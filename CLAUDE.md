@@ -6,7 +6,7 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
 
 - `docs/SPEC.md`: the behavior spec. Read it before building anything.
 - `prototype/week-budget-planner.html`: a working single-file prototype in vanilla JS. It's the reference for behavior, look and copy. It was built as a claude.ai artifact, so its `window.claude.use("db")` / `use("user")` code is platform-specific and won't run here. Its storage is replaced by in-browser SQLite (see Persistence in the spec).
-- **Reference project: [SantaClaas/flashcut](https://github.com/SantaClaas/flashcut)** (same author, Solid 2.0, public). Clone it and reuse its storage layer: `src/db/client.ts` (leader election plus export, import and wipe), `src/lib/broadcast-service.ts`, `src/lib/broadcast.ts`, `src/lib/db-file.ts`, `src/lib/download.ts`, the COOP/COEP headers in `vite.config.ts`, and `public/_headers`. Its `CLAUDE.md` lists Solid 2.0 conventions learned on `beta.17`. Re-check them against `rc.14`, since some may have changed.
+- **Reference project: [SantaClaas/flashcut](https://github.com/SantaClaas/flashcut)** (same author, Solid 2.0, public). Clone it and reuse its storage layer: `src/db/client.ts` (leader election plus export, import and wipe), `src/lib/broadcast-service.ts`, `src/lib/broadcast.ts`, `src/lib/db-file.ts`, `src/lib/download.ts`, the COOP/COEP headers in `vite.config.ts`, and `public/_headers`. Flashcut already solves the hard part of multiple tabs: Web Locks leader election plus a typed RPC proxy over BroadcastChannel. Reuse it as is.
 - `examples/example-week.json`: example plan data in the stored format.
 - `docs/*.png`: screenshots of the prototype.
 
@@ -19,8 +19,20 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
   - `vite@8`, TypeScript, strict mode
   - Storage: `@tursodatabase/database-wasm` (SQLite in OPFS, as in flashcut) with `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4` (pinned, since the 1.0 line is also an RC). Schema in `src/db/schema.ts`. Generate migrations with drizzle-kit into `drizzle/` and commit them. The details, including the tab-leader proxy and the required **database export/import**, are in the spec's Persistence section.
   - Use pnpm, like flashcut (`pnpm dlx` instead of `npx`).
-- Solid 2.0 changes core APIs compared to 1.x, including effects, stores, async and control-flow components. Training data mostly covers 1.x. **Before writing reactive code, check the installed package's type definitions (`node_modules/solid-js`, `node_modules/@solidjs/signals`) and the official 2.0 docs and migration notes.** Don't write from memory of 1.x.
 - No UI framework. Use plain CSS with the design tokens from the prototype's `:root` blocks, including the dark theme.
+
+## Solid 2.0: read the official sources first
+
+Solid 2.0 is not 1.x. Effects, batching, stores, async data, control flow and the package layout all changed, and most training data and online examples are 1.x. **Don't write Solid code from memory.** Before writing or reviewing reactive code, read the official material for the installed version:
+
+1. **`node_modules/solid-js/CHEATSHEET.md`**: the official one-page 2.0 reference, shipped inside the package for code generators. The bottom lists the 1.x patterns that changed. Read it at the start of every session that touches Solid code.
+2. **`node_modules/solid-js/skills/`**: official agent skills shipped with the package (for example `reactivity-diagnostics`). Use them when debugging reactivity.
+3. **The migration guide from 1.x to 2.0:** [`documentation/solid-2.0/MIGRATION.md`](https://github.com/solidjs/solid/blob/next/documentation/solid-2.0/MIGRATION.md) on the `next` branch of `solidjs/solid`. The per-topic RFCs sit beside it in [`documentation/solid-2.0/`](https://github.com/solidjs/solid/tree/next/documentation/solid-2.0) (reactivity and batching, signals and ownership, control flow, stores, async data, actions, DOM, TypeScript and JSX).
+4. **Changelogs between RCs:** [`packages/solid/CHANGELOG.md`](https://github.com/solidjs/solid/blob/next/packages/solid/CHANGELOG.md), [`packages/web/CHANGELOG.md`](https://github.com/solidjs/solid/blob/next/packages/web/CHANGELOG.md) and [`packages/signals/CHANGELOG.md`](https://github.com/solidjs/solid/blob/next/packages/signals/CHANGELOG.md) on `next`. Check them whenever you bump an RC version.
+5. **[docs.solidjs.com](https://docs.solidjs.com)**: the general documentation, which may still describe 1.x in places. If it disagrees with the cheatsheet or the migration guide, those two win for 2.0.
+6. **Type definitions** in `node_modules/solid-js` and `node_modules/@solidjs/signals`: the final word on signatures.
+
+Flashcut's `CLAUDE.md` has project-tested notes from `beta.17`: `<Loading>`/`<Errored>`, async `createMemo` with `refresh()`, `onSettled`, split `createEffect`, microtask batching, `render` from `@solidjs/web`, and a non-keyed `<Show>` stale-read bug. Treat them as hints and confirm each one against the sources above, since this project is on `rc.14`.
 
 ## Modern Web Guidance (required)
 
