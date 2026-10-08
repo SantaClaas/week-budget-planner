@@ -5,7 +5,8 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
 ## Where things are
 
 - `docs/SPEC.md`: the behavior spec. Read it before building anything.
-- `prototype/week-budget-planner.html`: a working single-file prototype in vanilla JS. It's the reference for behavior, look and copy. It was built as a claude.ai artifact, so its `window.claude.use("db")` / `use("user")` code is platform-specific and won't run here. Use localStorage for now (see Persistence in the spec).
+- `prototype/week-budget-planner.html`: a working single-file prototype in vanilla JS. It's the reference for behavior, look and copy. It was built as a claude.ai artifact, so its `window.claude.use("db")` / `use("user")` code is platform-specific and won't run here. Its storage is replaced by in-browser SQLite (see Persistence in the spec).
+- **Reference project: [SantaClaas/flashcut](https://github.com/SantaClaas/flashcut)** (same author, Solid 2.0, public). Clone it and reuse its storage layer: `src/db/client.ts` (leader election plus export, import and wipe), `src/lib/broadcast-service.ts`, `src/lib/broadcast.ts`, `src/lib/db-file.ts`, `src/lib/download.ts`, the COOP/COEP headers in `vite.config.ts`, and `public/_headers`. Its `CLAUDE.md` lists Solid 2.0 conventions learned on `beta.17`. Re-check them against `rc.14`, since some may have changed.
 - `examples/example-week.json`: example plan data in the stored format.
 - `docs/*.png`: screenshots of the prototype.
 
@@ -16,6 +17,8 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
   - `@solidjs/web@2.0.0-rc.14` (DOM rendering and `render` live here in 2.0, not in `solid-js/web`)
   - `@solidjs/vite-plugin@3.0.0-next.47` (the 2.0 replacement for `vite-plugin-solid`)
   - `vite@8`, TypeScript, strict mode
+  - Storage: `@tursodatabase/database-wasm` (SQLite in OPFS, as in flashcut) with `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4` (pinned, since the 1.0 line is also an RC). Schema in `src/db/schema.ts`. Generate migrations with drizzle-kit into `drizzle/` and commit them. The details, including the tab-leader proxy and the required **database export/import**, are in the spec's Persistence section.
+  - Use pnpm, like flashcut (`pnpm dlx` instead of `npx`).
 - Solid 2.0 changes core APIs compared to 1.x, including effects, stores, async and control-flow components. Training data mostly covers 1.x. **Before writing reactive code, check the installed package's type definitions (`node_modules/solid-js`, `node_modules/@solidjs/signals`) and the official 2.0 docs and migration notes.** Don't write from memory of 1.x.
 - No UI framework. Use plain CSS with the design tokens from the prototype's `:root` blocks, including the dark theme.
 
@@ -36,10 +39,10 @@ This project uses Google Chrome's [Modern Web Guidance](https://github.com/Googl
 - Plan state in one store, with pure functions for budget math, lanes, snapping and the first free slot. These are easy to unit test, so test them with Vitest.
 - Components: `Ledger` (activity list and forms), `WeekGrid` (header, gutter, day columns), `Tile`, `Dock` (toast and placing bar).
 - Use pointer events (not HTML5 drag and drop) so mouse, pen and touch share one code path. Use a single drag controller with window listeners, and update during drags inside `requestAnimationFrame`.
-- A `PlanStore` interface over localStorage, so sync can be added later.
+- Repository functions in `src/db/` that take the Drizzle database as a parameter, so tests can pass a Node-backed instance (flashcut's pattern).
 
 ## Working agreements
 
 - Match the prototype's interactions exactly, including the keyboard and touch paths, unless the user asks for a change.
 - Keep the copy plain and in the user's terms ("tiles", "left to place", "over budget").
-- Before calling the port done, test it in a browser: drag from the ledger, move, resize from both edges, the touch tap-to-arm path, undo, a reload that keeps state, and both color themes.
+- Before calling the port done, test it in a browser: drag from the ledger, move, resize from both edges, the touch tap-to-arm path, undo, a reload that keeps state, two tabs open at once, a database export followed by an import of that file, and both color themes.

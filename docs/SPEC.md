@@ -97,12 +97,50 @@ All of these must work with a mouse, touch and the keyboard.
 
 ## Persistence
 
-In the prototype, the plan lived in the claude.ai artifact database (`data/users/<id>/plan`), with localStorage as a cache and fallback. That API exists only inside claude.ai artifacts, so **the real project has to choose its own storage**. Start with localStorage (or IndexedDB) behind a small `PlanStore` interface, so cross-device sync can be added later. The behaviors to keep:
+In the prototype, the plan lived in the claude.ai artifact database. That API exists only inside claude.ai artifacts and is **not** carried over. The real app stores everything in a **SQLite database inside the browser**, set up the same way as [flashcut](https://github.com/SantaClaas/flashcut), with **Drizzle** added on top. There is no backend.
 
-- Save shortly after a change (the prototype debounces by 700ms), never during a drag, with one write in flight at a time.
-- The status line shows where the data is.
-- Sanitize on load.
-- Optionally offer "Load example week" from `examples/example-week.json`, marked as an example with `example: true`.
+### Database engine (same as flashcut)
+
+- `@tursodatabase/database-wasm`, persisted in OPFS. Import it from `@tursodatabase/database-wasm/vite`.
+- It needs `SharedArrayBuffer`, so cross-origin isolation headers (`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`) are required in dev, preview **and** production. Set them in `vite.config.ts` for `server` and `preview`, and in `public/_headers` for the host.
+- **Multiple tabs:** OPFS allows one open database per origin. Tabs therefore elect a leader with the Web Locks API. The leader opens the database and runs migrations, and the other tabs proxy their calls to it over a BroadcastChannel RPC. When the leader closes, a surviving tab is promoted automatically. Port this from flashcut's `src/db/client.ts` and `src/lib/broadcast-service.ts` rather than reinventing it.
+- **Cross-tab updates:** after a write, broadcast a change event so other open tabs reload the plan (flashcut's `src/lib/broadcast.ts` pattern). A tab never receives its own broadcast.
+
+### Drizzle (new compared to flashcut)
+
+- Use `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4`, pinned exactly. The 1.0 line ships `drizzle-orm/tursodatabase/wasm` and a filesystem-free `drizzle-orm/tursodatabase/wasm-migrator`, and 0.45 doesn't have them. Check the installed package's types before relying on these details.
+- **Schema** in `src/db/schema.ts`. Migrations are **generated** with `drizzle-kit generate` into `drizzle/` and committed. Never hand-edit an applied migration.
+- **Followers have no local database object**, so queries must work through the leader. Suggested approach: build the app's Drizzle instance with `drizzle-orm/sqlite-proxy`, whose callback forwards `(sql, params, method)` to the `DbService` RPC. That gives the leader and followers one typed query path.
+- **Migrations run only on the leader**, on its real connection, before it starts serving, using either the `wasm-migrator` (passing the generated SQL as a `Record<string, string>`, for example through `import.meta.glob("../../drizzle/**/*.sql", { query: "?raw", eager: true })`) or the sqlite-proxy migrator. Drizzle tracks applied migrations in its own table. Don't mix that with flashcut's `PRAGMA user_version` scheme.
+- **Tests** run in Node against `@tursodatabase/database` (the same async API) through `drizzle-orm/tursodatabase/database`, applying the same generated migrations. No browser is needed for repository tests.
+
+### Suggested tables
+
+Map the data model above roughly like this. Adjust it if Drizzle suggests better, but keep minutes as integers.
+
+- `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `mins` int, `days` int, `position` int (list order), `created_at` text
+- `blocks`: `id` text PK, `activity_id` text → activities (delete its tiles together with the activity, in one transaction), `day` int 0–6, `start` int, `dur` int
+- `settings`: a single row with `day_start`, `day_end`, `example` (boolean)
+
+### Writes and undo
+
+- Write when an action is complete: tile created, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
+- Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
+- The status line now reflects the database: "Saved in this browser". On a write error, show a toast that explains what failed and keep the in-memory state.
+
+### Export, import and reset (required)
+
+Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `exportFile`/`importFile`/`wipe` in `src/db/client.ts`):
+
+- **Export database:** downloads the raw SQLite file as `week-budget-planner-YYYY-MM-DD.db` (`application/vnd.sqlite3`). The leader runs `PRAGMA wal_checkpoint(TRUNCATE)`, briefly closes the database, reads the file bytes from OPFS, then reopens. Calls that arrive in the meantime queue behind the reopen. Export works from any tab.
+- **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` that their current plan will be replaced. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
+- **Delete all data:** confirm, delete the database files and reload every tab.
+- Put these in a small settings popover or page reached from the top bar. Mention that the data lives only in this browser and that export is the backup.
+
+### Also keep
+
+- Sanitize values read from the database, especially after an import.
+- "Load example week" from `examples/example-week.json` (bundle it), marked `example = true`. Offer it in the empty state.
 
 ## Design
 
@@ -124,4 +162,5 @@ Screenshots of the prototype are in `docs/`.
 - Several weeks or semesters, or real calendar dates
 - Exporting to iCal or Google Calendar
 - Fixed tiles such as lectures that are locked in place
-- Sync across devices
+- Sync across devices (for example Turso sync, since the database is already Turso)
+- Installing as a PWA, like flashcut (its Workbox config raises the precache size limit for the large WASM file)
