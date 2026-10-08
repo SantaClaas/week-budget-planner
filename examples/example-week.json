@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "example": true,
+  "dayStart": 7,
+  "dayEnd": 22,
+  "activities": [
+    {"id": "stats", "name": "Statistics lecture", "hue": 255, "mode": "week", "mins": 180, "days": 5},
+    {"id": "linalg", "name": "Linear algebra", "hue": 305, "mode": "week", "mins": 270, "days": 5},
+    {"id": "study", "name": "Self-study", "hue": 198, "mode": "week", "mins": 480, "days": 5},
+    {"id": "work", "name": "Work", "hue": 78, "mode": "week", "mins": 720, "days": 5},
+    {"id": "gym", "name": "Gym", "hue": 152, "mode": "day", "mins": 90, "days": 3}
+  ],
+  "blocks": [
+    {"id": "b1", "act": "stats", "day": 0, "start": 600, "dur": 90},
+    {"id": "b2", "act": "stats", "day": 2, "start": 600, "dur": 90},
+    {"id": "b3", "act": "linalg", "day": 1, "start": 510, "dur": 90},
+    {"id": "b4", "act": "linalg", "day": 3, "start": 510, "dur": 90},
+    {"id": "b5", "act": "work", "day": 1, "start": 780, "dur": 240},
+    {"id": "b6", "act": "work", "day": 3, "start": 780, "dur": 240},
+    {"id": "b7", "act": "study", "day": 2, "start": 840, "dur": 120},
+    {"id": "b8", "act": "gym", "day": 0, "start": 1080, "dur": 90}
+  ]
+}
