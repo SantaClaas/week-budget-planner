@@ -1,12 +1,49 @@
 # Week Budget Planner: product spec
 
-This spec describes the behavior of the working prototype in `prototype/week-budget-planner.html`. The SolidJS app should match it unless a section says the behavior is open for change. When the spec and the prototype disagree, the prototype is what the user has actually tried, so ask before diverging.
+This spec describes the behavior of the working prototype in `prototype/week-budget-planner.html`, plus the design decisions made after it (see "Changes from the prototype"). The SolidJS app should match it. When the spec and the prototype disagree, the spec wins for anything listed under "Changes from the prototype". For anything else the prototype is what the user has actually tried, so ask before diverging.
+
+The visual design is the [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) (private, ask the user for access). Its tokens are extracted to `docs/design/m3-tokens.css`.
 
 ## What it is
 
-A planner for one reusable week (Monday to Sunday, no calendar dates). The user creates **activities** (university classes, work, the gym) and gives each one an **hour budget**, either per week or per day. They then drag activities onto a seven-column week grid as **tiles**, then move and resize those tiles. Every activity shows live how much of its budget is still unplaced.
+A planner for one reusable week (Monday to Sunday, no calendar dates). The user creates **activities** (university classes, work, the gym) and gives each one a **budget** of hours, either per week or per day. They then put **blocks** of those activities on a seven-column week, by dragging, by placing, or by tapping an empty slot, and move and resize them. Every activity shows live how much of its budget is still **left to place**.
 
-The core loop is: set a budget, place tiles, resize them, and watch "left to place" count down to zero.
+The core loop is: set a budget, add blocks, resize them, and watch "left to place" count down to zero.
+
+## Glossary
+
+Use one name per thing, the same way in the UI copy, this spec and the code.
+
+| Term | Meaning | Notes |
+| --- | --- | --- |
+| **Week** | The one reusable plan, Monday to Sunday. It has no dates. | Code: `Plan` |
+| **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color and a budget. | Code: `Activity` |
+| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `mins`, `days` |
+| **Block** | One piece of an activity on the week: a day, a start time and a length. You add, move, resize and remove blocks. | Was "tile" in the prototype. Code: `Block` |
+| **Slot** | A 15-minute cell on the week. An empty slot has no block. Blocks start and end on slots. | Everything snaps to 15 min |
+| **Length** | How long a block is. | Code: `dur` |
+| **Default length** | The length a new block gets: the per-day budget for per-day activities, otherwise 1 h 30 min, and never more than what is left. | |
+| **Placed** | The total length of an activity's blocks. | |
+| **Left to place** | Budget minus placed. At zero it reads "All placed". Below zero it is "Over budget". | |
+| **Placing** | The mode you are in after picking an activity: every click or tap on an empty slot adds a block of it, until you press Done or nothing is left. | Was "armed" in the prototype |
+| **Add block** | Click or tap an empty slot when you are not placing, then choose the activity. | Phone: a bottom sheet. Desktop: a menu |
+| **First free slot** | The earliest gap that fits the default length, scanning Monday to Sunday. | |
+| **Hours shown** | The part of the day the week shows, by default 07:00 to 22:00. It grows by itself so no block is hidden. | Code: `dayStart`, `dayEnd` |
+| **Example week** | Sample activities and blocks shown on first run, until you keep them or start empty. | |
+| **Export / Import** | Save the whole database as a `.db` file, or replace this browser's data with one. | Settings › Your data |
+
+Words not to use in the app: **tile** (say "block"), **ledger** (it's the "Activities" list), **arm / armed** (say "placing"), and **event, appointment, task, session** (they suggest dates or to-dos, and this is one reusable week). Code may keep internal names that aren't user-facing, but prefer the glossary terms for new code.
+
+## Changes from the prototype
+
+These were decided after the prototype and override it:
+
+- **Material 3 Expressive** replaces the prototype's look (see Design). The interaction model stays the same unless listed here.
+- **"Tile" is renamed "block"** and **"armed" is renamed "placing"** everywhere, including copy such as "Deleted Gym and its 3 blocks."
+- **Add block from an empty slot.** Clicking or tapping an empty slot while not placing opens a chooser to add a block there. This is the main touch path, since dragging is hard on phones (see Interactions).
+- **Phones use a navigation bar** with Week, Activities and Settings instead of stacking the panes.
+- **Settings is a page**, holding the theme choice and the data actions (export, import, delete). The theme choice (System, Light, Dark) is new.
+- **The new-activity form** is behind a "New activity" button once at least one activity exists. In the empty state it is shown open.
 
 ## Data model
 
@@ -16,7 +53,7 @@ One plan document per user. The stored shape is the same as `examples/example-we
 type Plan = {
   v: 1;
   activities: Activity[];
-  blocks: Block[];        // the tiles on the grid
+  blocks: Block[];        // the blocks on the week
   dayStart: number;       // first hour shown, 0..12 (default 7)
   dayEnd: number;         // last hour shown, 13..24 (default 22)
   example: boolean;       // true while the example week is loaded and not yet dismissed
@@ -36,64 +73,90 @@ type Block = {
   act: string;            // Activity.id
   day: number;            // 0 = Monday … 6 = Sunday
   start: number;          // minutes from midnight, multiple of 15
-  dur: number;            // minutes, multiple of 15, min 15
+  dur: number;            // length in minutes, multiple of 15, min 15
 };
 ```
 
 Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `target(a) = a.mode === "day" ? a.mins * a.days : a.mins`. Placed: the sum of `dur` over that activity's blocks. Left to place: `target − placed`. It can go negative, which means over budget.
 
-Sanitize every loaded plan (from storage or sync): clamp numbers, snap to 15, drop tiles whose activity no longer exists, and de-duplicate ids. The prototype's `sanitize()` is the reference.
+Sanitize every loaded plan (from storage or sync): clamp numbers, snap to 15, drop blocks whose activity no longer exists, and de-duplicate ids. The prototype's `sanitize()` is the reference.
+
+The theme choice is a device preference, not part of the plan: store it in the `settings` table (see Persistence) as `system`, `light` or `dark`, default `system`.
 
 ## Layout
 
-- **Top bar:** the app name, plus a save status on the right ("Saved to your account", "Saving…", "Saved in this browser only").
-- **Left pane, the ledger** (about 20.5rem wide, scrolls on its own):
-  - An example-week note, shown only while `example` is true, with "Start empty" and "Keep these".
-  - The activity list. Each row has a color swatch, name, budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress meter, and an Edit button.
-  - A hint line: "Drag an activity onto the week. Or click it, then click a time slot."
-  - A "New activity" form with name, hours (step 0.25), counted per week or per day, days (shown only for per day), and a color picker with 8 swatches.
+### Wide screens (desktop and tablets, 840px and up)
+
+- **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Not saved"), an Undo icon button and a Settings icon button.
+- **Left pane, Activities** (360px wide, scrolls on its own):
+  - The example-week card, shown only while `example` is true: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
+  - A header, "Activities", with the total left to place.
+  - The activity list. Each item has a color swatch, the name, the budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress indicator, and an Edit icon button.
+  - A hint line: "Drag an activity onto the week, or click an empty slot to add a block there."
+  - A "New activity" button that opens the form: name, hours (step 0.25), counted per week or per day, days (shown only for per day), and a color picker with 8 colors.
 - **Right pane, the week:**
-  - A summary line ("20 h placed of 32 h · 12 h left to place") with an overall meter.
-  - Tools: a visible hour range (two selects), Undo, and Clear week.
-  - The grid. It has a sticky day header row (day name plus the total hours placed that day), a sticky hour gutter on the left, and 7 day columns. Columns are at least 6rem wide and the grid scrolls horizontally on narrow screens. Weekend columns are slightly tinted, and today's weekday is marked in the header.
-- **Bottom dock (floating):** a toast with an Undo button, and the "placing" bar described under Interactions.
-- **Under 820px wide:** the panes stack, the page scrolls normally, and the grid is capped at 78vh.
+  - A summary ("20 h placed of 32 h · 12 h left to place") with an overall progress indicator.
+  - Tools: an "Hours shown" button (opens a menu with the two hour selects, for example "07:00 – 22:00") and "Clear week".
+  - The grid. It has a sticky day header row (day name plus the total placed that day), a sticky hour gutter on the left, and 7 day columns. Columns are at least 6rem wide and the grid scrolls horizontally if needed. Weekend columns are slightly tinted, and today's weekday is marked in the header.
+- **Floating:** the placing toolbar and snackbars (see Interactions), at the bottom center.
+
+### Phones (under 840px)
+
+- **Navigation bar** (64px) at the bottom with three destinations: **Week**, **Activities**, **Settings**.
+- **Week:** a top app bar with the title "Week", Undo and an overflow menu, then the summary and progress, then the grid filling the rest of the screen. About three days fit across, the next one is just visible at the edge, and the grid scrolls sideways with scroll snapping per day. The placing toolbar floats above the navigation bar.
+- **Activities:** the same list as the wide-screen pane, with an extended "New activity" floating action button. Tapping an activity starts placing it and switches to Week.
+- **Settings:** the same page as on wide screens. On phones it also holds "Hours shown" and "Clear week", which on wide screens sit above the grid.
+
+### Settings page
+
+- **Appearance:** Theme, as a connected button group: System, Light, Dark.
+- **Week** (phones only): Hours shown, Clear week.
+- **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
+- **Storage:** number of activities, number of blocks, database size.
+- On wide screens it is a full page with a back button to the week.
 
 ## Grid geometry
 
 - 48px per hour, so 12px per 15 minutes. The hour lines are solid and the half-hour lines are fainter.
-- The visible range is `[min(dayStart, earliest tile hour), max(dayEnd, latest tile end hour)]`. The grid widens itself so a tile is never hidden. Don't change the range in the middle of a drag.
-- Overlapping tiles in a day sit side by side in lanes, like a standard calendar. Group tiles that overlap, then give each one the first lane whose last end is at or before its start.
-- Tile content: the name, then the duration and time range ("1h30  10:00–11:30"). The duration can wrap to its own line. Tiles of 30 minutes or less show a single line, "Name · 30m". A 15-minute tile has no top resize handle.
+- The visible range is `[min(dayStart, earliest block hour), max(dayEnd, latest block end hour)]`. The grid widens itself so a block is never hidden. Don't change the range in the middle of a drag.
+- Overlapping blocks in a day sit side by side in lanes, like a standard calendar. Group blocks that overlap, then give each one the first lane whose last end is at or before its start.
+- Block content: the name, then the time range and length ("10:00–11:30 · 1h30"). The length can wrap to its own line. Blocks of 30 minutes or less show a single line, "Name · 30m". A 15-minute block has no top resize handle.
 
 ## Interactions
 
 All of these must work with a mouse, touch and the keyboard.
 
-**Creating tiles**
-- **Drag from the ledger** (mouse or pen): a press on an activity row followed by more than 4px of movement starts a drag. A chip follows the pointer, and a dashed preview shows where the tile will land. Dropping on a day creates the tile. The start is the 15-minute slot under the pointer, clamped to the visible range.
-- **Click to arm:** clicking an activity row "arms" it, and touch always uses this path. A dock bar appears: "Placing **Gym**, 1 h 30 min. Click a time slot." with "Use first free slot" and "Done". While armed, a mouse hovering over the grid shows the preview, and each click on the grid places a tile. Arming switches off on its own once that activity's budget is fully placed. Escape also disarms.
-- **First free slot:** scan the days in order, in 15-minute steps within the visible range, for a gap of the default duration. For per-day activities, try days that don't have the activity yet first. If nothing fits, show a toast.
-- **Default duration:** for per-day activities it's `mins`; for weekly ones it's 90 minutes (one lecture slot). Cap it at the remaining budget when some is left, and at the visible range. The minimum is 15.
+**Adding blocks**
+- **Drag from the Activities list** (mouse or pen): a press on an activity followed by more than 4px of movement starts a drag. A chip follows the pointer, and a dashed preview shows where the block will land. Dropping on a day creates the block. The start is the slot under the pointer, clamped to the visible range.
+- **Placing:** clicking or tapping an activity starts placing it. The placing toolbar appears: "Placing **Gym** · 1 h 30 min. Click a time slot." ("Tap a slot" on touch) with the activity's left-to-place figure, "Use first free slot" and "Done". While placing, a mouse hovering over the grid shows the preview, and each click or tap on an empty slot adds a block of the default length there. Placing stops on its own once that activity is all placed. Escape and Done also stop it.
+- **Add block from an empty slot:** when not placing, clicking or tapping an empty slot highlights it and opens a chooser titled "Add block" with the day and start ("Tuesday · from 10:00"):
+  - On phones it is a modal bottom sheet. On wide screens it is a menu anchored to the slot.
+  - It lists the activities, those with the most left to place first. Activities that are all placed or over budget come last, dimmed but still selectable ("this would go over budget").
+  - The phone sheet has a length stepper (− and +, 15 minutes per step), preset to the default length of the activity under focus. The desktop menu uses the default length, and the block can be resized afterwards.
+  - It ends with "New activity…", which opens the new-activity form and then adds the block.
+  - Choosing an activity adds the block, closes the chooser and shows a snackbar: "Added Gym · Tue 10:00–11:30" with Undo.
+  - On touch, a tap on an empty slot must not fire while the user scrolls. Only a tap without movement opens the chooser.
+- **First free slot:** scan the days in order, in 15-minute steps within the visible range, for a gap of the default length. For per-day activities, try days that don't have the activity yet first. If nothing fits, show a snackbar ("No free 1 h 30 min slot between 07:00 and 22:00.").
+- **Default length:** for per-day activities it's `mins`. For weekly ones it's 90 minutes (one lecture slot). Cap it at the remaining budget when some is left, and at the visible range. The minimum is 15.
 
-**Editing tiles**
-- **Move:** drag the tile body, which can cross days. Keep the grab offset so the tile doesn't jump. Snap to 15 and clamp to the visible range.
-- **Resize:** drag the top or bottom handle (7px tall, 4px on short tiles). The minimum is 15 minutes. The top handle keeps the end fixed.
-- **Select:** a mouse press selects. On touch, the first tap only selects, and only a selected tile can be dragged (`touch-action: none` applies only to the selected tile and the handles), so the grid stays scrollable.
-- **Remove:** the × button on hover or selection, or Delete/Backspace when the tile has focus.
-- **Keyboard:** tiles are focusable. Up/Down moves 15 minutes, Shift+Up/Down resizes by 15 minutes, Left/Right changes the day, and Escape deselects.
-- Ignore clicks for about 350ms after a drag ends, so the click that ends a drag doesn't place or deselect.
+**Editing blocks**
+- **Move:** drag the block body, which can cross days. Keep the grab offset so the block doesn't jump. Snap to 15 and clamp to the visible range.
+- **Resize:** drag the top or bottom handle (7px tall, 4px on short blocks). The minimum is 15 minutes. The top handle keeps the end fixed.
+- **Select:** a mouse press selects. On touch, the first tap only selects, and only a selected block can be dragged (`touch-action: none` applies only to the selected block and the handles), so the grid stays scrollable.
+- **Remove:** the remove button on hover or selection, or Delete/Backspace when the block has focus.
+- **Keyboard:** blocks are focusable. Up/Down moves 15 minutes, Shift+Up/Down resizes by 15 minutes, Left/Right changes the day, and Escape deselects. Empty slots must be reachable too, so the keyboard can open "Add block".
+- Ignore clicks for about 350ms after a drag ends, so the click that ends a drag doesn't add a block or deselect.
 - Scroll the grid automatically when dragging near its top or bottom edge.
-- The meters and the summary update live during a drag. Persist only when the drag ends, and only if something changed.
+- The progress indicators and the summary update live during a drag. Persist only when the drag ends, and only if something changed.
 
 **Activities**
 - Add with validation messages: "Give the activity a name.", "Enter the hours it needs, for example 1.5.", "A day has 24 hours. Enter 24 or less.", "A week has 168 hours. Enter 168 or less.", "Enter how many days per week, from 1 to 7." Hours are rounded to 15 minutes.
-- Edit inline in the row (same form, plus Save, Cancel and Delete). Escape cancels.
-- Deleting an activity also deletes its tiles. Show a toast with Undo: "Deleted Gym and its 3 tiles."
+- Edit inline in the list item (same form, plus Save, Cancel and Delete). Escape cancels.
+- Deleting an activity also deletes its blocks. Show a snackbar with Undo: "Deleted Gym and its 3 blocks."
 - A new activity gets the first unused palette color by default.
 
 **History**
-- Undo covers every change: tile create, move, resize and delete, activity add, edit and delete, Clear week, and Start empty. It keeps up to 100 steps. Ctrl/Cmd+Z works when focus isn't in a form field. The toast Undo uses the same stack.
+- Undo covers every change: block add, move, resize and remove, activity add, edit and delete, Clear week, and Start empty. It keeps up to 100 steps. Ctrl/Cmd+Z works when focus isn't in a form field. The snackbar Undo and the Undo icon button use the same stack.
 
 ## Persistence
 
@@ -121,48 +184,54 @@ In the prototype, the plan lived in the claude.ai artifact database. That API ex
 Map the data model above roughly like this. Adjust it if Drizzle suggests better, but keep minutes as integers.
 
 - `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `mins` int, `days` int, `position` int (list order), `created_at` text
-- `blocks`: `id` text PK, `activity_id` text → activities (delete its tiles together with the activity, in one transaction), `day` int 0–6, `start` int, `dur` int
-- `settings`: a single row with `day_start`, `day_end`, `example` (boolean)
+- `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `dur` int
+- `settings`: a single row with `day_start`, `day_end`, `example` (boolean) and `theme` (`system`/`light`/`dark`)
 
 ### Writes and undo
 
-- Write when an action is complete: tile created, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
+- Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
 - Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
-- The status line now reflects the database: "Saved in this browser". On a write error, show a toast that explains what failed and keep the in-memory state.
+- The status in the top app bar reflects the database: "Saved in this browser", "Saving…", or "Not saved". On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
 
 ### Export, import and reset (required)
 
 Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `exportFile`/`importFile`/`wipe` in `src/db/client.ts`):
 
 - **Export database:** downloads the raw SQLite file as `week-budget-planner-YYYY-MM-DD.db` (`application/vnd.sqlite3`). The leader runs `PRAGMA wal_checkpoint(TRUNCATE)`, briefly closes the database, reads the file bytes from OPFS, then reopens. Calls that arrive in the meantime queue behind the reopen. Export works from any tab.
-- **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` that their current plan will be replaced. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
+- **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` ("Replace your plan?") that names the file and how many activities and blocks it replaces, with a link to export first. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
 - **Delete all data:** confirm, delete the database files and reload every tab.
-- Put these in a small settings popover or page reached from the top bar. Mention that the data lives only in this browser and that export is the backup.
+- These live on the Settings page (see Layout), which says that the data lives only in this browser and that export is the backup.
 
 ### Also keep
 
 - Sanitize values read from the database, especially after an import.
-- "Load example week" from `examples/example-week.json` (bundle it), marked `example = true`. Offer it in the empty state.
+- "Load an example week" from `examples/example-week.json` (bundle it), marked `example = true`. Offer it in the empty state.
 
 ## Design
 
-- **Fonts:** Archivo (variable, with width 112–120% for the title, eyebrows and day names) for the UI, and IBM Plex Mono for times and figures. Use tabular numerals.
-- **Colors:** defined as oklch tokens with light and dark values (see the `:root` blocks in the prototype). The neutrals are a cool, slightly blue paper. The accent is cobalt (`oklch(0.49 0.19 262)` in light mode, `oklch(0.74 0.13 262)` in dark), with green for done and orange-red for over budget.
-- **Tile colors** come from one hue per activity through shared lightness and chroma tokens, so every hue works in both themes:
-  - background `oklch(L C h)`: light 0.905 / 0.065, dark 0.34 / 0.07
-  - border: light 0.70 / 0.12, dark 0.52 / 0.11
-  - text: light 0.30 / 0.09, dark 0.94 / 0.045
-  - solid (swatch and meter): light 0.60 / 0.16, dark 0.72 / 0.15
-- **Palette hues:** Blue 255, Red 28, Green 152, Amber 78, Violet 305, Teal 198, Pink 350, Lime 118.
-- **Tiles** are solid tinted fills with a 4px radius and no colored side rail. The selected tile gets a 2px accent outline.
-- Respect `prefers-reduced-motion` (only the meter widths animate).
+The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-with-m3-expressive)**, Google's 2025 update of Material Design 3. Build it with plain CSS from the tokens in `docs/design/m3-tokens.css`. Don't use a Material component library (`@material/web`, Material Components for the Web, MUI, and so on). They look similar but are not M3 Expressive. The [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) shows every screen and state, and the [Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit) in Figma is the official component reference.
 
-Screenshots of the prototype are in `docs/`.
+- **Token sources:** shape, type, motion and component sizes come from Google's own Material 3 tokens ([androidx `material3/tokens`](https://github.com/androidx/androidx/tree/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens)). Colors come from [material-color-utilities](https://github.com/material-foundation/material-color-utilities). Regenerate them from there rather than inventing values.
+- **Color:** a `SchemeTonalSpot` light and dark scheme from the seed `#3a5bd9` (a cobalt close to the prototype's accent). Pages sit on `surface-container`, and panes, lists and the grid use a card color (`surface-container-lowest` in light, `surface-container-high` in dark). Over budget uses `error`, and "All placed" uses a green.
+- **Theme:** follow `prefers-color-scheme` by default. The Settings choice (Light or Dark) overrides it.
+- **Activity colors:** the 8 palette hues, keyed by the stored `hue` value: Blue 255, Red 28, Green 152, Amber 78, Violet 305, Teal 198, Pink 350, Lime 118. Each gets a tonal palette (`TonalPalette.fromHueAndChroma(hue, 48)`):
+  - block background: tone 90 light, 30 dark
+  - block text: tone 10 light, 90 dark
+  - solid (swatch, progress, drag chip): tone 40 light, 80 dark
+- **Type:** Google Sans Flex (variable, from Google Fonts) on the M3 type scale, with the emphasized styles for headings and figures. The app name uses the `ROND` axis at 100. Use tabular numerals for times and figures. There is no monospace font.
+- **Icons:** Material Symbols Rounded.
+- **Shape:** the M3 corner scale (4, 8, 12, 16, 20, 28, 32, 48 and full). Buttons are fully round. Panes, the grid and dialogs use 28. Grouped lists have 20px outer and 4px inner corners with 2px gaps. Blocks use 8 (12 when selected, 4 when 15 minutes long). The selected color swatch morphs from a circle to a rounded square.
+- **Components:** small top app bar, navigation bar (64px, pill indicator), connected button groups, filled, tonal, outlined and text buttons, extended FAB, menu, modal bottom sheet, dialog, snackbar, outlined text fields, linear progress indicator with a gap and a stop dot, and a floating toolbar (vibrant, 64px, fully round) for placing.
+- **Blocks** are solid tonal fills with no border or side rail. The selected block gets a 2px `primary` ring with a gap, plus elevation.
+- **Motion:** M3 Expressive uses springs. Approximate the spatial and effects springs with CSS `linear()` easing curves. Respect `prefers-reduced-motion` by dropping spatial motion and keeping only fades and the progress widths.
+- **Touch targets** are at least 48px (40px visual buttons with padding around them).
+
+Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 
 ## Ideas for later (not in the prototype)
 
 - Several weeks or semesters, or real calendar dates
 - Exporting to iCal or Google Calendar
-- Fixed tiles such as lectures that are locked in place
+- Fixed blocks such as lectures that are locked in place
 - Sync across devices (for example Turso sync, since the database is already Turso)
 - Installing as a PWA, like flashcut (its Workbox config raises the precache size limit for the large WASM file)
