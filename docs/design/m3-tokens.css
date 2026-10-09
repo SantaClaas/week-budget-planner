@@ -57,9 +57,9 @@
 .m3 a { color: var(--primary); }
 
 /* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
-   into public/iconset.svg by `pnpm icons`. Use <img class="icon" src="/iconset.svg#undo" alt="">.
-   The filled variant is #name-fill. The icon color comes from the iconset (on-surface-variant) and
-   follows the page's color-scheme, so the theme setting must set color-scheme on :root. */
+   into public/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor:
+   <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg>
+   The filled variant is #name-fill. Color the icon with `color` on it or on its parent. */
 .icon { width: 24px; height: 24px; flex: none; display: inline-block; vertical-align: middle; }
 .icon.s20 { width: 20px; height: 20px; } .icon.s18 { width: 18px; height: 18px; }
 

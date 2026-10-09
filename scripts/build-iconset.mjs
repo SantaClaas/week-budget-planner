@@ -3,8 +3,9 @@
 //   node scripts/build-iconset.mjs --fetch   download missing SVGs from Google's repository, then build
 //   node scripts/build-iconset.mjs           build from the SVGs already in icons/material-symbols/
 //
-// Each icon is optimized with SVGO, then placed in one SVG with a <view> per icon, so
-// <img src="/iconset.svg#undo" alt=""> shows just that icon.
+// Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor, so
+// <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg> shows it
+// in the text color of the element around it.
 
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
@@ -13,14 +14,6 @@ const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8"));
 const sourceDir = new URL("icons/material-symbols/", root);
 const output = new URL("public/iconset.svg", root);
-
-// Each icon is a 24×24 cell in its own row, with a gap so neighbors never bleed into a view.
-const SIZE = 24;
-const ROW = 32;
-
-// Icon color: on-surface-variant from docs/design/m3-tokens.css, light and dark.
-const LIGHT = "#45464f";
-const DARK = "#c6c5d0";
 
 const { repository, commit, style } = manifest.source;
 
@@ -43,8 +36,8 @@ if (process.argv.includes("--fetch")) {
   }
 }
 
-const rows = [];
-for (const [index, { id, file }] of variants.entries()) {
+const symbols = [];
+for (const { id, file } of variants) {
   const source = await readFile(new URL(file, sourceDir), "utf8").catch(() => {
     throw new Error(`Missing icons/material-symbols/${file}. Run \`pnpm icons:fetch\`.`);
   });
@@ -55,22 +48,13 @@ for (const [index, { id, file }] of variants.entries()) {
   const match = data.match(/^<svg[^>]*viewBox="([^"]+)"[^>]*>([\s\S]*)<\/svg>$/);
   if (!match) throw new Error(`Unexpected SVG shape in ${file}: ${data}`);
   const [, viewBox, body] = match;
-  // The icons are single-color glyphs. Anything else would ignore the iconset's fill.
+  // The icons are single-color glyphs. Anything else would ignore currentColor.
   if (/fill=|style=|<(?!path)/.test(body)) throw new Error(`${file} has more than plain paths: ${body}`);
 
-  const y = index * ROW;
-  rows.push(
-    `<view id="${id}" viewBox="0 ${y} ${SIZE} ${SIZE}"/>` +
-      `<svg y="${y}" width="${SIZE}" height="${SIZE}" viewBox="${viewBox}">${body}</svg>`,
-  );
+  symbols.push(`<symbol id="${id}" viewBox="${viewBox}" fill="currentColor">${body}</symbol>`);
 }
 
-const height = (variants.length - 1) * ROW + SIZE;
-const iconset =
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${height}">` +
-  `<style>:root{fill:${LIGHT}}@media (prefers-color-scheme:dark){:root{fill:${DARK}}}</style>\n` +
-  rows.join("\n") +
-  `\n</svg>\n`;
+const iconset = `<svg xmlns="http://www.w3.org/2000/svg">\n${symbols.join("\n")}\n</svg>\n`;
 
 await mkdir(new URL("public/", root), { recursive: true });
 await writeFile(output, iconset);

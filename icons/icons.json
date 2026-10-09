@@ -1,5 +1,5 @@
 {
-  "$comment": "Material Symbols used by the app. Style: Rounded, weight 400, grade 0, optical size 24. Add an entry, run `pnpm icons:fetch` and `pnpm icons`, and reference it as <img src=\"/iconset.svg#name\">. Filled variants get the id name-fill.",
+  "$comment": "Material Symbols used by the app. Style: Rounded, weight 400, grade 0, optical size 24. Add an entry, run `pnpm icons:fetch` and `pnpm icons`, and reference it as <svg class=\"icon\" aria-hidden=\"true\"><use href=\"/iconset.svg#name\"/></svg>. Filled variants get the id name-fill.",
   "source": {
     "repository": "google/material-design-icons",
     "commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
