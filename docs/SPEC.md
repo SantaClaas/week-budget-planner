@@ -209,7 +209,9 @@ Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `
 
 ## Design
 
-The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-with-m3-expressive)**, Google's 2025 update of Material Design 3. Build it with plain CSS from the tokens in `docs/design/m3-tokens.css`. Don't use a Material component library (`@material/web`, Material Components for the Web, MUI, and so on). They look similar but are not M3 Expressive. The [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) shows every screen and state, and the [Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit) in Figma is the official component reference.
+The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-with-m3-expressive)**, Google's 2025 update of Material Design 3. Build it with plain CSS from the tokens in `docs/design/m3-tokens.css`, without a component library.
+
+**Google is the only source for Material Design:** m3.material.io, the [Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit) in Figma, and Google's own code. Third-party implementations and write-ups are not sources. Only the user can approve a deviation from Google's guidance, and approved deviations are listed under "Deviations" below. The [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) shows every screen and state.
 
 - **Token sources:** shape, type, motion and component sizes come from Google's own Material 3 tokens ([androidx `material3/tokens`](https://github.com/androidx/androidx/tree/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens)). Colors come from [material-color-utilities](https://github.com/material-foundation/material-color-utilities). Regenerate them from there rather than inventing values.
 - **Color:** a `SchemeTonalSpot` light and dark scheme from the seed `#3a5bd9` (a cobalt close to the prototype's accent). Pages sit on `surface-container`, and panes, lists and the grid use a card color (`surface-container-lowest` in light, `surface-container-high` in dark). Over budget uses `error`, and "All placed" uses a green.
@@ -225,6 +227,20 @@ The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-w
 - **Blocks** are solid tonal fills with no border or side rail. The selected block gets a 2px `primary` ring with a gap, plus elevation.
 - **Motion:** M3 Expressive uses springs. Approximate the spatial and effects springs with CSS `linear()` easing curves. Respect `prefers-reduced-motion` by dropping spatial motion and keeping only fades and the progress widths.
 - **Touch targets** are at least 48px (40px visual buttons with padding around them).
+
+### Deviations
+
+None approved yet. Every deviation from Google's guidance needs the user's approval before it is built.
+
+### To check against Google
+
+The design canvas made these choices without a Google source. Confirm each against m3.material.io or the Figma kit, and if Google says otherwise, follow Google or ask the user to approve a deviation:
+
+- The grouped list (20px outer corners, 4px inner corners, 2px gaps). These values came from looking at Android's settings, not from a Google spec.
+- The activity color palettes at chroma 48. M3's guidance for extra, custom colors may prescribe something else, such as harmonizing them with the scheme.
+- Block shapes (8px, 12px when selected, 4px at 15 minutes), the selected ring, and the color swatch that morphs from circle to rounded square.
+- Google Sans Flex as the typeface. Google's baseline type tokens use the system sans-serif (Roboto on Android).
+- Approximating the springs with CSS `linear()` easing.
 
 Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 
