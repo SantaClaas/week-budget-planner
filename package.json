@@ -1,0 +1,13 @@
+{
+  "name": "week-budget-planner",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "icons:fetch": "node scripts/build-iconset.mjs --fetch",
+    "icons": "node scripts/build-iconset.mjs"
+  },
+  "devDependencies": {
+    "svgo": "4.1.0"
+  }
+}

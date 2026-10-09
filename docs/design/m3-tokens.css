@@ -56,10 +56,12 @@
 .m3 button, .m3 input, .m3 select { font: inherit; color: inherit; letter-spacing: inherit; }
 .m3 a { color: var(--primary); }
 
-/* icons: Material Symbols Rounded */
-.ms { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 24px; line-height: 1; letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; display: inline-block; flex: none; }
-.ms.fill { font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24; }
-.ms.s20 { font-size: 20px; } .ms.s18 { font-size: 18px; }
+/* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
+   into public/iconset.svg by `pnpm icons`. Use <img class="icon" src="/iconset.svg#undo" alt="">.
+   The filled variant is #name-fill. The icon color comes from the iconset (on-surface-variant) and
+   follows the page's color-scheme, so the theme setting must set color-scheme on :root. */
+.icon { width: 24px; height: 24px; flex: none; display: inline-block; vertical-align: middle; }
+.icon.s20 { width: 20px; height: 20px; } .icon.s18 { width: 18px; height: 18px; }
 
 /* type scale (emphasized = one weight step up) */
 .display-s { font-size: 36px; line-height: 44px; font-weight: 400; letter-spacing: 0; }
@@ -83,9 +85,9 @@
 
 /* buttons: expressive sizes, round by default */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--corner-full); border: 0; font-size: 14px; font-weight: 500; letter-spacing: .1px; cursor: pointer; white-space: nowrap; background: transparent; color: var(--primary); }
-.btn .ms { font-size: 20px; }
+.btn .icon { width: 20px; height: 20px; }
 .btn.xs { height: 32px; padding: 0 12px; gap: 4px; }
-.btn.xs .ms { font-size: 18px; }
+.btn.xs .icon { width: 18px; height: 18px; }
 .btn.m { height: 56px; padding: 0 24px; font-size: 16px; }
 .btn.filled { background: var(--primary); color: var(--on-primary); }
 .btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }

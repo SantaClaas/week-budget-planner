@@ -1,0 +1,38 @@
+{
+  "$comment": "Material Symbols used by the app. Style: Rounded, weight 400, grade 0, optical size 24. Add an entry, run `pnpm icons:fetch` and `pnpm icons`, and reference it as <img src=\"/iconset.svg#name\">. Filled variants get the id name-fill.",
+  "source": {
+    "repository": "google/material-design-icons",
+    "commit": "49d4db35df873165d6bd6ba09b063c7dafbac2f4",
+    "style": "materialsymbolsrounded"
+  },
+  "icons": [
+    { "name": "add" },
+    { "name": "arrow_back" },
+    { "name": "auto_awesome" },
+    { "name": "calendar_add_on" },
+    { "name": "calendar_view_week", "fill": true },
+    { "name": "check" },
+    { "name": "check_circle" },
+    { "name": "checklist", "fill": true },
+    { "name": "chevron_right" },
+    { "name": "close" },
+    { "name": "cloud_done" },
+    { "name": "cloud_off" },
+    { "name": "contrast" },
+    { "name": "delete" },
+    { "name": "delete_forever" },
+    { "name": "delete_sweep" },
+    { "name": "download" },
+    { "name": "drag_indicator" },
+    { "name": "edit" },
+    { "name": "error" },
+    { "name": "more_vert" },
+    { "name": "remove" },
+    { "name": "schedule" },
+    { "name": "settings", "fill": true },
+    { "name": "sync" },
+    { "name": "undo" },
+    { "name": "upload" },
+    { "name": "upload_file" }
+  ]
+}
