@@ -26,6 +26,39 @@
       type="font/woff2"
       crossorigin
     />
+    <script>
+      // GitHub Pages can't send the cross-origin isolation headers the database needs, so the
+      // service worker adds them. Register it and reload once when it takes control. The app never
+      // waits for this: without isolation it starts with limited storage (see the spec).
+      (() => {
+        const flag = "week-budget-planner.isolation-reload";
+        const storage = (() => {
+          try {
+            return window.sessionStorage;
+          } catch {
+            return undefined;
+          }
+        })();
+        if (window.crossOriginIsolated) {
+          storage?.removeItem(flag);
+          return;
+        }
+        if (!window.isSecureContext || !("serviceWorker" in navigator)) return;
+        const reloadOnce = () => {
+          // The flag stops a reload loop when isolation still fails after the worker took over.
+          if (storage?.getItem(flag) === "1") return;
+          storage?.setItem(flag, "1");
+          location.reload();
+        };
+        navigator.serviceWorker
+          .register(new URL("sw.js", document.baseURI))
+          .then(() => {
+            if (navigator.serviceWorker.controller) reloadOnce();
+            else navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
+          })
+          .catch((error) => console.warn("[isolation] service worker registration failed", error));
+      })();
+    </script>
   </head>
   <body>
     <noscript>The Week Budget Planner needs JavaScript to plan your week.</noscript>
