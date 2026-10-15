@@ -60,6 +60,8 @@ This doesn't mean avoiding shared code. Sometimes a horizontal connection can't 
 
 **Unavoidable layers tend to sit at the edges.** Where the application meets the outside (the database file, the stored format, the network), many paths have to come together, so the layer there works as a funnel. A funnel can turn into a bad bottleneck when it ties too much together, like one repository that every feature's save has to go through. Keep what passes through an edge small, and let each feature own as much of its side of it as it can.
 
+For example, in Rust's axum every endpoint goes through a router, so the router is where the features meet. Instead of exporting every handler and listing them all in one top-level router, each module builds its own `Router` with its handlers and sub-routers and exports only that. `main` then puts together a few routers (`merge`, `nest`) instead of every small branch. The handlers stay private, a feature can be removed with its folder and one line, and the routers nest the same way the modules do. In this project, `storage/index.ts` works the same way: it exports one `open()`, and the app never sees which store it got.
+
 ### Coupling
 
 **Export as little as possible.** TypeScript can't enforce visibility the way Rust modules do, so it's a habit, not a rule the compiler checks. A name that's only used inside its file stays unexported. Types that only describe another export's signature usually don't need exporting either.
