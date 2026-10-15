@@ -13,8 +13,8 @@ export type ExportedFile = { blob: Blob; filename: string };
 
 export interface PlanStore {
   readonly level: StorageLevel;
-  /** `stored` is false when nothing was ever saved here (first run). */
-  load(): Promise<{ plan: Plan; stored: boolean }>;
+  /** `isStored` is false when nothing was ever saved here (first run). */
+  load(): Promise<{ plan: Plan; isStored: boolean }>;
   /** Saves one user action, `before` being what is stored now. */
   save(before: Plan | undefined, after: Plan): Promise<void>;
   loadTheme(): Promise<Theme>;

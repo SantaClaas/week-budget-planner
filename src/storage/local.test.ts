@@ -45,9 +45,9 @@ describe("localStorage store", () => {
   it("starts empty, then keeps what was saved", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    expect(await store.load()).toMatchObject({ stored: false });
+    expect(await store.load()).toMatchObject({ isStored: false });
     await store.save(undefined, example());
-    expect(await local.create(storage, events()).load()).toEqual({ plan: example(), stored: true });
+    expect(await local.create(storage, events()).load()).toEqual({ plan: example(), isStored: true });
   });
 
   it("stores the theme", async () => {
