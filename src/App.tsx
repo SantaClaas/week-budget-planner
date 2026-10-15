@@ -16,8 +16,8 @@ export function App() {
   onSettled(() => {
     void (async () => {
       const opened = await openStorage();
-      let { plan: loaded, stored } = await opened.load();
-      if (!stored) {
+      let { plan: loaded, isStored } = await opened.load();
+      if (!isStored) {
         loaded = sanitizePlan(exampleWeek);
         await opened.save(undefined, loaded);
       }

@@ -31,7 +31,7 @@ let channel: BroadcastChannel | undefined;
 let consumer: Consumer<DatabaseService> | undefined;
 let isLeader = false;
 let localDatabase: Promise<TursoConnection> | undefined;
-let electionStarted = false;
+let isElectionStarted = false;
 
 async function open(): Promise<TursoConnection> {
   const connection = (await connect(DATABASE_FILE)) as unknown as TursoConnection;
@@ -111,8 +111,8 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
 }
 
 function startElection(): void {
-  if (electionStarted) return;
-  electionStarted = true;
+  if (isElectionStarted) return;
+  isElectionStarted = true;
   const { channel, consumer } = setUp();
   void navigator.locks.request(LOCK_NAME, async () => {
     isLeader = true;

@@ -19,7 +19,7 @@ export function create(storage: Storage, events: Pick<Window, "addEventListener"
     async load() {
       const text = storage.getItem(PLAN_KEY);
       current = text === null ? undefined : planFile.parse(text);
-      return { plan: current ?? planFile.parse("null"), stored: text !== null };
+      return { plan: current ?? planFile.parse("null"), isStored: text !== null };
     },
     async save(_before, after) {
       storage.setItem(PLAN_KEY, planFile.serialize(after));

@@ -10,10 +10,10 @@ describe("memory store", () => {
   it("keeps the plan only in memory", async () => {
     const store = memory.create();
     expect(store.level).toBe("none");
-    expect(await store.load()).toMatchObject({ stored: false });
+    expect(await store.load()).toMatchObject({ isStored: false });
     await store.save(undefined, example());
     expect((await store.load()).plan).toEqual(example());
     await store.wipe();
-    expect(await store.load()).toMatchObject({ stored: false });
+    expect(await store.load()).toMatchObject({ isStored: false });
   });
 });
