@@ -114,7 +114,7 @@
   .button.outlined { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
   .button.danger { background: var(--error); color: var(--on-error); }
   .button.text-danger { color: var(--error); }
-  .button:disabled { background: rgb(from var(--on-surface) r g b / .1); color: rgb(from var(--on-surface) r g b / .38); }
+  .button:disabled { background: color-mix(in srgb, var(--on-surface) 10%, transparent); color: color-mix(in srgb, var(--on-surface) 38%, transparent); }
   .button.outlined:disabled, .button.text:disabled { background: transparent; }
   .icon-button { width: 2.5rem; height: 2.5rem; display: inline-grid; place-items: center; border-radius: var(--corner-full); border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; padding: 0; }
   .icon-button.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
@@ -192,7 +192,7 @@
   .day-header .day-total { font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
   .day-header.today .day-name { color: var(--primary); }
   .day-header.today .day-name::before { content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary); }
-  .day-column { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), rgb(from var(--outline-variant) r g b / .45) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
+  .day-column { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), color-mix(in srgb, var(--outline-variant) 45%, transparent) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
   .day-column.weekend { background-color: var(--weekend); }
   .gutter { position: relative; font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
   .gutter span { position: absolute; right: .5rem; transform: translateY(-50%); }
@@ -206,7 +206,7 @@
   .block.selected { box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium); }
   .block .handle { position: absolute; left: 50%; width: 1.5rem; height: .25rem; margin-left: -.75rem; border-radius: .125rem; background: var(--on-activity-container); opacity: .5; }
   .block.preview { background: transparent; border: 2px dashed var(--activity-color); color: var(--activity-color); }
-  .slot-highlight { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: rgb(from var(--primary) r g b / .12); border: 2px solid var(--primary); }
+  .slot-highlight { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: color-mix(in srgb, var(--primary) 12%, transparent); border: 2px solid var(--primary); }
 
   /* menus, bottom sheets, dialogs, snackbar */
   .menu { background: var(--surface-container); border-radius: var(--corner-large); box-shadow: var(--elevation-level-2); padding: .25rem; display: flex; flex-direction: column; gap: .125rem; }
