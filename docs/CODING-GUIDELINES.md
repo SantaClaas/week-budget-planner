@@ -21,10 +21,19 @@ The behavior and the design are in `docs/SPEC.md`. The words for things are in i
 
 **Resolve clashes at the import.** Rust writes `storage::open`. TypeScript has no module paths at call sites, so the import puts the noun back:
 
-- A namespace import reads closest to Rust: `import * as jsonFile from "./json-file"`, then `jsonFile.read(file)`. The storage stores use this: `local.create()`, `memory.create()`, `planFile.parse(text)`.
-- A renamed import suits a single function: `import { open as openStorage } from "./storage"`.
+- A renamed import goes back to verbNoun: `import { open as openStorage } from "./storage"`. Not `storageOpen`: without Rust's `::` between them, "open" can read as an adjective instead of a verb.
+- A namespace import keeps the module name in front, like a Rust path: `import * as jsonFile from "./json-file"`, then `jsonFile.read(file)`. The storage stores use this: `local.create()`, `memory.create()`, `planFile.parse(text)`.
 
-Whether a prefix form like `storageOpen` reads better is still open.
+### Booleans
+
+**A predicate is a question.** Functions, variables and fields that hold a boolean start with `is` and, where it reads well, end on an adjective: `isFree`, `isOvernight`, `isStored`, `isDatabaseUsable`, `isRangeOverlapping`. Use `can` or `has` only when `is` would sound really awkward. Type guards read the same way: `isTheme(value)`.
+
+**Stored booleans are probably something else.** In data that is stored or sent (the database, file formats, messages), a boolean often hides a richer type ([That boolean should probably be something else](https://ntietz.com/blog/that-boolean-should-probably-be-something-else/), Nicole Tietz-Sokolskaya):
+
+- **A datetime**, when an action has to happen for the value to change and it only changes once: store when it happened (`confirmedAt`, null until then) instead of `isConfirmed`.
+- **An enum**, when the boolean says what kind something is or what state it's in, or when several booleans are mutually exclusive or change together: a `status` or `role` instead of `isFailed`, `isQueued` and `isAdmin`. Enums can grow new cases, and the compiler finds the places that need to handle them.
+
+Inside a function, a boolean for a condition is fine. Naming a long condition with one is often clearer, and it doesn't need anything more.
 
 ## Modules
 
