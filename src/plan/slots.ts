@@ -1,5 +1,5 @@
 import { DAY, SLOT, type Activity, type Block, type Plan } from "./types";
-import { rangesOverlap, weekStart } from "./week";
+import { rangesOverlap, calculateWeekStart } from "./week";
 
 /** Whether a block of `length` starting at `day`/`start` would overlap any existing block. */
 export function isFree(
@@ -9,14 +9,14 @@ export function isFree(
   length: number,
 ): boolean {
   const from = day * DAY + start;
-  return !blocks.some((block) => rangesOverlap(from, length, weekStart(block), block.length));
+  return !blocks.some((block) => rangesOverlap(from, length, calculateWeekStart(block), block.length));
 }
 
 /**
  * The earliest gap that fits `length`, scanning Monday to Sunday in slot steps within the day
  * hours. For per-day activities, days that don't have the activity yet come first.
  */
-export function firstFreeSlot(
+export function findFirstFreeSlot(
   plan: Pick<Plan, "blocks" | "dayStart" | "dayEnd">,
   activity: Activity,
   length: number,
@@ -44,7 +44,7 @@ export function firstFreeSlot(
  * down to the hour, in minutes. Only block starts count, so the second part of an overnight block
  * (which always begins at 00:00) never pins the view to midnight.
  */
-export function openingMinute(plan: Pick<Plan, "blocks" | "dayStart">): number {
+export function findOpeningMinute(plan: Pick<Plan, "blocks" | "dayStart">): number {
   let earliest = plan.dayStart * 60;
   for (const block of plan.blocks) earliest = Math.min(earliest, block.start);
   return Math.floor(earliest / 60) * 60;

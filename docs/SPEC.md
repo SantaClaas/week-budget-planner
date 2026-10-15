@@ -83,7 +83,7 @@ type Block = {
 };
 ```
 
-Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `target(activity) = activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes`. Placed: the sum of `length` over that activity's blocks. Left to place: `target − placed`. It can go negative, which means over budget.
+Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `calculateWeeklyBudget(activity) = activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes`. Placed: the sum of `length` over that activity's blocks. Left to place: `weekly budget − placed`. It can go negative, which means over budget.
 
 A block covers the week minutes `[day * 1440 + start, day * 1440 + start + length)`, taken modulo 10080 (one week), so a block that starts on Sunday evening continues on Monday. Placed, left to place, overlaps and lanes, the first free slot and the per-day totals all work on these week minutes. A day's total counts only the part of each block that falls on that day.
 
