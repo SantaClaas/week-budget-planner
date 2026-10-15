@@ -4,11 +4,11 @@
   "dayStart": 7,
   "dayEnd": 22,
   "activities": [
-    {"id": "stats", "name": "Statistics lecture", "hue": 255, "mode": "week", "mins": 180, "days": 5},
-    {"id": "linalg", "name": "Linear algebra", "hue": 305, "mode": "week", "mins": 270, "days": 5},
-    {"id": "study", "name": "Self-study", "hue": 198, "mode": "week", "mins": 480, "days": 5},
-    {"id": "work", "name": "Work", "hue": 78, "mode": "week", "mins": 720, "days": 5},
-    {"id": "gym", "name": "Gym", "hue": 152, "mode": "day", "mins": 90, "days": 3}
+    {"id": "stats", "name": "Statistics lecture", "hue": 255, "mode": "week", "mins": 180, "days": 5, "shape": "arrow"},
+    {"id": "linalg", "name": "Linear algebra", "hue": 305, "mode": "week", "mins": 270, "days": 5, "shape": "puffy"},
+    {"id": "study", "name": "Self-study", "hue": 198, "mode": "week", "mins": 480, "days": 5, "shape": "clover-8"},
+    {"id": "work", "name": "Work", "hue": 78, "mode": "week", "mins": 720, "days": 5, "shape": "square"},
+    {"id": "gym", "name": "Gym", "hue": 152, "mode": "day", "mins": 90, "days": 3, "shape": "arch"}
   ],
   "blocks": [
     {"id": "b1", "act": "stats", "day": 0, "start": 600, "dur": 90},
