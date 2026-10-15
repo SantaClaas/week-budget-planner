@@ -304,6 +304,31 @@ The design canvas made these choices without a Google source. Confirm each again
 
 Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 
+## Browser support
+
+This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Versions are from MDN's browser compat data.
+
+**With a fallback, or degrading on purpose:**
+
+| Feature | Supported from | Without it |
+| --- | --- | --- |
+| SQLite in OPFS (`createSyncAccessHandle`), Web Locks, BroadcastChannel, cross-origin isolation | Chrome 102, Firefox 111, Safari 15.4 | The lower storage levels (see Progressive enhancement). |
+| `<meta name="text-scale">` | Chrome 146 | Ignored. Browser text size and zoom still work. |
+| View Transitions | Chrome 111, Firefox 144, Safari 18 | Changes apply without the animation. |
+| `clip-path: shape()` for the wavy progress bar | Chrome 135, Firefox 148, Safari 18.4 | The bar stays flat. |
+| `forced-colors` rules, `forced-color-adjust`, `Mark` | Chrome, Firefox (Windows High Contrast) | Not needed where forced colors don't exist. |
+| Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
+
+**Without a fallback:**
+
+| Feature | Supported from | Without it | A fallback would need |
+| --- | --- | --- | --- |
+| `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Every color is invalid. | Each token defined twice, switched with `prefers-color-scheme`. |
+| `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Swatches are plain squares, so activities differ by color only. | The shapes also generated as SVG `<clipPath>`s with `objectBoundingBox` units, referenced by `url(#…)`. |
+| Anchor positioning for the add-block menu (planned) | Chrome 125, Firefox 147, Safari 26 | The menu can't be placed next to its slot. | Positioning the popover from script. Decide when building it. |
+
+Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>`, the Popover API and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4, and the app works, with square swatches, from Chrome 123, Firefox 121 or Safari 17.5.
+
 ## Ideas for later (not in the prototype)
 
 **Long-term direction, not in scope now:** the app may grow into a calendar app, with week planning by budget staying its core and what sets it apart. The likely order: finish the week planner, then export the week as an `.ics` file (one weekly repeating event per block, using block ids as stable event ids), then import other calendars as a read-only background layer, then per-week variants for irregular blocks. Full calendar features (dated events, invites, two-way sync) would come last, if ever. Don't build toward this yet, but avoid choices that block it, such as unstable block ids.
