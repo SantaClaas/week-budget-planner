@@ -45,6 +45,16 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 **No index files that only re-export.** Import submodules directly, like `../plan/week` or `../broadcast/service`. That works like importing a public submodule in Rust. An `index.ts` holds the module's own code, not a list of names from its submodules.
 
+### Vertical first
+
+**Split by feature before splitting by layer.** Splitting by noun tends to cut the code vertically, by feature (the week, activities, the budget), rather than horizontally, by layer (all the components, all the queries, all the helpers).
+
+Picture the features as pillars. Horizontal functionality, such as storage, broadcasting between tabs or formatting, runs through them like fibers threaded through the pillars, and the fibers can be adjusted to fit each one. The other way round, the layers are bars, and every feature has to be threaded through them. Code that many features' paths run through is hard to change and hard to delete, so it fails the package test.
+
+What stays solid, in the centre, are the features. The horizontal parts adjust to them, not the other way round: don't force a feature into the shape of an existing layer *auf Gedeih und Verderb* (come what may).
+
+This doesn't mean avoiding shared code. Sometimes a horizontal connection can't be avoided, or it's simply where the code leads, like the one database every tab talks to. Then it's a deliberate piece in its own module, shaped by the features that use it.
+
 ### Coupling
 
 **Export as little as possible.** TypeScript can't enforce visibility the way Rust modules do, so it's a habit, not a rule the compiler checks. A name that's only used inside its file stays unexported. Types that only describe another export's signature usually don't need exporting either.
