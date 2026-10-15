@@ -16,8 +16,8 @@
    and a utility (a type role, an activity color) always beats a component.
    - reset: removes browser defaults we don't want. Element selectors only, no `*`.
    - base: the document's own look: font, colors, links.
-   - theme: design tokens as custom properties (m3-shapes.css goes here too:
-     @import url("m3-shapes.css") layer(theme);).
+   - theme: design tokens as custom properties. m3-shapes.css puts its shapes in this layer
+     itself, so import it plainly after this file.
    - components: Material components and the app's own (week grid, blocks, pickers).
    - utilities: single-purpose classes that combine with any component. */
 @layer reset, base, theme, components, utilities;
