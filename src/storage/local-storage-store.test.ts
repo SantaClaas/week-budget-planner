@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "../plan/sanitize";
-import { localStorageStore, memoryStore, PLAN_KEY, THEME_KEY } from "./simple-stores";
+import { localStorageStore, PLAN_KEY, THEME_KEY } from "./local-storage-store";
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();
@@ -81,17 +81,5 @@ describe("localStorage store", () => {
     stop();
     target.dispatchStorage(PLAN_KEY);
     expect(calls).toBe(1);
-  });
-});
-
-describe("memory store", () => {
-  it("keeps the plan only in memory", async () => {
-    const store = memoryStore();
-    expect(store.level).toBe("none");
-    expect(await store.load()).toMatchObject({ stored: false });
-    await store.save(undefined, example());
-    expect((await store.load()).plan).toEqual(example());
-    await store.wipe();
-    expect(await store.load()).toMatchObject({ stored: false });
   });
 });

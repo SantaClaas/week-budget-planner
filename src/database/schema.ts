@@ -1,5 +1,7 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { THEMES } from "../theme";
+
 /** Activities in list order (`position`). Times and budgets are integer minutes. */
 export const activities = sqliteTable("activities", {
   id: text().primaryKey(),
@@ -34,5 +36,5 @@ export const settings = sqliteTable("settings", {
   dayStart: integer("day_start").notNull(),
   dayEnd: integer("day_end").notNull(),
   example: integer({ mode: "boolean" }).notNull(),
-  theme: text({ enum: ["system", "light", "dark"] }).notNull().default("system"),
+  theme: text({ enum: THEMES }).notNull().default("system"),
 });

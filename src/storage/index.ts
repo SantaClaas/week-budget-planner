@@ -1,8 +1,11 @@
+import { localStorageStore, usableLocalStorage } from "./local-storage-store";
+import { memoryStore } from "./memory-store";
 import type { PlanStore } from "./plan-store";
-import { localStorageStore, memoryStore, usableLocalStorage } from "./simple-stores";
+
+export type { PlanStore, StorageLevel } from "./plan-store";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
-export function canUseDatabase(): boolean {
+function canUseDatabase(): boolean {
   return (
     globalThis.crossOriginIsolated === true &&
     typeof navigator !== "undefined" &&
