@@ -47,7 +47,11 @@ Code adapted from another project, such as flashcut's tab leader and broadcast s
 
 **Wait for three.** Write the specific code first. Pull out a shared function, module or abstraction once the same thing shows up about three times, not when it might show up. This is a guideline with exceptions: a file that has grown too big to read gets split by meaning before anything repeats.
 
-Casey Muratori calls this approach "semantic compression": write the code that does the job, and compress it once a pattern repeats. He compresses at the second occurrence. This project usually waits for the third.
+**Compress by meaning, not by text.** The aim is less duplicated meaning: code that does the same thing goes through the same path, and code that is unique stays plain and next to where it's used. Shorter text often follows, but it isn't the goal.
+
+**Let structure come out of the code.** Modules, types and grouped functions are what you get after compressing real code, not a plan drawn up before it. When a noun keeps coming back with different verbs, that noun becomes a module, and its functions drop the noun. This is how the names end up matching the language of the problem.
+
+This is close to what Casey Muratori calls [semantic compression](https://caseymuratori.com/blog_0015): "make your code usable before you try to make it reusable". You type out exactly what each case needs, get it working, and pull out the shared part once it repeats. In his example, the variables and calls a UI panel kept repeating became a `Panel_Layout` struct with `row()`, `push_button()` and `complete()`. Its methods don't repeat "layout", just as this project's module functions don't repeat their module's noun. One difference: he pulls code out at the second occurrence, and this project usually waits for the third.
 
 ## CSS
 
