@@ -6,7 +6,7 @@ const BROADCAST_NAME = "week-budget-planner";
  * App-level change events so other tabs reload the plan. The posting tab updates itself directly
  * (a BroadcastChannel does not deliver messages back to the poster).
  */
-type BroadcastMessage = { type: "Plan changed" } | { type: "Theme changed" };
+type BroadcastMessage = { type: "Plan changed" };
 
 let sender: BroadcastChannel | undefined;
 

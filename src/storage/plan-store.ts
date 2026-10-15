@@ -1,5 +1,4 @@
 import type { Plan } from "../plan/types";
-import type { Theme } from "../theme";
 
 /**
  * How much the browser lets the app save (see "Progressive enhancement" in the spec):
@@ -17,14 +16,12 @@ export interface PlanStore {
   load(): Promise<{ plan: Plan; isStored: boolean }>;
   /** Saves one user action, `before` being what is stored now. */
   save(before: Plan | undefined, after: Plan): Promise<void>;
-  loadTheme(): Promise<Theme>;
-  saveTheme(theme: Theme): Promise<void>;
   /** The `.db` file at the full level, the `.json` plan file otherwise. */
   exportFile(): Promise<ExportedFile>;
   /** Replaces the stored plan with an imported `.db` (full level only) or `.json` file. */
   importFile(file: File): Promise<void>;
   /** Deletes everything this level stored. */
   wipe(): Promise<void>;
-  /** Calls back when another tab changed the plan or the theme. Returns an unsubscribe function. */
+  /** Calls back when another tab changed the plan. Returns an unsubscribe function. */
   onExternalChange(callback: () => void): () => void;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createExampleWeek } from "../plan/example";
 import * as local from "./local";
-import { PLAN_KEY, THEME_KEY } from "./local";
+import { PLAN_KEY } from "./local";
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();
@@ -47,15 +47,6 @@ describe("localStorage store", () => {
     expect(await store.load()).toMatchObject({ isStored: false });
     await store.save(undefined, example());
     expect(await local.create(storage, events()).load()).toEqual({ plan: example(), isStored: true });
-  });
-
-  it("stores the theme", async () => {
-    const storage = new MemoryStorage();
-    const store = local.create(storage, events());
-    expect(await store.loadTheme()).toBe("system");
-    await store.saveTheme("dark");
-    expect(storage.getItem(THEME_KEY)).toBe("dark");
-    expect(await store.loadTheme()).toBe("dark");
   });
 
   it("exports and imports .json and refuses .db files", async () => {
