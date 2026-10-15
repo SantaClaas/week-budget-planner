@@ -1,4 +1,4 @@
-import { localDate, parsePlan, serializePlan } from "../lib/plan-file";
+import { localDate, parsePlan, serializePlan } from "../plan/file";
 import type { Plan } from "../plan/types";
 import { isPlanJson, type ExportedFile, type PlanStore, type Theme } from "./plan-store";
 
