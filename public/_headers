@@ -1,12 +1,12 @@
 # Cross-origin isolation is required for SharedArrayBuffer (@tursodatabase/database-wasm).
-# Read by Netlify and Cloudflare Pages. GitHub Pages ignores this file; there public/sw.js adds the
+# Read by Netlify and Cloudflare Pages. GitHub Pages ignores this file; there public/service-worker.js adds the
 # headers instead.
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
 
 # The service worker must never be served stale, or fixes take an extra visit to arrive.
-/week-budget-planner/sw.js
+/week-budget-planner/service-worker.js
   Cache-Control: no-cache
 
 # Hashed build assets are immutable.
