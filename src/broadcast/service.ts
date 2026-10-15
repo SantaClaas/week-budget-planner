@@ -11,7 +11,7 @@
  */
 
 /** Every exposed method must be async — the channel makes everything async anyway. */
-export type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
+type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
 
 type ServiceMessage =
   | { scope: string; kind: "call"; id: string; property: string; parameters: unknown[] }

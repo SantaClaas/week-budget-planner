@@ -2,12 +2,12 @@
 // BroadcastChannel RPC, serving Drizzle's sqlite-proxy calls instead of plain row objects.
 import { connect } from "@tursodatabase/database-wasm/vite";
 
-import { consume, provide, ProviderChangedError } from "../broadcast/service";
+import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service";
 import { localQueryService, type QueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
 import { runMigrations } from "./migrations";
 
-export const DATABASE_FILE = "week-budget-planner.db";
+const DATABASE_FILE = "week-budget-planner.db";
 const LOCK_NAME = "week-budget-planner-database-leader";
 const CHANNEL_NAME = "week-budget-planner-database";
 const SCOPE = "database";
@@ -18,7 +18,7 @@ const SCOPE = "database";
  * provides `DatabaseService` over a BroadcastChannel; every other tab proxies its calls to the leader.
  * When the leader tab closes, the lock is released and a surviving tab is promoted seamlessly.
  */
-export type DatabaseService = QueryService & {
+type DatabaseService = QueryService & {
   /** Checkpoints the WAL, briefly closes the database, and returns the raw SQLite file bytes. */
   exportFile(): Promise<Uint8Array>;
   /** Replaces the database file and reloads every tab. Destructive. */
@@ -28,7 +28,7 @@ export type DatabaseService = QueryService & {
 };
 
 let channel: BroadcastChannel | undefined;
-let consumer: ReturnType<typeof consume<DatabaseService>> | undefined;
+let consumer: Consumer<DatabaseService> | undefined;
 let isLeader = false;
 let localDatabase: Promise<TursoConnection> | undefined;
 let electionStarted = false;
@@ -99,7 +99,7 @@ const localService: DatabaseService = {
   },
 };
 
-function setUp(): { channel: BroadcastChannel; consumer: ReturnType<typeof consume<DatabaseService>> } {
+function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseService> } {
   if (!channel || !consumer) {
     channel = new BroadcastChannel(CHANNEL_NAME);
     consumer = consume<DatabaseService>(channel, SCOPE);
