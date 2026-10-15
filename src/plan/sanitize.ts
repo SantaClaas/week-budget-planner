@@ -23,6 +23,13 @@ function readInteger(value: unknown, low: number, high: number, fallback: number
   return Number.isFinite(number) ? clamp(number, low, high) : fallback;
 }
 
+/** A valid date as a normalized ISO 8601 time in UTC, or null. */
+function readTime(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toISOString() : null;
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -77,6 +84,6 @@ export function sanitizePlan(input: unknown): Plan {
 
   plan.dayStart = readInteger(input["dayStart"], 0, 12, 7);
   plan.dayEnd = readInteger(input["dayEnd"], 13, 24, 22);
-  plan.example = input["example"] === true;
+  plan.exampleLoadedAt = readTime(input["exampleLoadedAt"]);
   return plan;
 }
