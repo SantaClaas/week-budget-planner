@@ -42,7 +42,7 @@ export function findPartsOnDay(blocks: readonly Block[], day: number): BlockPart
 }
 
 /** Whether two week-minute ranges overlap on the wrapping week. */
-export function rangesOverlap(
+export function isRangeOverlapping(
   startA: number,
   lengthA: number,
   startB: number,
@@ -58,8 +58,8 @@ export function rangesOverlap(
   return false;
 }
 
-export const blocksOverlap = (first: Block, second: Block): boolean =>
-  rangesOverlap(calculateWeekStart(first), first.length, calculateWeekStart(second), second.length);
+export const isBlockOverlapping = (first: Block, second: Block): boolean =>
+  isRangeOverlapping(calculateWeekStart(first), first.length, calculateWeekStart(second), second.length);
 
 /** Minutes of each day (Monday first) covered by blocks, counting overnight parts on their own day. */
 export function sumDayTotals(blocks: readonly Block[]): number[] {

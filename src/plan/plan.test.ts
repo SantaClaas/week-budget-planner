@@ -11,7 +11,7 @@ import { snapDown, formatClock, formatLength, formatShort, snap } from "./time";
 import { DEFAULT_SHAPES, SHAPES, type Activity, type Block } from "./types";
 import {
   splitIntoParts,
-  blocksOverlap,
+  isBlockOverlapping,
   sumDayTotals,
   describeTime,
   convertFromWeekMinutes,
@@ -118,8 +118,8 @@ describe("week", () => {
     const sunday = block({ id: "s", day: 6, start: 1380, length: 120 });
     const monday = block({ id: "m", day: 0, start: 30, length: 60 });
     const later = block({ id: "l", day: 0, start: 60, length: 60 });
-    expect(blocksOverlap(sunday, monday)).toBe(true);
-    expect(blocksOverlap(sunday, later)).toBe(false);
+    expect(isBlockOverlapping(sunday, monday)).toBe(true);
+    expect(isBlockOverlapping(sunday, later)).toBe(false);
   });
 
   it("moves keeping the length, overflowing into the next day", () => {
