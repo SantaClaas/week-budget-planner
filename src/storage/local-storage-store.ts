@@ -1,26 +1,11 @@
-import { localDate, parsePlan, serializePlan } from "../plan/file";
+import { parsePlan, serializePlan } from "../plan/file";
 import type { Plan } from "../plan/types";
-import { isPlanJson, type ExportedFile, type PlanStore, type Theme } from "./plan-store";
+import { isTheme } from "../theme";
+import { exportJsonFile, importJsonFile } from "./json-file";
+import type { PlanStore } from "./plan-store";
 
 export const PLAN_KEY = "week-budget-planner.plan";
 export const THEME_KEY = "week-budget-planner.theme";
-
-const isTheme = (value: unknown): value is Theme =>
-  value === "system" || value === "light" || value === "dark";
-
-function exportJson(plan: Plan): ExportedFile {
-  return {
-    blob: new Blob([serializePlan(plan)], { type: "application/json" }),
-    filename: `week-budget-planner-${localDate()}.json`,
-  };
-}
-
-async function readImport(file: File): Promise<Plan> {
-  if (!isPlanJson(file)) {
-    throw new Error("Only a .json plan file can be imported here, because this browser can't open the database.");
-  }
-  return parsePlan(await file.text());
-}
 
 /**
  * The limited level: the plan as JSON in localStorage (the stored format of
@@ -49,10 +34,10 @@ export function localStorageStore(storage: Storage, events: Pick<Window, "addEve
     },
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
-      return exportJson(text === null ? (current ?? parsePlan("null")) : parsePlan(text));
+      return exportJsonFile(text === null ? (current ?? parsePlan("null")) : parsePlan(text));
     },
     async importFile(file) {
-      const plan = await readImport(file);
+      const plan = await importJsonFile(file);
       storage.setItem(PLAN_KEY, serializePlan(plan));
       current = plan;
     },
@@ -67,40 +52,6 @@ export function localStorageStore(storage: Storage, events: Pick<Window, "addEve
       };
       events.addEventListener("storage", listener as EventListener);
       return () => events.removeEventListener("storage", listener as EventListener);
-    },
-  };
-}
-
-/** The lowest level: the plan lives in memory only and is lost when the tab closes. */
-export function memoryStore(): PlanStore {
-  let plan: Plan | undefined;
-  let theme: Theme = "system";
-  return {
-    level: "none",
-    async load() {
-      return { plan: plan ?? parsePlan("null"), stored: plan !== undefined };
-    },
-    async save(_before, after) {
-      plan = after;
-    },
-    async loadTheme() {
-      return theme;
-    },
-    async saveTheme(next) {
-      theme = next;
-    },
-    async exportFile() {
-      return exportJson(plan ?? parsePlan("null"));
-    },
-    async importFile(file) {
-      plan = await readImport(file);
-    },
-    async wipe() {
-      plan = undefined;
-      theme = "system";
-    },
-    onExternalChange() {
-      return () => undefined;
     },
   };
 }

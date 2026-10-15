@@ -2,7 +2,8 @@ import { databaseService, getDatabase } from "../database/client";
 import { loadPlan, loadTheme, savePlan, saveTheme } from "../database/plan-repository";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast";
 import { localDate, parsePlan } from "../plan/file";
-import { isPlanJson, type PlanStore } from "./plan-store";
+import { isPlanJson } from "./json-file";
+import type { PlanStore } from "./plan-store";
 
 /** The full level: the SQLite database in OPFS, shared by every tab through the leader. */
 export function databaseStore(): PlanStore {

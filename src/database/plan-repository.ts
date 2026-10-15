@@ -3,7 +3,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 
 import { sanitizePlan } from "../plan/sanitize";
 import type { Activity, Block, Plan } from "../plan/types";
-import type { Theme } from "../storage/plan-store";
+import type { Theme } from "../theme";
 import type { Database } from "./drizzle";
 import { activities, blocks, settings } from "./schema";
 

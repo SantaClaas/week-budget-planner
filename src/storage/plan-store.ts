@@ -1,6 +1,5 @@
 import type { Plan } from "../plan/types";
-
-export type Theme = "system" | "light" | "dark";
+import type { Theme } from "../theme";
 
 /**
  * How much the browser lets the app save (see "Progressive enhancement" in the spec):
@@ -29,6 +28,3 @@ export interface PlanStore {
   /** Calls back when another tab changed the plan or the theme. Returns an unsubscribe function. */
   onExternalChange(callback: () => void): () => void;
 }
-
-export const isPlanJson = (file: File): boolean =>
-  file.name.toLowerCase().endsWith(".json") || file.type === "application/json";

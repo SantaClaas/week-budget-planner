@@ -1,19 +1,19 @@
-export type SqlValue = string | number | bigint | null | Uint8Array;
+type SqlValue = string | number | bigint | null | Uint8Array;
 
 /**
  * One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. `params` is
  * Drizzle's name, so it stays abbreviated here.
  */
-export type BatchStatement = { sql: string; params: SqlValue[]; method: QueryMethod };
+type BatchStatement = { sql: string; params: SqlValue[]; method: QueryMethod };
 
 /** Drizzle's sqlite-proxy execute methods. */
-export type QueryMethod = "run" | "all" | "get" | "values";
+type QueryMethod = "run" | "all" | "get" | "values";
 
 /**
  * What Drizzle's sqlite-proxy expects back: rows as arrays of column values in column order. For
  * "get" it is one row (or undefined), otherwise a list of rows; "run" returns no rows.
  */
-export type QueryResult = { rows: unknown[] };
+type QueryResult = { rows: unknown[] };
 
 /**
  * The SQL surface every tab uses. The leader tab runs it on its local database; other tabs reach
@@ -33,7 +33,7 @@ export interface TursoConnection {
   close(): Promise<void>;
 }
 
-export interface TursoStatement {
+interface TursoStatement {
   raw(raw?: boolean): this;
   run(...parameters: SqlValue[]): Promise<unknown>;
   get(...parameters: SqlValue[]): Promise<unknown>;
