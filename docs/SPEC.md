@@ -18,10 +18,10 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | --- | --- | --- |
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | Code: `Plan` |
 | **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color, a shape and a budget. | Code: `Activity` |
-| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `mins`, `days` |
+| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes`, `days` |
 | **Block** | One piece of an activity on the week: a day, a start time and a length. You add, move, resize and remove blocks. | Was "tile" in the prototype. Code: `Block` |
 | **Slot** | A 15-minute cell on the week. An empty slot has no block. Blocks start and end on slots. | Everything snaps to 15 min |
-| **Length** | How long a block is. | Code: `dur` |
+| **Length** | How long a block is, in minutes. | Code: `length` |
 | **Overnight block** | A block that runs past midnight into the next day, for example a night shift from Tuesday 22:00 to Wednesday 02:00. It is one block, drawn in two parts. Sunday night runs into Monday morning. | |
 | **Default length** | The length a new block gets: the per-day budget for per-day activities, otherwise 1 h 30 min, and never more than what is left. | |
 | **Placed** | The total length of an activity's blocks. | |
@@ -47,6 +47,7 @@ These were decided after the prototype and override it:
 - **Activities have a shape as well as a color**, picked freely and independently, with distinct defaults (see Design). The shape replaces the prototype's vertical color bar and also shows small on each block.
 - **Phones use a navigation bar** with Week, Activities and Settings instead of stacking the panes.
 - **Settings is a page**, holding the theme choice and the data actions (export, import, delete). The theme choice (System, Light, Dark) is new.
+- **Names are spelled out** in the stored format and the database: `version` (was `v`), `budgetMinutes` (was `mins`), `activityId` (was `act`) and `length` (was `dur`). Nothing was stored in the old format outside the prototype, so there is no conversion.
 - **The new-activity form** is behind a "New activity" button once at least one activity exists. In the empty state it is shown open.
 
 ## Data model
@@ -55,7 +56,7 @@ One plan document per user. The stored shape is the same as `examples/example-we
 
 ```ts
 type Plan = {
-  v: 1;
+  version: 1;
   activities: Activity[];
   blocks: Block[];        // the blocks on the week
   dayStart: number;       // first of the day hours, 0..12 (default 7)
@@ -65,28 +66,28 @@ type Plan = {
 
 type Activity = {
   id: string;
-  name: string;           // max 60 chars
+  name: string;           // at most 60 characters
   hue: number;            // one of the 8 palette hues, see Design
   shape: string;          // one of the 35 Material shape names, for example "heart", see Design
   mode: "week" | "day";   // how the budget is counted
-  mins: number;           // budget in minutes, per week or per day; multiple of 15, min 15
+  budgetMinutes: number;  // budget in minutes, per week or per day; multiple of 15, at least 15
   days: number;           // 1..7, used only when mode === "day"
 };
 
 type Block = {
   id: string;
-  act: string;            // Activity.id
+  activityId: string;     // Activity.id
   day: number;            // 0 = Monday … 6 = Sunday
   start: number;          // minutes from midnight, multiple of 15, 0..1425
-  dur: number;            // length in minutes, multiple of 15, 15..1440; start + dur may pass 1440 (overnight block)
+  length: number;         // length in minutes, multiple of 15, 15..1440; start + length may pass 1440 (overnight block)
 };
 ```
 
-Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `target(a) = a.mode === "day" ? a.mins * a.days : a.mins`. Placed: the sum of `dur` over that activity's blocks. Left to place: `target − placed`. It can go negative, which means over budget.
+Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `target(activity) = activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes`. Placed: the sum of `length` over that activity's blocks. Left to place: `target − placed`. It can go negative, which means over budget.
 
-A block covers the week minutes `[day * 1440 + start, day * 1440 + start + dur)`, taken modulo 10080 (one week), so a block that starts on Sunday evening continues on Monday. Placed, left to place, overlaps and lanes, the first free slot and the per-day totals all work on these week minutes. A day's total counts only the part of each block that falls on that day.
+A block covers the week minutes `[day * 1440 + start, day * 1440 + start + length)`, taken modulo 10080 (one week), so a block that starts on Sunday evening continues on Monday. Placed, left to place, overlaps and lanes, the first free slot and the per-day totals all work on these week minutes. A day's total counts only the part of each block that falls on that day.
 
-Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `dur` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, and de-duplicate ids. The prototype's `sanitize()` is the reference.
+Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, and de-duplicate ids. The prototype's `sanitize()` is the reference.
 
 The theme choice is a device preference, not part of the plan: store it in the `settings` table (see Persistence) as `system`, `light` or `dark`, default `system`.
 
@@ -148,7 +149,7 @@ All of these must work with a mouse, touch and the keyboard.
   - Choosing an activity adds the block, closes the chooser and shows a snackbar: "Added Gym · Tue 10:00–11:30" with Undo.
   - On touch, a tap on an empty slot must not fire while the user scrolls. Only a tap without movement opens the chooser.
 - **First free slot:** scan the days in order, in 15-minute steps within the day hours, for a gap of the default length. For per-day activities, try days that don't have the activity yet first. If nothing fits, show a snackbar ("No free 1 h 30 min slot between 07:00 and 22:00.").
-- **Default length:** for per-day activities it's `mins`. For weekly ones it's 90 minutes (one lecture slot). Cap it at the remaining budget when some is left, and so it ends by the end of the day hours when it starts inside them. The minimum is 15.
+- **Default length:** for per-day activities it's `budgetMinutes`. For weekly ones it's 90 minutes (one lecture slot). Cap it at the remaining budget when some is left, and so it ends by the end of the day hours when it starts inside them. The minimum is 15.
 
 **Editing blocks**
 - **Move:** drag the block body, which can cross days. Keep the grab offset so the block doesn't jump. Snap to 15.
@@ -197,8 +198,8 @@ In the prototype, the plan lived in the claude.ai artifact database. That API ex
 
 Map the data model above roughly like this. Adjust it if Drizzle suggests better, but keep minutes as integers.
 
-- `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `mins` int, `days` int, `shape` text, `position` int (list order), `created_at` text
-- `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `dur` int
+- `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `budget_minutes` int, `days` int, `shape` text, `position` int (list order), `created_at` text
+- `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `length` int
 - `settings`: a single row with `day_start`, `day_end`, `example` (boolean) and `theme` (`system`/`light`/`dark`)
 
 ### Writes and undo
