@@ -2,7 +2,7 @@ import { localDate, parsePlan, serializePlan } from "../lib/plan-file";
 import type { Plan } from "../plan/types";
 import { isPlanJson, type ExportedFile, type PlanStore, type Theme } from "./plan-store";
 
-export const PLAN_KEY = "week-budget-planner.v1";
+export const PLAN_KEY = "week-budget-planner.plan";
 export const THEME_KEY = "week-budget-planner.theme";
 
 const isTheme = (value: unknown): value is Theme =>

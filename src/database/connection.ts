@@ -1,6 +1,9 @@
 export type SqlValue = string | number | bigint | null | Uint8Array;
 
-/** One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. */
+/**
+ * One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. `params` is
+ * Drizzle's name, so it stays abbreviated here.
+ */
 export type BatchStatement = { sql: string; params: SqlValue[]; method: QueryMethod };
 
 /** Drizzle's sqlite-proxy execute methods. */
@@ -18,7 +21,7 @@ export type QueryResult = { rows: unknown[] };
  * structured-cloneable.
  */
 export type QueryService = {
-  query(sql: string, params: SqlValue[], method: QueryMethod): Promise<QueryResult>;
+  query(sql: string, parameters: SqlValue[], method: QueryMethod): Promise<QueryResult>;
   /** Runs every statement in one transaction, rolling back if any fails. */
   batch(statements: BatchStatement[]): Promise<QueryResult[]>;
 };
@@ -32,43 +35,43 @@ export interface TursoConnection {
 
 export interface TursoStatement {
   raw(raw?: boolean): this;
-  run(...params: SqlValue[]): Promise<unknown>;
-  get(...params: SqlValue[]): Promise<unknown>;
-  all(...params: SqlValue[]): Promise<unknown[]>;
+  run(...parameters: SqlValue[]): Promise<unknown>;
+  get(...parameters: SqlValue[]): Promise<unknown>;
+  all(...parameters: SqlValue[]): Promise<unknown[]>;
 }
 
 async function execute(
   connection: TursoConnection,
   sql: string,
-  params: SqlValue[],
+  parameters: SqlValue[],
   method: QueryMethod,
 ): Promise<QueryResult> {
   const statement = await connection.prepare(sql);
   if (method === "run") {
-    await statement.run(...params);
+    await statement.run(...parameters);
     return { rows: [] };
   }
   statement.raw(true);
   if (method === "get") {
     // One row, or undefined when nothing matched; Drizzle handles both.
-    return { rows: (await statement.get(...params)) as unknown[] };
+    return { rows: (await statement.get(...parameters)) as unknown[] };
   }
-  return { rows: await statement.all(...params) };
+  return { rows: await statement.all(...parameters) };
 }
 
 /** The {@link QueryService} for a local connection: the leader tab's, or a test database. */
 export function localQueryService(getConnection: () => Promise<TursoConnection>): QueryService {
   return {
-    async query(sql, params, method) {
-      return execute(await getConnection(), sql, params, method);
+    async query(sql, parameters, method) {
+      return execute(await getConnection(), sql, parameters, method);
     },
     async batch(statements) {
       const connection = await getConnection();
       await connection.exec("BEGIN");
       try {
         const results: QueryResult[] = [];
-        for (const { sql, params, method } of statements) {
-          results.push(await execute(connection, sql, params, method));
+        for (const { sql, params: parameters, method } of statements) {
+          results.push(await execute(connection, sql, parameters, method));
         }
         await connection.exec("COMMIT");
         return results;
