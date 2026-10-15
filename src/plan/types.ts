@@ -47,8 +47,11 @@ export type Plan = {
   dayStart: number;
   /** End of the day hours, 13 to 24. */
   dayEnd: number;
-  /** True while the example week is loaded and not yet kept or replaced. */
-  example: boolean;
+  /**
+   * When the example week was loaded, as an ISO 8601 time in UTC. Null when there is no example
+   * week: it was never loaded, or it was kept or replaced.
+   */
+  exampleLoadedAt: string | null;
 };
 
 /** The eight activity colors, keyed by the stored hue value. */
@@ -151,5 +154,5 @@ export const DAY_NAMES_LONG = [
 ] as const;
 
 export function createEmptyPlan(): Plan {
-  return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, example: false };
+  return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, exampleLoadedAt: null };
 }

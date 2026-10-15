@@ -249,7 +249,7 @@ describe("sanitize", () => {
     const plan = sanitizePlan(exampleWeek);
     expect(plan.activities).toEqual(exampleWeek.activities);
     expect(plan.blocks).toEqual(exampleWeek.blocks);
-    expect(plan.example).toBe(true);
+    expect(plan.exampleLoadedAt).toBeNull();
   });
 
   it("clamps, snaps, de-duplicates and drops orphaned blocks", () => {
@@ -265,7 +265,7 @@ describe("sanitize", () => {
       ],
       dayStart: 20,
       dayEnd: 3,
-      example: "yes",
+      exampleLoadedAt: "yesterday",
     });
     const [first, second] = plan.activities;
     expect(first).toMatchObject({ id: "x", name: "Untitled", mode: "day", budgetMinutes: 1440, days: 7 });
@@ -276,7 +276,13 @@ describe("sanitize", () => {
     expect(plan.blocks[0]).toMatchObject({ day: 6, start: 1425, length: 1440 });
     expect(plan.blocks[1]).toMatchObject({ day: 2, start: 600, length: 45 });
     expect(plan.blocks[1]!.id).not.toBe("1");
-    expect(plan).toMatchObject({ dayStart: 12, dayEnd: 13, example: false });
+    expect(plan).toMatchObject({ dayStart: 12, dayEnd: 13, exampleLoadedAt: null });
+  });
+
+  it("keeps a valid example time, normalized to UTC", () => {
+    expect(sanitizePlan({ exampleLoadedAt: "2026-10-15T22:30:00+02:00" }).exampleLoadedAt).toBe(
+      "2026-10-15T20:30:00.000Z",
+    );
   });
 
   it("returns an empty plan for anything that isn't a plan", () => {

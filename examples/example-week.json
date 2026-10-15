@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "example": true,
+  "exampleLoadedAt": null,
   "dayStart": 7,
   "dayEnd": 22,
   "activities": [
