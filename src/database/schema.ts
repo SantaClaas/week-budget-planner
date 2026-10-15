@@ -35,6 +35,7 @@ export const settings = sqliteTable("settings", {
   id: integer().primaryKey(),
   dayStart: integer("day_start").notNull(),
   dayEnd: integer("day_end").notNull(),
-  example: integer({ mode: "boolean" }).notNull(),
+  /** When the example week was loaded (ISO 8601, UTC), null when there is none. */
+  exampleLoadedAt: text("example_loaded_at"),
   theme: text({ enum: THEMES }).notNull().default("system"),
 });
