@@ -5,16 +5,16 @@ import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "../plan/sanitize";
 import type { Plan } from "../plan/types";
 import { localQueryService, type TursoConnection } from "./connection";
-import { createDb, type Db } from "./drizzle";
+import { createDatabase, type Database } from "./drizzle";
 import { MIGRATIONS, runMigrations } from "./migrations";
 import { loadPlan, loadTheme, planStatements, savePlan, saveTheme } from "./plan-repository";
 import { blocks as blocksTable } from "./schema";
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
-async function openTestDb(): Promise<{ db: Db; connection: TursoConnection }> {
+async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {
   const connection = (await connect(":memory:")) as unknown as TursoConnection;
   await runMigrations(connection);
-  return { db: createDb(localQueryService(async () => connection)), connection };
+  return { database: createDatabase(localQueryService(async () => connection)), connection };
 }
 
 const example = (): Plan => sanitizePlan(exampleWeek);
@@ -34,85 +34,85 @@ describe("migrations", () => {
 
 describe("plan repository", () => {
   it("reports a fresh database as not stored", async () => {
-    const { db } = await openTestDb();
-    const { plan, stored } = await loadPlan(db);
+    const { database } = await openTestDatabase();
+    const { plan, stored } = await loadPlan(database);
     expect(stored).toBe(false);
     expect(plan.activities).toEqual([]);
     expect(plan.dayStart).toBe(7);
   });
 
   it("round-trips a plan", async () => {
-    const { db } = await openTestDb();
-    await savePlan(db, undefined, example());
-    const { plan, stored } = await loadPlan(db);
+    const { database } = await openTestDatabase();
+    await savePlan(database, undefined, example());
+    const { plan, stored } = await loadPlan(database);
     expect(stored).toBe(true);
     expect(plan).toEqual(example());
   });
 
   it("writes only what changed", async () => {
-    const { db } = await openTestDb();
+    const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(db, undefined, before);
+    await savePlan(database, undefined, before);
     const after: Plan = {
       ...before,
-      blocks: before.blocks.map((block) => (block.id === "b1" ? { ...block, start: 660 } : block)),
+      blocks: before.blocks.map((block) => (block.id === "block-1" ? { ...block, start: 660 } : block)),
     };
-    expect(planStatements(db, before, after)).toHaveLength(1);
-    expect(planStatements(db, before, before)).toHaveLength(0);
-    await savePlan(db, before, after);
-    expect((await loadPlan(db)).plan).toEqual(after);
+    expect(planStatements(database, before, after)).toHaveLength(1);
+    expect(planStatements(database, before, before)).toHaveLength(0);
+    await savePlan(database, before, after);
+    expect((await loadPlan(database)).plan).toEqual(after);
   });
 
   it("deletes an activity together with its blocks", async () => {
-    const { db } = await openTestDb();
+    const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(db, undefined, before);
+    await savePlan(database, undefined, before);
     const after: Plan = {
       ...before,
       activities: before.activities.filter((activity) => activity.id !== "gym"),
-      blocks: before.blocks.filter((block) => block.act !== "gym"),
+      blocks: before.blocks.filter((block) => block.activityId !== "gym"),
     };
-    await savePlan(db, before, after);
-    const { plan } = await loadPlan(db);
+    await savePlan(database, before, after);
+    const { plan } = await loadPlan(database);
     expect(plan.activities.map((activity) => activity.id)).not.toContain("gym");
-    expect(plan.blocks.some((block) => block.act === "gym")).toBe(false);
+    expect(plan.blocks.some((block) => block.activityId === "gym")).toBe(false);
   });
 
   it("keeps the list order when activities move", async () => {
-    const { db } = await openTestDb();
+    const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(db, undefined, before);
+    await savePlan(database, undefined, before);
     const after: Plan = { ...before, activities: [...before.activities].reverse() };
-    await savePlan(db, before, after);
-    expect((await loadPlan(db)).plan.activities.map((activity) => activity.id)).toEqual(
+    await savePlan(database, before, after);
+    expect((await loadPlan(database)).plan.activities.map((activity) => activity.id)).toEqual(
       after.activities.map((activity) => activity.id),
     );
   });
 
   it("rolls the whole action back when one statement fails", async () => {
-    const { db } = await openTestDb();
+    const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(db, undefined, before);
+    await savePlan(database, undefined, before);
     const after: Plan = { ...before, dayStart: 6 };
-    const [settingsUpdate] = planStatements(db, before, after);
+    const [settingsUpdate] = planStatements(database, before, after);
     // A duplicate primary key makes the second statement fail after the first one ran.
-    const duplicate = db.insert(blocksTable).values({
-      id: "b1",
+    const duplicate = database.insert(blocksTable).values({
+      id: "block-1",
       activityId: "stats",
       day: 0,
       start: 0,
-      dur: 15,
+      length: 15,
     });
-    await expect(db.batch([settingsUpdate!, duplicate])).rejects.toThrow();
-    expect((await loadPlan(db)).plan.dayStart).toBe(7);
+    await expect(database.batch([settingsUpdate!, duplicate])).rejects.toThrow();
+    expect((await loadPlan(database)).plan.dayStart).toBe(7);
   });
 
   it("stores the theme without touching the plan", async () => {
-    const { db } = await openTestDb();
-    expect(await loadTheme(db)).toBe("system");
-    await savePlan(db, undefined, example());
-    await saveTheme(db, "dark");
-    expect(await loadTheme(db)).toBe("dark");
-    expect((await loadPlan(db)).plan).toEqual(example());
+    const { database } = await openTestDatabase();
+    expect(await loadTheme(database)).toBe("system");
+    await savePlan(database, undefined, example());
+    await saveTheme(database, "dark");
+    expect(await loadTheme(database)).toBe("dark");
+    expect((await loadPlan(database)).plan).toEqual(example());
   });
 });

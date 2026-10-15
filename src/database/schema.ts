@@ -7,7 +7,7 @@ export const activities = sqliteTable("activities", {
   hue: integer().notNull(),
   shape: text().notNull(),
   mode: text({ enum: ["week", "day"] }).notNull(),
-  mins: integer().notNull(),
+  budgetMinutes: integer("budget_minutes").notNull(),
   days: integer().notNull(),
   position: integer().notNull(),
   createdAt: text("created_at").notNull(),
@@ -23,7 +23,7 @@ export const blocks = sqliteTable(
       .references(() => activities.id),
     day: integer().notNull(),
     start: integer().notNull(),
-    dur: integer().notNull(),
+    length: integer().notNull(),
   },
   (table) => [index("blocks_activity_id").on(table.activityId)],
 );

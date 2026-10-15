@@ -19,7 +19,7 @@
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
     "icons": "node scripts/build-iconset.ts",
     "shapes": "node scripts/build-shapes.ts",
-    "db:generate": "drizzle-kit generate"
+    "database:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@formatjs/intl-durationformat": "0.11.1",
