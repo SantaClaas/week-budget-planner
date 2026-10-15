@@ -1,7 +1,7 @@
-import { parsePlan, serializePlan } from "../plan/file";
+import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
 import { isTheme } from "../theme";
-import { exportJsonFile, importJsonFile } from "./json-file";
+import * as jsonFile from "./json-file";
 import type { PlanStore } from "./plan-store";
 
 export const PLAN_KEY = "week-budget-planner.plan";
@@ -12,17 +12,17 @@ export const THEME_KEY = "week-budget-planner.theme";
  * examples/example-week.json). Other tabs pick up changes through the `storage` event; the last
  * write wins.
  */
-export function localStorageStore(storage: Storage, events: Pick<Window, "addEventListener" | "removeEventListener">): PlanStore {
+export function create(storage: Storage, events: Pick<Window, "addEventListener" | "removeEventListener">): PlanStore {
   let current: Plan | undefined;
   return {
     level: "limited",
     async load() {
       const text = storage.getItem(PLAN_KEY);
-      current = text === null ? undefined : parsePlan(text);
-      return { plan: current ?? parsePlan("null"), stored: text !== null };
+      current = text === null ? undefined : planFile.parse(text);
+      return { plan: current ?? planFile.parse("null"), stored: text !== null };
     },
     async save(_before, after) {
-      storage.setItem(PLAN_KEY, serializePlan(after));
+      storage.setItem(PLAN_KEY, planFile.serialize(after));
       current = after;
     },
     async loadTheme() {
@@ -34,11 +34,11 @@ export function localStorageStore(storage: Storage, events: Pick<Window, "addEve
     },
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
-      return exportJsonFile(text === null ? (current ?? parsePlan("null")) : parsePlan(text));
+      return jsonFile.create(text === null ? (current ?? planFile.parse("null")) : planFile.parse(text));
     },
     async importFile(file) {
-      const plan = await importJsonFile(file);
-      storage.setItem(PLAN_KEY, serializePlan(plan));
+      const plan = await jsonFile.read(file);
+      storage.setItem(PLAN_KEY, planFile.serialize(plan));
       current = plan;
     },
     async wipe() {
@@ -57,7 +57,7 @@ export function localStorageStore(storage: Storage, events: Pick<Window, "addEve
 }
 
 /** Whether localStorage can actually be written (it can be missing, or throw, when blocked). */
-export function usableLocalStorage(): Storage | undefined {
+export function findWritableStorage(): Storage | undefined {
   try {
     const storage = globalThis.localStorage;
     const probe = `${PLAN_KEY}.probe`;
