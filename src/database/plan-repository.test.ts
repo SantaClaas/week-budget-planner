@@ -4,17 +4,17 @@ import { describe, expect, it } from "vitest";
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "../plan/sanitize";
 import type { Plan } from "../plan/types";
-import { localQueryService, type TursoConnection } from "./connection";
+import { createLocalQueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
 import { MIGRATIONS, runMigrations } from "./migrations";
-import { loadPlan, loadTheme, planStatements, savePlan, saveTheme } from "./plan-repository";
+import { loadPlan, loadTheme, buildPlanStatements, savePlan, saveTheme } from "./plan-repository";
 import { blocks as blocksTable } from "./schema";
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
 async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {
   const connection = (await connect(":memory:")) as unknown as TursoConnection;
   await runMigrations(connection);
-  return { database: createDatabase(localQueryService(async () => connection)), connection };
+  return { database: createDatabase(createLocalQueryService(async () => connection)), connection };
 }
 
 const example = (): Plan => sanitizePlan(exampleWeek);
@@ -57,8 +57,8 @@ describe("plan repository", () => {
       ...before,
       blocks: before.blocks.map((block) => (block.id === "block-1" ? { ...block, start: 660 } : block)),
     };
-    expect(planStatements(database, before, after)).toHaveLength(1);
-    expect(planStatements(database, before, before)).toHaveLength(0);
+    expect(buildPlanStatements(database, before, after)).toHaveLength(1);
+    expect(buildPlanStatements(database, before, before)).toHaveLength(0);
     await savePlan(database, before, after);
     expect((await loadPlan(database)).plan).toEqual(after);
   });
@@ -94,7 +94,7 @@ describe("plan repository", () => {
     const before = example();
     await savePlan(database, undefined, before);
     const after: Plan = { ...before, dayStart: 6 };
-    const [settingsUpdate] = planStatements(database, before, after);
+    const [settingsUpdate] = buildPlanStatements(database, before, after);
     // A duplicate primary key makes the second statement fail after the first one ran.
     const duplicate = database.insert(blocksTable).values({
       id: "block-1",

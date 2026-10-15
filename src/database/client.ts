@@ -3,7 +3,7 @@
 import { connect } from "@tursodatabase/database-wasm/vite";
 
 import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service";
-import { localQueryService, type QueryService, type TursoConnection } from "./connection";
+import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
 import { runMigrations } from "./migrations";
 
@@ -39,7 +39,7 @@ async function open(): Promise<TursoConnection> {
   return connection;
 }
 
-function getLocal(): Promise<TursoConnection> {
+function getLocalConnection(): Promise<TursoConnection> {
   localDatabase ??= open();
   return localDatabase;
 }
@@ -60,10 +60,10 @@ function broadcastReload(): void {
 
 /** The leader-side implementation working on the locally opened database. */
 const localService: DatabaseService = {
-  ...localQueryService(getLocal),
+  ...createLocalQueryService(getLocalConnection),
 
   async exportFile() {
-    const database = await getLocal();
+    const database = await getLocalConnection();
     await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     const bytesAfterClose = (async () => {
       await database.close();
@@ -75,7 +75,7 @@ const localService: DatabaseService = {
   },
 
   async importFile(bytes) {
-    const database = await getLocal();
+    const database = await getLocalConnection();
     await database.close();
     localDatabase = undefined;
     const root = await navigator.storage.getDirectory();
@@ -89,7 +89,7 @@ const localService: DatabaseService = {
   },
 
   async wipe() {
-    const database = await getLocal();
+    const database = await getLocalConnection();
     await database.close();
     localDatabase = undefined;
     const root = await navigator.storage.getDirectory();
@@ -117,7 +117,7 @@ function startElection(): void {
   void navigator.locks.request(LOCK_NAME, async () => {
     isLeader = true;
     consumer.handlePromotion();
-    await getLocal();
+    await getLocalConnection();
     provide(channel, SCOPE, localService);
     console.debug("[database] acquired leader lock, serving the database");
     // Hold the lock, and with it leadership, until this tab dies.

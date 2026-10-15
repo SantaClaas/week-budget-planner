@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "../plan/sanitize";
-import { localStorageStore, PLAN_KEY, THEME_KEY } from "./local-storage-store";
+import * as local from "./local";
+import { PLAN_KEY, THEME_KEY } from "./local";
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();
@@ -43,15 +44,15 @@ const file = (text: string, name: string) => new File([text], name, { type: name
 describe("localStorage store", () => {
   it("starts empty, then keeps what was saved", async () => {
     const storage = new MemoryStorage();
-    const store = localStorageStore(storage, events());
+    const store = local.create(storage, events());
     expect(await store.load()).toMatchObject({ stored: false });
     await store.save(undefined, example());
-    expect(await localStorageStore(storage, events()).load()).toEqual({ plan: example(), stored: true });
+    expect(await local.create(storage, events()).load()).toEqual({ plan: example(), stored: true });
   });
 
   it("stores the theme", async () => {
     const storage = new MemoryStorage();
-    const store = localStorageStore(storage, events());
+    const store = local.create(storage, events());
     expect(await store.loadTheme()).toBe("system");
     await store.saveTheme("dark");
     expect(storage.getItem(THEME_KEY)).toBe("dark");
@@ -60,7 +61,7 @@ describe("localStorage store", () => {
 
   it("exports and imports .json and refuses .db files", async () => {
     const storage = new MemoryStorage();
-    const store = localStorageStore(storage, events());
+    const store = local.create(storage, events());
     await store.save(undefined, example());
     const exported = await store.exportFile();
     expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/);
@@ -73,7 +74,7 @@ describe("localStorage store", () => {
 
   it("reports changes from other tabs", async () => {
     const target = events();
-    const store = localStorageStore(new MemoryStorage(), target);
+    const store = local.create(new MemoryStorage(), target);
     let calls = 0;
     const stop = store.onExternalChange(() => calls++);
     target.dispatchStorage(PLAN_KEY);
