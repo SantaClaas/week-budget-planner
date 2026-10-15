@@ -3,7 +3,8 @@ import { createSignal, onSettled, Show } from "solid-js";
 import { sanitizePlan } from "./plan/sanitize";
 import type { Plan } from "./plan/types";
 import exampleWeek from "../examples/example-week.json";
-import { openPlanStore, type PlanStore } from "./storage";
+import { openPlanStore } from "./storage";
+import type { PlanStore } from "./storage/plan-store";
 
 // Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
 // shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.

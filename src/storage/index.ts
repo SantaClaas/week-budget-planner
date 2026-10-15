@@ -2,8 +2,6 @@ import { localStorageStore, usableLocalStorage } from "./local-storage-store";
 import { memoryStore } from "./memory-store";
 import type { PlanStore } from "./plan-store";
 
-export type { PlanStore, StorageLevel } from "./plan-store";
-
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
 function canUseDatabase(): boolean {
   return (
