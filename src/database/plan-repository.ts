@@ -10,10 +10,10 @@ import { activities, blocks, settings } from "./schema";
 const SETTINGS_ID = 1;
 
 /**
- * Reads the plan. `stored` is false when the database has never held a plan (first run), so the
+ * Reads the plan. `isStored` is false when the database has never held a plan (first run), so the
  * caller can load the example week.
  */
-export async function loadPlan(database: Database): Promise<{ plan: Plan; stored: boolean }> {
+export async function loadPlan(database: Database): Promise<{ plan: Plan; isStored: boolean }> {
   const [row, activityRows, blockRows] = await Promise.all([
     database.select().from(settings).where(eq(settings.id, SETTINGS_ID)).get(),
     database.select().from(activities).orderBy(asc(activities.position)),
@@ -27,10 +27,10 @@ export async function loadPlan(database: Database): Promise<{ plan: Plan; stored
     dayEnd: row?.dayEnd,
     example: row?.example,
   });
-  return { plan, stored: row !== undefined };
+  return { plan, isStored: row !== undefined };
 }
 
-const sameActivity = (
+const isSameActivity = (
   previous: Activity,
   next: Activity,
   previousPosition: number,
@@ -44,7 +44,7 @@ const sameActivity = (
   previous.budgetMinutes === next.budgetMinutes &&
   previous.days === next.days;
 
-const sameBlock = (previous: Block, next: Block): boolean =>
+const isSameBlock = (previous: Block, next: Block): boolean =>
   previous.activityId === next.activityId &&
   previous.day === next.day &&
   previous.start === next.start &&
@@ -74,7 +74,7 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
 
   after.activities.forEach((activity, position) => {
     const previous = beforeActivities.get(activity.id);
-    if (previous && sameActivity(previous.activity, activity, previous.index, position)) return;
+    if (previous && isSameActivity(previous.activity, activity, previous.index, position)) return;
     const values = {
       name: activity.name,
       hue: activity.hue,
@@ -94,7 +94,7 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
 
   for (const block of after.blocks) {
     const previous = beforeBlocks.get(block.id);
-    if (previous && sameBlock(previous, block)) continue;
+    if (previous && isSameBlock(previous, block)) continue;
     const values = { activityId: block.activityId, day: block.day, start: block.start, length: block.length };
     statements.push(
       database

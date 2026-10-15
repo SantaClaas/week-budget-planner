@@ -3,7 +3,7 @@ import * as memory from "./memory";
 import type { PlanStore } from "./plan-store";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
-function canUseDatabase(): boolean {
+function isDatabaseUsable(): boolean {
   return (
     globalThis.crossOriginIsolated === true &&
     typeof navigator !== "undefined" &&
@@ -19,7 +19,7 @@ function canUseDatabase(): boolean {
  * caller shows "Opening your plan…" until this resolves.
  */
 export async function open(): Promise<PlanStore> {
-  if (canUseDatabase()) {
+  if (isDatabaseUsable()) {
     try {
       const database = await import("./database");
       const store = database.create();
