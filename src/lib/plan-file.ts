@@ -5,20 +5,20 @@ import type { Plan } from "../plan/types";
 export function serializePlan(plan: Plan): string {
   return JSON.stringify(
     {
-      v: 1,
+      version: 1,
       example: plan.example,
       dayStart: plan.dayStart,
       dayEnd: plan.dayEnd,
-      activities: plan.activities.map(({ id, name, hue, shape, mode, mins, days }) => ({
+      activities: plan.activities.map(({ id, name, hue, shape, mode, budgetMinutes, days }) => ({
         id,
         name,
         hue,
         shape,
         mode,
-        mins,
+        budgetMinutes,
         days,
       })),
-      blocks: plan.blocks.map(({ id, act, day, start, dur }) => ({ id, act, day, start, dur })),
+      blocks: plan.blocks.map(({ id, activityId, day, start, length }) => ({ id, activityId, day, start, length })),
     },
     null,
     2,
