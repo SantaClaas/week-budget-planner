@@ -1,8 +1,7 @@
 import { createSignal, onSettled, Show } from "solid-js";
 
-import { sanitizePlan } from "./plan/sanitize";
+import { createExampleWeek } from "./plan/example";
 import type { Plan } from "./plan/types";
-import exampleWeek from "../examples/example-week.json";
 import { open as openStorage } from "./storage";
 import type { PlanStore } from "./storage/plan-store";
 
@@ -17,7 +16,7 @@ export function App() {
       const opened = await openStorage();
       let { plan: loaded, isStored } = await opened.load();
       if (!isStored) {
-        loaded = sanitizePlan(exampleWeek);
+        loaded = createExampleWeek();
         await opened.save(undefined, loaded);
       }
       setStore(opened);

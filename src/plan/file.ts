@@ -6,7 +6,7 @@ export function serialize(plan: Plan): string {
   return JSON.stringify(
     {
       version: 1,
-      example: plan.example,
+      exampleLoadedAt: plan.exampleLoadedAt,
       dayStart: plan.dayStart,
       dayEnd: plan.dayEnd,
       activities: plan.activities.map(({ id, name, hue, shape, mode, budgetMinutes, days }) => ({

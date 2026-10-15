@@ -25,7 +25,7 @@ export async function loadPlan(database: Database): Promise<{ plan: Plan; isStor
     blocks: blockRows,
     dayStart: row?.dayStart,
     dayEnd: row?.dayEnd,
-    example: row?.example,
+    exampleLoadedAt: row?.exampleLoadedAt,
   });
   return { plan, isStored: row !== undefined };
 }
@@ -108,9 +108,9 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
     !before ||
     before.dayStart !== after.dayStart ||
     before.dayEnd !== after.dayEnd ||
-    before.example !== after.example
+    before.exampleLoadedAt !== after.exampleLoadedAt
   ) {
-    const values = { dayStart: after.dayStart, dayEnd: after.dayEnd, example: after.example };
+    const values = { dayStart: after.dayStart, dayEnd: after.dayEnd, exampleLoadedAt: after.exampleLoadedAt };
     statements.push(
       database
         .insert(settings)
@@ -139,6 +139,6 @@ export async function loadTheme(database: Database): Promise<Theme> {
 export async function saveTheme(database: Database, theme: Theme): Promise<void> {
   await database
     .insert(settings)
-    .values({ id: SETTINGS_ID, dayStart: 7, dayEnd: 22, example: false, theme })
+    .values({ id: SETTINGS_ID, dayStart: 7, dayEnd: 22, exampleLoadedAt: null, theme })
     .onConflictDoUpdate({ target: settings.id, set: { theme } });
 }

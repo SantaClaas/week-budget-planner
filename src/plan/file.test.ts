@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import exampleWeek from "../../examples/example-week.json";
 import * as planFile from "./file";
-import { sanitizePlan } from "./sanitize";
+import { createExampleWeek } from "./example";
 
-const example = () => sanitizePlan(exampleWeek);
+const example = () => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
 
 describe("plan file", () => {
   it("round-trips the stored format", () => {

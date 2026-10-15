@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "2b34835a-ed9f-4882-beb7-cb80baf78b3a",
+  "id": "7d355390-582e-4b6b-bfcc-524b02279c57",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -189,12 +189,12 @@
       "table": "settings"
     },
     {
-      "type": "integer",
-      "notNull": true,
+      "type": "text",
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "example",
+      "name": "example_loaded_at",
       "entityType": "columns",
       "table": "settings"
     },

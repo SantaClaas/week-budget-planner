@@ -1,8 +1,7 @@
 import { connect } from "@tursodatabase/database";
 import { describe, expect, it } from "vitest";
 
-import exampleWeek from "../../examples/example-week.json";
-import { sanitizePlan } from "../plan/sanitize";
+import { createExampleWeek } from "../plan/example";
 import type { Plan } from "../plan/types";
 import { createLocalQueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
@@ -17,7 +16,7 @@ async function openTestDatabase(): Promise<{ database: Database; connection: Tur
   return { database: createDatabase(createLocalQueryService(async () => connection)), connection };
 }
 
-const example = (): Plan => sanitizePlan(exampleWeek);
+const example = (): Plan => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
