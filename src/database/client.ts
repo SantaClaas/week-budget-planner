@@ -2,7 +2,7 @@
 // BroadcastChannel RPC, serving Drizzle's sqlite-proxy calls instead of plain row objects.
 import { connect } from "@tursodatabase/database-wasm/vite";
 
-import { consume, provide, ProviderChangedError } from "../lib/broadcast-service";
+import { consume, provide, ProviderChangedError } from "../broadcast/service";
 import { localQueryService, type QueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
 import { runMigrations } from "./migrations";

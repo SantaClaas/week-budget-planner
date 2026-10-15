@@ -1,4 +1,5 @@
-// Adapted from SantaClaas/flashcut (src/lib/broadcast.ts), without the Solid dependency.
+// Adapted from SantaClaas/flashcut (src/lib/broadcast.ts), without the Solid dependency. The
+// leader election's calls go through ./service.ts on a channel of their own.
 export const BROADCAST_NAME = "week-budget-planner";
 
 /**
