@@ -3,8 +3,9 @@
    Shape, type, motion, component sizes: androidx compose material3 tokens.
    Activity colors: TonalPalette.fromHueAndChroma(hue, 48), tones 90/10/40 (light) and 30/90/80 (dark).
    Sizes: Google's dp/sp values divided by 16 as rem, so text and the controls around it follow the
-   user's font size (browser setting and, with <meta name="text-scale">, the OS text size). Borders,
-   corners, shadows and the 4dp progress tracks stay in px. Never set a font size on :root or html.
+   user's font size (browser setting and, with <meta name="text-scale">, the OS text size). Avoid px:
+   only 1-2px hairlines (borders, outlines, grid lines, selection rings) stay in px. Never set a font
+   size on :root or html.
    Each color is light-dark(light, dark) and follows color-scheme on :root. The theme setting
    sets data-theme="light" or "dark" on <html>; without it the system setting applies.
    The design canvas keeps its own class-scoped copy (.m3 / .m3.dark) for mixed-theme boards. */
@@ -29,12 +30,12 @@
   --card: light-dark(var(--surface-container-lowest), var(--surface-container-high));
   --weekend: var(--surface-container-low);
   /* shape */
-  --corner-xs: 4px; --corner-s: 8px; --corner-m: 12px; --corner-l: 16px; --corner-l-inc: 20px;
-  --corner-xl: 28px; --corner-xl-inc: 32px; --corner-xxl: 48px; --corner-full: 999px;
+  --corner-xs: .25rem; --corner-s: .5rem; --corner-m: .75rem; --corner-l: 1rem; --corner-l-inc: 1.25rem;
+  --corner-xl: 1.75rem; --corner-xl-inc: 2rem; --corner-xxl: 3rem; --corner-full: 999rem;
   /* elevation */
-  --level1: 0 1px 2px rgb(0 0 0 / .3), 0 1px 3px 1px rgb(0 0 0 / .15);
-  --level2: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
-  --level3: 0 1px 3px rgb(0 0 0 / .3), 0 4px 8px 3px rgb(0 0 0 / .15);
+  --level1: 0 1px .125rem rgb(0 0 0 / .3), 0 1px .1875rem 1px rgb(0 0 0 / .15);
+  --level2: 0 1px .125rem rgb(0 0 0 / .3), 0 .125rem .375rem .125rem rgb(0 0 0 / .15);
+  --level3: 0 1px .1875rem rgb(0 0 0 / .3), 0 .25rem .5rem .1875rem rgb(0 0 0 / .15);
   /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
   --hour: 3rem;
   --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
@@ -135,7 +136,7 @@ a { color: var(--primary); }
 
 /* segmented list (expressive grouped list): 2px gaps, large outer, small inner corners */
 .slist { display: flex; flex-direction: column; gap: .125rem; }
-.slist > * { background: var(--card); border-radius: 4px; }
+.slist > * { background: var(--card); border-radius: .25rem; }
 .slist > *:first-child { border-top-left-radius: var(--corner-l-inc); border-top-right-radius: var(--corner-l-inc); }
 .slist > *:last-child { border-bottom-left-radius: var(--corner-l-inc); border-bottom-right-radius: var(--corner-l-inc); }
 .li { display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding: .625rem 1rem; }
@@ -162,16 +163,16 @@ a { color: var(--primary); }
 .avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--corner-m); background: var(--ac); color: var(--on-ac); display: grid; place-items: center; flex: none; font-weight: 700; font-size: 1rem; }
 
 /* linear progress: track + gap + stop indicator */
-.progress { position: relative; display: flex; align-items: center; gap: 4px; height: 10px; } /* 10dp: room for the wavy state */
-.progress .on.wavy { height: 10px; border-radius: 0; }
-.progress .on { height: 4px; border-radius: 2px; background: var(--as, var(--primary)); }
-.progress .off { flex: 1; height: 4px; border-radius: 2px; background: var(--secondary-container); position: relative; }
-.progress .off::after { content: ""; position: absolute; right: 0; top: 0; width: 4px; height: 4px; border-radius: 2px; background: var(--as, var(--primary)); }
+.progress { position: relative; display: flex; align-items: center; gap: .25rem; height: .625rem; } /* 10dp: room for the wavy state */
+.progress .on.wavy { height: .625rem; border-radius: 0; }
+.progress .on { height: .25rem; border-radius: .125rem; background: var(--as, var(--primary)); }
+.progress .off { flex: 1; height: .25rem; border-radius: .125rem; background: var(--secondary-container); position: relative; }
+.progress .off::after { content: ""; position: absolute; right: 0; top: 0; width: .25rem; height: .25rem; border-radius: .125rem; background: var(--as, var(--primary)); }
 .progress.full .off { display: none; }
 /* over budget (approved deviation, see the spec): the bar spans max(budget, placed). The within-budget
    part keeps the activity color, then the usual gap, then the overrun in red (--over), sized by flex
    in minutes: <span class="on" style="flex: 720"></span><span class="over" style="flex: 30"></span> */
-.progress .over { height: 4px; min-width: 4px; border-radius: 2px; background: var(--over); }
+.progress .over { height: .25rem; min-width: .25rem; border-radius: .125rem; background: var(--over); }
 .progress.over .off { display: none; }
 
 /* week grid */
@@ -180,7 +181,7 @@ a { color: var(--primary); }
 .dayhead .d { font-size: .75rem; line-height: 1rem; font-weight: 700; letter-spacing: .0312rem; text-transform: uppercase; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
 .dayhead .t { font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
 .dayhead.today .d { color: var(--primary); }
-.dayhead.today .d::before { content: ""; width: .375rem; height: .375rem; border-radius: 3px; background: var(--primary); }
+.dayhead.today .d::before { content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary); }
 .daycol { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), rgb(from var(--outline-variant) r g b / .45) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
 .daycol.we { background-color: var(--weekend); }
 .gutter { position: relative; font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
@@ -190,10 +191,10 @@ a { color: var(--primary); }
 .block { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-s); background: var(--ac); color: var(--on-ac); padding: .25rem .5rem; overflow: hidden; display: flex; flex-direction: column; }
 .block .n { font-size: .75rem; line-height: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .block .tm { font-size: .6875rem; line-height: .875rem; opacity: .85; }
-.block.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: 6px; }
+.block.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
 .block.tiny { border-radius: var(--corner-xs); padding: 0; }
 .block.sel { box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--level2); z-index: 2; border-radius: var(--corner-m); }
-.block .handle { position: absolute; left: 50%; width: 1.5rem; height: .25rem; margin-left: -.75rem; border-radius: 2px; background: var(--on-ac); opacity: .5; }
+.block .handle { position: absolute; left: 50%; width: 1.5rem; height: .25rem; margin-left: -.75rem; border-radius: .125rem; background: var(--on-ac); opacity: .5; }
 .block.preview { background: transparent; border: 2px dashed var(--as); color: var(--as); }
 .slot-hit { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-s); background: rgb(from var(--primary) r g b / .12); border: 2px solid var(--primary); }
 
@@ -202,7 +203,7 @@ a { color: var(--primary); }
 .menu .mi { display: flex; align-items: center; gap: .75rem; min-height: 3rem; padding: 0 .75rem; border-radius: var(--corner-m); border: 0; background: transparent; text-align: left; width: 100%; }
 .menu .mi.hl { background: var(--secondary-container); color: var(--on-secondary-container); }
 .sheet { background: var(--surface-container-low); border-radius: var(--corner-xl) var(--corner-xl) 0 0; box-shadow: var(--level1); }
-.sheet .grip { width: 2rem; height: .25rem; border-radius: 2px; background: var(--on-surface-variant); opacity: .4; margin: 1rem auto .5rem; }
+.sheet .grip { width: 2rem; height: .25rem; border-radius: .125rem; background: var(--on-surface-variant); opacity: .4; margin: 1rem auto .5rem; }
 .dialog { background: var(--surface-container-high); border-radius: var(--corner-xl); padding: 1.5rem; box-shadow: var(--level3); display: flex; flex-direction: column; gap: 1rem; }
 .scrim { position: absolute; inset: 0; background: rgb(0 0 0 / .32); }
 .snackbar { display: flex; align-items: center; gap: .5rem; min-height: 3rem; padding: .25rem .5rem .25rem 1rem; border-radius: var(--corner-xs); background: var(--inverse-surface); color: var(--inverse-on-surface); box-shadow: var(--level3); }
