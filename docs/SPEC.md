@@ -48,6 +48,7 @@ These were decided after the prototype and override it:
 - **Phones use a navigation bar** with Week, Activities and Settings instead of stacking the panes.
 - **Settings is a page**, holding the theme choice and the data actions (export, import, delete). The theme choice (System, Light, Dark) is new.
 - **Names are spelled out** in the stored format and the database: `version` (was `v`), `budgetMinutes` (was `mins`), `activityId` (was `act`) and `length` (was `dur`). Nothing was stored in the old format outside the prototype, so there is no conversion.
+- **The example week is marked with a time, not a boolean:** `exampleLoadedAt` says when it was loaded and is null once it's kept or replaced (the prototype stored `example: true`). See `docs/CODING-GUIDELINES.md` on stored booleans.
 - **The new-activity form** is behind a "New activity" button once at least one activity exists. In the empty state it is shown open.
 
 ## Data model
@@ -61,7 +62,7 @@ type Plan = {
   blocks: Block[];        // the blocks on the week
   dayStart: number;       // first of the day hours, 0..12 (default 7)
   dayEnd: number;         // end of the day hours, 13..24 (default 22)
-  example: boolean;       // true while the example week is loaded and not yet dismissed
+  exampleLoadedAt: string | null; // when the example week was loaded (ISO 8601, UTC); null once it's kept or replaced
 };
 
 type Activity = {
@@ -87,7 +88,7 @@ Time is stored as integer minutes and everything snaps to 15 minutes. Weekly bud
 
 A block covers the week minutes `[day * 1440 + start, day * 1440 + start + length)`, taken modulo 10080 (one week), so a block that starts on Sunday evening continues on Monday. Placed, left to place, overlaps and lanes, the first free slot and the per-day totals all work on these week minutes. A day's total counts only the part of each block that falls on that day.
 
-Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, and de-duplicate ids. The prototype's `sanitize()` is the reference.
+Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, de-duplicate ids, and turn an `exampleLoadedAt` that isn't a valid date into null. The prototype's `sanitize()` is the reference.
 
 The theme choice is a device preference, not part of the plan: store it in the `settings` table (see Persistence) as `system`, `light` or `dark`, default `system`.
 
@@ -97,7 +98,7 @@ The theme choice is a device preference, not part of the plan: store it in the `
 
 - **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Not saved"), an Undo icon button and a Settings icon button.
 - **Left pane, Activities** (360px wide, scrolls on its own):
-  - The example-week card, shown only while `example` is true: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
+  - The example-week card, shown only while `exampleLoadedAt` is set: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
   - A header, "Activities", with the total left to place.
   - The activity list. Each item has a color swatch, the name, the budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress indicator, and an Edit icon button.
   - A hint line: "Drag an activity onto the week, or click an empty slot to add a block there."
@@ -200,7 +201,7 @@ Map the data model above roughly like this. Adjust it if Drizzle suggests better
 
 - `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `budget_minutes` int, `days` int, `shape` text, `position` int (list order), `created_at` text
 - `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `length` int
-- `settings`: a single row with `day_start`, `day_end`, `example` (boolean) and `theme` (`system`/`light`/`dark`)
+- `settings`: a single row with `day_start`, `day_end`, `example_loaded_at` (text, ISO 8601, null when there is no example week) and `theme` (`system`/`light`/`dark`)
 
 ### Writes and undo
 
@@ -239,7 +240,7 @@ Moving up a level later (for example the same browser outside a private window) 
 ### Also keep
 
 - Sanitize values read from the database, especially after an import.
-- "Load an example week" from `examples/example-week.json` (bundle it), marked `example = true`. Offer it in the empty state.
+- "Load an example week" from `examples/example-week.json` (bundle it), with `exampleLoadedAt` set to the time it was loaded. Offer it in the empty state. "Keep these" and "Start empty" set it back to null.
 
 ## Design
 
