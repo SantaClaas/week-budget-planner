@@ -20,7 +20,7 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
   - `@solidjs/web@2.0.0-rc.14` (DOM rendering and `render` live here in 2.0, not in `solid-js/web`)
   - `@solidjs/vite-plugin@3.0.0-next.47` (the 2.0 replacement for `vite-plugin-solid`)
   - `vite@8`, TypeScript, strict mode
-  - Storage: `@tursodatabase/database-wasm` (SQLite in OPFS, as in flashcut) with `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4` (pinned, since the 1.0 line is also an RC). Schema in `src/db/schema.ts`. Generate migrations with drizzle-kit into `drizzle/` and commit them. The details, including the tab-leader proxy and the required **database export/import**, are in the spec's Persistence section.
+  - Storage: `@tursodatabase/database-wasm` (SQLite in OPFS, as in flashcut) with `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4` (pinned, since the 1.0 line is also an RC). Schema in `src/database/schema.ts`. Generate migrations with drizzle-kit into `drizzle/` and commit them. The details, including the tab-leader proxy and the required **database export/import**, are in the spec's Persistence section.
   - Use pnpm, like flashcut (`pnpm dlx` or `pnpx` instead of `npx`).
   - Hosting: GitHub Pages, with a service worker that adds the cross-origin isolation headers, and progressive enhancement down to private windows. See Hosting and Progressive enhancement in the spec.
 - **Material 3 Expressive, built with plain CSS.** Use the tokens in `docs/design/m3-tokens.css` and the spec's Design section, and build the components (navigation bar, bottom sheet, snackbar, floating toolbar and so on) yourself, without a component library.
@@ -53,7 +53,7 @@ This project uses Google Chrome's [Modern Web Guidance](https://github.com/Googl
 - Plan state in one store, with pure functions for budget math, lanes, snapping and the first free slot. These are easy to unit test, so test them with Vitest.
 - Components: `ActivityList` (activities and their forms), `WeekGrid` (header, gutter, day columns), `Block`, `AddBlock` (the menu or bottom sheet on an empty slot), `PlacingToolbar`, `Snackbar`, `SettingsPage`, and `NavigationBar` for phones.
 - Use pointer events (not HTML5 drag and drop) so mouse, pen and touch share one code path. Use a single drag controller with window listeners, and update during drags inside `requestAnimationFrame`.
-- Repository functions in `src/db/` that take the Drizzle database as a parameter, so tests can pass a Node-backed instance (flashcut's pattern).
+- Repository functions in `src/database/` that take the Drizzle database as a parameter, so tests can pass a Node-backed instance (flashcut's pattern).
 
 ## Working agreements
 

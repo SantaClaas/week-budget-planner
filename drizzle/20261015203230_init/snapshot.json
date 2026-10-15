@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "49773990-f83c-4475-90aa-9b9564475ddc",
+  "id": "2b34835a-ed9f-4882-beb7-cb80baf78b3a",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -74,7 +74,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "mins",
+      "name": "budget_minutes",
       "entityType": "columns",
       "table": "activities"
     },
@@ -154,7 +154,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "dur",
+      "name": "length",
       "entityType": "columns",
       "table": "blocks"
     },

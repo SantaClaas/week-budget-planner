@@ -12,7 +12,7 @@
     "icons:fetch": "node scripts/build-iconset.mjs --fetch",
     "icons": "node scripts/build-iconset.mjs",
     "shapes": "node scripts/build-shapes.mjs",
-    "db:generate": "drizzle-kit generate"
+    "database:generate": "drizzle-kit generate"
   },
   "devDependencies": {
     "@solidjs/vite-plugin": "3.0.0-next.47",

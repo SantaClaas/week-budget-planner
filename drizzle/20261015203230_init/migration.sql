@@ -4,7 +4,7 @@ CREATE TABLE `activities` (
 	`hue` integer NOT NULL,
 	`shape` text NOT NULL,
 	`mode` text NOT NULL,
-	`mins` integer NOT NULL,
+	`budget_minutes` integer NOT NULL,
 	`days` integer NOT NULL,
 	`position` integer NOT NULL,
 	`created_at` text NOT NULL
@@ -15,7 +15,7 @@ CREATE TABLE `blocks` (
 	`activity_id` text NOT NULL,
 	`day` integer NOT NULL,
 	`start` integer NOT NULL,
-	`dur` integer NOT NULL,
+	`length` integer NOT NULL,
 	CONSTRAINT `fk_blocks_activity_id_activities_id_fk` FOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`)
 );
 --> statement-breakpoint
