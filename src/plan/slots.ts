@@ -1,5 +1,5 @@
 import { DAY, SLOT, type Activity, type Block, type Plan } from "./types";
-import { rangesOverlap, calculateWeekStart } from "./week";
+import { isRangeOverlapping, calculateWeekStart } from "./week";
 
 /** Whether a block of `length` starting at `day`/`start` would overlap any existing block. */
 export function isFree(
@@ -9,7 +9,7 @@ export function isFree(
   length: number,
 ): boolean {
   const from = day * DAY + start;
-  return !blocks.some((block) => rangesOverlap(from, length, calculateWeekStart(block), block.length));
+  return !blocks.some((block) => isRangeOverlapping(from, length, calculateWeekStart(block), block.length));
 }
 
 /**
