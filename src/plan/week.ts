@@ -18,13 +18,13 @@ export type BlockPart = {
 const modulo = (value: number, modulus: number): number => ((value % modulus) + modulus) % modulus;
 
 /** The block's start in week minutes, 0 to 10079. */
-export const weekStart = (block: Pick<Block, "day" | "start">): number =>
+export const calculateWeekStart = (block: Pick<Block, "day" | "start">): number =>
   block.day * DAY + block.start;
 
 export const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
   block.start + block.length > DAY;
 
-export function blockParts(block: Block): BlockPart[] {
+export function splitIntoParts(block: Block): BlockPart[] {
   const end = block.start + block.length;
   if (end <= DAY) return [{ block, day: block.day, start: block.start, end, kind: "only" }];
   return [
@@ -34,9 +34,9 @@ export function blockParts(block: Block): BlockPart[] {
 }
 
 /** Every part that falls on `day`, sorted by start. */
-export function partsOnDay(blocks: readonly Block[], day: number): BlockPart[] {
+export function findPartsOnDay(blocks: readonly Block[], day: number): BlockPart[] {
   return blocks
-    .flatMap(blockParts)
+    .flatMap(splitIntoParts)
     .filter((part) => part.day === day)
     .sort((first, second) => first.start - second.start || second.end - first.end);
 }
@@ -59,17 +59,17 @@ export function rangesOverlap(
 }
 
 export const blocksOverlap = (first: Block, second: Block): boolean =>
-  rangesOverlap(weekStart(first), first.length, weekStart(second), second.length);
+  rangesOverlap(calculateWeekStart(first), first.length, calculateWeekStart(second), second.length);
 
 /** Minutes of each day (Monday first) covered by blocks, counting overnight parts on their own day. */
-export function dayTotals(blocks: readonly Block[]): number[] {
+export function sumDayTotals(blocks: readonly Block[]): number[] {
   const totals = [0, 0, 0, 0, 0, 0, 0];
-  for (const part of blocks.flatMap(blockParts)) totals[part.day]! += part.end - part.start;
+  for (const part of blocks.flatMap(splitIntoParts)) totals[part.day]! += part.end - part.start;
   return totals;
 }
 
 /** Converts week minutes back to a day and a start, wrapping around the week. */
-export function fromWeekMinutes(minutes: number): { day: number; start: number } {
+export function convertFromWeekMinutes(minutes: number): { day: number; start: number } {
   const wrapped = modulo(minutes, WEEK);
   return { day: Math.floor(wrapped / DAY), start: wrapped % DAY };
 }
@@ -81,7 +81,7 @@ export function moveTo(block: Block, day: number, start: number): Block {
 
 /** Moves by a number of minutes, crossing midnight and wrapping the week (keyboard Up/Down). */
 export function moveBy(block: Block, minutes: number): Block {
-  return { ...block, ...fromWeekMinutes(weekStart(block) + minutes) };
+  return { ...block, ...convertFromWeekMinutes(calculateWeekStart(block) + minutes) };
 }
 
 /** Moves to the neighbouring day, wrapping the week (keyboard Left/Right). */

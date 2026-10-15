@@ -7,7 +7,7 @@ export const clamp = (value: number, low: number, high: number): number =>
 export const snap = (minutes: number): number => Math.round(minutes / SLOT) * SLOT;
 
 /** Rounds down to the slot that contains the minute, for pointer positions. */
-export const floorSnap = (minutes: number): number => Math.floor(minutes / SLOT) * SLOT;
+export const snapDown = (minutes: number): number => Math.floor(minutes / SLOT) * SLOT;
 
 /** "1 h 30 min", "45 min", "3 h". */
 export function formatLength(minutes: number): string {
