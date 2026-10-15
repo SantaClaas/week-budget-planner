@@ -7,7 +7,10 @@
    only 1-2px hairlines (borders, outlines, grid lines, selection rings) stay in px. Never set a font
    size on :root or html.
    Each color is light-dark(light, dark) and follows color-scheme on :root. The theme setting
-   sets data-theme="light" or "dark" on <html>; without it the system setting applies.
+   sets <meta name="color-scheme"> to "light" or "dark" ("light dark" for System), and the theme
+   layer maps that meta back onto color-scheme, so no script is needed for CSS to follow it.
+   Line heights are unitless (Google's line height divided by the font size, in sp), so they
+   follow the element's own font size.
    Names are whole words, no abbreviations, and follow Material's own names where it has one.
    The design canvas keeps its own class-scoped copy (.m3 / .m3.dark) for mixed-theme boards. */
 
@@ -39,19 +42,24 @@
 @layer base {
   body {
     font-family: var(--font);
-    font-size: .875rem; line-height: 1.25rem; letter-spacing: .0125rem;
+    font-size: .875rem; line-height: calc(20 / 14); letter-spacing: .0125rem;
     font-variant-numeric: tabular-nums;
     color: var(--on-surface);
     background: var(--surface-container);
     -webkit-font-smoothing: antialiased;
   }
   a { color: var(--primary); }
+  /* Keyboard focus on everything interactive. outline survives forced colors, box-shadow doesn't. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer theme {
   :root {
-    /* Light and dark follow color-scheme: the system setting by default,
-       or the Settings theme through data-theme below. */
+    /* Light and dark follow color-scheme: the system setting by default, or the Settings theme
+       through the color-scheme meta (mapped below). Keep the default at "light dark". */
     color-scheme: light dark;
 
     --primary: light-dark(#4f5b92, #b8c4ff); --on-primary: light-dark(#ffffff, #202c61);
@@ -82,8 +90,8 @@
     --hour: 3rem;
     --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
   }
-  :root[data-theme="light"] { color-scheme: light; }
-  :root[data-theme="dark"] { color-scheme: dark; }
+  :root:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
+  :root:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
 }
 
 @layer components {
@@ -130,7 +138,7 @@
 
   /* navigation bar (flexible, 64dp) */
   .navigation-bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-height: 4rem; background: var(--surface-container); }
-  .navigation-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .375rem 0; text-decoration: none; color: var(--on-surface-variant); font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
+  .navigation-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .375rem 0; text-decoration: none; color: var(--on-surface-variant); font-size: .75rem; line-height: calc(16 / 12); font-weight: 500; letter-spacing: .0312rem; }
   .navigation-item .active-indicator { display: grid; place-items: center; width: 3.5rem; height: 2rem; border-radius: var(--corner-full); }
   .navigation-item[aria-current="page"] { color: var(--secondary); font-weight: 700; }
   .navigation-item[aria-current="page"] .active-indicator { background: var(--secondary-container); color: var(--on-secondary-container); }
@@ -180,19 +188,19 @@
   /* week grid */
   .week { display: grid; background: var(--card); border-radius: var(--corner-extra-large); overflow: hidden; }
   .day-header { min-height: 3rem; display: flex; flex-direction: column; justify-content: center; padding: 0 .625rem; }
-  .day-header .day-name { font-size: .75rem; line-height: 1rem; font-weight: 700; letter-spacing: .0312rem; text-transform: uppercase; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
-  .day-header .day-total { font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
+  .day-header .day-name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; letter-spacing: .0312rem; text-transform: uppercase; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
+  .day-header .day-total { font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
   .day-header.today .day-name { color: var(--primary); }
   .day-header.today .day-name::before { content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary); }
   .day-column { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), rgb(from var(--outline-variant) r g b / .45) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
   .day-column.weekend { background-color: var(--weekend); }
-  .gutter { position: relative; font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
+  .gutter { position: relative; font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
   .gutter span { position: absolute; right: .5rem; transform: translateY(-50%); }
 
   /* blocks */
   .block { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: flex; flex-direction: column; }
-  .block .name { font-size: .75rem; line-height: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .block .time { font-size: .6875rem; line-height: .875rem; opacity: .85; }
+  .block .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .block .time { font-size: .6875rem; line-height: calc(14 / 11); opacity: .85; }
   .block.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
   .block.tiny { border-radius: var(--corner-extra-small); padding: 0; }
   .block.selected { box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium); }
@@ -213,13 +221,13 @@
 
   /* outlined text field */
   .text-field { position: relative; display: flex; flex-direction: column; }
-  .text-field input, .text-field select { height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-extra-small); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
-  .text-field label { position: absolute; top: -.5rem; left: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); background: var(--text-field-background, var(--surface)); }
-  .text-field.focused input { border: 2px solid var(--primary); }
-  .text-field.focused label { color: var(--primary); }
-  .text-field.error input { border: 2px solid var(--error); }
-  .text-field.error label, .text-field .supporting-text.error { color: var(--error); }
-  .text-field .supporting-text { padding: .25rem 1rem 0; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); }
+  .text-field input, .text-field select { min-height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-extra-small); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
+  .text-field label { position: absolute; top: -.5rem; left: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); background: var(--text-field-background, var(--surface)); }
+  .text-field:is(.focused, :focus-within) input { border: 2px solid var(--primary); }
+  .text-field:is(.focused, :focus-within) label { color: var(--primary); }
+  .text-field:is(.error, :has(:user-invalid)) input { border: 2px solid var(--error); }
+  .text-field:is(.error, :has(:user-invalid)) label, .text-field .supporting-text.error { color: var(--error); }
+  .text-field .supporting-text { padding: .25rem 1rem 0; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); }
 
   /* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
      tonal rounded square with a primary ring. A color option sets its color-* class, a shape option
@@ -228,24 +236,37 @@
   .picker-option { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-medium); background: transparent; cursor: pointer; }
   .picker-option::before { content: ""; width: 1.75rem; height: 1.75rem; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle)); }
   .picker-option[aria-checked="true"] { background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary); }
+
+  /* Windows High Contrast: the browser drops box-shadow and replaces backgrounds with system
+     colors. Rings fall back to outlines, blocks get a border, the progress bar uses system colors,
+     and swatches keep the activity's color, because there the color is the information. */
+  @media (forced-colors: active) {
+    .block { border: 1px solid CanvasText; }
+    .block.selected, .picker-option[aria-checked="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
+    .swatch, .picker-option::before { forced-color-adjust: none; }
+    .progress :is(.indicator, .track, .over-budget), .progress .track::after { forced-color-adjust: none; }
+    .progress .indicator, .progress .track::after { background: Highlight; }
+    .progress .track { background: GrayText; }
+    .progress .over-budget { background: Mark; }
+  }
 }
 
 @layer utilities {
   /* type scale: Material's type roles (TypographyTokens). Add .emphasized for the emphasized style,
      one weight step up. */
-  .display-small { font-size: 2.25rem; line-height: 2.75rem; font-weight: 400; letter-spacing: 0; }
-  .headline-large { font-size: 2rem; line-height: 2.5rem; font-weight: 400; letter-spacing: 0; }
-  .headline-medium { font-size: 1.75rem; line-height: 2.25rem; font-weight: 400; letter-spacing: 0; }
-  .headline-small { font-size: 1.5rem; line-height: 2rem; font-weight: 400; letter-spacing: 0; }
-  .title-large { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; letter-spacing: 0; }
-  .title-medium { font-size: 1rem; line-height: 1.5rem; font-weight: 500; letter-spacing: .0094rem; }
-  .title-small { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
-  .body-large { font-size: 1rem; line-height: 1.5rem; font-weight: 400; letter-spacing: .0312rem; }
-  .body-medium { font-size: .875rem; line-height: 1.25rem; font-weight: 400; letter-spacing: .0125rem; }
-  .body-small { font-size: .75rem; line-height: 1rem; font-weight: 400; letter-spacing: .025rem; }
-  .label-large { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
-  .label-medium { font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
-  .label-small { font-size: .6875rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
+  .display-small { font-size: 2.25rem; line-height: calc(44 / 36); font-weight: 400; letter-spacing: 0; }
+  .headline-large { font-size: 2rem; line-height: calc(40 / 32); font-weight: 400; letter-spacing: 0; }
+  .headline-medium { font-size: 1.75rem; line-height: calc(36 / 28); font-weight: 400; letter-spacing: 0; }
+  .headline-small { font-size: 1.5rem; line-height: calc(32 / 24); font-weight: 400; letter-spacing: 0; }
+  .title-large { font-size: 1.375rem; line-height: calc(28 / 22); font-weight: 400; letter-spacing: 0; }
+  .title-medium { font-size: 1rem; line-height: calc(24 / 16); font-weight: 500; letter-spacing: .0094rem; }
+  .title-small { font-size: .875rem; line-height: calc(20 / 14); font-weight: 500; letter-spacing: .0063rem; }
+  .body-large { font-size: 1rem; line-height: calc(24 / 16); font-weight: 400; letter-spacing: .0312rem; }
+  .body-medium { font-size: .875rem; line-height: calc(20 / 14); font-weight: 400; letter-spacing: .0125rem; }
+  .body-small { font-size: .75rem; line-height: calc(16 / 12); font-weight: 400; letter-spacing: .025rem; }
+  .label-large { font-size: .875rem; line-height: calc(20 / 14); font-weight: 500; letter-spacing: .0063rem; }
+  .label-medium { font-size: .75rem; line-height: calc(16 / 12); font-weight: 500; letter-spacing: .0312rem; }
+  .label-small { font-size: .6875rem; line-height: calc(16 / 11); font-weight: 500; letter-spacing: .0312rem; }
   .emphasized:is(.display-small, .headline-large, .headline-medium, .headline-small, .title-large, .body-large, .body-medium, .body-small) { font-weight: 500; }
   .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) { font-weight: 700; }
   .brand { font-variation-settings: "ROND" 100; font-weight: 600; letter-spacing: -.0125rem; }
