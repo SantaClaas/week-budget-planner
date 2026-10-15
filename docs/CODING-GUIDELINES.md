@@ -52,11 +52,13 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 A feature isn't only something users see, like the week, activities or the budget. Technical requirements are features too: the database, the storage levels, broadcasting between tabs. Each is a pillar of its own.
 
-Picture the features as pillars. Horizontal functionality runs through them like fibers threaded through the pillars, and the fibers can be adjusted to fit each one. The other way round, the layers are bars, and every feature has to be threaded through them. Code that many features' paths run through is hard to change and hard to delete, so it fails the package test.
+Picture the features as pillars. Horizontal functionality runs through them like fibers threaded through the pillars, and the fibers can be adjusted to fit each one. A pillar can split into sub-features, which are its submodules in the file tree. Together they grow like a tree, or seen the other way up, like roots, with the horizontal fibers threaded between them. The other way round, the layers are bars, and every feature has to be threaded through them. Code that many features' paths run through is hard to change and hard to delete, so it fails the package test.
 
 What stays solid, in the centre, are the features. The horizontal parts adjust to them, not the other way round: don't force a feature into the shape of an existing layer *auf Gedeih und Verderb* (come what may).
 
 This doesn't mean avoiding shared code. Sometimes a horizontal connection can't be avoided, or it's simply where the code leads, like the plan types that the week, the activities and storage all use. Then it's a deliberate piece in its own module, shaped by the features that use it.
+
+**Unavoidable layers tend to sit at the edges.** Where the application meets the outside (the database file, the stored format, the network), many paths have to come together, so the layer there works as a funnel. A funnel can turn into a bad bottleneck when it ties too much together, like one repository that every feature's save has to go through. Keep what passes through an edge small, and let each feature own as much of its side of it as it can.
 
 ### Coupling
 
