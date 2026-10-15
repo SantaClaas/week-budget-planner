@@ -150,6 +150,6 @@ export const DAY_NAMES_LONG = [
   "Sunday",
 ] as const;
 
-export function emptyPlan(): Plan {
+export function createEmptyPlan(): Plan {
   return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, example: false };
 }

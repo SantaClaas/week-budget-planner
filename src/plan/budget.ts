@@ -1,19 +1,19 @@
 import type { Activity, Block, Plan } from "./types";
 
 /** The activity's weekly budget in minutes. */
-export const target = (activity: Pick<Activity, "mode" | "budgetMinutes" | "days">): number =>
+export const calculateWeeklyBudget = (activity: Pick<Activity, "mode" | "budgetMinutes" | "days">): number =>
   activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes;
 
 /** Minutes placed per activity id. */
-export function placedByActivity(blocks: readonly Block[]): Map<string, number> {
+export function sumPlacedByActivity(blocks: readonly Block[]): Map<string, number> {
   const placed = new Map<string, number>();
   for (const block of blocks) placed.set(block.activityId, (placed.get(block.activityId) ?? 0) + block.length);
   return placed;
 }
 
 /** Budget minus placed. Negative means over budget. */
-export const leftToPlace = (activity: Activity, blocks: readonly Block[]): number =>
-  target(activity) - (placedByActivity(blocks).get(activity.id) ?? 0);
+export const calculateLeftToPlace = (activity: Activity, blocks: readonly Block[]): number =>
+  calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
 
 export type Summary = {
   /** Sum of all budgets. */
@@ -27,10 +27,10 @@ export type Summary = {
 };
 
 export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
-  const placed = placedByActivity(plan.blocks);
+  const placed = sumPlacedByActivity(plan.blocks);
   const summary: Summary = { budget: 0, placed: 0, leftToPlace: 0, overBudget: 0 };
   for (const activity of plan.activities) {
-    const budget = target(activity);
+    const budget = calculateWeeklyBudget(activity);
     const done = placed.get(activity.id) ?? 0;
     summary.budget += budget;
     summary.placed += done;
@@ -46,7 +46,7 @@ export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
  * `overBudget` the overrun's; otherwise `overBudget` is zero and `withinBudget` is the filled share
  * of the track.
  */
-export function progressParts(budget: number, placed: number): { withinBudget: number; overBudget: number } {
+export function splitProgress(budget: number, placed: number): { withinBudget: number; overBudget: number } {
   if (budget <= 0) return { withinBudget: 0, overBudget: placed > 0 ? 1 : 0 };
   if (placed <= budget) return { withinBudget: placed / budget, overBudget: 0 };
   return { withinBudget: budget / placed, overBudget: (placed - budget) / placed };
