@@ -1,12 +1,12 @@
 // Adapted from SantaClaas/flashcut (src/lib/broadcast.ts), without the Solid dependency. The
 // leader election's calls go through ./service.ts on a channel of their own.
-export const BROADCAST_NAME = "week-budget-planner";
+const BROADCAST_NAME = "week-budget-planner";
 
 /**
  * App-level change events so other tabs reload the plan. The posting tab updates itself directly
  * (a BroadcastChannel does not deliver messages back to the poster).
  */
-export type BroadcastMessage = { type: "Plan changed" } | { type: "Theme changed" };
+type BroadcastMessage = { type: "Plan changed" } | { type: "Theme changed" };
 
 let sender: BroadcastChannel | undefined;
 
