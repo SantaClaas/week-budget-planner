@@ -1,11 +1,9 @@
 import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
-import { isTheme } from "../theme";
 import * as jsonFile from "./json-file";
 import type { PlanStore } from "./plan-store";
 
 export const PLAN_KEY = "week-budget-planner.plan";
-export const THEME_KEY = "week-budget-planner.theme";
 
 /**
  * The limited level: the plan as JSON in localStorage (the stored format of
@@ -25,13 +23,6 @@ export function create(storage: Storage, events: Pick<Window, "addEventListener"
       storage.setItem(PLAN_KEY, planFile.serialize(after));
       current = after;
     },
-    async loadTheme() {
-      const theme = storage.getItem(THEME_KEY);
-      return isTheme(theme) ? theme : "system";
-    },
-    async saveTheme(theme) {
-      storage.setItem(THEME_KEY, theme);
-    },
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
       return jsonFile.create(text === null ? (current ?? planFile.parse("null")) : planFile.parse(text));
@@ -43,12 +34,11 @@ export function create(storage: Storage, events: Pick<Window, "addEventListener"
     },
     async wipe() {
       storage.removeItem(PLAN_KEY);
-      storage.removeItem(THEME_KEY);
       current = undefined;
     },
     onExternalChange(callback) {
       const listener = (event: StorageEvent) => {
-        if (event.key === null || event.key === PLAN_KEY || event.key === THEME_KEY) callback();
+        if (event.key === null || event.key === PLAN_KEY) callback();
       };
       events.addEventListener("storage", listener as EventListener);
       return () => events.removeEventListener("storage", listener as EventListener);

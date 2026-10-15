@@ -1,5 +1,5 @@
 import { databaseService, getDatabase } from "../database/client";
-import { loadPlan, loadTheme, savePlan, saveTheme } from "../database/plan-repository";
+import { loadPlan, savePlan } from "../database/plan-repository";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast";
 import * as planFile from "../plan/file";
 import * as jsonFile from "./json-file";
@@ -14,11 +14,6 @@ export function create(): PlanStore {
     async save(before, after) {
       await savePlan(database, before, after);
       broadcastMessage({ type: "Plan changed" });
-    },
-    loadTheme: () => loadTheme(database),
-    async saveTheme(theme) {
-      await saveTheme(database, theme);
-      broadcastMessage({ type: "Theme changed" });
     },
     async exportFile() {
       const bytes = await databaseService.exportFile();
