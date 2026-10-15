@@ -1,4 +1,4 @@
-/* Material 3 Expressive tokens for Week Budget Planner.
+/* Material 3 Expressive tokens and components for Week Budget Planner.
    Color: SchemeTonalSpot from seed #3a5bd9 (material-color-utilities 0.3.0).
    Shape, type, motion, component sizes: androidx compose material3 tokens.
    Activity colors: TonalPalette.fromHueAndChroma(hue, 48), tones 90/10/40 (light) and 30/90/80 (dark).
@@ -8,221 +8,257 @@
    size on :root or html.
    Each color is light-dark(light, dark) and follows color-scheme on :root. The theme setting
    sets data-theme="light" or "dark" on <html>; without it the system setting applies.
+   Names are whole words, no abbreviations, and follow Material's own names where it has one.
    The design canvas keeps its own class-scoped copy (.m3 / .m3.dark) for mixed-theme boards. */
-:root {
-  /* Light and dark follow color-scheme: the system setting by default,
-     or the Settings theme through data-theme below. */
-  color-scheme: light dark;
 
-  --primary: light-dark(#4f5b92, #b8c4ff); --on-primary: light-dark(#ffffff, #202c61);
-  --primary-container: light-dark(#dde1ff, #374379); --on-primary-container: light-dark(#374379, #dde1ff);
-  --secondary: light-dark(#5a5d72, #c2c5dd); --secondary-container: light-dark(#dfe1f9, #424659); --on-secondary-container: light-dark(#424659, #dfe1f9);
-  --tertiary: light-dark(#76546e, #e4bad9); --tertiary-container: light-dark(#ffd7f3, #5c3d56); --on-tertiary-container: light-dark(#5c3d56, #ffd7f3);
-  --error: light-dark(#ba1a1a, #ffb4ab); --on-error: light-dark(#ffffff, #690005); --error-container: light-dark(#ffdad6, #93000a); --on-error-container: light-dark(#93000a, #ffdad6);
-  --surface: light-dark(#fbf8ff, #121318); --on-surface: light-dark(#1b1b21, #e3e1e9); --on-surface-variant: light-dark(#45464f, #c6c5d0);
-  --surface-container-lowest: light-dark(#ffffff, #0d0e13); --surface-container-low: light-dark(#f5f2fa, #1b1b21);
-  --surface-container: light-dark(#efedf4, #1f1f25); --surface-container-high: light-dark(#e9e7ef, #292a2f); --surface-container-highest: light-dark(#e3e1e9, #34343a);
-  --outline: light-dark(#767680, #90909a); --outline-variant: light-dark(#c6c5d0, #45464f);
-  --inverse-surface: light-dark(#2f3036, #e3e1e9); --inverse-on-surface: light-dark(#f2f0f7, #2f3036); --inverse-primary: light-dark(#b8c4ff, #4f5b92);
-  --ok: light-dark(#126d34, #84d994);
-  /* overrun in progress bars: error palette tone 40 light, tone 60 dark, so it reads as red in both themes */
-  --over: light-dark(#ba1a1a, #ff5449);
-  --card: light-dark(var(--surface-container-lowest), var(--surface-container-high));
-  --weekend: var(--surface-container-low);
-  /* shape */
-  --corner-xs: .25rem; --corner-s: .5rem; --corner-m: .75rem; --corner-l: 1rem; --corner-l-inc: 1.25rem;
-  --corner-xl: 1.75rem; --corner-xl-inc: 2rem; --corner-xxl: 3rem; --corner-full: 999rem;
-  /* elevation */
-  --level1: 0 1px .125rem rgb(0 0 0 / .3), 0 1px .1875rem 1px rgb(0 0 0 / .15);
-  --level2: 0 1px .125rem rgb(0 0 0 / .3), 0 .125rem .375rem .125rem rgb(0 0 0 / .15);
-  --level3: 0 1px .1875rem rgb(0 0 0 / .3), 0 .25rem .5rem .1875rem rgb(0 0 0 / .15);
-  /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
-  --hour: 3rem;
-  --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
+/* Cascade layers, lowest priority first. A later layer always wins over an earlier one, whatever
+   the selector's specificity, so a component never needs a stronger selector to beat the reset,
+   and a utility (a type role, an activity color) always beats a component.
+   - reset: removes browser defaults we don't want. Element selectors only, no `*`.
+   - base: the document's own look: font, colors, links.
+   - theme: design tokens as custom properties. m3-shapes.css puts its shapes in this layer
+     itself, so import it plainly after this file.
+   - components: Material components and the app's own (week grid, blocks, pickers).
+   - utilities: single-purpose classes that combine with any component. */
+@layer reset, base, theme, components, utilities;
+
+@layer reset {
+  /* Element types instead of a global `*` rule, so web components and lower layers can still
+     override it. */
+  :where(body, div, span, p, h1, h2, h3, ul, ol, li, dl, dt, dd, header, footer, main, nav, aside,
+    section, article, form, fieldset, legend, label, a, button, input, select, textarea, dialog,
+    svg),
+  :where(div, span, button, label)::before,
+  :where(div, span, button, label)::after { box-sizing: border-box; }
+  :where(body, h1, h2, h3, p, ul, ol, fieldset, dl, dd) { margin: 0; padding: 0; }
+  :where(ul, ol) { list-style: none; }
+  :where(fieldset) { border: 0; min-width: 0; }
+  :where(button, input, select, textarea) { font: inherit; color: inherit; letter-spacing: inherit; }
 }
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }
-body {
-  margin: 0;
-  font-family: var(--font);
-  font-size: .875rem; line-height: 1.25rem; letter-spacing: .0125rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--on-surface);
-  background: var(--surface-container);
-  -webkit-font-smoothing: antialiased;
+
+@layer base {
+  body {
+    font-family: var(--font);
+    font-size: .875rem; line-height: 1.25rem; letter-spacing: .0125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--on-surface);
+    background: var(--surface-container);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); }
 }
-*, *::before, *::after { box-sizing: border-box; }
-h1, h2, h3, p, ul, ol, fieldset, dl, dd { margin: 0; padding: 0; }
-ul, ol { list-style: none; }
-fieldset { border: 0; min-width: 0; }
-button, input, select { font: inherit; color: inherit; letter-spacing: inherit; }
-a { color: var(--primary); }
 
-/* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
-   into public/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor:
-   <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg>
-   The filled variant is #name-fill. Color the icon with `color` on it or on its parent. */
-.icon { width: 1.5rem; height: 1.5rem; flex: none; display: inline-block; vertical-align: middle; }
-.icon.s20 { width: 1.25rem; height: 1.25rem; } .icon.s18 { width: 1.125rem; height: 1.125rem; }
+@layer theme {
+  :root {
+    /* Light and dark follow color-scheme: the system setting by default,
+       or the Settings theme through data-theme below. */
+    color-scheme: light dark;
 
-/* type scale (emphasized = one weight step up) */
-.display-s { font-size: 2.25rem; line-height: 2.75rem; font-weight: 400; letter-spacing: 0; }
-.headline-l { font-size: 2rem; line-height: 2.5rem; font-weight: 400; letter-spacing: 0; }
-.headline-m { font-size: 1.75rem; line-height: 2.25rem; font-weight: 400; letter-spacing: 0; }
-.headline-s { font-size: 1.5rem; line-height: 2rem; font-weight: 400; letter-spacing: 0; }
-.title-l { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; letter-spacing: 0; }
-.title-m { font-size: 1rem; line-height: 1.5rem; font-weight: 500; letter-spacing: .0094rem; }
-.title-s { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
-.body-l { font-size: 1rem; line-height: 1.5rem; font-weight: 400; letter-spacing: .0312rem; }
-.body-m { font-size: .875rem; line-height: 1.25rem; font-weight: 400; letter-spacing: .0125rem; }
-.body-s { font-size: .75rem; line-height: 1rem; font-weight: 400; letter-spacing: .025rem; }
-.label-l { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
-.label-m { font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
-.label-s { font-size: .6875rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
-.emph.display-s, .emph.headline-l, .emph.headline-m, .emph.headline-s, .emph.title-l, .emph.body-l, .emph.body-m, .emph.body-s { font-weight: 500; }
-.emph.title-m, .emph.title-s { font-weight: 700; }
-.emph.label-l, .emph.label-m, .emph.label-s { font-weight: 700; }
-.brand { font-variation-settings: "ROND" 100; font-weight: 600; letter-spacing: -.0125rem; }
-.muted { color: var(--on-surface-variant); }
+    --primary: light-dark(#4f5b92, #b8c4ff); --on-primary: light-dark(#ffffff, #202c61);
+    --primary-container: light-dark(#dde1ff, #374379); --on-primary-container: light-dark(#374379, #dde1ff);
+    --secondary: light-dark(#5a5d72, #c2c5dd); --secondary-container: light-dark(#dfe1f9, #424659); --on-secondary-container: light-dark(#424659, #dfe1f9);
+    --tertiary: light-dark(#76546e, #e4bad9); --tertiary-container: light-dark(#ffd7f3, #5c3d56); --on-tertiary-container: light-dark(#5c3d56, #ffd7f3);
+    --error: light-dark(#ba1a1a, #ffb4ab); --on-error: light-dark(#ffffff, #690005); --error-container: light-dark(#ffdad6, #93000a); --on-error-container: light-dark(#93000a, #ffdad6);
+    --surface: light-dark(#fbf8ff, #121318); --on-surface: light-dark(#1b1b21, #e3e1e9); --on-surface-variant: light-dark(#45464f, #c6c5d0);
+    --surface-container-lowest: light-dark(#ffffff, #0d0e13); --surface-container-low: light-dark(#f5f2fa, #1b1b21);
+    --surface-container: light-dark(#efedf4, #1f1f25); --surface-container-high: light-dark(#e9e7ef, #292a2f); --surface-container-highest: light-dark(#e3e1e9, #34343a);
+    --outline: light-dark(#767680, #90909a); --outline-variant: light-dark(#c6c5d0, #45464f);
+    --inverse-surface: light-dark(#2f3036, #e3e1e9); --inverse-on-surface: light-dark(#f2f0f7, #2f3036); --inverse-primary: light-dark(#b8c4ff, #4f5b92);
+    --success: light-dark(#126d34, #84d994);
+    /* overrun in progress bars: error palette tone 40 light, tone 60 dark, so it reads as red in both themes */
+    --over-budget: light-dark(#ba1a1a, #ff5449);
+    --card: light-dark(var(--surface-container-lowest), var(--surface-container-high));
+    --weekend: var(--surface-container-low);
+    /* shape: ShapeKeyTokens */
+    --corner-extra-small: .25rem; --corner-small: .5rem; --corner-medium: .75rem;
+    --corner-large: 1rem; --corner-large-increased: 1.25rem;
+    --corner-extra-large: 1.75rem; --corner-extra-large-increased: 2rem;
+    --corner-extra-extra-large: 3rem; --corner-full: 999rem;
+    /* elevation: ElevationTokens */
+    --elevation-level-1: 0 1px .125rem rgb(0 0 0 / .3), 0 1px .1875rem 1px rgb(0 0 0 / .15);
+    --elevation-level-2: 0 1px .125rem rgb(0 0 0 / .3), 0 .125rem .375rem .125rem rgb(0 0 0 / .15);
+    --elevation-level-3: 0 1px .1875rem rgb(0 0 0 / .3), 0 .25rem .5rem .1875rem rgb(0 0 0 / .15);
+    /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
+    --hour: 3rem;
+    --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+}
 
-/* buttons: expressive sizes, round by default */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem; padding: 0 1rem; border-radius: var(--corner-full); border: 0; font-size: .875rem; font-weight: 500; letter-spacing: .0063rem; cursor: pointer; white-space: nowrap; background: transparent; color: var(--primary); }
-.btn .icon { width: 1.25rem; height: 1.25rem; }
-.btn.xs { min-height: 2rem; padding: 0 .75rem; gap: .25rem; }
-.btn.xs .icon { width: 1.125rem; height: 1.125rem; }
-.btn.m { min-height: 3.5rem; padding: 0 1.5rem; font-size: 1rem; }
-.btn.filled { background: var(--primary); color: var(--on-primary); }
-.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
-.btn.outlined { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
-.btn.danger { background: var(--error); color: var(--on-error); }
-.btn.text-danger { color: var(--error); }
-.btn:disabled { background: rgb(from var(--on-surface) r g b / .1); color: rgb(from var(--on-surface) r g b / .38); }
-.btn.outlined:disabled, .btn.text:disabled { background: transparent; }
-.icon-btn { width: 2.5rem; height: 2.5rem; display: inline-grid; place-items: center; border-radius: var(--corner-full); border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; padding: 0; }
-.icon-btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
-.icon-btn.filled { background: var(--primary); color: var(--on-primary); }
-.icon-btn.sq { border-radius: var(--corner-m); }
+@layer components {
+  /* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
+     into public/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor:
+     <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg>
+     The filled variant is #name-fill. Color the icon with `color` on it or on its parent.
+     Size classes name the size in dp: size-20 is 20dp (1.25rem). */
+  .icon { width: 1.5rem; height: 1.5rem; flex: none; display: inline-block; vertical-align: middle; }
+  .icon.size-20 { width: 1.25rem; height: 1.25rem; } .icon.size-18 { width: 1.125rem; height: 1.125rem; }
 
-/* connected button group: inner corners 8, selected item goes fully round */
-.cbg { display: flex; gap: .125rem; }
-.cbg > * { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2.5rem; padding: 0 .875rem; border: 0; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: .875rem; font-weight: 500; border-radius: var(--corner-s); cursor: pointer; }
-.cbg > *:first-child { border-top-left-radius: var(--corner-full); border-bottom-left-radius: var(--corner-full); }
-.cbg > *:last-child { border-top-right-radius: var(--corner-full); border-bottom-right-radius: var(--corner-full); }
-.cbg > [aria-pressed="true"], .cbg > [aria-checked="true"] { background: var(--primary); color: var(--on-primary); border-radius: var(--corner-full); }
-.cbg.xs > * { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
+  /* buttons: expressive sizes, round by default */
+  .button { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem; padding: 0 1rem; border-radius: var(--corner-full); border: 0; font-size: .875rem; font-weight: 500; letter-spacing: .0063rem; cursor: pointer; white-space: nowrap; background: transparent; color: var(--primary); }
+  .button .icon { width: 1.25rem; height: 1.25rem; }
+  .button.extra-small { min-height: 2rem; padding: 0 .75rem; gap: .25rem; }
+  .button.extra-small .icon { width: 1.125rem; height: 1.125rem; }
+  .button.medium { min-height: 3.5rem; padding: 0 1.5rem; font-size: 1rem; }
+  .button.filled { background: var(--primary); color: var(--on-primary); }
+  .button.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .button.outlined { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
+  .button.danger { background: var(--error); color: var(--on-error); }
+  .button.text-danger { color: var(--error); }
+  .button:disabled { background: rgb(from var(--on-surface) r g b / .1); color: rgb(from var(--on-surface) r g b / .38); }
+  .button.outlined:disabled, .button.text:disabled { background: transparent; }
+  .icon-button { width: 2.5rem; height: 2.5rem; display: inline-grid; place-items: center; border-radius: var(--corner-full); border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; padding: 0; }
+  .icon-button.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .icon-button.filled { background: var(--primary); color: var(--on-primary); }
+  .icon-button.square { border-radius: var(--corner-medium); }
 
-/* FAB */
-.fab { display: inline-flex; align-items: center; gap: .75rem; min-height: 3.5rem; padding: 0 1.25rem 0 1rem; border: 0; border-radius: var(--corner-l); background: var(--primary-container); color: var(--on-primary-container); font-size: 1rem; font-weight: 500; box-shadow: var(--level3); cursor: pointer; }
+  /* connected button group: inner corners 8, selected item goes fully round */
+  .connected-button-group { display: flex; gap: .125rem; }
+  .connected-button-group > * { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2.5rem; padding: 0 .875rem; border: 0; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: .875rem; font-weight: 500; border-radius: var(--corner-small); cursor: pointer; }
+  .connected-button-group > *:first-child { border-top-left-radius: var(--corner-full); border-bottom-left-radius: var(--corner-full); }
+  .connected-button-group > *:last-child { border-top-right-radius: var(--corner-full); border-bottom-right-radius: var(--corner-full); }
+  .connected-button-group > [aria-pressed="true"], .connected-button-group > [aria-checked="true"] { background: var(--primary); color: var(--on-primary); border-radius: var(--corner-full); }
+  .connected-button-group.extra-small > * { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
 
-/* top app bar */
-.top-bar { display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: .5rem .5rem .5rem 1rem; }
-.top-bar .grow { flex: 1; min-width: 0; }
+  /* extended floating action button */
+  .floating-action-button { display: inline-flex; align-items: center; gap: .75rem; min-height: 3.5rem; padding: 0 1.25rem 0 1rem; border: 0; border-radius: var(--corner-large); background: var(--primary-container); color: var(--on-primary-container); font-size: 1rem; font-weight: 500; box-shadow: var(--elevation-level-3); cursor: pointer; }
 
-/* navigation bar (flexible, 64dp) */
-.nav-bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-height: 4rem; background: var(--surface-container); }
-.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .375rem 0; text-decoration: none; color: var(--on-surface-variant); font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
-.nav-item .pill { display: grid; place-items: center; width: 3.5rem; height: 2rem; border-radius: var(--corner-full); }
-.nav-item[aria-current="page"] { color: var(--secondary); font-weight: 700; }
-.nav-item[aria-current="page"] .pill { background: var(--secondary-container); color: var(--on-secondary-container); }
+  /* small top app bar */
+  .top-app-bar { display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: .5rem .5rem .5rem 1rem; }
+  .top-app-bar .grow { flex: 1; min-width: 0; }
 
-/* navigation rail (collapsed, desktop) */
-.rail { display: flex; flex-direction: column; align-items: center; gap: .25rem; width: 6rem; padding: .75rem 0; }
-.rail .nav-item { width: 100%; padding: .25rem 0 .5rem; }
+  /* navigation bar (flexible, 64dp) */
+  .navigation-bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-height: 4rem; background: var(--surface-container); }
+  .navigation-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .375rem 0; text-decoration: none; color: var(--on-surface-variant); font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
+  .navigation-item .active-indicator { display: grid; place-items: center; width: 3.5rem; height: 2rem; border-radius: var(--corner-full); }
+  .navigation-item[aria-current="page"] { color: var(--secondary); font-weight: 700; }
+  .navigation-item[aria-current="page"] .active-indicator { background: var(--secondary-container); color: var(--on-secondary-container); }
 
-/* floating toolbar: 64dp, full shape */
-.toolbar { display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: 0 .5rem; border-radius: var(--corner-full); background: var(--surface-container); color: var(--on-surface); box-shadow: var(--level3); }
-.toolbar.vibrant { background: var(--primary-container); color: var(--on-primary-container); }
-.toolbar.vibrant .icon-btn { color: var(--on-primary-container); }
+  /* navigation rail (collapsed, desktop) */
+  .navigation-rail { display: flex; flex-direction: column; align-items: center; gap: .25rem; width: 6rem; padding: .75rem 0; }
+  .navigation-rail .navigation-item { width: 100%; padding: .25rem 0 .5rem; }
 
-/* segmented list (expressive grouped list): 2px gaps, large outer, small inner corners */
-.slist { display: flex; flex-direction: column; gap: .125rem; }
-.slist > * { background: var(--card); border-radius: .25rem; }
-.slist > *:first-child { border-top-left-radius: var(--corner-l-inc); border-top-right-radius: var(--corner-l-inc); }
-.slist > *:last-child { border-bottom-left-radius: var(--corner-l-inc); border-bottom-right-radius: var(--corner-l-inc); }
-.li { display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding: .625rem 1rem; }
-.li .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.li .trail { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+  /* floating toolbar: 64dp, full shape */
+  .toolbar { display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: 0 .5rem; border-radius: var(--corner-full); background: var(--surface-container); color: var(--on-surface); box-shadow: var(--elevation-level-3); }
+  .toolbar.vibrant { background: var(--primary-container); color: var(--on-primary-container); }
+  .toolbar.vibrant .icon-button { color: var(--on-primary-container); }
 
-/* activity color: a tonal palette per palette hue */
-.h-blue   { --ac: light-dark(#d2e4ff, #00497f); --on-ac: light-dark(#001c37, #d2e4ff); --as: light-dark(#0b61a4, #a0c9ff); }
-.h-red    { --ac: light-dark(#ffdad4, #7d2b20); --on-ac: light-dark(#400100, #ffdad4); --as: light-dark(#9c4234, #ffb4a7); }
-.h-green  { --ac: light-dark(#a0f6ae, #005323); --on-ac: light-dark(#00210a, #a0f6ae); --as: light-dark(#126d34, #84d994); }
-.h-amber  { --ac: light-dark(#ffdeae, #604100); --on-ac: light-dark(#281900, #ffdeae); --as: light-dark(#7f5600, #fcbb4a); }
-.h-violet { --ac: light-dark(#ecdcff, #563587); --on-ac: light-dark(#280056, #ecdcff); --as: light-dark(#6e4da1, #d6baff); }
-.h-teal   { --ac: light-dark(#6ff6f8, #004f50); --on-ac: light-dark(#002020, #6ff6f8); --as: light-dark(#00696b, #4cdadc); }
-.h-pink   { --ac: light-dark(#ffd8e8, #772957); --on-ac: light-dark(#3c0028, #ffd8e8); --as: light-dark(#944170, #ffafd6); }
-.h-lime   { --ac: light-dark(#dceb78, #434b00); --on-ac: light-dark(#1a1e00, #dceb78); --as: light-dark(#596400, #c0cf5f); }
-/* activity shape: the activity's solid color clipped to its Material 3 Expressive shape. Set
-   --activity-shape: var(--shape-<name>) on the activity's element (shapes in m3-shapes.css). */
-.swatch { display: inline-block; width: 1.5rem; height: 1.5rem; flex: none; background: var(--as); clip-path: var(--activity-shape, var(--shape-circle)); }
-.swatch.s20 { width: 1.25rem; height: 1.25rem; } .swatch.s32 { width: 2rem; height: 2rem; }
-.swatch.s12 { width: .75rem; height: .75rem; } .swatch.s10 { width: .625rem; height: .625rem; }
-/* the shape on a block: top-right corner, out of the name's way */
-.block .swatch.corner { position: absolute; top: .25rem; right: .25rem; z-index: 1; }
-.block:has(.swatch.corner) .n { padding-right: .875rem; }
-.avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--corner-m); background: var(--ac); color: var(--on-ac); display: grid; place-items: center; flex: none; font-weight: 700; font-size: 1rem; }
+  /* segmented list (expressive grouped list): 2dp gaps, large outer, small inner corners */
+  .segmented-list { display: flex; flex-direction: column; gap: .125rem; }
+  .segmented-list > * { background: var(--card); border-radius: .25rem; }
+  .segmented-list > *:first-child { border-top-left-radius: var(--corner-large-increased); border-top-right-radius: var(--corner-large-increased); }
+  .segmented-list > *:last-child { border-bottom-left-radius: var(--corner-large-increased); border-bottom-right-radius: var(--corner-large-increased); }
+  .list-item { display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding: .625rem 1rem; }
+  .list-item .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .list-item .trailing { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 
-/* linear progress: track + gap + stop indicator */
-.progress { position: relative; display: flex; align-items: center; gap: .25rem; height: .625rem; } /* 10dp: room for the wavy state */
-.progress .on.wavy { height: .625rem; border-radius: 0; }
-.progress .on { height: .25rem; border-radius: .125rem; background: var(--as, var(--primary)); }
-.progress .off { flex: 1; height: .25rem; border-radius: .125rem; background: var(--secondary-container); position: relative; }
-.progress .off::after { content: ""; position: absolute; right: 0; top: 0; width: .25rem; height: .25rem; border-radius: .125rem; background: var(--as, var(--primary)); }
-.progress.full .off { display: none; }
-/* over budget (approved deviation, see the spec): the bar spans max(budget, placed). The within-budget
-   part keeps the activity color, then the usual gap, then the overrun in red (--over), sized by flex
-   in minutes: <span class="on" style="flex: 720"></span><span class="over" style="flex: 30"></span> */
-.progress .over { height: .25rem; min-width: .25rem; border-radius: .125rem; background: var(--over); }
-.progress.over .off { display: none; }
+  /* activity shape: the activity's solid color clipped to its Material 3 Expressive shape. Set
+     --activity-shape: var(--shape-<name>) on the activity's element (shapes in m3-shapes.css). */
+  .swatch { display: inline-block; width: 1.5rem; height: 1.5rem; flex: none; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle)); }
+  .swatch.size-20 { width: 1.25rem; height: 1.25rem; } .swatch.size-32 { width: 2rem; height: 2rem; }
+  .swatch.size-12 { width: .75rem; height: .75rem; } .swatch.size-10 { width: .625rem; height: .625rem; }
+  /* the shape on a block: top-right corner, out of the name's way */
+  .block .swatch.corner { position: absolute; top: .25rem; right: .25rem; z-index: 1; }
+  .block:has(.swatch.corner) .name { padding-right: .875rem; }
+  .avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--corner-medium); background: var(--activity-container); color: var(--on-activity-container); display: grid; place-items: center; flex: none; font-weight: 700; font-size: 1rem; }
 
-/* week grid */
-.week { display: grid; background: var(--card); border-radius: var(--corner-xl); overflow: hidden; }
-.dayhead { min-height: 3rem; display: flex; flex-direction: column; justify-content: center; padding: 0 .625rem; }
-.dayhead .d { font-size: .75rem; line-height: 1rem; font-weight: 700; letter-spacing: .0312rem; text-transform: uppercase; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
-.dayhead .t { font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
-.dayhead.today .d { color: var(--primary); }
-.dayhead.today .d::before { content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary); }
-.daycol { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), rgb(from var(--outline-variant) r g b / .45) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
-.daycol.we { background-color: var(--weekend); }
-.gutter { position: relative; font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
-.gutter span { position: absolute; right: .5rem; transform: translateY(-50%); }
+  /* linear progress: active indicator + gap + track + stop indicator */
+  .progress { position: relative; display: flex; align-items: center; gap: .25rem; height: .625rem; } /* 10dp: room for the wavy state */
+  .progress .indicator.wavy { height: .625rem; border-radius: 0; }
+  .progress .indicator { height: .25rem; border-radius: .125rem; background: var(--activity-color, var(--primary)); }
+  .progress .track { flex: 1; height: .25rem; border-radius: .125rem; background: var(--secondary-container); position: relative; }
+  .progress .track::after { content: ""; position: absolute; right: 0; top: 0; width: .25rem; height: .25rem; border-radius: .125rem; background: var(--activity-color, var(--primary)); }
+  .progress.full .track { display: none; }
+  /* over budget (approved deviation, see the spec): the bar spans max(budget, placed). The within-budget
+     part keeps the activity color, then the usual gap, then the overrun in red (--over-budget), sized by
+     flex in minutes:
+     <span class="indicator" style="flex: 720"></span><span class="over-budget" style="flex: 30"></span> */
+  .progress .over-budget { height: .25rem; min-width: .25rem; border-radius: .125rem; background: var(--over-budget); }
+  .progress.over-budget .track { display: none; }
 
-/* blocks */
-.block { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-s); background: var(--ac); color: var(--on-ac); padding: .25rem .5rem; overflow: hidden; display: flex; flex-direction: column; }
-.block .n { font-size: .75rem; line-height: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.block .tm { font-size: .6875rem; line-height: .875rem; opacity: .85; }
-.block.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
-.block.tiny { border-radius: var(--corner-xs); padding: 0; }
-.block.sel { box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--level2); z-index: 2; border-radius: var(--corner-m); }
-.block .handle { position: absolute; left: 50%; width: 1.5rem; height: .25rem; margin-left: -.75rem; border-radius: .125rem; background: var(--on-ac); opacity: .5; }
-.block.preview { background: transparent; border: 2px dashed var(--as); color: var(--as); }
-.slot-hit { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-s); background: rgb(from var(--primary) r g b / .12); border: 2px solid var(--primary); }
+  /* week grid */
+  .week { display: grid; background: var(--card); border-radius: var(--corner-extra-large); overflow: hidden; }
+  .day-header { min-height: 3rem; display: flex; flex-direction: column; justify-content: center; padding: 0 .625rem; }
+  .day-header .day-name { font-size: .75rem; line-height: 1rem; font-weight: 700; letter-spacing: .0312rem; text-transform: uppercase; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
+  .day-header .day-total { font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
+  .day-header.today .day-name { color: var(--primary); }
+  .day-header.today .day-name::before { content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary); }
+  .day-column { position: relative; border-left: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), rgb(from var(--outline-variant) r g b / .45) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour)); }
+  .day-column.weekend { background-color: var(--weekend); }
+  .gutter { position: relative; font-size: .6875rem; line-height: .875rem; color: var(--on-surface-variant); }
+  .gutter span { position: absolute; right: .5rem; transform: translateY(-50%); }
 
-/* menus, sheets, dialogs, snackbar */
-.menu { background: var(--surface-container); border-radius: var(--corner-l); box-shadow: var(--level2); padding: .25rem; display: flex; flex-direction: column; gap: .125rem; }
-.menu .mi { display: flex; align-items: center; gap: .75rem; min-height: 3rem; padding: 0 .75rem; border-radius: var(--corner-m); border: 0; background: transparent; text-align: left; width: 100%; }
-.menu .mi.hl { background: var(--secondary-container); color: var(--on-secondary-container); }
-.sheet { background: var(--surface-container-low); border-radius: var(--corner-xl) var(--corner-xl) 0 0; box-shadow: var(--level1); }
-.sheet .grip { width: 2rem; height: .25rem; border-radius: .125rem; background: var(--on-surface-variant); opacity: .4; margin: 1rem auto .5rem; }
-.dialog { background: var(--surface-container-high); border-radius: var(--corner-xl); padding: 1.5rem; box-shadow: var(--level3); display: flex; flex-direction: column; gap: 1rem; }
-.scrim { position: absolute; inset: 0; background: rgb(0 0 0 / .32); }
-.snackbar { display: flex; align-items: center; gap: .5rem; min-height: 3rem; padding: .25rem .5rem .25rem 1rem; border-radius: var(--corner-xs); background: var(--inverse-surface); color: var(--inverse-on-surface); box-shadow: var(--level3); }
-.snackbar .btn { color: var(--inverse-primary); min-height: 2.25rem; padding: 0 .75rem; }
+  /* blocks */
+  .block { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: flex; flex-direction: column; }
+  .block .name { font-size: .75rem; line-height: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .block .time { font-size: .6875rem; line-height: .875rem; opacity: .85; }
+  .block.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
+  .block.tiny { border-radius: var(--corner-extra-small); padding: 0; }
+  .block.selected { box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium); }
+  .block .handle { position: absolute; left: 50%; width: 1.5rem; height: .25rem; margin-left: -.75rem; border-radius: .125rem; background: var(--on-activity-container); opacity: .5; }
+  .block.preview { background: transparent; border: 2px dashed var(--activity-color); color: var(--activity-color); }
+  .slot-highlight { position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: rgb(from var(--primary) r g b / .12); border: 2px solid var(--primary); }
 
-/* outlined text field */
-.tf { position: relative; display: flex; flex-direction: column; }
-.tf input, .tf select { height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-xs); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
-.tf label { position: absolute; top: -.5rem; left: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); background: var(--tf-bg, var(--surface)); }
-.tf.focus input { border: 2px solid var(--primary); }
-.tf.focus label { color: var(--primary); }
-.tf.err input { border: 2px solid var(--error); }
-.tf.err label, .tf .sup.e { color: var(--error); }
-.tf .sup { padding: .25rem 1rem 0; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); }
+  /* menus, bottom sheets, dialogs, snackbar */
+  .menu { background: var(--surface-container); border-radius: var(--corner-large); box-shadow: var(--elevation-level-2); padding: .25rem; display: flex; flex-direction: column; gap: .125rem; }
+  .menu .menu-item { display: flex; align-items: center; gap: .75rem; min-height: 3rem; padding: 0 .75rem; border-radius: var(--corner-medium); border: 0; background: transparent; text-align: left; width: 100%; }
+  .menu .menu-item.highlighted { background: var(--secondary-container); color: var(--on-secondary-container); }
+  .bottom-sheet { background: var(--surface-container-low); border-radius: var(--corner-extra-large) var(--corner-extra-large) 0 0; box-shadow: var(--elevation-level-1); }
+  .bottom-sheet .drag-handle { width: 2rem; height: .25rem; border-radius: .125rem; background: var(--on-surface-variant); opacity: .4; margin: 1rem auto .5rem; }
+  .dialog { background: var(--surface-container-high); border-radius: var(--corner-extra-large); padding: 1.5rem; box-shadow: var(--elevation-level-3); display: flex; flex-direction: column; gap: 1rem; }
+  .scrim { position: absolute; inset: 0; background: rgb(0 0 0 / .32); }
+  .snackbar { display: flex; align-items: center; gap: .5rem; min-height: 3rem; padding: .25rem .5rem .25rem 1rem; border-radius: var(--corner-extra-small); background: var(--inverse-surface); color: var(--inverse-on-surface); box-shadow: var(--elevation-level-3); }
+  .snackbar .button { color: var(--inverse-primary); min-height: 2.25rem; padding: 0 .75rem; }
 
-/* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
-   tonal rounded square with a primary ring. A color option sets its h-* class, a shape option sets
-   --activity-shape inline; both inherit the other half from the form. */
-.picks { display: flex; gap: .25rem; flex-wrap: wrap; }
-.pick { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-m); background: transparent; cursor: pointer; }
-.pick::before { content: ""; width: 1.75rem; height: 1.75rem; background: var(--as); clip-path: var(--activity-shape, var(--shape-circle)); }
-.pick[aria-checked="true"] { background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary); }
+  /* outlined text field */
+  .text-field { position: relative; display: flex; flex-direction: column; }
+  .text-field input, .text-field select { height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-extra-small); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
+  .text-field label { position: absolute; top: -.5rem; left: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); background: var(--text-field-background, var(--surface)); }
+  .text-field.focused input { border: 2px solid var(--primary); }
+  .text-field.focused label { color: var(--primary); }
+  .text-field.error input { border: 2px solid var(--error); }
+  .text-field.error label, .text-field .supporting-text.error { color: var(--error); }
+  .text-field .supporting-text { padding: .25rem 1rem 0; font-size: .75rem; line-height: 1rem; color: var(--on-surface-variant); }
+
+  /* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
+     tonal rounded square with a primary ring. A color option sets its color-* class, a shape option
+     sets --activity-shape inline; both inherit the other half from the form. */
+  .picker { display: flex; gap: .25rem; flex-wrap: wrap; }
+  .picker-option { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-medium); background: transparent; cursor: pointer; }
+  .picker-option::before { content: ""; width: 1.75rem; height: 1.75rem; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle)); }
+  .picker-option[aria-checked="true"] { background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary); }
+}
+
+@layer utilities {
+  /* type scale: Material's type roles (TypographyTokens). Add .emphasized for the emphasized style,
+     one weight step up. */
+  .display-small { font-size: 2.25rem; line-height: 2.75rem; font-weight: 400; letter-spacing: 0; }
+  .headline-large { font-size: 2rem; line-height: 2.5rem; font-weight: 400; letter-spacing: 0; }
+  .headline-medium { font-size: 1.75rem; line-height: 2.25rem; font-weight: 400; letter-spacing: 0; }
+  .headline-small { font-size: 1.5rem; line-height: 2rem; font-weight: 400; letter-spacing: 0; }
+  .title-large { font-size: 1.375rem; line-height: 1.75rem; font-weight: 400; letter-spacing: 0; }
+  .title-medium { font-size: 1rem; line-height: 1.5rem; font-weight: 500; letter-spacing: .0094rem; }
+  .title-small { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
+  .body-large { font-size: 1rem; line-height: 1.5rem; font-weight: 400; letter-spacing: .0312rem; }
+  .body-medium { font-size: .875rem; line-height: 1.25rem; font-weight: 400; letter-spacing: .0125rem; }
+  .body-small { font-size: .75rem; line-height: 1rem; font-weight: 400; letter-spacing: .025rem; }
+  .label-large { font-size: .875rem; line-height: 1.25rem; font-weight: 500; letter-spacing: .0063rem; }
+  .label-medium { font-size: .75rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
+  .label-small { font-size: .6875rem; line-height: 1rem; font-weight: 500; letter-spacing: .0312rem; }
+  .emphasized:is(.display-small, .headline-large, .headline-medium, .headline-small, .title-large, .body-large, .body-medium, .body-small) { font-weight: 500; }
+  .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) { font-weight: 700; }
+  .brand { font-variation-settings: "ROND" 100; font-weight: 600; letter-spacing: -.0125rem; }
+  .muted { color: var(--on-surface-variant); }
+
+  /* activity color: a tonal palette per palette color. Sets the activity's container color (block
+     background), the text on it, and its solid color (swatch, progress, preview outline). */
+  .color-blue   { --activity-container: light-dark(#d2e4ff, #00497f); --on-activity-container: light-dark(#001c37, #d2e4ff); --activity-color: light-dark(#0b61a4, #a0c9ff); }
+  .color-red    { --activity-container: light-dark(#ffdad4, #7d2b20); --on-activity-container: light-dark(#400100, #ffdad4); --activity-color: light-dark(#9c4234, #ffb4a7); }
+  .color-green  { --activity-container: light-dark(#a0f6ae, #005323); --on-activity-container: light-dark(#00210a, #a0f6ae); --activity-color: light-dark(#126d34, #84d994); }
+  .color-amber  { --activity-container: light-dark(#ffdeae, #604100); --on-activity-container: light-dark(#281900, #ffdeae); --activity-color: light-dark(#7f5600, #fcbb4a); }
+  .color-violet { --activity-container: light-dark(#ecdcff, #563587); --on-activity-container: light-dark(#280056, #ecdcff); --activity-color: light-dark(#6e4da1, #d6baff); }
+  .color-teal   { --activity-container: light-dark(#6ff6f8, #004f50); --on-activity-container: light-dark(#002020, #6ff6f8); --activity-color: light-dark(#00696b, #4cdadc); }
+  .color-pink   { --activity-container: light-dark(#ffd8e8, #772957); --on-activity-container: light-dark(#3c0028, #ffd8e8); --activity-color: light-dark(#944170, #ffafd6); }
+  .color-lime   { --activity-container: light-dark(#dceb78, #434b00); --on-activity-container: light-dark(#1a1e00, #dceb78); --activity-color: light-dark(#596400, #c0cf5f); }
+}
