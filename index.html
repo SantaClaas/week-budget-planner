@@ -60,7 +60,7 @@
           location.reload();
         };
         navigator.serviceWorker
-          .register(new URL("sw.js", document.baseURI))
+          .register(new URL("service-worker.js", document.baseURI))
           .then(() => {
             if (navigator.serviceWorker.controller) reloadOnce();
             else navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
