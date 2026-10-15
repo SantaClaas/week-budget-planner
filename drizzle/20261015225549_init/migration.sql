@@ -23,8 +23,7 @@ CREATE TABLE `settings` (
 	`id` integer PRIMARY KEY,
 	`day_start` integer NOT NULL,
 	`day_end` integer NOT NULL,
-	`example_loaded_at` text,
-	`theme` text DEFAULT 'system' NOT NULL
+	`example_loaded_at` text
 );
 --> statement-breakpoint
 CREATE INDEX `blocks_activity_id` ON `blocks` (`activity_id`);

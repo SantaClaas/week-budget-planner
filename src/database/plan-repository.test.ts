@@ -6,7 +6,7 @@ import type { Plan } from "../plan/types";
 import { createLocalQueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
 import { MIGRATIONS, runMigrations } from "./migrations";
-import { loadPlan, loadTheme, buildPlanStatements, savePlan, saveTheme } from "./plan-repository";
+import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository";
 import { blocks as blocksTable } from "./schema";
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
@@ -104,14 +104,5 @@ describe("plan repository", () => {
     });
     await expect(database.batch([settingsUpdate!, duplicate])).rejects.toThrow();
     expect((await loadPlan(database)).plan.dayStart).toBe(7);
-  });
-
-  it("stores the theme without touching the plan", async () => {
-    const { database } = await openTestDatabase();
-    expect(await loadTheme(database)).toBe("system");
-    await savePlan(database, undefined, example());
-    await saveTheme(database, "dark");
-    expect(await loadTheme(database)).toBe("dark");
-    expect((await loadPlan(database)).plan).toEqual(example());
   });
 });
