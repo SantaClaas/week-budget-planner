@@ -1,4 +1,4 @@
-// Copied from SantaClaas/flashcut (src/lib/broadcast-service.ts) unchanged.
+// Adapted from SantaClaas/flashcut (src/lib/broadcast-service.ts).
 /**
  * Comlink-style RPC between same-origin tabs, in the spirit of crackle, but over a
  * BroadcastChannel: exactly one tab (the provider, elected elsewhere via the Web Locks API) serves
@@ -104,7 +104,7 @@ interface PendingCall {
   reject(reason: unknown): void;
 }
 
-const PROVIDER_QUERY_INTERVAL_MS = 500;
+const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
 
 /** A proxy whose method calls are served by whichever tab currently provides `scope`. */
 export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: string): Consumer<T> {
@@ -158,7 +158,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
       queryTimer ??= setInterval(
         () => channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage),
-        PROVIDER_QUERY_INTERVAL_MS,
+        PROVIDER_QUERY_INTERVAL_MILLISECONDS,
       );
     });
   }
