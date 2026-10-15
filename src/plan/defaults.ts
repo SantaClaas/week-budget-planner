@@ -56,7 +56,7 @@ export function defaultLook(
  */
 export function defaultLength(activity: Activity, blocks: readonly Block[]): number {
   const left = target(activity) - (placedByActivity(blocks).get(activity.id) ?? 0);
-  let length = activity.mode === "day" ? activity.mins : WEEKLY_DEFAULT_LENGTH;
+  let length = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
   if (left > 0) length = Math.min(length, left);
   return clamp(length, SLOT, MAX_LENGTH);
 }
