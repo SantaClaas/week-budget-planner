@@ -90,7 +90,7 @@ A block covers the week minutes `[day * 1440 + start, day * 1440 + start + lengt
 
 Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, de-duplicate ids, and turn an `exampleLoadedAt` that isn't a valid date into null. The prototype's `sanitize()` is the reference.
 
-The theme choice is a device preference, not part of the plan: store it in the `settings` table (see Persistence) as `system`, `light` or `dark`, default `system`.
+The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.theme` as `light` or `dark`, and System removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme).
 
 ## Layout
 
@@ -118,7 +118,7 @@ The theme choice is a device preference, not part of the plan: store it in the `
 
 ### Settings page
 
-- **Appearance:** Theme, as a connected button group: System, Light, Dark.
+- **Appearance:** Theme, as a connected button group: System, Light, Dark. Supporting text under it says what System currently resolves to: "System is currently dark." It updates when the system setting changes.
 - **Week** (phones only): Day hours, Clear week.
 - **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
 - **Storage:** number of activities, number of blocks, database size.
@@ -201,7 +201,7 @@ Map the data model above roughly like this. Adjust it if Drizzle suggests better
 
 - `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `budget_minutes` int, `days` int, `shape` text, `position` int (list order), `created_at` text
 - `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `length` int
-- `settings`: a single row with `day_start`, `day_end`, `example_loaded_at` (text, ISO 8601, null when there is no example week) and `theme` (`system`/`light`/`dark`)
+- `settings`: a single row with `day_start`, `day_end`, and `example_loaded_at` (text, ISO 8601, null when there is no example week). The theme isn't stored here (see Data model).
 
 ### Writes and undo
 
@@ -252,7 +252,7 @@ The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-w
 
 - **Token sources:** shape, type, motion and component sizes come from Google's own Material 3 tokens ([androidx `material3/tokens`](https://github.com/androidx/androidx/tree/androidx-main/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/tokens)). Colors come from [material-color-utilities](https://github.com/material-foundation/material-color-utilities). Regenerate them from there rather than inventing values.
 - **Color:** a `SchemeTonalSpot` light and dark scheme from the seed `#3a5bd9` (a cobalt close to the prototype's accent). Pages sit on `surface-container`, and panes, lists and the grid use a card color (`surface-container-lowest` in light, `surface-container-high` in dark). Over budget uses `error`, and "All placed" uses a green.
-- **Theme:** every color token is `light-dark(light, dark)` on `:root`, with `color-scheme: light dark`, so it follows the system setting by default. The Settings choice sets `data-theme="light"` or `data-theme="dark"` on `<html>`, which pins `color-scheme`. System removes the attribute. Native form controls follow the same switch.
+- **Theme:** every color token is `light-dark(light, dark)` on `:root`, with `color-scheme: light dark`, so it follows the system setting by default. The Settings choice sets the content of `<meta name="color-scheme">` to `light` or `dark` (System sets it back to `light dark`), and the tokens map that meta back onto `color-scheme` with `:root:has(> head > meta[name="color-scheme"][content="dark"])`, so CSS doesn't depend on script. A small inline script right after the meta (not a module, not deferred) applies the stored choice before the first paint, so the theme never flashes. Native form controls follow the same switch. Other tabs follow through the `storage` event. Don't clear a stored choice when the system setting happens to change to match it.
 - **Activity colors:** the 8 palette hues, keyed by the stored `hue` value: Blue 255, Red 28, Green 152, Amber 78, Violet 305, Teal 198, Pink 350, Lime 118. Each gets a tonal palette (`TonalPalette.fromHueAndChroma(hue, 48)`):
   - block background: tone 90 light, 30 dark
   - block text: tone 10 light, 90 dark
@@ -275,6 +275,12 @@ The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-w
 - **Motion:** M3 Expressive uses springs. Approximate the spatial and effects springs with CSS `linear()` easing curves. Respect `prefers-reduced-motion` by dropping spatial motion and keeping only fades and the progress widths.
 - **Touch targets** are at least 3rem (2.5rem visual buttons with padding around them).
 - **Text size and zoom (WCAG 1.4.4 Resize Text, 1.4.10 Reflow):** Avoid px. Google's sp and dp values become rem (divided by 16, so 16dp = 1rem), so text, spacing, corners and controls follow the user's preferred text size, not only browser zoom. `index.html` opts into the operating system's text size with `<meta name="text-scale" content="scale">`. Never set a font size on `:root` or `html`. Only 1–2px hairlines stay in px: borders, outlines, grid lines, the 1px shadow offsets and selection rings. Controls that hold text use a minimum height and grow with their text instead of clipping it. Breakpoints use `em` (the wide layout starts at 52.5em, Material's 840dp at the default size), so larger text switches to the phone layout sooner. Check text at 200% and reflow at a 320 CSS px wide viewport.
+- **Accessibility:**
+  - Every interactive element shows a focus ring on `:focus-visible` (an outline with an offset, in `primary`), never on plain `:focus`.
+  - Windows High Contrast (`forced-colors: active`): the browser drops box shadows and replaces backgrounds, so selection rings fall back to an `outline` in `Highlight`, blocks get a border, the progress indicator uses system colors, and the activity swatches keep their color with `forced-color-adjust: none`, since the color is the information there.
+  - Snackbars and the save status are announced through one shared polite live region (`role="status"`). A failed write is announced as an alert. "Saving…" isn't announced.
+  - The reset removes list styles, which makes Safari drop list semantics, so the Activities list and other real lists get `role="list"`.
+  - Text fields show focus and errors from the platform state (`:focus-within`, `:user-invalid`), not from script.
 - **CSS layers:** styles live in cascade layers declared up front, lowest priority first: `@layer reset, base, theme, components, utilities;`. `reset` removes browser defaults with element selectors only, never a global `*` rule. `base` is the document's font, colors and links. `theme` holds the design tokens as custom properties, including the shapes, which `m3-shapes.css` declares in that layer itself. `components` holds Material's components and the app's own. `utilities` holds single-purpose classes that combine with any component: the type roles, `.muted`, `.brand` and the activity colors. A later layer always wins, so no selector needs extra specificity to beat an earlier one. Use `:where()` inside a layer for defaults that should be easy to override.
 - **Names:** whole words, no abbreviations, in CSS as in code: `.button`, not `.btn`; `--corner-extra-small`, not `--corner-xs`. Use Material's own name for a part when it has one (`.top-app-bar`, `.active-indicator`, `.drag-handle`, `.title-medium`). Only very common abbreviations such as UUID, URL or ID are fine.
 
@@ -294,6 +300,7 @@ The design canvas made these choices without a Google source. Confirm each again
 - The size and placement of the shape on blocks, and the pickers' selected style.
 - Google Sans Flex as the typeface. Google's baseline type tokens use the system sans-serif (Roboto on Android).
 - Approximating the springs with CSS `linear()` easing.
+- The focus ring (2px outline in `primary`, 2px offset). Look up Material's focus indicator.
 
 Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 

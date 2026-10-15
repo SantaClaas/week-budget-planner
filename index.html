@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="text-scale" content="scale" />
     <meta name="color-scheme" content="light dark" />
+    <script>
+      // Applies the theme setting before the first paint (see Design, Theme in docs/SPEC.md).
+      // Kept tiny and blocking on purpose; src/theme.ts handles changes later.
+      try {
+        const theme = localStorage.getItem("week-budget-planner.theme");
+        if (theme === "light" || theme === "dark") {
+          document.querySelector('meta[name="color-scheme"]').content = theme;
+        }
+      } catch {
+        // Storage can be blocked. The system setting applies then.
+      }
+    </script>
     <title>Week Budget Planner</title>
     <script>
       // GitHub Pages can't send the cross-origin isolation headers the database needs, so the
