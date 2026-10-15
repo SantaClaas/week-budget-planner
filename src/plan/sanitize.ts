@@ -51,7 +51,7 @@ export function sanitizePlan(input: unknown): Plan {
       hue: PALETTE_HUES.has(hue) ? hue : look.hue,
       shape: SHAPE_NAMES.has(shape) ? shape : look.shape,
       mode,
-      mins: Math.max(SLOT, snap(integer(raw["mins"], SLOT, mode === "day" ? DAY : WEEK, 60))),
+      budgetMinutes: Math.max(SLOT, snap(integer(raw["budgetMinutes"], SLOT, mode === "day" ? DAY : WEEK, 60))),
       days: integer(raw["days"], 1, 7, 5),
     };
     plan.activities.push(activity);
@@ -60,17 +60,17 @@ export function sanitizePlan(input: unknown): Plan {
   const blockIds = new Set<string>();
   for (const raw of Array.isArray(input["blocks"]) ? input["blocks"] : []) {
     if (!isRecord(raw)) continue;
-    const act = String(raw["act"] ?? "");
-    if (!activityIds.has(act)) continue;
+    const activityId = String(raw["activityId"] ?? "");
+    if (!activityIds.has(activityId)) continue;
     let id = String(raw["id"] ?? "").slice(0, 40);
     if (!id || blockIds.has(id)) id = newId();
     blockIds.add(id);
     const block: Block = {
       id,
-      act,
+      activityId,
       day: integer(raw["day"], 0, 6, 0),
       start: clamp(snap(integer(raw["start"], 0, DAY, 540)), 0, DAY - SLOT),
-      dur: clamp(snap(integer(raw["dur"], SLOT, MAX_LENGTH, 60)), SLOT, MAX_LENGTH),
+      length: clamp(snap(integer(raw["length"], SLOT, MAX_LENGTH, 60)), SLOT, MAX_LENGTH),
     };
     plan.blocks.push(block);
   }

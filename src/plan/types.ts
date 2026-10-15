@@ -22,7 +22,7 @@ export type Activity = {
   /** How the budget is counted. */
   mode: Mode;
   /** Budget in minutes, per week or per day. A multiple of the slot, at least one slot. */
-  mins: number;
+  budgetMinutes: number;
   /** Days per week, 1 to 7. Used only when `mode` is "day". */
   days: number;
 };
@@ -30,17 +30,17 @@ export type Activity = {
 export type Block = {
   id: string;
   /** The activity's id. */
-  act: string;
+  activityId: string;
   /** 0 is Monday, 6 is Sunday. */
   day: number;
   /** Minutes from midnight, 0 to 1425, a multiple of the slot. */
   start: number;
-  /** Length in minutes, 15 to 1440. `start + dur` may pass midnight (an overnight block). */
-  dur: number;
+  /** Length in minutes, 15 to 1440. `start + length` may pass midnight (an overnight block). */
+  length: number;
 };
 
 export type Plan = {
-  v: 1;
+  version: 1;
   activities: Activity[];
   blocks: Block[];
   /** First of the day hours, 0 to 12. */
@@ -151,5 +151,5 @@ export const DAY_NAMES_LONG = [
 ] as const;
 
 export function emptyPlan(): Plan {
-  return { v: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, example: false };
+  return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, example: false };
 }

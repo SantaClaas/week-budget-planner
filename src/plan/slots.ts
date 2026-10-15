@@ -9,7 +9,7 @@ export function isFree(
   length: number,
 ): boolean {
   const from = day * DAY + start;
-  return !blocks.some((block) => rangesOverlap(from, length, weekStart(block), block.dur));
+  return !blocks.some((block) => rangesOverlap(from, length, weekStart(block), block.length));
 }
 
 /**
@@ -23,7 +23,7 @@ export function firstFreeSlot(
 ): { day: number; start: number } | undefined {
   const days = [0, 1, 2, 3, 4, 5, 6];
   const taken = new Set(
-    plan.blocks.filter((block) => block.act === activity.id).map((block) => block.day),
+    plan.blocks.filter((block) => block.activityId === activity.id).map((block) => block.day),
   );
   const order =
     activity.mode === "day"

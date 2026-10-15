@@ -11,7 +11,7 @@ export type ActivityFormInput = {
 };
 
 export type ActivityFormResult =
-  | { ok: true; value: { name: string; mins: number; mode: Mode; days: number } }
+  | { ok: true; value: { name: string; budgetMinutes: number; mode: Mode; days: number } }
   | { ok: false; field: "name" | "hours" | "days"; message: string };
 
 /** Validates the activity form with the prototype's messages. Hours round to the slot. */
@@ -36,7 +36,7 @@ export function readActivityForm(input: ActivityFormInput): ActivityFormResult {
     ok: true,
     value: {
       name: name.slice(0, 60),
-      mins: Math.max(SLOT, snap(hours * 60)),
+      budgetMinutes: Math.max(SLOT, snap(hours * 60)),
       mode: input.mode,
       days: input.mode === "day" ? days : 5,
     },

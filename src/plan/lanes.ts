@@ -8,7 +8,7 @@ export type Lane = { lane: number; lanes: number };
  * start, and every part in the group shares the group's lane count. Keyed by block id.
  */
 export function layoutLanes(parts: readonly BlockPart[]): Map<string, Lane> {
-  const sorted = [...parts].sort((a, b) => a.start - b.start || b.end - a.end);
+  const sorted = [...parts].sort((first, second) => first.start - second.start || second.end - first.end);
   const result = new Map<string, Lane>();
   let group: BlockPart[] = [];
   let groupEnd = -1;

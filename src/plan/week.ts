@@ -15,21 +15,21 @@ export type BlockPart = {
   kind: "only" | "first" | "second";
 };
 
-const mod = (value: number, modulus: number): number => ((value % modulus) + modulus) % modulus;
+const modulo = (value: number, modulus: number): number => ((value % modulus) + modulus) % modulus;
 
 /** The block's start in week minutes, 0 to 10079. */
 export const weekStart = (block: Pick<Block, "day" | "start">): number =>
   block.day * DAY + block.start;
 
-export const isOvernight = (block: Pick<Block, "start" | "dur">): boolean =>
-  block.start + block.dur > DAY;
+export const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
+  block.start + block.length > DAY;
 
 export function blockParts(block: Block): BlockPart[] {
-  const end = block.start + block.dur;
+  const end = block.start + block.length;
   if (end <= DAY) return [{ block, day: block.day, start: block.start, end, kind: "only" }];
   return [
     { block, day: block.day, start: block.start, end: DAY, kind: "first" },
-    { block, day: mod(block.day + 1, 7), start: 0, end: end - DAY, kind: "second" },
+    { block, day: modulo(block.day + 1, 7), start: 0, end: end - DAY, kind: "second" },
   ];
 }
 
@@ -38,7 +38,7 @@ export function partsOnDay(blocks: readonly Block[], day: number): BlockPart[] {
   return blocks
     .flatMap(blockParts)
     .filter((part) => part.day === day)
-    .sort((a, b) => a.start - b.start || b.end - a.end);
+    .sort((first, second) => first.start - second.start || second.end - first.end);
 }
 
 /** Whether two week-minute ranges overlap on the wrapping week. */
@@ -49,17 +49,17 @@ export function rangesOverlap(
   lengthB: number,
 ): boolean {
   // Unroll both ranges onto a line of two weeks and compare every pairing.
-  const a = mod(startA, WEEK);
-  const b = mod(startB, WEEK);
+  const wrappedA = modulo(startA, WEEK);
+  const wrappedB = modulo(startB, WEEK);
   for (const shift of [-WEEK, 0, WEEK]) {
-    const bs = b + shift;
-    if (a < bs + lengthB && bs < a + lengthA) return true;
+    const shiftedB = wrappedB + shift;
+    if (wrappedA < shiftedB + lengthB && shiftedB < wrappedA + lengthA) return true;
   }
   return false;
 }
 
-export const blocksOverlap = (a: Block, b: Block): boolean =>
-  rangesOverlap(weekStart(a), a.dur, weekStart(b), b.dur);
+export const blocksOverlap = (first: Block, second: Block): boolean =>
+  rangesOverlap(weekStart(first), first.length, weekStart(second), second.length);
 
 /** Minutes of each day (Monday first) covered by blocks, counting overnight parts on their own day. */
 export function dayTotals(blocks: readonly Block[]): number[] {
@@ -70,13 +70,13 @@ export function dayTotals(blocks: readonly Block[]): number[] {
 
 /** Converts week minutes back to a day and a start, wrapping around the week. */
 export function fromWeekMinutes(minutes: number): { day: number; start: number } {
-  const wrapped = mod(minutes, WEEK);
+  const wrapped = modulo(minutes, WEEK);
   return { day: Math.floor(wrapped / DAY), start: wrapped % DAY };
 }
 
 /** Moving keeps the length; only the day and start change. The start may be any slot. */
 export function moveTo(block: Block, day: number, start: number): Block {
-  return { ...block, day: mod(day, 7), start: clamp(start, 0, DAY - SLOT) };
+  return { ...block, day: modulo(day, 7), start: clamp(start, 0, DAY - SLOT) };
 }
 
 /** Moves by a number of minutes, crossing midnight and wrapping the week (keyboard Up/Down). */
@@ -87,7 +87,7 @@ export function moveBy(block: Block, minutes: number): Block {
 /** Moves to the neighbouring day, wrapping the week (keyboard Left/Right). */
 export const moveDays = (block: Block, days: number): Block => ({
   ...block,
-  day: mod(block.day + days, 7),
+  day: modulo(block.day + days, 7),
 });
 
 /**
@@ -95,9 +95,9 @@ export const moveDays = (block: Block, days: number): Block => ({
  * on the block's own day, the length between one slot and a day.
  */
 export function resizeStart(block: Block, start: number): Block {
-  const end = block.start + block.dur;
+  const end = block.start + block.length;
   const next = clamp(start, Math.max(0, end - MAX_LENGTH), Math.min(DAY - SLOT, end - SLOT));
-  return { ...block, start: next, dur: end - next };
+  return { ...block, start: next, length: end - next };
 }
 
 /**
@@ -109,14 +109,14 @@ export function resizeEnd(block: Block, end: number): Block {
   const low = block.start + SLOT;
   const high = isOvernight(block) ? block.start + MAX_LENGTH : DAY;
   const next = clamp(end, isOvernight(block) ? Math.max(low, DAY) : low, high);
-  return { ...block, dur: next - block.start };
+  return { ...block, length: next - block.start };
 }
 
 /** "10:00–11:30 · 1h30", or "Tue 22:00 – Wed 02:00 · 4h" for an overnight block. */
 export function describeTime(block: Block): string {
-  const end = block.start + block.dur;
-  const length = formatShort(block.dur);
-  if (end <= DAY) return `${formatClock(block.start)}–${formatClock(end)} · ${length}`;
-  const nextDay = DAY_NAMES[mod(block.day + 1, 7)];
-  return `${DAY_NAMES[block.day]} ${formatClock(block.start)} – ${nextDay} ${formatClock(end)} · ${length}`;
+  const end = block.start + block.length;
+  const lengthLabel = formatShort(block.length);
+  if (end <= DAY) return `${formatClock(block.start)}–${formatClock(end)} · ${lengthLabel}`;
+  const nextDay = DAY_NAMES[modulo(block.day + 1, 7)];
+  return `${DAY_NAMES[block.day]} ${formatClock(block.start)} – ${nextDay} ${formatClock(end)} · ${lengthLabel}`;
 }
