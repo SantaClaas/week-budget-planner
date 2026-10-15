@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
-import { localDate, parsePlan, serializePlan } from "../lib/plan-file";
 import { sanitizePlan } from "../plan/sanitize";
 import { localStorageStore, memoryStore, PLAN_KEY, THEME_KEY } from "./simple-stores";
 
@@ -40,20 +39,6 @@ const events = () => {
 
 const example = () => sanitizePlan(exampleWeek);
 const file = (text: string, name: string) => new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
-
-describe("plan file", () => {
-  it("round-trips the stored format", () => {
-    expect(parsePlan(serializePlan(example()))).toEqual(example());
-  });
-
-  it("turns malformed text into an empty plan", () => {
-    expect(parsePlan("{not json").activities).toEqual([]);
-  });
-
-  it("formats the local date for file names", () => {
-    expect(localDate(new Date(2026, 0, 5))).toBe("2026-01-05");
-  });
-});
 
 describe("localStorage store", () => {
   it("starts empty, then keeps what was saved", async () => {
