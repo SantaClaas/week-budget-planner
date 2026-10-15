@@ -11,7 +11,7 @@ export function create(): PlanStore {
   return {
     level: "none",
     async load() {
-      return { plan: plan ?? planFile.parse("null"), stored: plan !== undefined };
+      return { plan: plan ?? planFile.parse("null"), isStored: plan !== undefined };
     },
     async save(_before, after) {
       plan = after;

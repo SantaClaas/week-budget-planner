@@ -35,8 +35,8 @@ describe("migrations", () => {
 describe("plan repository", () => {
   it("reports a fresh database as not stored", async () => {
     const { database } = await openTestDatabase();
-    const { plan, stored } = await loadPlan(database);
-    expect(stored).toBe(false);
+    const { plan, isStored } = await loadPlan(database);
+    expect(isStored).toBe(false);
     expect(plan.activities).toEqual([]);
     expect(plan.dayStart).toBe(7);
   });
@@ -44,8 +44,8 @@ describe("plan repository", () => {
   it("round-trips a plan", async () => {
     const { database } = await openTestDatabase();
     await savePlan(database, undefined, example());
-    const { plan, stored } = await loadPlan(database);
-    expect(stored).toBe(true);
+    const { plan, isStored } = await loadPlan(database);
+    expect(isStored).toBe(true);
     expect(plan).toEqual(example());
   });
 
