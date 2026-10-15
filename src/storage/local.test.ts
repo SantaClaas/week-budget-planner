@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import exampleWeek from "../../examples/example-week.json";
-import { sanitizePlan } from "../plan/sanitize";
+import { createExampleWeek } from "../plan/example";
 import * as local from "./local";
 import { PLAN_KEY, THEME_KEY } from "./local";
 
@@ -38,7 +37,7 @@ const events = () => {
   });
 };
 
-const example = () => sanitizePlan(exampleWeek);
+const example = () => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
 const file = (text: string, name: string) => new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
 describe("localStorage store", () => {

@@ -23,7 +23,7 @@ CREATE TABLE `settings` (
 	`id` integer PRIMARY KEY,
 	`day_start` integer NOT NULL,
 	`day_end` integer NOT NULL,
-	`example` integer NOT NULL,
+	`example_loaded_at` text,
 	`theme` text DEFAULT 'system' NOT NULL
 );
 --> statement-breakpoint
