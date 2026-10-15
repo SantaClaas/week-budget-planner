@@ -11,15 +11,20 @@ The behavior and the design are in `docs/SPEC.md`. The words for things are in i
 - **No abbreviations.** Write `button`, not `btn`; `database`, not `db`; `parameters`, not `params`; `length`, not `dur`; `--corner-extra-small`, not `--corner-xs`. Very common abbreviations that read as words are fine, such as UUID, URL, ID or API. Units in UI copy ("1 h 30 min") are copy, not names.
 - **Use the glossary.** "Block" (never "tile"), "slot", "length", "placing" (never "armed"), "left to place", "over budget". If a new term is needed, add it to the glossary first.
 - **Use the platform's or the design system's own name** when it has one. In CSS that's Material's names: `.top-app-bar`, `.active-indicator`, `.drag-handle`, `.title-medium`, `--elevation-level-1`.
-- **Keep other people's names at the boundary.** When an outside API fixes a name (Drizzle's `params` in a batch statement, for example), keep it where the API needs it, and say so in a comment.
+- **The rules stop at the edges.** They apply inside the code we control. At the edges of the application, names belong to the other side: browser and library APIs (`localStorage`, Drizzle's `params` in a batch statement), file formats, network messages and data on disk. We can't rename those, so use them as they are, and say so in a comment where it isn't obvious. Abbreviations are fine there when they help the edge, for example to save space on the wire or on disk. Away from the edges, use names people understand, not the names someone chose for an outside API.
 
 ### Functions
 
 **A function starts with a verb in the imperative mood**, usually followed by the noun it acts on: `openStorage`, `loadPlan`, `saveTheme`, `moveBlock`.
 
-**Repeated nouns point to a module.** When several functions share a noun (`openStorage`, `wipeStorage`, `exportStorage`), that noun may want to be a module of its own, with the functions inside it. The module name already says the noun, so the functions inside drop it: the `storage` module exports `open`, `wipe` and `export`.
+**Repeated nouns point to a module.** When several functions share a noun (`openStorage`, `readStorage`, `wipeStorage`), that noun may want to be a module of its own, with the functions inside it. The module name already says the noun, so the functions inside drop it: the `storage` module exports `open`, `read` and `wipe`.
 
-**Resolve clashes at the import.** Rust writes `storage::open`. TypeScript has no module paths at call sites, so rename on import when two verbs clash: `import { open as openStorage } from "./storage"`. Whether a prefix form like `storageOpen` reads better is still open.
+**Resolve clashes at the import.** Rust writes `storage::open`. TypeScript has no module paths at call sites, so the import puts the noun back:
+
+- A namespace import reads closest to Rust: `import * as jsonFile from "./json-file"`, then `jsonFile.read(file)`. The storage stores use this: `local.create()`, `memory.create()`, `planFile.parse(text)`.
+- A renamed import suits a single function: `import { open as openStorage } from "./storage"`.
+
+Whether a prefix form like `storageOpen` reads better is still open.
 
 ## Modules
 
@@ -27,7 +32,7 @@ The behavior and the design are in `docs/SPEC.md`. The words for things are in i
 
 **Split by meaning when a file grows.** A file becomes a folder of the same name, with an `index.ts` and submodules beside it: `broadcast.ts` becomes `broadcast/index.ts` and `broadcast/service.ts`. If `broadcast/logger.ts` grows too, it becomes `broadcast/logger/index.ts` with its own submodules. `broadcast.ts` and `broadcast/index.ts` mean the same module.
 
-**Group by a repeated noun, not by kind.** Files like `local-storage-store.ts`, `memory-store.ts` and `database-store.ts` share a noun, so they could become `store/local-storage.ts`, `store/memory.ts` and `store/database.ts`. As with functions, the folder says "store" so the files don't repeat it.
+**Group by a repeated noun, and don't repeat it.** Files like `local-storage-store.ts`, `memory-store.ts` and `database-store.ts` share a noun, so they belong together under it, and the files drop it. Here the `storage` module already says what they are, so they became `storage/local.ts`, `storage/memory.ts` and `storage/database.ts`, with no extra `store/` folder. Each exports `create()`.
 
 **No index files that only re-export.** Import submodules directly, like `../plan/week` or `../broadcast/service`. That works like importing a public submodule in Rust. An `index.ts` holds the module's own code, not a list of names from its submodules.
 
@@ -45,13 +50,15 @@ Code adapted from another project, such as flashcut's tab leader and broadcast s
 
 ## Refactoring
 
-**Wait for three.** Write the specific code first. Pull out a shared function, module or abstraction once the same thing shows up about three times, not when it might show up. This is a guideline with exceptions: a file that has grown too big to read gets split by meaning before anything repeats.
+**Bottom-up.** Start with the details: write the specific code each case needs and get it working. Structure comes out of that code, not from a plan drawn up before it.
+
+**Compress when it starts to repeat.** Around the second or third time the same thing shows up is when it starts making sense to think about pulling it out. That's a point to think, not a rule. Other reasons to do it can make it earlier or later: a file that has grown too big to read gets split by meaning before anything repeats, and code that only looks alike but means different things stays apart.
 
 **Compress by meaning, not by text.** The aim is less duplicated meaning: code that does the same thing goes through the same path, and code that is unique stays plain and next to where it's used. Shorter text often follows, but it isn't the goal.
 
-**Let structure come out of the code.** Modules, types and grouped functions are what you get after compressing real code, not a plan drawn up before it. When a noun keeps coming back with different verbs, that noun becomes a module, and its functions drop the noun. This is how the names end up matching the language of the problem.
+**Let the names come from the code.** Modules, types and grouped functions are what you get after compressing real code. When a noun keeps coming back with different verbs, that noun becomes a module, and its functions drop the noun. This is how the names end up matching the language of the problem.
 
-This is close to what Casey Muratori calls [semantic compression](https://caseymuratori.com/blog_0015): "make your code usable before you try to make it reusable". You type out exactly what each case needs, get it working, and pull out the shared part once it repeats. In his example, the variables and calls a UI panel kept repeating became a `Panel_Layout` struct with `row()`, `push_button()` and `complete()`. Its methods don't repeat "layout", just as this project's module functions don't repeat their module's noun. One difference: he pulls code out at the second occurrence, and this project usually waits for the third.
+This is close to what Casey Muratori calls [semantic compression](https://caseymuratori.com/blog_0015), or compression-oriented programming. He avoids the word "refactoring", which he calls "a ridiculous term". His rule is "make your code usable before you try to make it reusable": type out exactly what each case needs, get it working, and pull out the shared part once it repeats. In his example, the variables and calls a UI panel kept repeating became a `Panel_Layout` struct with `row()`, `push_button()` and `complete()`. Its methods don't repeat "layout", just as this project's module functions don't repeat their module's noun.
 
 ## CSS
 
