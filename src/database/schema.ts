@@ -1,7 +1,5 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { THEMES } from "../theme";
-
 /** Activities in list order (`position`). Times and budgets are integer minutes. */
 export const activities = sqliteTable("activities", {
   id: text().primaryKey(),
@@ -30,12 +28,11 @@ export const blocks = sqliteTable(
   (table) => [index("blocks_activity_id").on(table.activityId)],
 );
 
-/** A single row (id 1) with the week's settings and this device's theme choice. */
+/** A single row (id 1) with the week's settings. */
 export const settings = sqliteTable("settings", {
   id: integer().primaryKey(),
   dayStart: integer("day_start").notNull(),
   dayEnd: integer("day_end").notNull(),
   /** When the example week was loaded (ISO 8601, UTC), null when there is none. */
   exampleLoadedAt: text("example_loaded_at"),
-  theme: text({ enum: THEMES }).notNull().default("system"),
 });

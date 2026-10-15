@@ -3,7 +3,6 @@ import { asc, eq, inArray } from "drizzle-orm";
 
 import { sanitizePlan } from "../plan/sanitize";
 import type { Activity, Block, Plan } from "../plan/types";
-import type { Theme } from "../theme";
 import type { Database } from "./drizzle";
 import { activities, blocks, settings } from "./schema";
 
@@ -128,17 +127,4 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
 export async function savePlan(database: Database, before: Plan | undefined, after: Plan): Promise<void> {
   const [first, ...rest] = buildPlanStatements(database, before, after);
   if (first) await database.batch([first, ...rest]);
-}
-
-export async function loadTheme(database: Database): Promise<Theme> {
-  const row = await database.select({ theme: settings.theme }).from(settings).where(eq(settings.id, SETTINGS_ID)).get();
-  return row?.theme ?? "system";
-}
-
-/** Stores the theme choice. Creates the settings row with default day hours if there is none yet. */
-export async function saveTheme(database: Database, theme: Theme): Promise<void> {
-  await database
-    .insert(settings)
-    .values({ id: SETTINGS_ID, dayStart: 7, dayEnd: 22, exampleLoadedAt: null, theme })
-    .onConflictDoUpdate({ target: settings.id, set: { theme } });
 }
