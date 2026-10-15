@@ -54,7 +54,7 @@ const sameBlock = (previous: Block, next: Block): boolean =>
  * The statements that turn the stored `before` into `after`: deletes first (a deleted activity's
  * blocks before the activity), then upserts. Only what changed is written.
  */
-export function planStatements(database: Database, before: Plan | undefined, after: Plan): BatchItem<"sqlite">[] {
+export function buildPlanStatements(database: Database, before: Plan | undefined, after: Plan): BatchItem<"sqlite">[] {
   const statements: BatchItem<"sqlite">[] = [];
   const now = new Date().toISOString();
 
@@ -126,7 +126,7 @@ export function planStatements(database: Database, before: Plan | undefined, aft
  * in one transaction. Undo uses the same path, with the restored plan as `after`.
  */
 export async function savePlan(database: Database, before: Plan | undefined, after: Plan): Promise<void> {
-  const [first, ...rest] = planStatements(database, before, after);
+  const [first, ...rest] = buildPlanStatements(database, before, after);
   if (first) await database.batch([first, ...rest]);
 }
 

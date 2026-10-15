@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "../plan/sanitize";
-import { memoryStore } from "./memory-store";
+import * as memory from "./memory";
 
 const example = () => sanitizePlan(exampleWeek);
 
 describe("memory store", () => {
   it("keeps the plan only in memory", async () => {
-    const store = memoryStore();
+    const store = memory.create();
     expect(store.level).toBe("none");
     expect(await store.load()).toMatchObject({ stored: false });
     await store.save(undefined, example());

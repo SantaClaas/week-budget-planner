@@ -60,7 +60,7 @@ async function execute(
 }
 
 /** The {@link QueryService} for a local connection: the leader tab's, or a test database. */
-export function localQueryService(getConnection: () => Promise<TursoConnection>): QueryService {
+export function createLocalQueryService(getConnection: () => Promise<TursoConnection>): QueryService {
   return {
     async query(sql, parameters, method) {
       return execute(await getConnection(), sql, parameters, method);
