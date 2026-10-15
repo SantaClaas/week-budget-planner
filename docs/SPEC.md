@@ -92,7 +92,7 @@ The theme choice is a device preference, not part of the plan: store it in the `
 
 ## Layout
 
-### Wide screens (desktop and tablets, 840px and up)
+### Wide screens (desktop and tablets, 52.5em and up)
 
 - **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Not saved"), an Undo icon button and a Settings icon button.
 - **Left pane, Activities** (360px wide, scrolls on its own):
@@ -107,7 +107,7 @@ The theme choice is a device preference, not part of the plan: store it in the `
   - The grid. It has a sticky day header row (day name plus the total placed that day), a sticky hour gutter on the left, and 7 day columns. Columns are at least 6rem wide and the grid scrolls horizontally if needed. Weekend columns are slightly tinted, and today's weekday is marked in the header.
 - **Floating:** the placing toolbar and snackbars (see Interactions), at the bottom center.
 
-### Phones (under 840px)
+### Phones (under 52.5em)
 
 - **Navigation bar** (64px) at the bottom with three destinations: **Week**, **Activities**, **Settings**.
 - **Week:** a top app bar with the title "Week", Undo and an overflow menu, then the summary and progress, then the grid filling the rest of the screen. About three days fit across, the next one is just visible at the edge, and the grid scrolls sideways with scroll snapping per day. The placing toolbar floats above the navigation bar.
@@ -124,8 +124,8 @@ The theme choice is a device preference, not part of the plan: store it in the `
 
 ## Grid geometry
 
-- 48px per hour, so 12px per 15 minutes. The hour lines are solid and the half-hour lines are fainter.
-- The grid always shows the whole day, 00:00 to 24:00 (1152px at 48px per hour), and scrolls vertically inside its pane. The day header row and the hour gutter stay sticky.
+- 3rem per hour (`--hour`, 48px at the default text size), so 0.75rem per 15 minutes. The grid is sized in rem so it grows with the user's text size and blocks keep room for their text. The hour lines are solid and the half-hour lines are fainter.
+- The grid always shows the whole day, 00:00 to 24:00 (72rem, 1152px at the default text size), and scrolls vertically inside its pane. The day header row and the hour gutter stay sticky.
 - **Where the week opens:** scrolled so the top of the view is the earlier of the day hours' start (`dayStart`, 07:00 by default) and the earliest block start in the week, rounded down to the full hour. Only blocks that start on their own day count: the second part of an overnight block always starts at 00:00 and would otherwise pin the view to midnight. All days scroll together, so this is one position for the whole week. It is set when the week opens and when the day hours change, never while the user is working.
 - **Day hours** are drawn on the grid: the hours outside them get a slightly darker background, like the weekend tint, so the usual day stands out without hiding the night.
 - Overlapping blocks in a day sit side by side in lanes, like a standard calendar. Group blocks that overlap, then give each one the first lane whose last end is at or before its start.
@@ -271,7 +271,8 @@ The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-w
   - Draw the wave with `clip-path: shape()`, built in script from the current amplitude, phase and width, and update it inside the drag's `requestAnimationFrame`. With `prefers-reduced-motion`, skip the wave and the travel: the bar stays flat and only its width changes.
 - **Blocks** are solid tonal fills with no border or side rail. The selected block gets a 2px `primary` ring with a gap, plus elevation.
 - **Motion:** M3 Expressive uses springs. Approximate the spatial and effects springs with CSS `linear()` easing curves. Respect `prefers-reduced-motion` by dropping spatial motion and keeping only fades and the progress widths.
-- **Touch targets** are at least 48px (40px visual buttons with padding around them).
+- **Touch targets** are at least 3rem (2.5rem visual buttons with padding around them).
+- **Text size and zoom (WCAG 1.4.4 Resize Text, 1.4.10 Reflow):** Google's sp and dp values become rem (divided by 16), so text and the controls around it follow the user's preferred text size, not only browser zoom. `index.html` opts into the operating system's text size with `<meta name="text-scale" content="scale">`. Never set a font size on `:root` or `html`. Borders, corners, shadows and the thin progress tracks stay in px. Controls that hold text use a minimum height and grow with their text instead of clipping it. Breakpoints use `em` (the wide layout starts at 52.5em, Material's 840dp at the default size), so larger text switches to the phone layout sooner. Check text at 200% and reflow at a 320 CSS px wide viewport.
 
 ### Deviations
 
