@@ -20,7 +20,8 @@
    - reset: removes browser defaults we don't want. Element selectors only, no `*`.
    - base: the document's own look: font, colors, links.
    - theme: design tokens as custom properties. m3-shapes.css puts its shapes in this layer
-     itself, so import it plainly after this file.
+     itself. Import both stylesheets from the app's entry module, which Vite bundles into one
+     file. Don't chain them with a runtime @import.
    - components: Material components and the app's own (week grid, blocks, pickers).
    - utilities: single-purpose classes that combine with any component. */
 @layer reset, base, theme, components, utilities;
@@ -138,8 +139,10 @@
 
 @layer components {
   /* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
-     into public/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor:
-     <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg>
+     into src/icons/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor.
+     Import the sprite's URL (`import iconsetUrl from "./icons/iconset.svg?url"`, which adds the
+     base path and a content hash) and use it as <svg class="icon" aria-hidden="true"><use
+     href="{iconsetUrl}#undo"/></svg>. Name icon-only buttons with a .visually-hidden span.
      The filled variant is #name-fill. Color the icon with `color` on it or on its parent.
      Size classes name the size in dp: size-20 is 20dp (1.25rem). */
   .icon { width: 1.5rem; height: 1.5rem; flex: none; display: inline-block; vertical-align: middle; }
@@ -318,6 +321,19 @@
   .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) { font-weight: 700; }
   .brand { font-variation-settings: "ROND" 100; font-weight: 600; letter-spacing: -.0125rem; }
   .muted { color: var(--on-surface-variant); }
+  /* Hidden on screen, still read by screen readers: names icon-only buttons and adds context. It
+     shows again when focus is inside it, for skip links. !important so no component can undo it. */
+  .visually-hidden:where(:not(:focus-within, :active)) {
+    position: absolute !important;
+    clip-path: inset(50%) !important;
+    overflow: hidden !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    white-space: nowrap !important;
+  }
 
   /* activity color: a tonal palette per palette color. Sets the activity's container color (block
      background), the text on it, and its solid color (swatch, progress, preview outline). */
