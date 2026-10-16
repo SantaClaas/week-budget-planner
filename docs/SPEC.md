@@ -306,7 +306,7 @@ Screenshots of the old prototype are in `docs/`. They show the earlier look, not
 
 ## Browser support
 
-This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed. Versions are from MDN's browser compat data.
+This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed, and never in the initial bundle: each one comes in through a dynamic `import()`, which Vite splits into its own chunk, so browsers that don't need it never download it. Check the build output to confirm the chunk is separate. Versions are from MDN's browser compat data.
 
 **With a fallback, or degrading on purpose:**
 
@@ -320,9 +320,10 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
 | `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Light mode only: an `@supports not` block in the tokens gives every color its light value (a test checks they match), and the theme setting has no effect. |
 | `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Every swatch is a circle, so activities differ by color only, and the shape picker shows circles. |
+| Popover API for the menus, the placing toolbar and snackbars | Chrome 114, Firefox 125, Safari 17 | OddBird's [`@oddbird/popover-polyfill`](https://github.com/oddbird/popover-polyfill), loaded only when `"popover" in HTMLElement.prototype` is false. It can't add the real `:popover-open` pseudo-class and sets a `.\:popover-open` class instead, so popover rules must match both with `:is(:popover-open, .\:popover-open)`, or older browsers drop the whole rule. |
 | Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
 
-Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>`, the Popover API and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. The components themselves need the Popover API (Chrome 114, Firefox 125, Safari 17) and `:user-invalid` (Chrome 119), so the floor is about Chrome 119, Firefox 125 and Safari 17. `@starting-style` only animates, so without it things appear without a transition.
+Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>` and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. With the polyfills, the floor is set by `:user-invalid` and `:has()`: about Chrome 119, Firefox 121 and Safari 16.5. `@starting-style` only animates, so without it things appear without a transition.
 
 ## Ideas for later (not in the prototype)
 
