@@ -140,8 +140,8 @@
 @layer components {
   /* icons: official Material Symbols SVGs (Rounded, weight 400, grade 0, 24px), optimized with SVGO
      into src/icons/iconset.svg by `pnpm icons`. Each icon is a <symbol> filled with currentColor.
-     Import the sprite's URL (`import iconsetUrl from "./icons/iconset.svg?url"`, which adds the
-     base path and a content hash) and use it as <svg class="icon" aria-hidden="true"><use
+     Import the sprite's URL (`import iconsetUrl from "./icons/iconset.svg?no-inline"`, which adds
+     the base path and a content hash and never inlines it as a data: URL, which <use> can't read) and use it as <svg class="icon" aria-hidden="true"><use
      href="{iconsetUrl}#undo"/></svg>. Name icon-only buttons with a .visually-hidden span.
      The filled variant is #name-fill. Color the icon with `color` on it or on its parent.
      Size classes name the size in dp: size-20 is 20dp (1.25rem). */
