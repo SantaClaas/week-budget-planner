@@ -90,8 +90,50 @@
     --hour: 3rem;
     --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
   }
-  :root:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
-  :root:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
+  @supports (color: light-dark(#000, #fff)) {
+    :root:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
+    :root:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
+  }
+
+  /* Without light-dark() (Chrome 123, Firefox 120, Safari 17.5), every color above would be invalid.
+     This block gives those browsers the light colors: the first value of each light-dark() above.
+     A test checks that the two stay the same. */
+  @supports not (color: light-dark(#000, #fff)) {
+    :root {
+      /* Light only, so native controls match the colors. */
+      color-scheme: light;
+      --primary: #4f5b92;
+      --on-primary: #ffffff;
+      --primary-container: #dde1ff;
+      --on-primary-container: #374379;
+      --secondary: #5a5d72;
+      --secondary-container: #dfe1f9;
+      --on-secondary-container: #424659;
+      --tertiary: #76546e;
+      --tertiary-container: #ffd7f3;
+      --on-tertiary-container: #5c3d56;
+      --error: #ba1a1a;
+      --on-error: #ffffff;
+      --error-container: #ffdad6;
+      --on-error-container: #93000a;
+      --surface: #fbf8ff;
+      --on-surface: #1b1b21;
+      --on-surface-variant: #45464f;
+      --surface-container-lowest: #ffffff;
+      --surface-container-low: #f5f2fa;
+      --surface-container: #efedf4;
+      --surface-container-high: #e9e7ef;
+      --surface-container-highest: #e3e1e9;
+      --outline: #767680;
+      --outline-variant: #c6c5d0;
+      --inverse-surface: #2f3036;
+      --inverse-on-surface: #f2f0f7;
+      --inverse-primary: #b8c4ff;
+      --success: #126d34;
+      --over-budget: #ba1a1a;
+      --card: var(--surface-container-lowest);
+    }
+  }
 }
 
 @layer components {
@@ -166,6 +208,11 @@
   .swatch { display: inline-block; width: 1.5rem; height: 1.5rem; flex: none; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle)); }
   .swatch.size-20 { width: 1.25rem; height: 1.25rem; } .swatch.size-32 { width: 2rem; height: 2rem; }
   .swatch.size-12 { width: .75rem; height: .75rem; } .swatch.size-10 { width: .625rem; height: .625rem; }
+  /* Without shape() (Chrome 135, Firefox 148, Safari 18.4) the shapes are invalid, so every swatch
+     falls back to a circle. */
+  @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
+    .swatch, .picker-option::before { clip-path: none; border-radius: 50%; }
+  }
   /* the shape on a block: top-right corner, out of the name's way */
   .block .swatch.corner { position: absolute; top: .25rem; right: .25rem; z-index: 1; }
   .block:has(.swatch.corner) .name { padding-right: .875rem; }
@@ -282,4 +329,16 @@
   .color-teal   { --activity-container: light-dark(#6ff6f8, #004f50); --on-activity-container: light-dark(#002020, #6ff6f8); --activity-color: light-dark(#00696b, #4cdadc); }
   .color-pink   { --activity-container: light-dark(#ffd8e8, #772957); --on-activity-container: light-dark(#3c0028, #ffd8e8); --activity-color: light-dark(#944170, #ffafd6); }
   .color-lime   { --activity-container: light-dark(#dceb78, #434b00); --on-activity-container: light-dark(#1a1e00, #dceb78); --activity-color: light-dark(#596400, #c0cf5f); }
+
+  /* Light colors where light-dark() is missing, as for the tokens above. */
+  @supports not (color: light-dark(#000, #fff)) {
+    .color-blue { --activity-container: #d2e4ff; --on-activity-container: #001c37; --activity-color: #0b61a4; }
+    .color-red { --activity-container: #ffdad4; --on-activity-container: #400100; --activity-color: #9c4234; }
+    .color-green { --activity-container: #a0f6ae; --on-activity-container: #00210a; --activity-color: #126d34; }
+    .color-amber { --activity-container: #ffdeae; --on-activity-container: #281900; --activity-color: #7f5600; }
+    .color-violet { --activity-container: #ecdcff; --on-activity-container: #280056; --activity-color: #6e4da1; }
+    .color-teal { --activity-container: #6ff6f8; --on-activity-container: #002020; --activity-color: #00696b; }
+    .color-pink { --activity-container: #ffd8e8; --on-activity-container: #3c0028; --activity-color: #944170; }
+    .color-lime { --activity-container: #dceb78; --on-activity-container: #1a1e00; --activity-color: #596400; }
+  }
 }
