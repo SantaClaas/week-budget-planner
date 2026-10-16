@@ -4,8 +4,8 @@
 //   node scripts/build-iconset.mjs           build from the SVGs already in icons/material-symbols/
 //
 // Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor. The app imports
-// the sprite's URL with `import iconsetUrl from "./icons/iconset.svg?url"` (base path and content
-// hash included), and <svg class="icon" aria-hidden="true"><use href={`${iconsetUrl}#undo`}/></svg>
+// the sprite's URL with `import iconsetUrl from "./icons/iconset.svg?no-inline"` (base path and
+// content hash included, never inlined as a data: URL, which <use> can't read), and <svg class="icon" aria-hidden="true"><use href={`${iconsetUrl}#undo`}/></svg>
 // shows an icon in the text color of the element around it.
 
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
