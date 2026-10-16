@@ -1,11 +1,12 @@
-// Builds public/iconset.svg from the official Material Symbols SVGs listed in icons/icons.json.
+// Builds src/icons/iconset.svg from the official Material Symbols SVGs listed in icons/icons.json.
 //
 //   node scripts/build-iconset.mjs --fetch   download missing SVGs from Google's repository, then build
 //   node scripts/build-iconset.mjs           build from the SVGs already in icons/material-symbols/
 //
-// Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor, so
-// <svg class="icon" aria-hidden="true"><use href="/iconset.svg#undo"/></svg> shows it
-// in the text color of the element around it.
+// Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor. The app imports
+// the sprite's URL with `import iconsetUrl from "./icons/iconset.svg?url"` (base path and content
+// hash included), and <svg class="icon" aria-hidden="true"><use href={`${iconsetUrl}#undo`}/></svg>
+// shows an icon in the text color of the element around it.
 
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
@@ -13,7 +14,7 @@ import { optimize } from "svgo";
 const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8"));
 const sourceDir = new URL("icons/material-symbols/", root);
-const output = new URL("public/iconset.svg", root);
+const output = new URL("src/icons/iconset.svg", root);
 
 const { repository, commit, style } = manifest.source;
 
@@ -56,9 +57,9 @@ for (const { id, file } of variants) {
 
 const iconset = `<svg xmlns="http://www.w3.org/2000/svg">\n${symbols.join("\n")}\n</svg>\n`;
 
-await mkdir(new URL("public/", root), { recursive: true });
+await mkdir(new URL("src/icons/", root), { recursive: true });
 await writeFile(output, iconset);
-console.log(`wrote public/iconset.svg with ${variants.length} icons (${iconset.length} bytes)`);
+console.log(`wrote src/icons/iconset.svg with ${variants.length} icons (${iconset.length} bytes)`);
 
 async function exists(url) {
   try {
