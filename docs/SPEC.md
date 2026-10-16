@@ -306,7 +306,7 @@ Screenshots of the old prototype are in `docs/`. They show the earlier look, not
 
 ## Browser support
 
-This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Versions are from MDN's browser compat data.
+This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed. Versions are from MDN's browser compat data.
 
 **With a fallback, or degrading on purpose:**
 
@@ -320,12 +320,7 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
 | `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Light mode only: an `@supports not` block in the tokens gives every color its light value (a test checks they match), and the theme setting has no effect. |
 | `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Every swatch is a circle, so activities differ by color only, and the shape picker shows circles. |
-
-**Without a fallback:**
-
-| Feature | Supported from | Without it | A fallback would need |
-| --- | --- | --- | --- |
-| Anchor positioning for the add-block menu (planned) | Chrome 125, Firefox 147, Safari 26 | The menu can't be placed next to its slot. | Positioning the popover from script. Decide when building it. |
+| Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
 
 Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>`, the Popover API and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. The components themselves need the Popover API (Chrome 114, Firefox 125, Safari 17) and `:user-invalid` (Chrome 119), so the floor is about Chrome 119, Firefox 125 and Safari 17. `@starting-style` only animates, so without it things appear without a transition.
 
