@@ -318,16 +318,16 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | `clip-path: shape()` for the wavy progress bar | Chrome 135, Firefox 148, Safari 18.4 | The bar stays flat. |
 | `forced-colors` rules, `forced-color-adjust`, `Mark` | Chrome, Firefox (Windows High Contrast) | Not needed where forced colors don't exist. |
 | Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
+| `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Light mode only: an `@supports not` block in the tokens gives every color its light value (a test checks they match), and the theme setting has no effect. |
+| `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Every swatch is a circle, so activities differ by color only, and the shape picker shows circles. |
 
 **Without a fallback:**
 
 | Feature | Supported from | Without it | A fallback would need |
 | --- | --- | --- | --- |
-| `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Every color is invalid. | Each token defined twice, switched with `prefers-color-scheme`. |
-| `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Swatches are plain squares, so activities differ by color only. | The shapes also generated as SVG `<clipPath>`s with `objectBoundingBox` units, referenced by `url(#…)`. |
 | Anchor positioning for the add-block menu (planned) | Chrome 125, Firefox 147, Safari 26 | The menu can't be placed next to its slot. | Positioning the popover from script. Decide when building it. |
 
-Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>`, the Popover API and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4, and the app works, with square swatches, from Chrome 123, Firefox 121 or Safari 17.5.
+Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>`, the Popover API and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. The components themselves need the Popover API (Chrome 114, Firefox 125, Safari 17) and `:user-invalid` (Chrome 119), so the floor is about Chrome 119, Firefox 125 and Safari 17. `@starting-style` only animates, so without it things appear without a transition.
 
 ## Ideas for later (not in the prototype)
 
