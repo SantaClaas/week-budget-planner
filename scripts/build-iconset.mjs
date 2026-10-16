@@ -3,10 +3,11 @@
 //   node scripts/build-iconset.mjs --fetch   download missing SVGs from Google's repository, then build
 //   node scripts/build-iconset.mjs           build from the SVGs already in icons/material-symbols/
 //
-// Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor. The app imports
-// the sprite's URL with `import iconsetUrl from "./icons/iconset.svg?no-inline"` (base path and
-// content hash included, never inlined as a data: URL, which <use> can't read), and <svg class="icon" aria-hidden="true"><use href={`${iconsetUrl}#undo`}/></svg>
-// shows an icon in the text color of the element around it.
+// Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor. The app bundles
+// the sprite (`import iconset from "./icons/iconset.svg?raw"`) and inserts it into the page once,
+// so <svg class="icon" aria-hidden="true"><use href="#undo"/></svg> shows an icon in the text color
+// of the element around it. The sprite's root is hidden with display: none (the hidden attribute
+// doesn't hide an <svg>) and kept out of the accessibility tree.
 
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
@@ -55,7 +56,7 @@ for (const { id, file } of variants) {
   symbols.push(`<symbol id="${id}" viewBox="${viewBox}" fill="currentColor">${body}</symbol>`);
 }
 
-const iconset = `<svg xmlns="http://www.w3.org/2000/svg">\n${symbols.join("\n")}\n</svg>\n`;
+const iconset = `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: none">\n${symbols.join("\n")}\n</svg>\n`;
 
 await mkdir(new URL("src/icons/", root), { recursive: true });
 await writeFile(output, iconset);
