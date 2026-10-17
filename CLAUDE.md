@@ -24,6 +24,7 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
   - `vite@8`, TypeScript, strict mode
   - Storage: `@tursodatabase/database-wasm` (SQLite in OPFS, as in flashcut) with `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4` (pinned, since the 1.0 line is also an RC). Schema in `src/db/schema.ts`. Generate migrations with drizzle-kit into `drizzle/` and commit them. The details, including the tab-leader proxy and the required **database export/import**, are in the spec's Persistence section.
   - Use pnpm, like flashcut (`pnpm dlx` or `pnpx` instead of `npx`).
+  - Formatting and linting: `oxfmt` (`pnpm format`, `pnpm format:check`) and `oxlint` with type-aware rules through `oxlint-tsgolint` (`pnpm lint`), all pinned. CI runs both. Run them before committing. The configs are `.oxfmtrc.json` and `.oxlintrc.json`; every rule turned off or disabled on a line says why.
   - Hosting: GitHub Pages, with a service worker that adds the cross-origin isolation headers, and progressive enhancement down to private windows. See Hosting and Progressive enhancement in the spec.
 - **Material 3 Expressive, built with plain CSS.** Use the tokens in `docs/design/m3-tokens.css` and the spec's Design section, and build the components (navigation bar, bottom sheet, snackbar, floating toolbar and so on) yourself, without a component library.
 - **CSS layers:** `@layer reset, base, theme, components, utilities;`, as the spec's Design section describes. No global `*` reset.
