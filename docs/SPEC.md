@@ -133,7 +133,7 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
 - **Week** (phones only): Day hours, Clear week.
 - **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
 - **Storage:** number of activities, number of blocks, database size.
-- **Version**, at the bottom, in small supporting text: "Version 2026-10-17 · 74ea982". The short commit hash links to the repository at that commit. A build without git shows only the date (see Version).
+- **About**, the last section: one list item, "Version", with "2026-10-17 · 74ea982" (the date and the short commit hash) under it. The whole item is a link that opens the repository at that commit in a new tab, and it ends with the `open_in_new` icon instead of a chevron, so it reads as leaving the app. The icon's label says "Opens in a new tab". A build without git shows only the date, and the item isn't a link then (see Version).
 - On wide screens it is a full page with a back button to the week.
 
 ### Version
