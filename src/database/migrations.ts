@@ -13,6 +13,14 @@ const readName = (path: string) => path.split("/").at(-2)!;
 
 const loaderByName = new Map(Object.entries(loaders).map(([path, load]) => [readName(path), load]));
 
+/**
+ * The database has migrations this version of the app doesn't know: a newer version made or
+ * upgraded it. Opening it could misread or damage it, so nothing is run.
+ */
+export class NewerDatabaseError extends Error {
+  override name = "NewerDatabaseError";
+}
+
 /** Every migration this version of the app knows, oldest first. */
 export const MIGRATION_NAMES: readonly string[] = [...loaderByName.keys()].sort();
 
@@ -32,10 +40,14 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
 /**
  * Applies pending migrations to a real database connection (the leader tab's, an imported copy, or
  * a test database). A database that is up to date costs one query: the migrator and the SQL are
- * only loaded for migrations it doesn't have yet. Safe to run on every open.
+ * only loaded for migrations it doesn't have yet. Safe to run on every open. Throws
+ * {@link NewerDatabaseError} for a database from a newer version of the app.
  */
 export async function runMigrations(connection: TursoConnection): Promise<void> {
   const applied = await readAppliedNames(connection);
+  if ([...applied].some((name) => !loaderByName.has(name))) {
+    throw new NewerDatabaseError("The database was made by a newer version of the app.");
+  }
   const pending = MIGRATION_NAMES.filter((name) => !applied.has(name));
   if (pending.length === 0) return;
 

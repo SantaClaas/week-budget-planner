@@ -26,18 +26,22 @@ export function serialize(plan: Plan): string {
 }
 
 /**
- * Reads an imported plan file strictly: undefined when the text isn't JSON or isn't a plan in the
- * stored format (`version: 1`), so an import never replaces the plan with an empty one.
+ * Reads an imported plan file strictly, so an import never replaces the plan with an empty one:
+ * "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, "newer-version"
+ * when a newer version of the app wrote it (a `version` above 1).
  */
-export function read(text: string): Plan | undefined {
+export function read(text: string): Plan | "not-a-plan" | "newer-version" {
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
-    return undefined;
+    return "not-a-plan";
   }
-  const isPlan = typeof data === "object" && data !== null && "version" in data && data.version === 1;
-  return isPlan ? sanitizePlan(data) : undefined;
+  if (typeof data !== "object" || data === null || !("version" in data) || typeof data.version !== "number") {
+    return "not-a-plan";
+  }
+  if (data.version > 1) return "newer-version";
+  return data.version === 1 ? sanitizePlan(data) : "not-a-plan";
 }
 
 /** Parses a plan file or stored JSON. Anything malformed becomes a valid (possibly empty) plan. */

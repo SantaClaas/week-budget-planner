@@ -16,8 +16,13 @@ describe("plan file", () => {
 
   it("reads only real plan files on import", () => {
     expect(planFile.read(planFile.serialize(example()))).toEqual(example());
-    expect(planFile.read("{not json")).toBeUndefined();
-    expect(planFile.read('{"name": "something else"}')).toBeUndefined();
-    expect(planFile.read("null")).toBeUndefined();
+    expect(planFile.read("{not json")).toBe("not-a-plan");
+    expect(planFile.read('{"name": "something else"}')).toBe("not-a-plan");
+    expect(planFile.read("null")).toBe("not-a-plan");
+    expect(planFile.read('{"version": 0}')).toBe("not-a-plan");
+  });
+
+  it("recognizes a plan file from a newer version", () => {
+    expect(planFile.read('{"version": 2, "activities": []}')).toBe("newer-version");
   });
 });

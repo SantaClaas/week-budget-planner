@@ -4,7 +4,7 @@ export { hasDatabaseFile, removeBrokenDatabase } from "../database/client";
 import { loadPlan, savePlan } from "../database/plan-repository";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast";
 import * as jsonFile from "./json-file";
-import { InvalidFileError, type PlanStore } from "./plan-store";
+import { InvalidFileError, NewerVersionError, type PlanStore } from "./plan-store";
 
 /** The full level: the SQLite database in OPFS, shared by every tab through the leader. */
 export function create(): PlanStore {
@@ -36,6 +36,9 @@ export function create(): PlanStore {
       const result = await databaseService.importFile(new Uint8Array(await file.arrayBuffer()));
       if (result === "invalid-file") {
         throw new InvalidFileError("This file isn't a Week Budget Planner database, so nothing was changed.");
+      }
+      if (result === "newer-version") {
+        throw new NewerVersionError("This file is from a newer version of Week Budget Planner.");
       }
     },
     wipe: () => databaseService.wipe(),

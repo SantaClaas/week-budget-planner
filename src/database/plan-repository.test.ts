@@ -5,7 +5,7 @@ import { createExampleWeek } from "../plan/example";
 import type { Plan } from "../plan/types";
 import { createLocalQueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
-import { MIGRATION_NAMES, runMigrations } from "./migrations";
+import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migrations";
 import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository";
 import { blocks as blocksTable } from "./schema";
 
@@ -28,6 +28,13 @@ describe("migrations", () => {
     const connection = (await connect(":memory:")) as unknown as TursoConnection;
     await runMigrations(connection);
     await runMigrations(connection);
+  });
+
+  it("refuses a database from a newer version of the app", async () => {
+    const connection = (await connect(":memory:")) as unknown as TursoConnection;
+    await runMigrations(connection);
+    await connection.exec(`INSERT INTO __drizzle_migrations (hash, created_at, name) VALUES ('', 0, '29991231000000_future')`);
+    await expect(runMigrations(connection)).rejects.toThrow(NewerDatabaseError);
   });
 });
 
