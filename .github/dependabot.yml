@@ -1,0 +1,17 @@
+# Opens pull requests that bump the actions in .github/workflows, updating each pinned hash and the
+# version comment after it together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Waits a week after a release before proposing it, so a broken or compromised release has time
+    # to be noticed and pulled first.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: Bump
