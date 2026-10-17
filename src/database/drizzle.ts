@@ -1,6 +1,6 @@
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
-import { isSqlValue, type QueryService, type SqlValue } from "./connection";
+import { isSqlValue, type QueryService, type SqlValue } from "./connection.ts";
 
 export type Database = SqliteRemoteDatabase;
 

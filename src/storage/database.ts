@@ -1,10 +1,10 @@
-import { databaseService, getDatabase } from "../database/client";
+import { databaseService, getDatabase } from "../database/client.ts";
 
-export { hasDatabaseFile, removeBrokenDatabase } from "../database/client";
-import { loadPlan, savePlan } from "../database/plan-repository";
-import { broadcastMessage, listenForBroadcasts } from "../broadcast";
-import * as jsonFile from "./json-file";
-import { InvalidFileError, NewerVersionError, type PlanStore } from "./plan-store";
+export { hasDatabaseFile, removeBrokenDatabase } from "../database/client.ts";
+import { loadPlan, savePlan } from "../database/plan-repository.ts";
+import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
+import * as jsonFile from "./json-file.ts";
+import { InvalidFileError, NewerVersionError, type PlanStore } from "./plan-store.ts";
 
 /** The full level: the SQLite database in OPFS, shared by every tab through the leader. */
 export function create(): PlanStore {

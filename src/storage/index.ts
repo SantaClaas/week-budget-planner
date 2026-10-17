@@ -1,6 +1,6 @@
-import * as local from "./local";
-import * as memory from "./memory";
-import { NewerVersionError, type PlanStore } from "./plan-store";
+import * as local from "./local.ts";
+import * as memory from "./memory.ts";
+import { NewerVersionError, type PlanStore } from "./plan-store.ts";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
 function isDatabaseUsable(): boolean {
@@ -37,9 +37,9 @@ function isFromNewerVersion(error: unknown): boolean {
  */
 export async function open(): Promise<PlanStore> {
   if (!isDatabaseUsable()) return openFallback();
-  let database: typeof import("./database") | undefined;
+  let database: typeof import("./database.ts") | undefined;
   try {
-    database = await import("./database");
+    database = await import("./database.ts");
     const store = database.create();
     await store.load();
     return store;

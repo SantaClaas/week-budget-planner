@@ -2,11 +2,11 @@
 // BroadcastChannel RPC, serving Drizzle's sqlite-proxy calls instead of plain row objects.
 import { connect } from "@tursodatabase/database-wasm/vite";
 
-import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service";
-import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection";
-import { createDatabase, type Database } from "./drizzle";
-import { NewerDatabaseError, runMigrations } from "./migrations";
-import { loadPlan } from "./plan-repository";
+import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service.ts";
+import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
+import { createDatabase, type Database } from "./drizzle.ts";
+import { NewerDatabaseError, runMigrations } from "./migrations.ts";
+import { loadPlan } from "./plan-repository.ts";
 
 const DATABASE_FILE = "week-budget-planner.db";
 /**
