@@ -30,6 +30,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "drizzle.config.ts",
+    "vite-plugins",
     "scripts",
     "oxlint-plugins"
   ]

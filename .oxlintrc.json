@@ -62,7 +62,7 @@
   "ignorePatterns": ["dist/**", "drizzle/**", "prototype/**", ".agents/**"],
   "overrides": [
     {
-      "files": ["scripts/**", "*.config.ts", "vite-plugins/**", "oxlint-plugins/**"],
+      "files": ["scripts/**", "*.config.ts", "vite-plugins/**", "oxlint-plugins/**", "e2e/**"],
       "env": { "node": true },
       "rules": {
         // The build scripts work through files one at a time on purpose: downloads stay polite,

@@ -1,0 +1,7 @@
+# zizmor audits the workflows for security problems (https://docs.zizmor.sh).
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Every action, GitHub's own included, is pinned to a commit hash.
+        "*": hash-pin
