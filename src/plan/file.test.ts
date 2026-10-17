@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import * as planFile from "./file";
 import { createExampleWeek } from "./example";
 
-const example = () => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
+const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
 
 describe("plan file", () => {
   it("round-trips the stored format", () => {
@@ -12,9 +12,5 @@ describe("plan file", () => {
 
   it("turns malformed text into an empty plan", () => {
     expect(planFile.parse("{not json").activities).toEqual([]);
-  });
-
-  it("formats the local date for file names", () => {
-    expect(planFile.formatLocalDate(new Date(2026, 0, 5))).toBe("2026-01-05");
   });
 });

@@ -19,7 +19,7 @@ export function create(): PlanStore {
       const bytes = await databaseService.exportFile();
       return {
         blob: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/vnd.sqlite3" }),
-        filename: `week-budget-planner-${planFile.formatLocalDate()}.db`,
+        filename: `week-budget-planner-${Temporal.Now.plainDateISO()}.db`,
       };
     },
     async importFile(file) {
