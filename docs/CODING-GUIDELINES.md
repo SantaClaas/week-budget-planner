@@ -103,7 +103,7 @@ For example, in Rust's axum every endpoint goes through a router, so the router 
 
 **The package test.** A module is split well when it, with all its submodules, could be shipped as its own package, or deleted, without touching much else. For example, `broadcast/` depends on nothing else in the app.
 
-**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. In this project `theme` was split out because `database` and `storage` both needed the `Theme` type, and `storage` already imports `database`.
+**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. In this project the color scheme got its own module (`color-scheme`) when `database` and `storage` both needed its type, since `storage` already imports `database`.
 
 ### Code taken from elsewhere
 
