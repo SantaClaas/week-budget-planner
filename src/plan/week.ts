@@ -1,6 +1,20 @@
 import { formatClock, formatClockRange, formatLength, formatWeekday, type Format } from "./format";
-import { clamp } from "./time";
-import { DAY, MAX_LENGTH, SLOT, WEEK, type Block } from "./types";
+import {
+  DAY,
+  MAX_LENGTH,
+  SLOT,
+  WEEK,
+  clamp,
+  sanitizeDayIndex,
+  sanitizeDayMinute,
+  sanitizeLength,
+  wrapDayIndex,
+  wrapWeekMinute,
+  type DayIndex,
+  type DayMinute,
+  type WeekMinute,
+} from "./time";
+import type { Block } from "./types";
 
 /**
  * Where a block shows on one day. An overnight block has two parts: the end of its own day and the
@@ -8,19 +22,17 @@ import { DAY, MAX_LENGTH, SLOT, WEEK, type Block } from "./types";
  */
 export type BlockPart = {
   block: Block;
-  day: number;
-  /** Minutes from that day's midnight. */
+  day: DayIndex;
+  /** Minutes from that day's midnight, 0 to 1440. */
   start: number;
   end: number;
   /** "only", or which half of an overnight block this is. */
   kind: "only" | "first" | "second";
 };
 
-const modulo = (value: number, modulus: number): number => ((value % modulus) + modulus) % modulus;
-
-/** The block's start in week minutes, 0 to 10079. */
-export const calculateWeekStart = (block: Pick<Block, "day" | "start">): number =>
-  block.day * DAY + block.start;
+/** The block's start on the week. */
+export const calculateWeekStart = (block: Pick<Block, "day" | "start">): WeekMinute =>
+  wrapWeekMinute(block.day * DAY + block.start);
 
 export const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
   block.start + block.length > DAY;
@@ -30,31 +42,29 @@ export function splitIntoParts(block: Block): BlockPart[] {
   if (end <= DAY) return [{ block, day: block.day, start: block.start, end, kind: "only" }];
   return [
     { block, day: block.day, start: block.start, end: DAY, kind: "first" },
-    { block, day: modulo(block.day + 1, 7), start: 0, end: end - DAY, kind: "second" },
+    { block, day: wrapDayIndex(block.day + 1), start: 0, end: end - DAY, kind: "second" },
   ];
 }
 
 /** Every part that falls on `day`, sorted by start. */
-export function findPartsOnDay(blocks: readonly Block[], day: number): BlockPart[] {
+export function findPartsOnDay(blocks: readonly Block[], day: DayIndex): BlockPart[] {
   return blocks
     .flatMap(splitIntoParts)
     .filter((part) => part.day === day)
     .sort((first, second) => first.start - second.start || second.end - first.end);
 }
 
-/** Whether two week-minute ranges overlap on the wrapping week. */
+/** Whether two ranges on the week overlap, the week wrapping from Sunday into Monday. */
 export function isRangeOverlapping(
-  startA: number,
+  startA: WeekMinute,
   lengthA: number,
-  startB: number,
+  startB: WeekMinute,
   lengthB: number,
 ): boolean {
   // Unroll both ranges onto a line of two weeks and compare every pairing.
-  const wrappedA = modulo(startA, WEEK);
-  const wrappedB = modulo(startB, WEEK);
   for (const shift of [-WEEK, 0, WEEK]) {
-    const shiftedB = wrappedB + shift;
-    if (wrappedA < shiftedB + lengthB && shiftedB < wrappedA + lengthA) return true;
+    const shiftedB = startB + shift;
+    if (startA < shiftedB + lengthB && shiftedB < startA + lengthA) return true;
   }
   return false;
 }
@@ -69,15 +79,15 @@ export function sumDayTotals(blocks: readonly Block[]): number[] {
   return totals;
 }
 
-/** Converts week minutes back to a day and a start, wrapping around the week. */
-export function convertFromWeekMinutes(minutes: number): { day: number; start: number } {
-  const wrapped = modulo(minutes, WEEK);
-  return { day: Math.floor(wrapped / DAY), start: wrapped % DAY };
+/** Converts minutes on the week back to a day and a start, wrapping around the week. */
+export function convertFromWeekMinutes(minutes: number): { day: DayIndex; start: DayMinute } {
+  const wrapped = wrapWeekMinute(minutes);
+  return { day: sanitizeDayIndex(Math.floor(wrapped / DAY)), start: sanitizeDayMinute(wrapped % DAY) };
 }
 
 /** Moving keeps the length; only the day and start change. The start may be any slot. */
 export function moveTo(block: Block, day: number, start: number): Block {
-  return { ...block, day: modulo(day, 7), start: clamp(start, 0, DAY - SLOT) };
+  return { ...block, day: wrapDayIndex(day), start: sanitizeDayMinute(start) };
 }
 
 /** Moves by a number of minutes, crossing midnight and wrapping the week (keyboard Up/Down). */
@@ -88,7 +98,7 @@ export function moveBy(block: Block, minutes: number): Block {
 /** Moves to the neighbouring day, wrapping the week (keyboard Left/Right). */
 export const moveDays = (block: Block, days: number): Block => ({
   ...block,
-  day: modulo(block.day + days, 7),
+  day: wrapDayIndex(block.day + days),
 });
 
 /**
@@ -98,7 +108,7 @@ export const moveDays = (block: Block, days: number): Block => ({
 export function resizeStart(block: Block, start: number): Block {
   const end = block.start + block.length;
   const next = clamp(start, Math.max(0, end - MAX_LENGTH), Math.min(DAY - SLOT, end - SLOT));
-  return { ...block, start: next, length: end - next };
+  return { ...block, start: sanitizeDayMinute(next), length: sanitizeLength(end - next) };
 }
 
 /**
@@ -110,7 +120,7 @@ export function resizeEnd(block: Block, end: number): Block {
   const low = block.start + SLOT;
   const high = isOvernight(block) ? block.start + MAX_LENGTH : DAY;
   const next = clamp(end, isOvernight(block) ? Math.max(low, DAY) : low, high);
-  return { ...block, length: next - block.start };
+  return { ...block, length: sanitizeLength(next - block.start) };
 }
 
 /**
@@ -123,6 +133,6 @@ export function describeTime(block: Block, format: Format = {}): string {
   if (end <= DAY) return `${formatClockRange(block.start, end, format)} · ${length}`;
   // `formatRange` would add the day of the month, which a week without dates doesn't have.
   const startDay = formatWeekday(block.day, "short", format);
-  const endDay = formatWeekday(modulo(block.day + 1, 7), "short", format);
+  const endDay = formatWeekday(wrapDayIndex(block.day + 1), "short", format);
   return `${startDay} ${formatClock(block.start, format)} – ${endDay} ${formatClock(end, format)} · ${length}`;
 }

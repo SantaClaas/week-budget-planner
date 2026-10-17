@@ -18,10 +18,10 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | --- | --- | --- |
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | Code: `Plan` |
 | **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color, a shape and a budget. | Code: `Activity` |
-| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes`, `days` |
+| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes` (type `BudgetMinutes`), `days` (type `DayCount`) |
 | **Block** | One piece of an activity on the week: a day, a start time and a length. You add, move, resize and remove blocks. | Was "tile" in the prototype. Code: `Block` |
 | **Slot** | A 15-minute cell on the week. An empty slot has no block. Blocks start and end on slots. | Everything snaps to 15 min |
-| **Length** | How long a block is, in minutes. | Code: `length` |
+| **Length** | How long a block is, in minutes. | Code: `length`, type `Length` |
 | **Overnight block** | A block that runs past midnight into the next day, for example a night shift from Tuesday 22:00 to Wednesday 02:00. It is one block, drawn in two parts. Sunday night runs into Monday morning. | |
 | **Default length** | The length a new block gets: the per-day budget for per-day activities, otherwise 1 h 30 min, and never more than what is left. | |
 | **Placed** | The total length of an activity's blocks. | |
@@ -92,7 +92,14 @@ Time is stored as integer minutes and everything snaps to 15 minutes. Weekly bud
 
 A block covers the week minutes `[day * 1440 + start, day * 1440 + start + length)`, taken modulo 10080 (one week), so a block that starts on Sunday evening continues on Monday. Placed, left to place, overlaps and lanes, the first free slot and the per-day totals all work on these week minutes. A day's total counts only the part of each block that falls on that day.
 
-Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), drop blocks whose activity no longer exists, de-duplicate ids, and turn an `exampleLoadedAt` that isn't a valid date into null. The prototype's `sanitize()` is the reference.
+Sanitize every loaded plan (from storage or sync): give activities with a missing or unknown `shape` their default shape (see Design), going through them in list order, clamp numbers, snap to 15, clamp `start` to 0..1425 and `length` to 15..1440 (the prototype's `sanitize()` instead clamped blocks to end by midnight; don't), give invalid or repeated ids new ones (blocks stay with the first activity that had their stored id), drop blocks whose activity no longer exists, and turn an `exampleLoadedAt` that isn't a valid date into null. The prototype's `sanitize()` is the reference.
+
+**Checked values are branded types.** Every value above that has rules is its own type in the code, not a plain `number` or `string`: `ActivityId`, `BlockId`, `DayIndex` (0 is Monday, 6 is Sunday; Temporal's `dayOfWeek` is 1 to 7), `DayMinute` (a block's start), `WeekMinute` (a start on the whole week, for overlaps and slots), `Length`, `BudgetMinutes`, `DayCount` and `Hour` (the day hours). A hue or a shape is one of the listed values, as a literal type. Only a value's own sanitizer makes one, so a branded value is always valid, and the compiler keeps, for example, minutes of a day apart from minutes of the week. Each has two ways in:
+
+- **A sanitizer** for data that was loaded or computed: it takes any number and returns the nearest valid value, as described above. `sanitizePlan` is made of them.
+- **A strict parser** for what the user types or picks: it rejects a value out of range instead of clamping it, so the form can say what's wrong (see Activities under Interactions).
+
+The database checks the same rules again with `CHECK` constraints on its columns (see Suggested tables), so nothing that skipped the types can be stored.
 
 The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.theme` as `light` or `dark`, and System removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme).
 
@@ -170,7 +177,7 @@ All of these must work with a mouse, touch and the keyboard.
 - The progress indicators and the summary update live during a drag. Persist only when the drag ends, and only if something changed.
 
 **Activities**
-- Add with validation messages: "Give the activity a name.", "Enter the hours it needs, for example 1.5.", "A day has 24 hours. Enter 24 or less.", "A week has 168 hours. Enter 168 or less.", "Enter how many days per week, from 1 to 7." Hours are rounded to 15 minutes.
+- Add with validation messages (from the strict parsers, see Data model): "Give the activity a name.", "Enter the hours it needs, for example 1.5.", "A day has 24 hours. Enter 24 or less.", "A week has 168 hours. Enter 168 or less.", "Enter how many days per week, from 1 to 7." Hours are rounded to 15 minutes.
 - **Validation uses the platform's constraint validation**, not a form library and not CSS classes:
   - The inputs carry their own rules (`required`, `min`, `max`), and the browser decides what's invalid. For the rules attributes can't express, and to use the messages above instead of the browser's, set them with `setCustomValidity()` on the field: an empty string when it's valid, so `validationMessage` is always ours.
   - **Timing:** a field shows its error only once the user is done with it: when it loses focus, or when the form is submitted. That's what `:user-invalid` matches, so the error styling and the message (the text field's supporting text) hang off `:user-invalid`. No error shows on an untouched form or while typing for the first time. Run the field's check on every `input` event, so the error clears as soon as the value is fixed.
@@ -212,6 +219,7 @@ Map the data model above roughly like this. Adjust it if Drizzle suggests better
 
 - `activities`: `id` text PK, `name`, `hue` int, `mode` text (`week`/`day`), `budget_minutes` int, `days` int, `shape` text, `position` int (list order), `created_at` text
 - `blocks`: `id` text PK, `activity_id` text → activities (delete its blocks together with the activity, in one transaction), `day` int 0–6, `start` int, `length` int
+- Every column with rules has a `CHECK` constraint for them, generated by drizzle-kit from `check()` in the schema: id lengths, `name` length, the palette hues, `mode`, multiples of 15 and the ranges of `budget_minutes`, `days`, `day`, `start`, `length`, `day_start` and `day_end`. Turso enforces them. (Turso also has `STRICT` tables, but drizzle-kit can't generate them yet.)
 - `settings`: a single row with `day_start`, `day_end`, and `example_loaded_at` (text, ISO 8601, null when there is no example week). The theme isn't stored here (see Data model).
 
 ### Writes and undo
