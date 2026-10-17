@@ -1,0 +1,112 @@
+# pnpm settings, strict on purpose to keep compromised or broken packages out
+# (https://pnpm.io/supply-chain-security).
+
+# Waits a week after a version is published before installing it, like Dependabot's cooldown for
+# the actions, so a bad release has time to be found and pulled. It applies to every dependency,
+# transitive ones included, and pnpm checks the lockfile against it on every install, not only when
+# it picks a new version.
+minimumReleaseAge: 10080
+# Fails instead of falling back to a younger version when nothing in range is old enough.
+minimumReleaseAgeStrict: true
+# Fails on a package whose release date the registry doesn't report, instead of skipping the check.
+minimumReleaseAgeIgnoreMissingTime: false
+# Versions that were already in the lockfile, installed and tested, when this policy came in. Each
+# one is exempt only at that exact version, and pnpm drops its entry once the lockfile no longer
+# uses it. The newest turns a week old on 2026-10-21, after which the list can go.
+minimumReleaseAgeExclude:
+  - "@oxfmt/binding-android-arm-eabi@0.73.0"
+  - "@oxfmt/binding-android-arm64@0.73.0"
+  - "@oxfmt/binding-darwin-arm64@0.73.0"
+  - "@oxfmt/binding-darwin-x64@0.73.0"
+  - "@oxfmt/binding-freebsd-x64@0.73.0"
+  - "@oxfmt/binding-linux-arm-gnueabihf@0.73.0"
+  - "@oxfmt/binding-linux-arm-musleabihf@0.73.0"
+  - "@oxfmt/binding-linux-arm64-gnu@0.73.0"
+  - "@oxfmt/binding-linux-arm64-musl@0.73.0"
+  - "@oxfmt/binding-linux-ppc64-gnu@0.73.0"
+  - "@oxfmt/binding-linux-riscv64-gnu@0.73.0"
+  - "@oxfmt/binding-linux-riscv64-musl@0.73.0"
+  - "@oxfmt/binding-linux-s390x-gnu@0.73.0"
+  - "@oxfmt/binding-linux-x64-gnu@0.73.0"
+  - "@oxfmt/binding-linux-x64-musl@0.73.0"
+  - "@oxfmt/binding-openharmony-arm64@0.73.0"
+  - "@oxfmt/binding-win32-arm64-msvc@0.73.0"
+  - "@oxfmt/binding-win32-ia32-msvc@0.73.0"
+  - "@oxfmt/binding-win32-x64-msvc@0.73.0"
+  - "@oxlint/binding-android-arm-eabi@1.88.0"
+  - "@oxlint/binding-android-arm64@1.88.0"
+  - "@oxlint/binding-darwin-arm64@1.88.0"
+  - "@oxlint/binding-darwin-x64@1.88.0"
+  - "@oxlint/binding-freebsd-x64@1.88.0"
+  - "@oxlint/binding-linux-arm-gnueabihf@1.88.0"
+  - "@oxlint/binding-linux-arm-musleabihf@1.88.0"
+  - "@oxlint/binding-linux-arm64-gnu@1.88.0"
+  - "@oxlint/binding-linux-arm64-musl@1.88.0"
+  - "@oxlint/binding-linux-ppc64-gnu@1.88.0"
+  - "@oxlint/binding-linux-riscv64-gnu@1.88.0"
+  - "@oxlint/binding-linux-riscv64-musl@1.88.0"
+  - "@oxlint/binding-linux-s390x-gnu@1.88.0"
+  - "@oxlint/binding-linux-x64-gnu@1.88.0"
+  - "@oxlint/binding-linux-x64-musl@1.88.0"
+  - "@oxlint/binding-openharmony-arm64@1.88.0"
+  - "@oxlint/binding-win32-arm64-msvc@1.88.0"
+  - "@oxlint/binding-win32-ia32-msvc@1.88.0"
+  - "@oxlint/binding-win32-x64-msvc@1.88.0"
+  - "@oxlint/plugins@1.88.0"
+  - "@playwright/test@1.64.1"
+  - "@solidjs/babel-plugin@2.0.0-rc.15"
+  - "@solidjs/compiler@2.0.0-rc.15"
+  - "@solidjs/compiler-darwin-arm64@2.0.0-rc.15"
+  - "@solidjs/compiler-darwin-x64@2.0.0-rc.15"
+  - "@solidjs/compiler-linux-arm64-gnu@2.0.0-rc.15"
+  - "@solidjs/compiler-linux-x64-gnu@2.0.0-rc.15"
+  - "@solidjs/compiler-wasm32-wasi@2.0.0-rc.15"
+  - "@solidjs/compiler-win32-x64-msvc@2.0.0-rc.15"
+  - "@solidjs/signals@2.0.0-rc.15"
+  - "@tursodatabase/database@0.8.3"
+  - "@tursodatabase/database-common@0.8.3"
+  - "@tursodatabase/database-darwin-arm64@0.8.3"
+  - "@tursodatabase/database-linux-arm64-gnu@0.8.3"
+  - "@tursodatabase/database-linux-x64-gnu@0.8.3"
+  - "@tursodatabase/database-wasm@0.8.3"
+  - "@tursodatabase/database-wasm-common@0.8.3"
+  - "@tursodatabase/database-win32-x64-msvc@0.8.3"
+  - "@vitest/mocker@5.0.4"
+  - "@vitest/spy@5.0.4"
+  - "caniuse-lite@1.0.30001816"
+  - "electron-to-chromium@1.5.454"
+  - "oxfmt@0.73.0"
+  - "oxlint@1.88.0"
+  - "playwright@1.64.1"
+  - "playwright-core@1.64.1"
+  - "postcss@8.5.30"
+  - "temporal-polyfill@1.0.6"
+  - "tinybench@6.2.2"
+  - "vitest@5.0.4"
+minimumReleaseAgeExcludePrune: true
+
+# Fails when a version has weaker trust evidence (trusted publishing, provenance) than an earlier
+# release of the same package, a sign that someone else published it.
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  # A 2023 security backport to the 6.x line, published by an npm maintainer without provenance,
+  # after 7.x had started publishing with it. Babel still depends on 6.x.
+  - "semver@6.3.1"
+
+# Only the dependencies in package.json may come from git or a tarball URL, never transitive ones.
+blockExoticSubdeps: true
+
+# Dependencies may only run install scripts when they are listed here, and an install fails on any
+# unlisted one.
+strictDepBuilds: true
+allowBuilds:
+  esbuild: true
+
+# Fails when a dependency says it doesn't support the Node version in use.
+engineStrict: true
+
+# Saves exact versions, never ranges (see Stack in CLAUDE.md).
+savePrefix: ""
+
+# Fails instead of downloading another pnpm when the running one isn't the packageManager version.
+pmOnFail: error
