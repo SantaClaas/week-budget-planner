@@ -7,7 +7,14 @@ import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "
 import { layoutLanes } from "./lanes";
 import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots";
 import { formatClock, formatClockRange, formatLength, formatWeekday } from "./format";
-import { createActivityId, createBlockId, sanitizeActivityId, sanitizeBlockId } from "./id";
+import {
+  createActivityId,
+  createBlockId,
+  sanitizeActivityId,
+  sanitizeBlockId,
+  type ActivityId,
+  type BlockId,
+} from "./id";
 import { sanitizePlan } from "./sanitize";
 import {
   parseBudgetMinutes,
@@ -41,8 +48,12 @@ import {
 
 // Tests write plain numbers and strings. These turn them into checked values through the same
 // sanitizers the app uses, which also keeps the test data valid.
-const activityId = (id: string) => sanitizeActivityId(id)!;
-const blockId = (id: string) => sanitizeBlockId(id)!;
+function required<Value>(value: Value | undefined, what: string): Value {
+  if (value === undefined) throw new Error(`The test data has an invalid ${what}.`);
+  return value;
+}
+const activityId = (id: string): ActivityId => required(sanitizeActivityId(id), "activity id");
+const blockId = (id: string): BlockId => required(sanitizeBlockId(id), "block id");
 
 type ActivityValues = {
   id?: string;
@@ -122,7 +133,7 @@ describe("time", () => {
     expect(formatClock(450, { locale: "de", hourCycle: "h23" })).toBe("07:30");
     expect(formatClockRange(600, 690, { locale: "en-GB" })).toBe("10:00–11:30");
     // Thin spaces around the dash and a narrow no-break space before AM.
-    expect(formatClockRange(600, 690, { locale: "en-US" })).toBe("10:00\u2009–\u200911:30\u202fAM");
+    expect(formatClockRange(600, 690, { locale: "en-US" })).toBe("10:00\u2009–\u200911:30\u202FAM");
     expect(formatWeekday(0, "short", { locale: "en-GB" })).toBe("Mon");
     expect(formatWeekday(6, "long", { locale: "de" })).toBe("Sonntag");
   });
@@ -249,7 +260,8 @@ describe("lanes", () => {
 });
 
 describe("slots", () => {
-  const plan = { blocks: [] as Block[], ...hours(7, 22) };
+  const empty: Block[] = [];
+  const plan = { blocks: empty, ...hours(7, 22) };
 
   it("finds the first free slot within the day hours", () => {
     expect(findFirstFreeSlot(plan, activity(), length(90))).toEqual({ day: 0, start: 420 });
@@ -303,10 +315,12 @@ describe("defaults", () => {
   });
 
   it("avoids colors and shapes already in use while any are left", () => {
-    const others = DEFAULT_SHAPES.slice(0, 29).map((shape, index) => ({
-      hue: ([255, 28] as const)[index % 2]!,
-      shape,
-    }));
+    const blue: Hue = 255;
+    const red: Hue = 28;
+    const others = [
+      ...DEFAULT_SHAPES.slice(0, 15).map((shape) => ({ hue: blue, shape })),
+      ...DEFAULT_SHAPES.slice(15, 29).map((shape) => ({ hue: red, shape })),
+    ];
     const look = pickDefaultLook("anything", others);
     expect(look.shape).toBe(DEFAULT_SHAPES[29]);
     expect([255, 28]).not.toContain(look.hue);
@@ -364,13 +378,13 @@ describe("sanitize", () => {
       budgetMinutes: 1440,
       days: 7,
     });
-    expect(SHAPES).toContain(first!.shape);
-    expect(second!.id).not.toBe("x");
-    expect(second!.budgetMinutes).toBe(15);
+    expect(SHAPES).toContain(first?.shape);
+    expect(second?.id).not.toBe("x");
+    expect(second?.budgetMinutes).toBe(15);
     expect(plan.blocks).toHaveLength(2);
     expect(plan.blocks[0]).toMatchObject({ day: 6, start: 1425, length: 1440 });
     expect(plan.blocks[1]).toMatchObject({ day: 2, start: 600, length: 45 });
-    expect(plan.blocks[1]!.id).not.toBe("1");
+    expect(plan.blocks[1]?.id).not.toBe("1");
     expect(plan).toMatchObject({ dayStart: 12, dayEnd: 13, exampleLoadedAt: null });
   });
 
@@ -385,7 +399,7 @@ describe("sanitize", () => {
       ...Array.from({ length: 100 }, createActivityId),
       ...Array.from({ length: 100 }, createBlockId),
     ];
-    for (const id of ids) expect(id).toMatch(/^[6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz]{12}$/);
+    for (const id of ids) expect(id).toMatch(/^[6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz]{12}$/u);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -402,9 +416,9 @@ describe("sanitize", () => {
       ],
     });
     expect(plan.activities.map((each) => each.id)).toEqual([
-      expect.not.stringMatching(/^x+$/),
+      expect.not.stringMatching(/^x+$/u),
       "keep",
-      expect.not.stringMatching(/^keep$/),
+      expect.not.stringMatching(/^keep$/u),
     ]);
     // The block of the activity whose id was invalid can't be matched any more and is dropped.
     expect(plan.blocks.map((each) => each.activityId)).toEqual(["keep"]);

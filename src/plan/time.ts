@@ -24,6 +24,16 @@ export type DayCount = Brand<number, "DayCount">;
 /** A whole hour of the day, 0 to 24, for the day hours. */
 export type Hour = Brand<number, "Hour">;
 
+/**
+ * Gives a checked number its brand. The sanitizers and parsers below are the only callers, and only
+ * with values they've just made valid, so this is the one type assertion in the module.
+ */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Value is the brand to give: a return-only type parameter is what makes this the cast.
+function brand<Value extends Brand<number, string>>(value: number): Value {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place a checked number becomes a brand (see Branded types in docs/CODING-GUIDELINES.md).
+  return value as Value;
+}
+
 export const clamp = (value: number, low: number, high: number): number =>
   Math.min(high, Math.max(low, value));
 
@@ -44,19 +54,20 @@ function sanitizeInteger(value: number, low: number, high: number, fallback: num
 // loaded (storage, an import, another tab) or computed. Forms use the strict parsers below instead.
 
 export const sanitizeDayIndex = (value: number, fallback = 0): DayIndex =>
-  sanitizeInteger(value, 0, 6, fallback) as DayIndex;
+  brand<DayIndex>(sanitizeInteger(value, 0, 6, fallback));
 
 /** Wraps any day number around the week, so 7 is Monday again and -1 is Sunday. */
-export const wrapDayIndex = (value: number): DayIndex => modulo(Math.round(value), 7) as DayIndex;
+export const wrapDayIndex = (value: number): DayIndex =>
+  brand<DayIndex>(modulo(Math.round(value), 7));
 
 export const sanitizeDayMinute = (value: number, fallback = 540): DayMinute =>
-  clamp(snap(sanitizeInteger(value, 0, DAY, fallback)), 0, DAY - SLOT) as DayMinute;
+  brand<DayMinute>(clamp(snap(sanitizeInteger(value, 0, DAY, fallback)), 0, DAY - SLOT));
 
 /** Wraps any minute around the week. */
-export const wrapWeekMinute = (value: number): WeekMinute => modulo(value, WEEK) as WeekMinute;
+export const wrapWeekMinute = (value: number): WeekMinute => brand<WeekMinute>(modulo(value, WEEK));
 
 export const sanitizeLength = (value: number, fallback = 60): Length =>
-  clamp(snap(sanitizeInteger(value, SLOT, MAX_LENGTH, fallback)), SLOT, MAX_LENGTH) as Length;
+  brand<Length>(clamp(snap(sanitizeInteger(value, SLOT, MAX_LENGTH, fallback)), SLOT, MAX_LENGTH));
 
 /** Per day at most a day, per week at most a week. */
 export const sanitizeBudgetMinutes = (
@@ -64,21 +75,20 @@ export const sanitizeBudgetMinutes = (
   mode: "week" | "day",
   fallback = 60,
 ): BudgetMinutes =>
-  Math.max(
-    SLOT,
-    snap(sanitizeInteger(value, SLOT, mode === "day" ? DAY : WEEK, fallback)),
-  ) as BudgetMinutes;
+  brand<BudgetMinutes>(
+    Math.max(SLOT, snap(sanitizeInteger(value, SLOT, mode === "day" ? DAY : WEEK, fallback))),
+  );
 
 export const sanitizeDayCount = (value: number, fallback = 5): DayCount =>
-  sanitizeInteger(value, 1, 7, fallback) as DayCount;
+  brand<DayCount>(sanitizeInteger(value, 1, 7, fallback));
 
 /** The first of the day hours, 0 to 12. */
 export const sanitizeDayStart = (value: number, fallback = 7): Hour =>
-  sanitizeInteger(value, 0, 12, fallback) as Hour;
+  brand<Hour>(sanitizeInteger(value, 0, 12, fallback));
 
 /** The end of the day hours, 13 to 24. */
 export const sanitizeDayEnd = (value: number, fallback = 22): Hour =>
-  sanitizeInteger(value, 13, 24, fallback) as Hour;
+  brand<Hour>(sanitizeInteger(value, 13, 24, fallback));
 
 // Strict parsers, for what the user types or picks: they reject a value out of range instead of
 // clamping it, so the form can say what's wrong (see Activities in docs/SPEC.md).
@@ -93,17 +103,17 @@ export function parseBudgetMinutes(
 ): BudgetMinutes | "too-small" | "too-large" {
   if (!(minutes > 0)) return "too-small";
   if (minutes > (mode === "day" ? DAY : WEEK)) return "too-large";
-  return Math.max(SLOT, snap(minutes)) as BudgetMinutes;
+  return brand<BudgetMinutes>(Math.max(SLOT, snap(minutes)));
 }
 
 /** A whole number of days from 1 to 7, or undefined. */
 export const parseDayCount = (value: number): DayCount | undefined =>
-  Number.isInteger(value) && value >= 1 && value <= 7 ? (value as DayCount) : undefined;
+  Number.isInteger(value) && value >= 1 && value <= 7 ? brand<DayCount>(value) : undefined;
 
 /** A whole hour from 0 to 12, or undefined. */
 export const parseDayStart = (value: number): Hour | undefined =>
-  Number.isInteger(value) && value >= 0 && value <= 12 ? (value as Hour) : undefined;
+  Number.isInteger(value) && value >= 0 && value <= 12 ? brand<Hour>(value) : undefined;
 
 /** A whole hour from 13 to 24, or undefined. */
 export const parseDayEnd = (value: number): Hour | undefined =>
-  Number.isInteger(value) && value >= 13 && value <= 24 ? (value as Hour) : undefined;
+  Number.isInteger(value) && value >= 13 && value <= 24 ? brand<Hour>(value) : undefined;
