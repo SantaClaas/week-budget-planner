@@ -5,6 +5,8 @@
 // https://github.com/gzuidhof/coi-serviceworker, written as part of the app's own worker so a later
 // PWA step can extend it (a scope has only one service worker). index.html registers it and reloads
 // once when it takes control.
+//
+// It also adds the security headers a <meta> policy can't set (see Security in docs/SPEC.md).
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -21,6 +23,13 @@ self.addEventListener("fetch", (event) => {
       const headers = new Headers(response.headers);
       headers.set("Cross-Origin-Opener-Policy", "same-origin");
       headers.set("Cross-Origin-Embedder-Policy", "require-corp");
+      headers.set("X-Content-Type-Options", "nosniff");
+      headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      if (request.mode === "navigate") {
+        // The <meta> policy in index.html covers the rest; frame-ancestors only works as a header.
+        headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+        headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+      }
       if (new URL(request.url).origin === self.location.origin) {
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
       }
