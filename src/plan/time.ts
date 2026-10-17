@@ -6,7 +6,11 @@ export const SLOT = 15;
 export const DAY = 1440;
 /** Minutes in the week. The week wraps: Sunday night continues into Monday morning. */
 export const WEEK = 7 * DAY;
-/** The longest a block can be. */
+/**
+ * The longest a block can be. A day for now, but its own rule, so it can change without DAY.
+ *
+ * @alias Tells knip that sharing DAY's value is on purpose.
+ */
 export const MAX_LENGTH = DAY;
 
 /** The day of the week, 0 for Monday to 6 for Sunday. Temporal's `dayOfWeek` is 1 to 7 instead. */
