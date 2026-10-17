@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createExampleWeek } from "../plan/example";
-import * as memory from "./memory";
+import { createExampleWeek } from "../plan/example.ts";
+import * as memory from "./memory.ts";
 
 const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
 

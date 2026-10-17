@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { consume, ProviderMissingError, provide, RemoteCallError } from "./service";
+import { consume, ProviderMissingError, provide, RemoteCallError } from "./service.ts";
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
 // their class when they're cloned, and a missing provider shows only as silence. These tests pin

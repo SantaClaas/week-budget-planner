@@ -2,8 +2,8 @@ import { connect } from "@tursodatabase/database";
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { createLocalQueryService, isSqlValue } from "./connection";
-import { createDatabase } from "./drizzle";
+import { createLocalQueryService, isSqlValue } from "./connection.ts";
+import { createDatabase } from "./drizzle.ts";
 
 // Drizzle types query parameters as `any[]`, so the app checks them at runtime instead (see Where
 // rules are enforced in docs/CODING-GUIDELINES.md).

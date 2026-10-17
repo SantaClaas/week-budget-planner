@@ -1,10 +1,10 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { asc, eq, inArray } from "drizzle-orm";
 
-import { sanitizePlan } from "../plan/sanitize";
-import type { Activity, Block, Plan } from "../plan/types";
-import type { Database } from "./drizzle";
-import { activities, blocks, settings } from "./schema";
+import { sanitizePlan } from "../plan/sanitize.ts";
+import type { Activity, Block, Plan } from "../plan/types.ts";
+import type { Database } from "./drizzle.ts";
+import { activities, blocks, settings } from "./schema.ts";
 
 const SETTINGS_ID = 1;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import * as theme from "./theme";
+import * as theme from "./theme.ts";
 
 const createStorage = () => {
   const items = new Map<string, string>();
