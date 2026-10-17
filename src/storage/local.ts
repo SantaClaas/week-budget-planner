@@ -1,9 +1,9 @@
 /* oxlint-disable require-await, typescript/require-await -- PlanStore's methods are async so that a
    throw (localStorage full or blocked, for example) arrives as a rejection, like the database's. */
-import * as planFile from "../plan/file";
-import type { Plan } from "../plan/types";
-import * as jsonFile from "./json-file";
-import type { PlanStore } from "./plan-store";
+import * as planFile from "../plan/file.ts";
+import type { Plan } from "../plan/types.ts";
+import * as jsonFile from "./json-file.ts";
+import type { PlanStore } from "./plan-store.ts";
 
 export const PLAN_KEY = "week-budget-planner.plan";
 

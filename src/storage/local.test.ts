@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createExampleWeek } from "../plan/example";
-import * as local from "./local";
-import { PLAN_KEY } from "./local";
-import { InvalidFileError, NewerVersionError } from "./plan-store";
+import { createExampleWeek } from "../plan/example.ts";
+import * as local from "./local.ts";
+import { PLAN_KEY } from "./local.ts";
+import { InvalidFileError, NewerVersionError } from "./plan-store.ts";
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();

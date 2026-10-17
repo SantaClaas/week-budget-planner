@@ -1,10 +1,10 @@
 import { createSignal, onSettled, Show } from "solid-js";
 import version from "virtual:app-version";
 
-import { createExampleWeek } from "./plan/example";
-import type { Plan } from "./plan/types";
-import { open as openStorage } from "./storage";
-import { NewerVersionError, type PlanStore } from "./storage/plan-store";
+import { createExampleWeek } from "./plan/example.ts";
+import type { Plan } from "./plan/types.ts";
+import { open as openStorage } from "./storage/index.ts";
+import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
 
 // Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
 // shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.

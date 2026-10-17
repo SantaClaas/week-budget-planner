@@ -1,4 +1,4 @@
-import type { TursoConnection } from "./connection";
+import type { TursoConnection } from "./connection.ts";
 
 /** Drizzle's table of applied migrations. It holds one row per migration, by name. */
 const MIGRATIONS_TABLE = "__drizzle_migrations";

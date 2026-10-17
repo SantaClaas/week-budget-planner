@@ -1,5 +1,5 @@
-import { sanitizePlan } from "./sanitize";
-import { createEmptyPlan, type Plan } from "./types";
+import { sanitizePlan } from "./sanitize.ts";
+import { createEmptyPlan, type Plan } from "./types.ts";
 
 /** The stored format, as in examples/example-week.json, with keys in a stable order. */
 export function serialize(plan: Plan): string {
