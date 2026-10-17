@@ -202,6 +202,7 @@ In the prototype, the plan lived in the claude.ai artifact database. That API ex
 - **Drizzle sits on top of flashcut's RPC; it doesn't replace it.** Follower tabs have no local database object, so the app's Drizzle instance uses `drizzle-orm/sqlite-proxy`. That driver has no database of its own. It builds the SQL, calls one async callback with `(sql, params, method)`, and maps the returned rows to typed results. The callback just calls the existing `dbService`, which runs the SQL locally on the leader and over BroadcastChannel everywhere else. So every tab uses the same typed queries.
   - **Row shape:** the proxy expects rows as arrays of values in column order (one row for `method === "get"`, a list otherwise). Flashcut's `DbService` returns rows as objects, so add a method that returns arrays, for example using Turso's raw statement mode if its API has one (check it), and verify against Drizzle's sqlite-proxy docs and types.
   - **Atomic writes:** `database.transaction()` over the proxy would send BEGIN, the statements and COMMIT as separate RPC calls, so another tab's query could land in between. Instead, pass Drizzle's batch callback (`drizzle(callback, batchCallback, config)`) and add a `DbService.batch(statements)` that the leader runs inside one transaction (flashcut's `withTransaction`). Use `database.batch([...])` for every multi-statement user action.
+- **Migrations are loaded only when a database needs them.** Each generated `migration.sql` becomes a chunk of its own (a lazy `import.meta.glob`). At open, one query reads the names of the applied migrations from Drizzle's `__drizzle_migrations` table. If none are pending, nothing else is loaded. Otherwise the leader loads the pending SQL files and Drizzle's migrator and passes only the pending migrations, since Drizzle runs every migration whose name isn't in its table yet. So migrations every database already has cost nothing but their name, however many there are. If the list grows long, new databases could later start from a baseline instead of replaying the full history.
 - **Migrations run only on the leader**, on its real connection, before it starts serving, using either the `wasm-migrator` (passing the generated SQL as a `Record<string, string>`, for example through `import.meta.glob("../../drizzle/**/*.sql", { query: "?raw", eager: true })`) or the sqlite-proxy migrator. Drizzle tracks applied migrations in its own table. Don't mix that with flashcut's `PRAGMA user_version` scheme.
 - **Tests** run in Node against `@tursodatabase/database` (the same async API), applying the same generated migrations and going through the same sqlite-proxy adapter the app uses (`createLocalQueryService` in `src/database/connection.ts`), so the proxy path is tested too. No browser is needed for repository tests.
 
@@ -237,8 +238,11 @@ Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `
 
 Browsers may delete a site's storage when space runs low, unless the site has persistent storage. Safari also deletes storage written by script after 7 days without a visit, unless the site was added to the home screen.
 
-- After the user's first saved change to their own plan (not the first-run save, and not while the example week is shown), call `navigator.storage.persist()` once per page load, at the full and limited levels. Chrome and Safari decide on their own, and Firefox asks the user, which is why it follows something the user did.
-- Settings › Your data shows the result with `navigator.storage.persisted()`. Persisted: "This browser keeps your plan until you delete it." Not persisted: "This browser may delete your plan when it runs low on space. Export now and then to keep a copy." with a "Keep my plan" button that calls `persist()` again.
+The app asks the user before it asks the browser (see Browser permissions under Security):
+
+- After the user's first saved change to their own plan (not the first-run save, and not while the example week is shown), if `navigator.storage.persisted()` is false, show a snackbar once: "Your browser may delete your plan if it runs low on space." with the action "Keep it". Only that button calls `navigator.storage.persist()`. Chrome and Safari then decide on their own, and Firefox shows its prompt, which now follows a reason the user just read and a choice they made.
+- Dismissing the snackbar counts as "not now": store the time in `localStorage` (`week-budget-planner.keep-plan-dismissed-at`) and don't show the snackbar again. Settings still offers it.
+- Settings › Your data shows the state from `navigator.storage.persisted()`. Persisted: "This browser keeps your plan until you delete it." Not persisted: "This browser may delete your plan when it runs low on space. Export now and then to keep a copy." with a "Keep my plan" button that calls `persist()`. If the browser said no (`navigator.permissions.query({ name: "persistent-storage" })` is `denied`), say so instead of offering the button again: "This browser didn't agree to keep your plan. Export now and then to keep a copy."
 
 ### Calls between tabs
 
@@ -302,6 +306,16 @@ trusted-types default service-worker
 - `allowHtml()` is only for the build. The plugin fails the build when any other file imports `src/trusted-html.ts`, except `src/index.tsx`, which only imports it.
 - **One violation per page load is expected:** emnapi, which the database engine is built on, checks once whether `new Function` works and falls back to plain functions when it doesn't. That check shows up as a `TrustedScript` error in the console (in development, as several report-only messages). Any other violation is a bug.
 - To show user text, use text: JSX children and attributes, `textContent`. If a feature ever needs real untrusted HTML, it needs the Sanitizer API (`setHTML()`) and a decision recorded here first.
+
+### Browser permissions
+
+Never trigger a browser permission prompt the user has no context for. This covers persistent storage today, and location, camera, microphone, notifications and the like if a feature ever needs them.
+
+- **The app asks first, in its own UI,** saying in plain words what the permission is for, right where it matters, with a button for the user to agree. Only that button calls the browser API (`navigator.storage.persist()`, `getCurrentPosition()`, `getUserMedia()` and so on). Never call it on page load or as a side effect of something else.
+- "Not now" is respected: store when it was dismissed and don't ask again on your own. Keep a way to agree later in Settings.
+- Check the state first with `navigator.permissions.query()` where the permission is listed there. Don't ask for what's already granted. When it's denied, explain how to change it in the browser instead of asking again.
+- Where Chrome's `<permission>` element supports the permission (location, camera, microphone), prefer it inside our explanation, with a plain button calling the API as the fallback. It only prompts on the user's click.
+- A feature that needs camera, microphone or location also has to loosen the `Permissions-Policy` header, which turns them off today.
 
 ## Design
 
