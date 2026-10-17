@@ -1,21 +1,20 @@
 /**
- * The theme setting: follow the system, or always light or dark. It's a device preference, so it
- * lives in localStorage, not in the database, and the inline script in index.html applies it before
- * the first paint. Applying means setting the color-scheme meta, which the tokens map onto the
- * CSS color-scheme (see Design, Theme in docs/SPEC.md).
+ * The color scheme the page uses, which the Settings page calls the theme: follow the system, or
+ * always light or dark. The values are the CSS `color-scheme` values, and "light dark" follows the
+ * system. It's a device preference, so it lives in localStorage, not in the database, and the inline
+ * script in index.html applies it before the first paint. Applying means setting the color-scheme
+ * meta, which the tokens map onto the CSS color-scheme (see Design, Theme in docs/SPEC.md).
  */
-const THEMES = ["system", "light", "dark"] as const;
-
-export type Theme = (typeof THEMES)[number];
+export type ColorScheme = "light dark" | "light" | "dark";
 
 /** Also read by the inline script in index.html. */
-const STORAGE_KEY = "week-budget-planner.theme";
+const STORAGE_KEY = "week-budget-planner.color-scheme";
 
 type ColorSchemeMeta = { content: string };
 
-type ThemeStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+type ColorSchemeStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-function findStorage(): ThemeStorage | undefined {
+function findStorage(): ColorSchemeStorage | undefined {
   try {
     return globalThis.localStorage;
   } catch {
@@ -26,51 +25,51 @@ function findStorage(): ThemeStorage | undefined {
 const findMeta = (): ColorSchemeMeta | null =>
   globalThis.document?.querySelector<HTMLMetaElement>('meta[name="color-scheme"]') ?? null;
 
-/** The stored choice. "system" when nothing valid is stored, or storage is blocked. */
-export function read(storage: ThemeStorage | undefined = findStorage()): Theme {
+/** The stored choice. "light dark" (follow the system) when nothing valid is stored, or storage is blocked. */
+export function read(storage: ColorSchemeStorage | undefined = findStorage()): ColorScheme {
   try {
     const stored = storage?.getItem(STORAGE_KEY);
-    return stored === "light" || stored === "dark" ? stored : "system";
+    return stored === "light" || stored === "dark" ? stored : "light dark";
   } catch {
-    return "system";
+    return "light dark";
   }
 }
 
 /** Points the color-scheme meta at the choice. */
-function apply(theme: Theme, meta = findMeta()): void {
-  if (meta) meta.content = theme === "system" ? "light dark" : theme;
+function apply(colorScheme: ColorScheme, meta = findMeta()): void {
+  if (meta) meta.content = colorScheme;
 }
 
 /**
- * Stores the choice and applies it. System removes the stored entry instead of storing "system",
- * so the page keeps following the system setting. Applies even when storage is blocked.
+ * Stores the choice and applies it. "light dark" removes the stored entry instead of storing it, so
+ * the page keeps following the system setting. Applies even when storage is blocked.
  */
 export function save(
-  theme: Theme,
-  storage: ThemeStorage | undefined = findStorage(),
+  colorScheme: ColorScheme,
+  storage: ColorSchemeStorage | undefined = findStorage(),
   meta = findMeta(),
 ): void {
   try {
-    if (theme === "system") storage?.removeItem(STORAGE_KEY);
-    else storage?.setItem(STORAGE_KEY, theme);
+    if (colorScheme === "light dark") storage?.removeItem(STORAGE_KEY);
+    else storage?.setItem(STORAGE_KEY, colorScheme);
   } catch {
     // Blocked storage: the choice lasts until the tab closes.
   }
-  apply(theme, meta);
+  apply(colorScheme, meta);
 }
 
 /** Follows a choice made in another tab. Returns a function that stops listening. */
 export function listenForChanges(
-  callback: (theme: Theme) => void,
+  callback: (colorScheme: ColorScheme) => void,
   events: Pick<Window, "addEventListener" | "removeEventListener"> = window,
-  storage: ThemeStorage | undefined = findStorage(),
+  storage: ColorSchemeStorage | undefined = findStorage(),
   meta = findMeta(),
 ): () => void {
   const listener = (event: StorageEvent) => {
     if (event.key !== null && event.key !== STORAGE_KEY) return;
-    const theme = read(storage);
-    apply(theme, meta);
-    callback(theme);
+    const colorScheme = read(storage);
+    apply(colorScheme, meta);
+    callback(colorScheme);
   };
   events.addEventListener("storage", listener);
   return () => {

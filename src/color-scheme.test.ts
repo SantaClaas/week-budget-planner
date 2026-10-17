@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import * as theme from "./theme.ts";
+import * as colorScheme from "./color-scheme.ts";
 
 const createStorage = () => {
   const items = new Map<string, string>();
@@ -15,22 +15,22 @@ const createStorage = () => {
 // Node has no StorageEvent, so a plain event carries the key.
 const storageEvent = (key: string | null): Event => Object.assign(new Event("storage"), { key });
 
-describe("theme", () => {
+describe("color scheme", () => {
   it("follows the system until a choice is stored", () => {
     const storage = createStorage();
-    expect(theme.read(storage)).toBe("system");
-    storage.setItem("week-budget-planner.theme", "sepia");
-    expect(theme.read(storage)).toBe("system");
-    expect(theme.read()).toBe("system");
+    expect(colorScheme.read(storage)).toBe("light dark");
+    storage.setItem("week-budget-planner.color-scheme", "sepia");
+    expect(colorScheme.read(storage)).toBe("light dark");
+    expect(colorScheme.read()).toBe("light dark");
   });
 
   it("stores light and dark, and removes the entry for system", () => {
     const storage = createStorage();
     const meta = { content: "light dark" };
-    theme.save("dark", storage, meta);
-    expect(theme.read(storage)).toBe("dark");
+    colorScheme.save("dark", storage, meta);
+    expect(colorScheme.read(storage)).toBe("dark");
     expect(meta.content).toBe("dark");
-    theme.save("system", storage, meta);
+    colorScheme.save("light dark", storage, meta);
     expect(storage.items.size).toBe(0);
     expect(meta.content).toBe("light dark");
   });
@@ -48,17 +48,17 @@ describe("theme", () => {
       },
     };
     const meta = { content: "light dark" };
-    theme.save("light", blocked, meta);
+    colorScheme.save("light", blocked, meta);
     expect(meta.content).toBe("light");
-    expect(theme.read(blocked)).toBe("system");
+    expect(colorScheme.read(blocked)).toBe("light dark");
   });
 
   it("follows a choice made in another tab", () => {
     const storage = createStorage();
     const meta = { content: "light dark" };
     const events = new EventTarget();
-    const seen: theme.Theme[] = [];
-    const stop = theme.listenForChanges(
+    const seen: colorScheme.ColorScheme[] = [];
+    const stop = colorScheme.listenForChanges(
       (next) => {
         seen.push(next);
       },
@@ -66,8 +66,8 @@ describe("theme", () => {
       storage,
       meta,
     );
-    storage.setItem("week-budget-planner.theme", "dark");
-    events.dispatchEvent(storageEvent("week-budget-planner.theme"));
+    storage.setItem("week-budget-planner.color-scheme", "dark");
+    events.dispatchEvent(storageEvent("week-budget-planner.color-scheme"));
     events.dispatchEvent(storageEvent("something-else"));
     stop();
     events.dispatchEvent(storageEvent(null));
