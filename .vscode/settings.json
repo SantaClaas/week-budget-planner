@@ -1,0 +1,12 @@
+{
+  // oxfmt formats and oxlint fixes on save, with the project's own configs.
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "always"
+  },
+  // Markdown isn't formatted (see .oxfmtrc.json), so tables and long lines stay as written.
+  "[markdown]": {
+    "editor.formatOnSave": false
+  }
+}

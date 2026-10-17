@@ -1,0 +1,8 @@
+# Spell checks code, comments and docs (https://github.com/crate-ci/typos). CI runs it, and the
+# Typos editor extensions read this file too.
+
+[files]
+extend-exclude = [
+  # Integrity hashes are random letters, so sooner or later one spells a typo.
+  "pnpm-lock.yaml",
+]
