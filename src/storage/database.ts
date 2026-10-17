@@ -38,7 +38,7 @@ export function create(): PlanStore {
         throw new InvalidFileError("This file isn't a Week Budget Planner database, so nothing was changed.");
       }
       if (result === "newer-version") {
-        throw new NewerVersionError("This file is from a newer version of Week Budget Planner.");
+        throw new NewerVersionError("This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.");
       }
     },
     wipe: () => databaseService.wipe(),

@@ -20,7 +20,7 @@ export async function read(file: File): Promise<Plan> {
     throw new InvalidFileError("Only a .json plan file can be imported here, because this browser can't open the database.");
   }
   const plan = planFile.read(await file.text());
-  if (plan === "not-a-plan") throw new InvalidFileError("This file isn't a Week Budget Planner plan.");
-  if (plan === "newer-version") throw new NewerVersionError("This file is from a newer version of Week Budget Planner.");
+  if (plan === "not-a-plan") throw new InvalidFileError("This file isn't a Week Budget Planner plan, so nothing was changed.");
+  if (plan === "newer-version") throw new NewerVersionError("This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.");
   return plan;
 }
