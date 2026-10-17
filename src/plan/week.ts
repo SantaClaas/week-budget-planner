@@ -1,4 +1,10 @@
-import { formatClock, formatClockRange, formatLength, formatWeekday, type Format } from "./format.ts";
+import {
+  formatClock,
+  formatClockRange,
+  formatLength,
+  formatWeekday,
+  type Format,
+} from "./format.ts";
 import {
   DAY,
   MAX_LENGTH,
