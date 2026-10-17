@@ -9,5 +9,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), URL_LIFETIME_MILLISECONDS);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, URL_LIFETIME_MILLISECONDS);
 }

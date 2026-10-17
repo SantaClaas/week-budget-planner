@@ -1,3 +1,5 @@
+/* oxlint-disable require-await, typescript/require-await -- PlanStore's methods are async so that a
+   throw (localStorage full or blocked, for example) arrives as a rejection, like the database's. */
 import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
 import * as jsonFile from "./json-file";
@@ -42,11 +44,13 @@ export function create(
       current = undefined;
     },
     onExternalChange(callback) {
-      const listener = (event: StorageEvent) => {
+      const listener = (event: StorageEvent): void => {
         if (event.key === null || event.key === PLAN_KEY) callback();
       };
       events.addEventListener("storage", listener);
-      return () => events.removeEventListener("storage", listener);
+      return () => {
+        events.removeEventListener("storage", listener);
+      };
     },
   };
 }
