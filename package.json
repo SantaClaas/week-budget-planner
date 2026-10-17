@@ -1,6 +1,10 @@
 {
   "name": "week-budget-planner",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SantaClaas/week-budget-planner"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader native",
