@@ -23,9 +23,11 @@ function findLightValue(value: string): string {
 /** Every `--name: value;` declaration in `text`, keyed by its selector and name. */
 function readDeclarations(text: string): Map<string, string> {
   const declarations = new Map<string, string>();
-  for (const rule of text.matchAll(/([.:][\w-]+(?:\[[^\]]*\])?)\s*\{([^{}]*)\}/g)) {
-    for (const [, name, value] of rule[2]!.matchAll(/(--[\w-]+):\s*([^;]+);/g)) {
-      declarations.set(`${rule[1]} ${name}`, value!.trim());
+  for (const [, selector = "", body = ""] of text.matchAll(
+    /([.:][\w-]+(?:\[[^\]]*\])?)\s*\{([^{}]*)\}/gu,
+  )) {
+    for (const [, name = "", value = ""] of body.matchAll(/(--[\w-]+):\s*([^;]+);/gu)) {
+      declarations.set(`${selector} ${name}`, value.trim());
     }
   }
   return declarations;
