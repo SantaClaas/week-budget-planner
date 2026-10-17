@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
-import { parseDecimal, readActivityForm } from "./activity-form";
-import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget";
-import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "./defaults";
-import { layoutLanes } from "./lanes";
-import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots";
-import { formatClock, formatClockRange, formatLength, formatWeekday } from "./format";
+import { parseDecimal, readActivityForm } from "./activity-form.ts";
+import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget.ts";
+import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "./defaults.ts";
+import { layoutLanes } from "./lanes.ts";
+import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots.ts";
+import { formatClock, formatClockRange, formatLength, formatWeekday } from "./format.ts";
 import {
   createActivityId,
   createBlockId,
@@ -14,8 +14,8 @@ import {
   sanitizeBlockId,
   type ActivityId,
   type BlockId,
-} from "./id";
-import { sanitizePlan } from "./sanitize";
+} from "./id.ts";
+import { sanitizePlan } from "./sanitize.ts";
 import {
   parseBudgetMinutes,
   parseDayCount,
@@ -30,8 +30,8 @@ import {
   sanitizeLength as length,
   snapDown,
   snap,
-} from "./time";
-import { DEFAULT_SHAPES, SHAPES, type Activity, type Block, type Hue, type Shape } from "./types";
+} from "./time.ts";
+import { DEFAULT_SHAPES, SHAPES, type Activity, type Block, type Hue, type Shape } from "./types.ts";
 import {
   splitIntoParts,
   isBlockOverlapping,
@@ -44,7 +44,7 @@ import {
   findPartsOnDay,
   resizeEnd,
   resizeStart,
-} from "./week";
+} from "./week.ts";
 
 // Tests write plain numbers and strings. These turn them into checked values through the same
 // sanitizers the app uses, which also keeps the test data valid.

@@ -1,5 +1,5 @@
-import type { ActivityId } from "./id";
-import type { Activity, Block, Plan } from "./types";
+import type { ActivityId } from "./id.ts";
+import type { Activity, Block, Plan } from "./types.ts";
 
 /** The activity's weekly budget in minutes. */
 export const calculateWeeklyBudget = (
