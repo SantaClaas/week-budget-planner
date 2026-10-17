@@ -100,7 +100,7 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
 
 ### Wide screens (desktop and tablets, 52.5em and up)
 
-- **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Not saved"), an Undo icon button and a Settings icon button.
+- **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Saved in limited storage", "Not saved"), an Undo icon button and a Settings icon button. The save status is a link to Settings › Your data (see Writes and undo).
 - **Left pane, Activities** (360px wide, scrolls on its own):
   - The example-week card, shown only while `exampleLoadedAt` is set: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
   - A header, "Activities", with the total left to place.
@@ -218,7 +218,8 @@ Map the data model above roughly like this. Adjust it if Drizzle suggests better
 
 - Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
 - Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
-- The status in the top app bar reflects the database: "Saved in this browser", "Saving…", or "Not saved". On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
+- The status in the top app bar says whether and where the last change is saved: "Saved in this browser", "Saving…", "Saved in limited storage" (see Progressive enhancement, which includes a database that won't open), or "Not saved". It is a link to Settings › Your data, so every question about the data ("saved how safely?") lands where the answers and actions are: keeping the plan, a broken database, export.
+- **The status never shows whether the browser keeps the plan** (see Keeping the data). That's about the future, not the last change, and most browsers don't grant persistent storage to a new site, so it would be a warning for nearly everyone nearly all the time, and "Not saved" would stop standing out. Storage problems that change what happens to a change (limited storage, no storage) do show there. On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
 
 ### Export, import and reset (required)
 
