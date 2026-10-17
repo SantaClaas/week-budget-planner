@@ -6,13 +6,10 @@ export function App(): JSX.Element {
     <main>
       <h1>Week Budget Planner</h1>
       <p>
-        Version {version.date}
-        {version.commit && (
-          <>
-            {" · "}
-            <a href={version.commit.url}>{version.commit.hash.slice(0, 7)}</a>
-          </>
-        )}
+        <a href={version.url} target="_blank" rel="noopener">
+          Version {version.date}
+          {version.commit === undefined ? "" : ` · ${version.commit.slice(0, 7)}`}
+        </a>
       </p>
     </main>
   );
