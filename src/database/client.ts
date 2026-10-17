@@ -5,7 +5,7 @@ import { connect } from "@tursodatabase/database-wasm/vite";
 import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
-import { runMigrations } from "./migrations";
+import { NewerDatabaseError, runMigrations } from "./migrations";
 import { loadPlan } from "./plan-repository";
 
 const DATABASE_FILE = "week-budget-planner.db";
@@ -32,9 +32,10 @@ type DatabaseService = QueryService & {
   exportFile(): Promise<Uint8Array>;
   /**
    * Replaces the database file and reloads every tab. Destructive. Leaves the database as it was
-   * and returns "invalid-file" when the file isn't a database this app can open.
+   * and returns "invalid-file" when the file isn't a database this app can open, or
+   * "newer-version" when a newer version of the app made it.
    */
-  importFile(bytes: Uint8Array): Promise<"imported" | "invalid-file">;
+  importFile(bytes: Uint8Array): Promise<ImportCheck | "imported">;
   /** Deletes the database files entirely and reloads every tab. Destructive. */
   wipe(): Promise<void>;
 };
@@ -123,12 +124,14 @@ async function readFileBytes(): Promise<Uint8Array> {
 const hasSqliteHeader = (bytes: Uint8Array): boolean =>
   bytes.length >= SQLITE_HEADER.length && SQLITE_HEADER.every((byte, index) => bytes[index] === byte);
 
+type ImportCheck = "importable" | "invalid-file" | "newer-version";
+
 /**
  * Whether the file is a database this app can open: it has the SQLite header, and a copy of it
  * opens, migrates and holds a readable plan. The copy is deleted again either way.
  */
-async function isImportable(bytes: Uint8Array): Promise<boolean> {
-  if (!hasSqliteHeader(bytes)) return false;
+async function checkImport(bytes: Uint8Array): Promise<ImportCheck> {
+  if (!hasSqliteHeader(bytes)) return "invalid-file";
   const root = await navigator.storage.getDirectory();
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   await writeFile(root, name, bytes);
@@ -138,10 +141,11 @@ async function isImportable(bytes: Uint8Array): Promise<boolean> {
     await runMigrations(connection);
     const opened = connection;
     await loadPlan(createDatabase(createLocalQueryService(async () => opened)));
-    return true;
+    return "importable";
   } catch (error) {
+    if (error instanceof NewerDatabaseError) return "newer-version";
     console.warn("[database] the imported file can't be opened", error);
-    return false;
+    return "invalid-file";
   } finally {
     await connection?.close();
     await removeImportLeftovers();
@@ -173,7 +177,8 @@ const localService: DatabaseService = {
   },
 
   async importFile(bytes) {
-    if (!(await isImportable(bytes))) return "invalid-file";
+    const check = await checkImport(bytes);
+    if (check !== "importable") return check;
     await closeForReload();
     try {
       const root = await navigator.storage.getDirectory();

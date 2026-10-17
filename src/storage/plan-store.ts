@@ -13,6 +13,12 @@ export type ExportedFile = { blob: Blob; filename: string };
 /** An imported file that isn't a plan this level can read. Nothing was changed. */
 export class InvalidFileError extends Error {}
 
+/**
+ * The plan, or an imported file, was saved by a newer version of the app. Reloading updates the
+ * app (see Export, import and reset in docs/SPEC.md). Nothing was changed.
+ */
+export class NewerVersionError extends Error {}
+
 export interface PlanStore {
   readonly level: StorageLevel;
   /**
@@ -27,8 +33,9 @@ export interface PlanStore {
   /** The `.db` file at the full level, the `.json` plan file otherwise. */
   exportFile(): Promise<ExportedFile>;
   /**
-   * Replaces the stored plan with an imported `.db` (full level only) or `.json` file. Throws
-   * {@link InvalidFileError}, changing nothing, when the file isn't a plan this level can read.
+   * Replaces the stored plan with an imported `.db` (full level only) or `.json` file. Changes
+   * nothing and throws {@link InvalidFileError} when the file isn't a plan this level can read, or
+   * {@link NewerVersionError} when a newer version of the app made it.
    */
   importFile(file: File): Promise<void>;
   /** Deletes everything this level stored. */

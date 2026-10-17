@@ -16,7 +16,7 @@ type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
 type ServiceMessage =
   | { scope: string; kind: "call"; id: string; property: string; parameters: unknown[] }
   | { scope: string; kind: "result"; id: string; result: unknown }
-  | { scope: string; kind: "error"; id: string; error: unknown }
+  | { scope: string; kind: "error"; id: string; error: unknown; name?: string }
   | { scope: string; kind: "provider-ready"; providerId: string }
   | { scope: string; kind: "provider-query" };
 
@@ -70,11 +70,13 @@ export function provide<T extends AsyncApi>(
         } satisfies ServiceMessage);
       } catch (error) {
         try {
+          // Structured cloning turns custom errors into a plain Error, so the name travels apart.
           channel.postMessage({
             scope,
             kind: "error",
             id: message.id,
             error,
+            name: error instanceof Error ? error.name : undefined,
           } satisfies ServiceMessage);
         } catch {
           // The error wasn't structured-cloneable; send its string form.
@@ -181,11 +183,12 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
     lastHeardAt = performance.now();
     sent.delete(message.id);
     stopQueryingWhenIdle();
-    if (message.kind === "result") call.resolve(message.result);
-    else
-      call.reject(
-        new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }),
-      );
+    if (message.kind === "result") {
+      call.resolve(message.result);
+      return;
+    }
+    if (message.error instanceof Error && message.name) message.error.name = message.name;
+    call.reject(new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }));
   });
 
   function waitForProvider(): Promise<void> {

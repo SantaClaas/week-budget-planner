@@ -1,6 +1,6 @@
 import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
-import { InvalidFileError, type ExportedFile } from "./plan-store";
+import { InvalidFileError, NewerVersionError, type ExportedFile } from "./plan-store";
 
 /** The plan as a `.json` file, the export below the full level. */
 
@@ -20,6 +20,7 @@ export async function read(file: File): Promise<Plan> {
     throw new InvalidFileError("Only a .json plan file can be imported here, because this browser can't open the database.");
   }
   const plan = planFile.read(await file.text());
-  if (!plan) throw new InvalidFileError("This file isn't a Week Budget Planner plan.");
+  if (plan === "not-a-plan") throw new InvalidFileError("This file isn't a Week Budget Planner plan.");
+  if (plan === "newer-version") throw new NewerVersionError("This file is from a newer version of Week Budget Planner.");
   return plan;
 }
