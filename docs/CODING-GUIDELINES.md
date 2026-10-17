@@ -45,7 +45,7 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 How to use them:
 
-- **Only the module that defines a brand creates one**, with `as`, inside its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those.
+- **Only the module that defines a brand creates one**, through its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those. Inside the module, one private `brand()` helper holds the only type assertion, with a comment saying why (see Type assertions below).
 - **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
 - **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
 - **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.
@@ -106,9 +106,20 @@ This is close to what Casey Muratori calls [semantic compression](https://caseym
 
 **oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
 
-- The lint runs the correctness, suspicious and perf categories as errors, with type-aware rules (floating promises, unsafe assertions and the like).
-- **A rule that doesn't fit is turned off with a reason**, in `.oxlintrc.json` for a whole kind of file, or with `// oxlint-disable-next-line rule -- why` on one line. Always give the reason; the linter can't check that, but it does fail on a disable that no longer disables anything.
-- `typescript/no-unsafe-type-assertion` is off only where brands are defined (`src/plan/time.ts`, `src/plan/id.ts`) and in tests, so it enforces the branded types rule: a narrowing `as` anywhere else is an error.
+**Both the linter and the compiler are strict.** The lint runs the correctness, suspicious, perf and pedantic categories as errors, with type-aware rules (floating promises, unsafe `any`, misused promises and the like) and a few rules picked from the style and restriction categories. TypeScript runs with `strict` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `noImplicitOverride`, `noPropertyAccessFromIndexSignature` and `noUncheckedSideEffectImports`, and no unused or unreachable code. Everything is checked: the app, the tests, the Vite and oxlint plugins, the build scripts (TypeScript, run by Node directly) and the service worker (plain JavaScript, checked through JSDoc and `tsconfig.worker.json`).
+
+**An exception says why, and the tools check that it does.**
+
+- To skip a lint rule on one line: `// oxlint-disable-next-line rule-name -- why it doesn't apply here`. The reason after `--` is required, at least 10 characters. The local rule `week-budget-planner/require-reason` (in `oxlint-plugins/`) fails the lint without one, and the lint also fails on a disable that no longer disables anything.
+- To skip a type error: `// @ts-expect-error -- why`, also with a reason of 10 characters or more (`typescript/ban-ts-comment`). `@ts-ignore` and `@ts-nocheck` aren't allowed, since they stay quiet once the error is gone.
+- To turn a rule off for a whole kind of file, do it in `.oxlintrc.json` with a comment saying why. A file-level `/* oxlint-disable rule -- why */` is for one file with one clear reason, like the stores whose methods are `async` without `await` on purpose.
+- Prefer fixing the code. An exception is for when the rule is wrong about this line, not for when the fix is more work.
+
+**Type assertions aren't allowed.** `as`, `<Type>value` and the non-null `!` are lint errors (`typescript/consistent-type-assertions` with `assertionStyle: "never"`, `typescript/no-non-null-assertion`). `as const` is fine, since it only narrows a literal. Instead:
+
+- Check the value: a type guard (`isSqlValue`, `isRecord`), a sanitizer or parser for branded types, or a check that throws with a clear message.
+- For a value that may be missing, handle the missing case (`?? fallback`, an early return, or a helper like the tests' `required()` that throws).
+- Where an assertion is truly needed, at the edge of a library whose types are wrong or missing, or in a brand module's `brand()` helper, disable the rule on that line with the reason. Today there are six, and each says why: the two `brand()` helpers, Drizzle's untyped `construct()` and its row type, the RPC proxy, and the service worker's `self`.
 
 ## CSS
 
