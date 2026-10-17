@@ -1,3 +1,6 @@
+// First, so the Trusted Types policy exists before anything writes HTML (see Security in docs/SPEC.md).
+import "./trusted-html";
+
 import { render } from "@solidjs/web";
 
 import { App } from "./App";
