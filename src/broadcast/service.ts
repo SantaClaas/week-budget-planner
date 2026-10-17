@@ -27,10 +27,13 @@ type ServiceMessage =
 export class ProviderChangedError extends Error {}
 
 /**
- * The provider changed while the call was in flight. The old provider may or may not have applied
- * it, so it is NOT retried automatically.
+ * The provider changed or went silent while the call was in flight. The old provider may or may
+ * not have applied it, so it is NOT retried automatically.
  */
 export class CallLostError extends Error {}
+
+/** No provider answered within the time limit. The call was never sent. */
+export class ProviderMissingError extends Error {}
 
 /** A call that reached the provider but failed there. `cause` holds the provider-side error. */
 export class RemoteCallError extends Error {}
@@ -106,12 +109,22 @@ interface PendingCall {
 
 const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
 
+/**
+ * How long a consumer waits without any sign of life from the provider. While calls are open it
+ * asks every half second, and a provider answers even while it's busy, so only a provider that
+ * stopped running (for example a frozen background tab) runs into this.
+ */
+const SILENCE_LIMIT_MILLISECONDS = 10_000;
+
 /** A proxy whose method calls are served by whichever tab currently provides `scope`. */
 export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: string): Consumer<T> {
   const sent = new Map<string, PendingCall>();
   let providerId: string | undefined;
   let readyWaiters: PendingCall[] = [];
   let queryTimer: ReturnType<typeof setInterval> | undefined;
+  let lastHeardAt = 0;
+
+  const query = () => channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
 
   function failSent(reason: Error) {
     const calls = [...sent.values()];
@@ -122,11 +135,31 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   function settleWaiters(settle: (waiter: PendingCall) => void) {
     const waiters = readyWaiters;
     readyWaiters = [];
-    if (queryTimer !== undefined) {
-      clearInterval(queryTimer);
-      queryTimer = undefined;
-    }
     for (const waiter of waiters) settle(waiter);
+  }
+
+  function stopQueryingWhenIdle() {
+    if (queryTimer === undefined || readyWaiters.length > 0 || sent.size > 0) return;
+    clearInterval(queryTimer);
+    queryTimer = undefined;
+  }
+
+  /** Asks for the provider every half second while anything waits, and gives up after silence. */
+  function startQuerying() {
+    if (queryTimer !== undefined) return;
+    lastHeardAt = performance.now();
+    query();
+    queryTimer = setInterval(() => {
+      if (performance.now() - lastHeardAt > SILENCE_LIMIT_MILLISECONDS) {
+        // Forget the silent provider, so the next call looks for one again.
+        providerId = undefined;
+        settleWaiters((waiter) => waiter.reject(new ProviderMissingError("No database leader tab answered.")));
+        failSent(new CallLostError("The database leader tab stopped answering."));
+        stopQueryingWhenIdle();
+        return;
+      }
+      query();
+    }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
   }
 
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
@@ -137,13 +170,17 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
         failSent(new CallLostError("The database leader changed while a call was in flight."));
       }
       providerId = message.providerId;
+      lastHeardAt = performance.now();
       settleWaiters((waiter) => waiter.resolve(undefined));
+      stopQueryingWhenIdle();
       return;
     }
     if (message.kind !== "result" && message.kind !== "error") return;
     const call = sent.get(message.id);
     if (!call) return;
+    lastHeardAt = performance.now();
     sent.delete(message.id);
+    stopQueryingWhenIdle();
     if (message.kind === "result") call.resolve(message.result);
     else
       call.reject(
@@ -155,11 +192,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
     if (providerId !== undefined) return Promise.resolve();
     return new Promise((resolve, reject) => {
       readyWaiters.push({ resolve: () => resolve(), reject });
-      channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
-      queryTimer ??= setInterval(
-        () => channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage),
-        PROVIDER_QUERY_INTERVAL_MILLISECONDS,
-      );
+      startQuerying();
     });
   }
 
@@ -172,6 +205,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
         await waitForProvider();
         const id = crypto.randomUUID();
         const response = new Promise((resolve, reject) => sent.set(id, { resolve, reject }));
+        startQuerying();
         channel.postMessage({
           scope,
           kind: "call",
@@ -193,6 +227,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       failSent(
         new CallLostError("This tab became the database leader while a call was in flight."),
       );
+      stopQueryingWhenIdle();
     },
   };
 }

@@ -10,15 +10,26 @@ export type StorageLevel = "full" | "limited" | "none";
 
 export type ExportedFile = { blob: Blob; filename: string };
 
+/** An imported file that isn't a plan this level can read. Nothing was changed. */
+export class InvalidFileError extends Error {}
+
 export interface PlanStore {
   readonly level: StorageLevel;
+  /**
+   * Why this level is lower than the browser allows: "database-broken" when the database file
+   * exists but fails to open (see Export, import and reset in docs/SPEC.md).
+   */
+  readonly fallbackReason?: "database-broken";
   /** `isStored` is false when nothing was ever saved here (first run). */
   load(): Promise<{ plan: Plan; isStored: boolean }>;
   /** Saves one user action, `before` being what is stored now. */
   save(before: Plan | undefined, after: Plan): Promise<void>;
   /** The `.db` file at the full level, the `.json` plan file otherwise. */
   exportFile(): Promise<ExportedFile>;
-  /** Replaces the stored plan with an imported `.db` (full level only) or `.json` file. */
+  /**
+   * Replaces the stored plan with an imported `.db` (full level only) or `.json` file. Throws
+   * {@link InvalidFileError}, changing nothing, when the file isn't a plan this level can read.
+   */
   importFile(file: File): Promise<void>;
   /** Deletes everything this level stored. */
   wipe(): Promise<void>;
