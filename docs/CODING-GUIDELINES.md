@@ -2,6 +2,8 @@
 
 How code in this project is named, split and styled. These are guidelines, not laws: follow them by default, and when one doesn't fit, say why in the change.
 
+**This is an idealistic document.** It describes the code we strive for, not code we expect to reach perfectly. Falling short of it in places is normal; the direction is what counts. And as with the severability clause in a contract, if one guideline turns out wrong, or doesn't hold in some case, that doesn't void the others: set that one aside, say why, and the rest still apply.
+
 The behavior and the design are in `docs/SPEC.md`. The words for things are in its glossary, and the code uses those words too (see "Names" below).
 
 ## The consumer's needs come first
@@ -138,7 +140,7 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 - **Say why it's safe**, in the comment the lint requires, the way Rust code puts a `// SAFETY:` comment on an `unsafe` block.
 - **Make the reason a test**, so it can't change under our feet. The runtime check that replaces a compile-time proof gets unit tests, including the cases it rejects. The parsers and sanitizers are the example: `parseDecimal`, `parseBudgetMinutes`, `planFile.read` and `sanitizePlan` each have tests for valid input and for input they must refuse or repair, and the brand modules' one `brand()` assertion is only reached through them. The same goes for type guards such as `isSqlValue`, and for code that leans on a library's runtime behavior past its types, such as the RPC proxy or Drizzle's `construct()`.
 
-**Test where a test adds something.** Coverage numbers aren't the goal. A test is worth its code when it pins down a rule, a parser, an edge case or an exception's reason. A smoke test (does it run at all?) only earns its place on a sensitive path that's hard to recover from, where a failure loses or damages the user's data: export and import, migrations, deleting all data, the database opening and the isolation reload. Elsewhere it adds maintenance without telling us anything the types and the other tests don't. Those smoke tests run in a real browser with Playwright (`e2e/`, `pnpm test:browser`), in CI next to the unit tests.
+**Test where a test adds something.** Coverage numbers are a metric, not the goal. Once a measure becomes a target, it stops being a good measure ([Goodhart's law](https://en.wikipedia.org/wiki/Goodhart%27s_law)): aim for coverage and you get tests written to touch lines, not to catch mistakes. A test is worth its code when it pins down a rule, a parser, an edge case or an exception's reason. A smoke test (does it run at all?) only earns its place on a sensitive path that's hard to recover from, where a failure loses or damages the user's data: export and import, migrations, deleting all data, the database opening and the isolation reload. Elsewhere it adds maintenance without telling us anything the types and the other tests don't. Those smoke tests run in a real browser with Playwright (`e2e/`, `pnpm test:browser`), in CI next to the unit tests.
 
 ## Formatting and linting
 
