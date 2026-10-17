@@ -102,6 +102,14 @@ Code adapted from another project, such as flashcut's tab leader and broadcast s
 
 This is close to what Casey Muratori calls [semantic compression](https://caseymuratori.com/blog_0015), or compression-oriented programming. He avoids the word "refactoring", which he calls "a ridiculous term". His rule is "make your code usable before you try to make it reusable": type out exactly what each case needs, get it working, and pull out the shared part once it repeats. In his example, the variables and calls a UI panel kept repeating became a `Panel_Layout` struct with `row()`, `push_button()` and `complete()`. Its methods don't repeat "layout", just as this project's module functions don't repeat their module's noun.
 
+## Formatting and linting
+
+**oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
+
+- The lint runs the correctness, suspicious and perf categories as errors, with type-aware rules (floating promises, unsafe assertions and the like).
+- **A rule that doesn't fit is turned off with a reason**, in `.oxlintrc.json` for a whole kind of file, or with `// oxlint-disable-next-line rule -- why` on one line. A disable without a reason, or one that no longer disables anything, is an error.
+- `typescript/no-unsafe-type-assertion` is off only where brands are defined (`src/plan/time.ts`, `src/plan/id.ts`) and in tests, so it enforces the branded types rule: a narrowing `as` anywhere else is an error.
+
 ## CSS
 
 **Cascade layers.** Declare the order once: `@layer reset, base, theme, components, utilities;`. A later layer always wins, so no selector needs extra specificity to beat an earlier one. Use `:where()` inside a layer for defaults that should be easy to override.
