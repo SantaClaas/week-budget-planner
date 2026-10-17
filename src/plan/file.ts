@@ -33,9 +33,3 @@ export function parse(text: string): Plan {
     return sanitizePlan(undefined);
   }
 }
-
-/** "2026-10-13" in the local time zone, for export file names. */
-export function formatLocalDate(date = new Date()): string {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}

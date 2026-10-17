@@ -37,7 +37,7 @@ const events = () => {
   });
 };
 
-const example = () => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
+const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
 const file = (text: string, name: string) => new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
 describe("localStorage store", () => {

@@ -55,7 +55,7 @@ const isSameBlock = (previous: Block, next: Block): boolean =>
  */
 export function buildPlanStatements(database: Database, before: Plan | undefined, after: Plan): BatchItem<"sqlite">[] {
   const statements: BatchItem<"sqlite">[] = [];
-  const now = new Date().toISOString();
+  const now = Temporal.Now.instant().toString();
 
   const beforeActivities = new Map(before?.activities.map((activity, index) => [activity.id, { activity, index }]));
   const afterActivityIds = new Set(after.activities.map((activity) => activity.id));

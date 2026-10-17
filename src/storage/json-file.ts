@@ -10,7 +10,7 @@ export const isJson = (file: File): boolean =>
 export function create(plan: Plan): ExportedFile {
   return {
     blob: new Blob([planFile.serialize(plan)], { type: "application/json" }),
-    filename: `week-budget-planner-${planFile.formatLocalDate()}.json`,
+    filename: `week-budget-planner-${Temporal.Now.plainDateISO()}.json`,
   };
 }
 
