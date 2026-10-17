@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="text-scale" content="scale" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Applies the stored color scheme (the Theme setting) before the first paint (see Design,
+      // Theme in docs/SPEC.md). Kept tiny and blocking on purpose; src/color-scheme.ts handles
+      // changes later.
+      try {
+        const colorScheme = localStorage.getItem("week-budget-planner.color-scheme");
+        if (colorScheme === "light" || colorScheme === "dark") {
+          document.querySelector('meta[name="color-scheme"]').content = colorScheme;
+        }
+      } catch {
+        // Storage can be blocked. The system setting applies then.
+      }
+    </script>
+    <title>Week Budget Planner</title>
+    <link
+      rel="preload"
+      href="/src/font/google-sans-flex.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body>
+    <noscript>The Week Budget Planner needs JavaScript to plan your week.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

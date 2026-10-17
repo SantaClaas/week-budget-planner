@@ -7,10 +7,10 @@ import kotlin.math.sin
 class Matrix {
     var a = 1f; var b = 0f; var c = 0f; var d = 1f
     fun rotateZ(degrees: Float) {
-        val r = degrees * PI.toFloat() / 180f; val cs = cos(r); val sn = sin(r)
-        val na = a * cs + c * sn; val nb = b * cs + d * sn
-        val nc = -a * sn + c * cs; val nd = -b * sn + d * cs
-        a = na; b = nb; c = nc; d = nd
+        val radians = degrees * PI.toFloat() / 180f; val cosine = cos(radians); val sine = sin(radians)
+        val nextA = a * cosine + c * sine; val nextB = b * cosine + d * sine
+        val nextC = -a * sine + c * cosine; val nextD = -b * sine + d * cosine
+        a = nextA; b = nextB; c = nextC; d = nextD
     }
     fun scale(x: Float = 1f, y: Float = 1f) { a *= x; b *= x; c *= y; d *= y }
     fun map(o: Offset) = Offset(a * o.x + c * o.y, b * o.x + d * o.y)

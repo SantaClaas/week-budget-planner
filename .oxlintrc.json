@@ -1,0 +1,78 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Strict on purpose (see Formatting and linting in docs/CODING-GUIDELINES.md). Where a rule doesn't
+  // apply to one line, disable it there with a reason after "--"; require-reason checks that.
+  // Type-aware rules (floating promises, unsafe any and so on) need oxlint-tsgolint.
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest"],
+  "jsPlugins": ["./oxlint-plugins/require-reason.ts"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "rules": {
+    "week-budget-planner/require-reason": "error",
+    // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
+    // sanitizer or a type guard instead. `as const` is still allowed.
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/no-non-null-assertion": "error",
+    // Covered by the rule above, which already makes every assertion an explained exception.
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": "allow-with-description",
+        "ts-ignore": true,
+        "ts-nocheck": true,
+        "ts-check": false,
+        "minimumDescriptionLength": 10
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/explicit-module-boundary-types": "error",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    // It's about window.postMessage. Every postMessage here is a BroadcastChannel's, which has no
+    // target origin: a channel only ever reaches the same origin.
+    "unicorn/require-post-message-target-origin": "off",
+    // Asks for deeply readonly parameters, which DOM and library objects can't be. Arrays that
+    // must not change are `readonly` in their types instead.
+    "typescript/prefer-readonly-parameter-types": "off",
+    // Modules are split by meaning, not by size (see Modules in docs/CODING-GUIDELINES.md), so
+    // limits on lines, functions, classes or imports would push splits for the wrong reason.
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-classes-per-file": "off",
+    "import/max-dependencies": "off",
+    // Imports name the file in full, as Node's type stripping needs, in every file and not only
+    // the ones Node runs, so any module could run there as it is (see Formatting and linting in
+    // docs/CODING-GUIDELINES.md).
+    "import/extensions": ["error", "always", { "ignorePackages": true }]
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "ignorePatterns": ["dist/**", "drizzle/**", "prototype/**", ".agents/**"],
+  "overrides": [
+    {
+      "files": ["scripts/**", "*.config.ts", "vite-plugins/**", "oxlint-plugins/**"],
+      "env": { "node": true },
+      "rules": {
+        // The build scripts work through files one at a time on purpose: downloads stay polite,
+        // and the output is the same on every run.
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": ["public/service-worker.js"],
+      "env": { "serviceworker": true }
+    }
+  ]
+}
