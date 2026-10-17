@@ -10,7 +10,10 @@ export const PLAN_KEY = "week-budget-planner.plan";
  * examples/example-week.json). Other tabs pick up changes through the `storage` event; the last
  * write wins.
  */
-export function create(storage: Storage, events: Pick<Window, "addEventListener" | "removeEventListener">): PlanStore {
+export function create(
+  storage: Storage,
+  events: Pick<Window, "addEventListener" | "removeEventListener">,
+): PlanStore {
   let current: Plan | undefined;
   return {
     level: "limited",
@@ -25,7 +28,9 @@ export function create(storage: Storage, events: Pick<Window, "addEventListener"
     },
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
-      return jsonFile.create(text === null ? (current ?? planFile.parse("null")) : planFile.parse(text));
+      return jsonFile.create(
+        text === null ? (current ?? planFile.parse("null")) : planFile.parse(text),
+      );
     },
     async importFile(file) {
       const plan = await jsonFile.read(file);
@@ -40,8 +45,8 @@ export function create(storage: Storage, events: Pick<Window, "addEventListener"
       const listener = (event: StorageEvent) => {
         if (event.key === null || event.key === PLAN_KEY) callback();
       };
-      events.addEventListener("storage", listener as EventListener);
-      return () => events.removeEventListener("storage", listener as EventListener);
+      events.addEventListener("storage", listener);
+      return () => events.removeEventListener("storage", listener);
     },
   };
 }
