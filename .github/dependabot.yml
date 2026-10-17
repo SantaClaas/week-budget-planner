@@ -1,5 +1,5 @@
-# Opens pull requests that bump the actions in .github/workflows, updating each pinned hash and the
-# version comment after it together.
+# Opens weekly pull requests that bump the actions in .github/workflows (each pinned hash and the
+# version comment after it together) and the npm dependencies, a week after each release.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -7,11 +7,32 @@ updates:
     schedule:
       interval: weekly
     # Waits a week after a release before proposing it, so a broken or compromised release has time
-    # to be noticed and pulled first.
+    # to be found and pulled first.
     cooldown:
       default-days: 7
     groups:
       actions:
         patterns: ["*"]
+    commit-message:
+      prefix: Bump
+
+  # The npm dependencies, with the same week of waiting that pnpm-workspace.yaml enforces
+  # (minimumReleaseAge), so pnpm accepts every version it proposes.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    # Keeps the exact versions in package.json exact.
+    versioning-strategy: increase
+    groups:
+      # Solid's packages are release candidates that must move together.
+      solid:
+        patterns: ["solid-js", "@solidjs/*"]
+      development:
+        dependency-type: development
+      production:
+        dependency-type: production
     commit-message:
       prefix: Bump
