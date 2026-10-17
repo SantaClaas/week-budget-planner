@@ -300,6 +300,7 @@ trusted-types default service-worker
   - **Scripts:** none.
 - **`service-worker`** (the inline registration script): returns the one service worker URL, whatever it's given.
 - `allowHtml()` is only for the build. The plugin fails the build when any other file imports `src/trusted-html.ts`, except `src/index.tsx`, which only imports it.
+- **One violation per page load is expected:** emnapi, which the database engine is built on, checks once whether `new Function` works and falls back to plain functions when it doesn't. That check shows up as a `TrustedScript` error in the console (in development, as several report-only messages). Any other violation is a bug.
 - To show user text, use text: JSX children and attributes, `textContent`. If a feature ever needs real untrusted HTML, it needs the Sanitizer API (`setHTML()`) and a decision recorded here first.
 
 ## Design
