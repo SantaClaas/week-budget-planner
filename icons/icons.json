@@ -29,6 +29,8 @@
     { "name": "error" },
     { "name": "gpp_bad" },
     { "name": "gpp_maybe" },
+    { "name": "menu" },
+    { "name": "menu_open" },
     { "name": "more_vert" },
     { "name": "open_in_new" },
     { "name": "refresh" },
