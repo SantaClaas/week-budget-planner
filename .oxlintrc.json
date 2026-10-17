@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Type-aware rules (floating promises, misused spreads and so on) need oxlint-tsgolint.
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "ignorePatterns": ["dist/**", "drizzle/**", "prototype/**", ".agents/**"],
+  "overrides": [
+    {
+      "files": ["scripts/**", "*.config.ts", "vite-plugins/**"],
+      "env": { "node": true },
+      "rules": {
+        // The build scripts work through files one at a time on purpose: downloads stay polite,
+        // and the output is the same on every run.
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      // Only the module that defines a brand may create one with `as` (see Branded types in
+      // docs/CODING-GUIDELINES.md). Everywhere else, the rule catches a narrowing `as`.
+      "files": ["src/plan/time.ts", "src/plan/id.ts"],
+      "rules": { "typescript/no-unsafe-type-assertion": "off" }
+    },
+    {
+      "files": ["public/service-worker.js"],
+      "env": { "serviceworker": true }
+    }
+  ]
+}

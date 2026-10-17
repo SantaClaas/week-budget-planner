@@ -51,7 +51,7 @@ export function findPartsOnDay(blocks: readonly Block[], day: DayIndex): BlockPa
   return blocks
     .flatMap(splitIntoParts)
     .filter((part) => part.day === day)
-    .sort((first, second) => first.start - second.start || second.end - first.end);
+    .toSorted((first, second) => first.start - second.start || second.end - first.end);
 }
 
 /** Whether two ranges on the week overlap, the week wrapping from Sunday into Monday. */
@@ -70,7 +70,12 @@ export function isRangeOverlapping(
 }
 
 export const isBlockOverlapping = (first: Block, second: Block): boolean =>
-  isRangeOverlapping(calculateWeekStart(first), first.length, calculateWeekStart(second), second.length);
+  isRangeOverlapping(
+    calculateWeekStart(first),
+    first.length,
+    calculateWeekStart(second),
+    second.length,
+  );
 
 /** Minutes of each day (Monday first) covered by blocks, counting overnight parts on their own day. */
 export function sumDayTotals(blocks: readonly Block[]): number[] {
@@ -82,7 +87,10 @@ export function sumDayTotals(blocks: readonly Block[]): number[] {
 /** Converts minutes on the week back to a day and a start, wrapping around the week. */
 export function convertFromWeekMinutes(minutes: number): { day: DayIndex; start: DayMinute } {
   const wrapped = wrapWeekMinute(minutes);
-  return { day: sanitizeDayIndex(Math.floor(wrapped / DAY)), start: sanitizeDayMinute(wrapped % DAY) };
+  return {
+    day: sanitizeDayIndex(Math.floor(wrapped / DAY)),
+    start: sanitizeDayMinute(wrapped % DAY),
+  };
 }
 
 /** Moving keeps the length; only the day and start change. The start may be any slot. */

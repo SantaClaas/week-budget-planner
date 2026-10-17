@@ -59,17 +59,26 @@ export const sanitizeLength = (value: number, fallback = 60): Length =>
   clamp(snap(sanitizeInteger(value, SLOT, MAX_LENGTH, fallback)), SLOT, MAX_LENGTH) as Length;
 
 /** Per day at most a day, per week at most a week. */
-export const sanitizeBudgetMinutes = (value: number, mode: "week" | "day", fallback = 60): BudgetMinutes =>
-  Math.max(SLOT, snap(sanitizeInteger(value, SLOT, mode === "day" ? DAY : WEEK, fallback))) as BudgetMinutes;
+export const sanitizeBudgetMinutes = (
+  value: number,
+  mode: "week" | "day",
+  fallback = 60,
+): BudgetMinutes =>
+  Math.max(
+    SLOT,
+    snap(sanitizeInteger(value, SLOT, mode === "day" ? DAY : WEEK, fallback)),
+  ) as BudgetMinutes;
 
 export const sanitizeDayCount = (value: number, fallback = 5): DayCount =>
   sanitizeInteger(value, 1, 7, fallback) as DayCount;
 
 /** The first of the day hours, 0 to 12. */
-export const sanitizeDayStart = (value: number, fallback = 7): Hour => sanitizeInteger(value, 0, 12, fallback) as Hour;
+export const sanitizeDayStart = (value: number, fallback = 7): Hour =>
+  sanitizeInteger(value, 0, 12, fallback) as Hour;
 
 /** The end of the day hours, 13 to 24. */
-export const sanitizeDayEnd = (value: number, fallback = 22): Hour => sanitizeInteger(value, 13, 24, fallback) as Hour;
+export const sanitizeDayEnd = (value: number, fallback = 22): Hour =>
+  sanitizeInteger(value, 13, 24, fallback) as Hour;
 
 // Strict parsers, for what the user types or picks: they reject a value out of range instead of
 // clamping it, so the form can say what's wrong (see Activities in docs/SPEC.md).
@@ -78,7 +87,10 @@ export const sanitizeDayEnd = (value: number, fallback = 22): Hour => sanitizeIn
  * The budget for minutes the user entered, rounded to the slot. "too-small" when there's nothing
  * to count, "too-large" for more than a day (per day) or a week (per week).
  */
-export function parseBudgetMinutes(minutes: number, mode: "week" | "day"): BudgetMinutes | "too-small" | "too-large" {
+export function parseBudgetMinutes(
+  minutes: number,
+  mode: "week" | "day",
+): BudgetMinutes | "too-small" | "too-large" {
   if (!(minutes > 0)) return "too-small";
   if (minutes > (mode === "day" ? DAY : WEEK)) return "too-large";
   return Math.max(SLOT, snap(minutes)) as BudgetMinutes;

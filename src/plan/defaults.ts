@@ -1,6 +1,14 @@
 import { sumPlacedByActivity, calculateWeeklyBudget } from "./budget";
 import { DAY, MAX_LENGTH, SLOT, clamp, sanitizeLength, type Length } from "./time";
-import { DEFAULT_SHAPES, PALETTE, type Activity, type Block, type Hue, type Plan, type Shape } from "./types";
+import {
+  DEFAULT_SHAPES,
+  PALETTE,
+  type Activity,
+  type Block,
+  type Hue,
+  type Plan,
+  type Shape,
+} from "./types";
 
 /** Default length for activities counted per week: one lecture slot. */
 const WEEKLY_DEFAULT_LENGTH = 90;
@@ -48,7 +56,8 @@ export function pickDefaultLook(
  * slot, capped at what's left when something is, never under one slot or over a day.
  */
 export function pickDefaultLength(activity: Activity, blocks: readonly Block[]): Length {
-  const left = calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
+  const left =
+    calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
   let length: number = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
   if (left > 0) length = Math.min(length, left);
   return sanitizeLength(clamp(length, SLOT, MAX_LENGTH));

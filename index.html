@@ -18,7 +18,13 @@
       }
     </script>
     <title>Week Budget Planner</title>
-    <link rel="preload" href="/src/font/google-sans-flex.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="/src/font/google-sans-flex.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <script>
       // GitHub Pages can't send the cross-origin isolation headers the database needs, so the
       // service worker adds them. Register it and reload once when it takes control. The app never
@@ -46,7 +52,9 @@
         const url = new URL("service-worker.js", document.baseURI).href;
         // Registering takes a trusted script URL (see Security in docs/SPEC.md). This policy
         // only ever returns the one service worker URL.
-        const policy = window.trustedTypes?.createPolicy("service-worker", { createScriptURL: () => url });
+        const policy = window.trustedTypes?.createPolicy("service-worker", {
+          createScriptURL: () => url,
+        });
         navigator.serviceWorker
           .register(policy ? policy.createScriptURL(url) : url)
           .then(() => {

@@ -53,11 +53,21 @@ const reuseClockFormat = ({ locale, hourCycle }: Format) =>
  * A length, ignoring its sign: "1 hr, 30 min" (short, for text) or "1h 30m" (narrow, for blocks
  * and day totals). The words depend on the language.
  */
-export function formatLength(minutes: number, style: "short" | "narrow" = "short", format: Format = {}): string {
+export function formatLength(
+  minutes: number,
+  style: "short" | "narrow" = "short",
+  format: Format = {},
+): string {
   const total = Math.round(Math.abs(minutes));
   // Every unit is hidden when it's zero, which would leave nothing for a length of zero.
-  if (total === 0) return reuseDurationFormat(format.locale, { style, minutesDisplay: "always" }).format({ minutes: 0 });
-  return reuseDurationFormat(format.locale, { style }).format({ hours: Math.floor(total / 60), minutes: total % 60 });
+  if (total === 0)
+    return reuseDurationFormat(format.locale, { style, minutesDisplay: "always" }).format({
+      minutes: 0,
+    });
+  return reuseDurationFormat(format.locale, { style }).format({
+    hours: Math.floor(total / 60),
+    minutes: total % 60,
+  });
 }
 
 /** A minute of the day as a clock time: "07:30" or "7:30 AM". Minutes past midnight wrap. */
@@ -71,7 +81,11 @@ export function formatClockRange(start: number, end: number, format: Format = {}
 }
 
 /** A day of the week, 0 for Monday: "Mon" or "Monday". */
-export function formatWeekday(day: number, width: "short" | "long" = "short", format: Format = {}): string {
+export function formatWeekday(
+  day: number,
+  width: "short" | "long" = "short",
+  format: Format = {},
+): string {
   const date = Temporal.PlainDate.from(REFERENCE_MONDAY).add({ days: day });
   return reuseDateTimeFormat(format.locale, { weekday: width }).format(date);
 }
