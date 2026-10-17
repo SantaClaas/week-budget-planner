@@ -10,7 +10,6 @@
     "test:browser": "pnpm build && PW_DISABLE_TS_ESM=1 playwright test",
     "typecheck": "tsc -b",
     "lint": "oxlint",
-    "lint:actions": "node scripts/check-action-pins.ts",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
