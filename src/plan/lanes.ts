@@ -16,8 +16,9 @@ export function layoutLanes(parts: readonly BlockPart[]): Map<BlockId, Lane> {
   let group: BlockPart[] = [];
   let groupEnd = -1;
 
-  const closeGroup = () => {
+  const closeGroup = (): void => {
     const laneEnds: number[] = [];
+    const placed: { part: BlockPart; lane: number }[] = [];
     for (const part of group) {
       let lane = laneEnds.findIndex((end) => end <= part.start);
       if (lane < 0) {
@@ -25,18 +26,20 @@ export function layoutLanes(parts: readonly BlockPart[]): Map<BlockId, Lane> {
         laneEnds.push(0);
       }
       laneEnds[lane] = part.end;
-      result.set(part.block.id, { lane, lanes: 1 });
+      placed.push({ part, lane });
     }
-    for (const part of group) result.get(part.block.id)!.lanes = laneEnds.length;
+    // Every part in the group shares the group's lane count, known once all are placed.
+    for (const { part, lane } of placed)
+      result.set(part.block.id, { lane, lanes: laneEnds.length });
     group = [];
     groupEnd = -1;
   };
 
   for (const part of sorted) {
-    if (group.length && part.start >= groupEnd) closeGroup();
+    if (group.length > 0 && part.start >= groupEnd) closeGroup();
     group.push(part);
     groupEnd = Math.max(groupEnd, part.end);
   }
-  if (group.length) closeGroup();
+  if (group.length > 0) closeGroup();
   return result;
 }
