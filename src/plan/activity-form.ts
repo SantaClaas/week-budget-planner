@@ -36,7 +36,7 @@ function findDecimalSeparator(locale: string | undefined): string {
 export function parseDecimal(text: string, locale?: string): number {
   const separator = findDecimalSeparator(locale);
   const normalized = text.trim().replaceAll(separator, ".").replaceAll(",", ".");
-  return /^\d+(\.\d+)?$|^\.\d+$/.test(normalized) ? Number(normalized) : NaN;
+  return /^\d+(\.\d+)?$|^\.\d+$/u.test(normalized) ? Number(normalized) : NaN;
 }
 
 /** Validates the activity form with the prototype's messages. Hours round to the slot. */

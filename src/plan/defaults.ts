@@ -26,10 +26,13 @@ export function hashFnv1a32(text: string): number {
 /** The first item from `start` (wrapping) that isn't in `used`, or the one at `start` if all are. */
 function findFirstUnused<T>(items: readonly T[], start: number, used: ReadonlySet<T>): T {
   for (let step = 0; step < items.length; step++) {
-    const item = items[(start + step) % items.length]!;
-    if (!used.has(item)) return item;
+    const item = items[(start + step) % items.length];
+    if (item !== undefined && !used.has(item)) return item;
   }
-  return items[start]!;
+  const fallback = items[start];
+  if (fallback === undefined)
+    throw new RangeError(`No item at ${start.toString()} to fall back to.`);
+  return fallback;
 }
 
 /**
