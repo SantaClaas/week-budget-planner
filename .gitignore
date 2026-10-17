@@ -6,3 +6,5 @@ dist/
 .env
 .env.*
 .cache/
+test-results/
+playwright-report/
