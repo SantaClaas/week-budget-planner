@@ -31,7 +31,14 @@ import {
   snapDown,
   snap,
 } from "./time.ts";
-import { DEFAULT_SHAPES, SHAPES, type Activity, type Block, type Hue, type Shape } from "./types.ts";
+import {
+  DEFAULT_SHAPES,
+  SHAPES,
+  type Activity,
+  type Block,
+  type Hue,
+  type Shape,
+} from "./types.ts";
 import {
   splitIntoParts,
   isBlockOverlapping,
