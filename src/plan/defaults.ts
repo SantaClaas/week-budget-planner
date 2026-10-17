@@ -1,5 +1,5 @@
-import { sumPlacedByActivity, calculateWeeklyBudget } from "./budget";
-import { DAY, MAX_LENGTH, SLOT, clamp, sanitizeLength, type Length } from "./time";
+import { sumPlacedByActivity, calculateWeeklyBudget } from "./budget.ts";
+import { DAY, MAX_LENGTH, SLOT, clamp, sanitizeLength, type Length } from "./time.ts";
 import {
   DEFAULT_SHAPES,
   PALETTE,
@@ -8,7 +8,7 @@ import {
   type Hue,
   type Plan,
   type Shape,
-} from "./types";
+} from "./types.ts";
 
 /** Default length for activities counted per week: one lecture slot. */
 const WEEKLY_DEFAULT_LENGTH = 90;

@@ -1,5 +1,5 @@
-import type { BlockId } from "./id";
-import type { BlockPart } from "./week";
+import type { BlockId } from "./id.ts";
+import type { BlockPart } from "./week.ts";
 
 export type Lane = { lane: number; lanes: number };
 

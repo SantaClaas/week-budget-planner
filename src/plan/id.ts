@@ -1,6 +1,6 @@
 import { customAlphabet } from "nanoid";
 
-import type { Brand } from "../brand";
+import type { Brand } from "../brand.ts";
 
 export type ActivityId = Brand<string, "ActivityId">;
 export type BlockId = Brand<string, "BlockId">;
