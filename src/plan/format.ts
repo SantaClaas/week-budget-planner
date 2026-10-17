@@ -1,0 +1,77 @@
+/**
+ * Lengths, clock times and weekdays as the user reads them, written by `Intl` in the user's
+ * language and conventions (see Dates, times and language in docs/SPEC.md).
+ */
+
+/** How things are written. Empty means the browser's language and its conventions. */
+export type Format = {
+  /** A BCP 47 language tag, such as "en-GB". */
+  locale?: string;
+  /** "h23" for a 24-hour clock, "h12" for a 12-hour one. */
+  hourCycle?: "h12" | "h23";
+};
+
+/** Any Monday: weekdays are formatted from it. */
+const REFERENCE_MONDAY = "2024-01-01";
+
+// Creating an `Intl` formatter is slow and the grid formats on every drag frame, so each one is
+// made once per set of options.
+const durationFormats = new Map<string, Intl.DurationFormat>();
+const dateTimeFormats = new Map<string, Intl.DateTimeFormat>();
+
+function reuseDurationFormat(locale: string | undefined, options: Intl.DurationFormatOptions) {
+  const key = JSON.stringify([locale, options]);
+  let format = durationFormats.get(key);
+  if (!format) durationFormats.set(key, (format = new Intl.DurationFormat(locale, options)));
+  return format;
+}
+
+function reuseDateTimeFormat(locale: string | undefined, options: Intl.DateTimeFormatOptions) {
+  const key = JSON.stringify([locale, options]);
+  let format = dateTimeFormats.get(key);
+  if (!format) dateTimeFormats.set(key, (format = new Intl.DateTimeFormat(locale, options)));
+  return format;
+}
+
+const toPlainTime = (minutes: number) => {
+  const inDay = ((minutes % 1440) + 1440) % 1440;
+  return Temporal.PlainTime.from({ hour: Math.floor(inDay / 60), minute: inDay % 60 });
+};
+
+// The language's own short time, unless a clock is chosen. `timeStyle` keeps the language's hour
+// digits even with another clock ("06:00 pm" in en-GB), so a chosen clock spells them out: no
+// leading zero on a 12-hour clock, always two digits on a 24-hour one.
+const reuseClockFormat = ({ locale, hourCycle }: Format) =>
+  reuseDateTimeFormat(
+    locale,
+    hourCycle
+      ? { hour: hourCycle === "h12" ? "numeric" : "2-digit", minute: "2-digit", hourCycle }
+      : { timeStyle: "short" },
+  );
+
+/**
+ * A length, ignoring its sign: "1 hr, 30 min" (short, for text) or "1h 30m" (narrow, for blocks
+ * and day totals). The words depend on the language.
+ */
+export function formatLength(minutes: number, style: "short" | "narrow" = "short", format: Format = {}): string {
+  const total = Math.round(Math.abs(minutes));
+  // Every unit is hidden when it's zero, which would leave nothing for a length of zero.
+  if (total === 0) return reuseDurationFormat(format.locale, { style, minutesDisplay: "always" }).format({ minutes: 0 });
+  return reuseDurationFormat(format.locale, { style }).format({ hours: Math.floor(total / 60), minutes: total % 60 });
+}
+
+/** A minute of the day as a clock time: "07:30" or "7:30 AM". Minutes past midnight wrap. */
+export function formatClock(minutes: number, format: Format = {}): string {
+  return reuseClockFormat(format).format(toPlainTime(minutes));
+}
+
+/** Two clock times as a range: "10:00–11:30" or "10:00 – 11:30 AM". */
+export function formatClockRange(start: number, end: number, format: Format = {}): string {
+  return reuseClockFormat(format).formatRange(toPlainTime(start), toPlainTime(end));
+}
+
+/** A day of the week, 0 for Monday: "Mon" or "Monday". */
+export function formatWeekday(day: number, width: "short" | "long" = "short", format: Format = {}): string {
+  const date = Temporal.PlainDate.from(REFERENCE_MONDAY).add({ days: day });
+  return reuseDateTimeFormat(format.locale, { weekday: width }).format(date);
+}

@@ -3,7 +3,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "target": "es2023",
     "module": "esnext",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": ["ES2023", "ES2025.Intl", "ESNext.Intl", "ESNext.Temporal", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
@@ -23,5 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/vite-env.d.ts"]
+  "include": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/vite-env.d.ts", "vitest.setup.ts"]
 }

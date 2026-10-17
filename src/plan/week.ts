@@ -1,5 +1,6 @@
-import { DAY, DAY_NAMES, MAX_LENGTH, SLOT, WEEK, type Block } from "./types";
-import { clamp, formatClock, formatShort } from "./time";
+import { formatClock, formatClockRange, formatLength, formatWeekday, type Format } from "./format";
+import { clamp } from "./time";
+import { DAY, MAX_LENGTH, SLOT, WEEK, type Block } from "./types";
 
 /**
  * Where a block shows on one day. An overnight block has two parts: the end of its own day and the
@@ -112,11 +113,16 @@ export function resizeEnd(block: Block, end: number): Block {
   return { ...block, length: next - block.start };
 }
 
-/** "10:00–11:30 · 1h30", or "Tue 22:00 – Wed 02:00 · 4h" for an overnight block. */
-export function describeTime(block: Block): string {
+/**
+ * "10:00–11:30 · 1h 30m", or "Tue 22:00 – Wed 02:00 · 4h" for an overnight block, in the format's
+ * language and clock.
+ */
+export function describeTime(block: Block, format: Format = {}): string {
   const end = block.start + block.length;
-  const lengthLabel = formatShort(block.length);
-  if (end <= DAY) return `${formatClock(block.start)}–${formatClock(end)} · ${lengthLabel}`;
-  const nextDay = DAY_NAMES[modulo(block.day + 1, 7)];
-  return `${DAY_NAMES[block.day]} ${formatClock(block.start)} – ${nextDay} ${formatClock(end)} · ${lengthLabel}`;
+  const length = formatLength(block.length, "narrow", format);
+  if (end <= DAY) return `${formatClockRange(block.start, end, format)} · ${length}`;
+  // `formatRange` would add the day of the month, which a week without dates doesn't have.
+  const startDay = formatWeekday(block.day, "short", format);
+  const endDay = formatWeekday(modulo(block.day + 1, 7), "short", format);
+  return `${startDay} ${formatClock(block.start, format)} – ${endDay} ${formatClock(end, format)} · ${length}`;
 }
