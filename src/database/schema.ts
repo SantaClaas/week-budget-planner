@@ -60,7 +60,8 @@ export const activities = sqliteTable(
     check("activities_mode", sql`${table.mode} IN ('week', 'day')`),
     check(
       "activities_budget_minutes",
-      sql`${isSlotMultiple(table.budgetMinutes)} AND ${table.budgetMinutes} >= ${literal(SLOT)} AND ${table.budgetMinutes} <= CASE ${table.mode} WHEN 'day' THEN ${literal(DAY)} ELSE ${literal(WEEK)} END`,
+      // Spelled out with AND and OR: a STRICT table refuses a CASE here, whose type it can't tell.
+      sql`${isSlotMultiple(table.budgetMinutes)} AND ${table.budgetMinutes} >= ${literal(SLOT)} AND ((${table.mode} = 'day' AND ${table.budgetMinutes} <= ${literal(DAY)}) OR (${table.mode} = 'week' AND ${table.budgetMinutes} <= ${literal(WEEK)}))`,
     ),
     check("activities_days", isBetween(table.days, 1, 7)),
   ],

@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "53aecef2-11dd-4e29-b5b8-776bf57d12ef",
+  "id": "1d8dd35f-1f33-400b-a011-f039f1dae989",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -285,7 +285,7 @@
       "table": "activities"
     },
     {
-      "value": "\"budget_minutes\" % 15 = 0 AND \"budget_minutes\" >= 15 AND \"budget_minutes\" <= CASE \"mode\" WHEN 'day' THEN 1440 ELSE 10080 END",
+      "value": "\"budget_minutes\" % 15 = 0 AND \"budget_minutes\" >= 15 AND ((\"mode\" = 'day' AND \"budget_minutes\" <= 1440) OR (\"mode\" = 'week' AND \"budget_minutes\" <= 10080))",
       "name": "activities_budget_minutes",
       "entityType": "checks",
       "table": "activities"
