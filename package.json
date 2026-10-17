@@ -9,6 +9,7 @@
     "test": "vitest run --configLoader native",
     "typecheck": "tsc -b",
     "lint": "oxlint",
+    "knip": "knip",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
@@ -18,18 +19,14 @@
   "dependencies": {
     "@formatjs/intl-durationformat": "0.11.1",
     "@solidjs/web": "2.0.0-rc.14",
-    "@tursodatabase/database-wasm": "0.8.3",
-    "drizzle-orm": "1.0.0-rc.4",
-    "nanoid": "6.0.2",
     "solid-js": "2.0.0-rc.14",
     "temporal-polyfill": "1.0.6"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.88.0",
     "@solidjs/vite-plugin": "3.0.0-next.47",
-    "@tursodatabase/database": "0.8.3",
     "@types/node": "26.6.5",
-    "drizzle-kit": "1.0.0-rc.4",
+    "knip": "6.41.0",
     "oxfmt": "0.73.0",
     "oxlint": "1.88.0",
     "oxlint-tsgolint": "7.0.2004",
