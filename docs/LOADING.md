@@ -23,6 +23,8 @@ Sizes are from `pnpm build` of the full stack on 2026-10-17. Brackets give the g
 | 2. High | Google Sans Flex, Latin, weights 400 to 700 and `ROND` | 49 KB | `<link rel="preload" as="font" crossorigin>` in `index.html`, `@font-face` in `src/font/font.css` | Text is visible from the start. It shows in a fallback font with the same x-height (`font-size-adjust: from-font`) until this arrives, then swaps (`font-display: swap`). |
 | 3. On demand | The database chunk (`database-*.js`), its worker (`worker-*.js`) and the Turso WebAssembly engine | 295 KB (73 KB), 171 KB, 11.6 MB (4.0 MB) | Dynamic `import("./database")` in `src/storage/index.ts`, only when the page is cross-origin isolated and OPFS and Web Locks exist | The biggest download by far, and only useful at the full storage level. Private windows and browsers without isolation never load it (see Progressive enhancement in `docs/SPEC.md`). |
 | 4. After load | Google Sans Flex with the optical size axis | 121 KB | `new FontFace(…)` in `src/font/index.ts`, after the `load` event | Better letterforms at every size, but not worth delaying the first paint. Replaces the small copy when it arrives. |
+| 5. Only when missing | `temporal-polyfill` | 59 KB (20 KB) | Dynamic `import()` in `src/polyfills.ts` when `globalThis.Temporal` is missing, awaited before the app renders | The app's dates and times need it from the first frame, so in Safari and older Chrome and Firefox it delays the first render by one small download. Browsers with Temporal never fetch it. |
+| 5. Only when missing | `@formatjs/intl-durationformat` | 76 KB (18 KB) | The same, when `Intl.DurationFormat` is missing | Lengths are formatted from the first frame. Only Chrome before 129 and Firefox before 136 need it. Loaded in parallel with Temporal's. |
 | 5. Only when missing | `@oddbird/popover-polyfill` | | Dynamic `import()` when `"popover" in HTMLElement.prototype` is false | Planned for phase 4, with the menus, the placing toolbar and snackbars. |
 | 5. Only when missing | `@oddbird/css-anchor-positioning` | | Dynamic `import()` when `"anchorName" in document.documentElement.style` is false | Planned for phase 4, with the add-block menu. |
 | 6. Background | The service worker (`service-worker.js`) | | Registered by the inline script in `index.html`, only when the page isn't cross-origin isolated | It adds the isolation headers GitHub Pages can't send. The app never waits for it. |
@@ -31,7 +33,7 @@ Sizes are from `pnpm build` of the full stack on 2026-10-17. Brackets give the g
 
 1. The HTML arrives. The theme script sets the color scheme, and the font preload starts.
 2. The page isn't cross-origin isolated yet, so the inline script registers the service worker.
-3. The stylesheet and the main script load, and the app shows "Opening your plan…". Without isolation it opens the limited storage level at first.
+3. The stylesheet and the main script load. A browser without Temporal or `Intl.DurationFormat` fetches those polyfills first. Then the app shows "Opening your plan…". Without isolation it opens the limited storage level at first.
 4. The service worker takes control, and the page reloads once, now isolated.
 5. The app loads the database chunk, its worker and the WebAssembly engine, runs the migrations and shows the plan.
 6. After the `load` event, the optical-size font replaces the small one.
