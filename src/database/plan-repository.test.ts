@@ -5,7 +5,7 @@ import { createExampleWeek } from "../plan/example";
 import type { Plan } from "../plan/types";
 import { createLocalQueryService, type TursoConnection } from "./connection";
 import { createDatabase, type Database } from "./drizzle";
-import { MIGRATIONS, runMigrations } from "./migrations";
+import { MIGRATION_NAMES, runMigrations } from "./migrations";
 import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository";
 import { blocks as blocksTable } from "./schema";
 
@@ -20,8 +20,8 @@ const example = (): Plan => createExampleWeek(Temporal.Instant.from("2026-10-15T
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
-    expect(Object.keys(MIGRATIONS).length).toBeGreaterThan(0);
-    for (const key of Object.keys(MIGRATIONS)) expect(key).toMatch(/^\d{14}_/);
+    expect(MIGRATION_NAMES.length).toBeGreaterThan(0);
+    for (const name of MIGRATION_NAMES) expect(name).toMatch(/^\d{14}_/);
   });
 
   it("can run again on a migrated database", async () => {
