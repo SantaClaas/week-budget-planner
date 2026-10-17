@@ -1,6 +1,5 @@
 import * as local from "./local";
 import * as memory from "./memory";
-import * as persistence from "./persistence";
 import type { PlanStore } from "./plan-store";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
@@ -14,27 +13,10 @@ function isDatabaseUsable(): boolean {
   );
 }
 
-/**
- * Asks for persistent storage after the first saved change to the user's own plan: not the
- * first-run save, and not while the example week is shown (see Keeping the data in docs/SPEC.md).
- */
-function requestPersistenceOnFirstChange(store: PlanStore): PlanStore {
-  let isRequested = false;
-  return {
-    ...store,
-    async save(before, after) {
-      await store.save(before, after);
-      if (isRequested || before === undefined || after.exampleLoadedAt !== null) return;
-      isRequested = true;
-      void persistence.request();
-    },
-  };
-}
-
 /** The limited level, or none when localStorage can't be written. */
 function openFallback(): PlanStore {
   const storage = local.findWritableStorage();
-  return storage ? requestPersistenceOnFirstChange(local.create(storage, window)) : memory.create();
+  return storage ? local.create(storage, window) : memory.create();
 }
 
 /**
@@ -49,7 +31,7 @@ export async function open(): Promise<PlanStore> {
     database = await import("./database");
     const store = database.create();
     await store.load();
-    return requestPersistenceOnFirstChange(store);
+    return store;
   } catch (error) {
     console.warn("[storage] the database couldn't be opened, using limited storage", error);
     const fallback = openFallback();

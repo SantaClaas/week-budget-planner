@@ -1,6 +1,7 @@
 /**
  * Persistent storage, so the browser doesn't delete the plan when it runs low on space (see
- * Keeping the data in docs/SPEC.md).
+ * Keeping the data in docs/SPEC.md). Only call `request()` from a button in the app's own
+ * explanation, never on its own: the browser may show a prompt (see Browser permissions).
  */
 
 /** Asks the browser to keep this site's storage. Resolves to whether it will. */
