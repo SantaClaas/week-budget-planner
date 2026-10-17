@@ -1,5 +1,5 @@
-import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "./time";
-import type { Mode } from "./types";
+import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "./time.ts";
+import type { Mode } from "./types.ts";
 
 export type ActivityFormInput = {
   name: string;

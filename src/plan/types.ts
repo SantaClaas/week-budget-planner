@@ -1,4 +1,4 @@
-import type { ActivityId, BlockId } from "./id";
+import type { ActivityId, BlockId } from "./id.ts";
 import {
   sanitizeDayEnd,
   sanitizeDayStart,
@@ -8,7 +8,7 @@ import {
   type DayMinute,
   type Hour,
   type Length,
-} from "./time";
+} from "./time.ts";
 
 export type Mode = "week" | "day";
 

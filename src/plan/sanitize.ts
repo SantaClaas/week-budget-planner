@@ -1,4 +1,4 @@
-import { pickDefaultLook } from "./defaults";
+import { pickDefaultLook } from "./defaults.ts";
 import {
   createActivityId,
   createBlockId,
@@ -6,7 +6,7 @@ import {
   sanitizeBlockId,
   type ActivityId,
   type BlockId,
-} from "./id";
+} from "./id.ts";
 import {
   sanitizeBudgetMinutes,
   sanitizeDayCount,
@@ -15,7 +15,7 @@ import {
   sanitizeDayMinute,
   sanitizeDayStart,
   sanitizeLength,
-} from "./time";
+} from "./time.ts";
 import {
   PALETTE,
   SHAPES,
@@ -25,7 +25,7 @@ import {
   type Hue,
   type Plan,
   type Shape,
-} from "./types";
+} from "./types.ts";
 
 const PALETTE_HUES = new Set<number>(PALETTE.map((color) => color.hue));
 const SHAPE_NAMES = new Set<string>(SHAPES);
