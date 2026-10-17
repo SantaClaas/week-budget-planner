@@ -29,11 +29,13 @@ This is the same direction as "Bottom-up" under Refactoring: start with the spec
 - **Use the glossary** for the planner's own words: "block" (never "tile"), "slot", "length", "placing" (never "armed"), "left to place", "over budget". If a new term is needed, add it to the glossary first.
 - **Technical code has its own domain.** The database, the tab leader election or the service worker bring their own words (leader, migration, connection, isolation), and code there uses them. The code doesn't have to follow the users' language everywhere. Balancing user requirements and technical requirements is part of the job, and it's why code isn't just generated from a description.
 - **Use the platform's or the design system's own name** when it has one. In CSS that's Material's names: `.top-app-bar`, `.active-indicator`, `.drag-handle`, `.title-medium`, `--elevation-level-1`.
+- **Code can name a thing differently from the copy.** The glossary's words are the planner's, and the code uses them. But where the copy uses a word that's easier for people and a technical concept already has a name, the code uses the technical name: the Settings page says "Theme", and the code says "color scheme", after the CSS `color-scheme` property whose values it stores. Code has to be clear from a technical point of view first. Copy also changes more often than code, so code names shouldn't follow every rewording.
+- **Prefix every key in `localStorage` and `sessionStorage`** with `week-budget-planner.`, as in `week-budget-planner.color-scheme`. Storage is shared by everything on the same origin, and in development that's every app that ever ran on the same `localhost` port, so an unprefixed key like `theme` is bound to collide.
 - **The rules stop at the edges.** They apply inside the code we control. At the edges of the application, names belong to the other side: browser and library APIs (`localStorage`, Drizzle's `params` in a batch statement), file formats, network messages and data on disk. We can't rename those, so use them as they are, and say so in a comment where it isn't obvious. Abbreviations are fine there when they help the edge, for example to save space on the wire or on disk. Away from the edges, use names people understand, not the names someone chose for an outside API.
 
 ### Functions
 
-**A function starts with a verb in the imperative mood**, usually followed by the noun it acts on: `openStorage`, `loadPlan`, `saveTheme`, `moveBlock`.
+**A function starts with a verb in the imperative mood**, usually followed by the noun it acts on: `openStorage`, `loadPlan`, `saveColorScheme`, `moveBlock`.
 
 **Repeated nouns point to a module.** When several functions share a noun (`openStorage`, `readStorage`, `wipeStorage`), that noun may want to be a module of its own, with the functions inside it. The module name already says the noun, so the functions inside drop it: the `storage` module exports `open`, `read` and `wipe`.
 
