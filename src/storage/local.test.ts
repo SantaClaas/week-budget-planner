@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createExampleWeek } from "../plan/example";
 import * as local from "./local";
 import { PLAN_KEY } from "./local";
-import { InvalidFileError } from "./plan-store";
+import { InvalidFileError, NewerVersionError } from "./plan-store";
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();
@@ -69,6 +69,7 @@ describe("localStorage store", () => {
     await store.save(undefined, example());
     await expect(store.importFile(file('{"name": "notes"}', "notes.json"))).rejects.toThrow(InvalidFileError);
     await expect(store.importFile(file("{broken", "broken.json"))).rejects.toThrow(InvalidFileError);
+    await expect(store.importFile(file('{"version": 2}', "newer.json"))).rejects.toThrow(NewerVersionError);
     expect((await store.load()).plan).toEqual(example());
   });
 

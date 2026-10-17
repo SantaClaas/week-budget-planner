@@ -4,17 +4,24 @@ import version from "virtual:app-version";
 import { createExampleWeek } from "./plan/example";
 import type { Plan } from "./plan/types";
 import { open as openStorage } from "./storage";
-import type { PlanStore } from "./storage/plan-store";
+import { NewerVersionError, type PlanStore } from "./storage/plan-store";
 
 // Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
 // shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.
 export function App() {
   const [store, setStore] = createSignal<PlanStore>();
   const [plan, setPlan] = createSignal<Plan>();
+  const [problem, setProblem] = createSignal<"newer-version">();
 
   onSettled(() => {
     void (async () => {
-      const opened = await openStorage();
+      let opened: PlanStore;
+      try {
+        opened = await openStorage();
+      } catch (error) {
+        if (error instanceof NewerVersionError) return setProblem("newer-version");
+        throw error;
+      }
       let { plan: loaded, isStored } = await opened.load();
       if (!isStored) {
         loaded = createExampleWeek();
@@ -30,7 +37,16 @@ export function App() {
   return (
     <main>
       <h1>Week Budget Planner</h1>
-      <Show when={store()} fallback={<p>Opening your plan…</p>}>
+      <Show when={problem() === "newer-version"}>
+        <p data-testid="newer-version">
+          Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.
+          Your plan is safe.
+        </p>
+        <button type="button" onClick={() => location.reload()}>
+          Reload
+        </button>
+      </Show>
+      <Show when={store()} fallback={problem() ? undefined : <p>Opening your plan…</p>}>
         {(opened) => (
           <p data-testid="status">
             Storage: {opened().level} · {plan()?.activities.length ?? 0} activities ·{" "}
