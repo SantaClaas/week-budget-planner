@@ -1,15 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
-import { readActivityForm } from "./activity-form";
+import { parseDecimal, readActivityForm } from "./activity-form";
 import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget";
 import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "./defaults";
 import { layoutLanes } from "./lanes";
 import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots";
 import { formatClock, formatClockRange, formatLength, formatWeekday } from "./format";
-import { createId, sanitizePlan } from "./sanitize";
-import { snapDown, snap } from "./time";
-import { DEFAULT_SHAPES, SHAPES, type Activity, type Block } from "./types";
+import { createActivityId, createBlockId, sanitizeActivityId, sanitizeBlockId } from "./id";
+import { sanitizePlan } from "./sanitize";
+import {
+  parseBudgetMinutes,
+  parseDayCount,
+  parseDayEnd,
+  parseDayStart,
+  sanitizeBudgetMinutes,
+  sanitizeDayCount,
+  sanitizeDayEnd,
+  sanitizeDayIndex as day,
+  sanitizeDayMinute,
+  sanitizeDayStart,
+  sanitizeLength as length,
+  snapDown,
+  snap,
+} from "./time";
+import { DEFAULT_SHAPES, SHAPES, type Activity, type Block, type Hue, type Shape } from "./types";
 import {
   splitIntoParts,
   isBlockOverlapping,
@@ -24,25 +39,33 @@ import {
   resizeStart,
 } from "./week";
 
-const activity = (overrides: Partial<Activity> = {}): Activity => ({
-  id: "a",
+// Tests write plain numbers and strings. These turn them into checked values through the same
+// sanitizers the app uses, which also keeps the test data valid.
+const activityId = (id: string) => sanitizeActivityId(id)!;
+const blockId = (id: string) => sanitizeBlockId(id)!;
+
+type ActivityValues = { id?: string; name?: string; hue?: Hue; shape?: Shape; mode?: Activity["mode"]; budgetMinutes?: number; days?: number };
+const activity = ({ id = "a", mode = "week", budgetMinutes = 720, days = 5, ...rest }: ActivityValues = {}): Activity => ({
   name: "Work",
   hue: 78,
   shape: "square",
-  mode: "week",
-  budgetMinutes: 720,
-  days: 5,
-  ...overrides,
+  ...rest,
+  id: activityId(id),
+  mode,
+  budgetMinutes: sanitizeBudgetMinutes(budgetMinutes, mode),
+  days: sanitizeDayCount(days),
 });
 
-const block = (overrides: Partial<Block> = {}): Block => ({
-  id: "b",
-  activityId: "a",
-  day: 0,
-  start: 600,
-  length: 90,
-  ...overrides,
+type BlockValues = { id?: string; activityId?: string; day?: number; start?: number; length?: number };
+const block = (values: BlockValues = {}): Block => ({
+  id: blockId(values.id ?? "b"),
+  activityId: activityId(values.activityId ?? "a"),
+  day: day(values.day ?? 0),
+  start: sanitizeDayMinute(values.start ?? 600),
+  length: length(values.length ?? 90),
 });
+
+const hours = (dayStart: number, dayEnd: number) => ({ dayStart: sanitizeDayStart(dayStart), dayEnd: sanitizeDayEnd(dayEnd) });
 
 describe("time", () => {
   it("snaps to 15 minutes", () => {
@@ -95,7 +118,7 @@ describe("budget", () => {
       block({ id: "1", length: 750 }),
       block({ id: "2", activityId: "g", length: 90 }),
     ];
-    expect(sumPlacedByActivity(blocks).get("a")).toBe(750);
+    expect(sumPlacedByActivity(blocks).get(activityId("a"))).toBe(750);
     expect(summarize({ activities: [work, gym], blocks })).toEqual({
       budget: 990,
       placed: 840,
@@ -125,7 +148,7 @@ describe("week", () => {
   it("wraps Sunday night into Monday", () => {
     const sunday = block({ day: 6, start: 1380, length: 120 });
     expect(splitIntoParts(sunday)[1]).toMatchObject({ day: 0, start: 0, end: 60 });
-    expect(findPartsOnDay([sunday], 0)).toHaveLength(1);
+    expect(findPartsOnDay([sunday], day(0))).toHaveLength(1);
   });
 
   it("counts day totals per day, splitting overnight blocks", () => {
@@ -180,43 +203,43 @@ describe("lanes", () => {
       block({ id: "c", start: 750, length: 60 }),
       block({ id: "d", start: 900, length: 60 }),
     ];
-    const lanes = layoutLanes(findPartsOnDay(blocks, 0));
-    expect(lanes.get("a")).toEqual({ lane: 0, lanes: 2 });
-    expect(lanes.get("b")).toEqual({ lane: 1, lanes: 2 });
-    expect(lanes.get("c")).toEqual({ lane: 1, lanes: 2 });
-    expect(lanes.get("d")).toEqual({ lane: 0, lanes: 1 });
+    const lanes = layoutLanes(findPartsOnDay(blocks, day(0)));
+    expect(lanes.get(blockId("a"))).toEqual({ lane: 0, lanes: 2 });
+    expect(lanes.get(blockId("b"))).toEqual({ lane: 1, lanes: 2 });
+    expect(lanes.get(blockId("c"))).toEqual({ lane: 1, lanes: 2 });
+    expect(lanes.get(blockId("d"))).toEqual({ lane: 0, lanes: 1 });
   });
 });
 
 describe("slots", () => {
-  const plan = { blocks: [] as Block[], dayStart: 7, dayEnd: 22 };
+  const plan = { blocks: [] as Block[], ...hours(7, 22) };
 
   it("finds the first free slot within the day hours", () => {
-    expect(findFirstFreeSlot(plan, activity(), 90)).toEqual({ day: 0, start: 420 });
+    expect(findFirstFreeSlot(plan, activity(), length(90))).toEqual({ day: 0, start: 420 });
     const busy = { ...plan, blocks: [block({ start: 420, length: 120 })] };
-    expect(findFirstFreeSlot(busy, activity(), 90)).toEqual({ day: 0, start: 540 });
+    expect(findFirstFreeSlot(busy, activity(), length(90))).toEqual({ day: 0, start: 540 });
   });
 
   it("tries days without the activity first for per-day activities", () => {
     const gym = activity({ id: "g", mode: "day", budgetMinutes: 90, days: 3 });
     const busy = { ...plan, blocks: [block({ activityId: "g", day: 0, start: 1080 })] };
-    expect(findFirstFreeSlot(busy, gym, 90)).toEqual({ day: 1, start: 420 });
+    expect(findFirstFreeSlot(busy, gym, length(90))).toEqual({ day: 1, start: 420 });
   });
 
   it("returns nothing when no gap fits", () => {
-    expect(findFirstFreeSlot(plan, activity(), 16 * 60)).toBeUndefined();
+    expect(findFirstFreeSlot(plan, activity(), length(16 * 60))).toBeUndefined();
   });
 
   it("treats an overnight part as taken", () => {
     const night = block({ day: 0, start: 1320, length: 600 });
-    expect(isFree([night], 1, 420, 60)).toBe(false);
-    expect(isFree([night], 1, 480, 60)).toBe(true);
+    expect(isFree([night], day(1), sanitizeDayMinute(420), length(60))).toBe(false);
+    expect(isFree([night], day(1), sanitizeDayMinute(480), length(60))).toBe(true);
   });
 
   it("opens at the day hours or an earlier block start, ignoring overnight continuations", () => {
-    expect(findOpeningMinute({ dayStart: 7, blocks: [] })).toBe(420);
-    expect(findOpeningMinute({ dayStart: 7, blocks: [block({ start: 330 })] })).toBe(300);
-    expect(findOpeningMinute({ dayStart: 7, blocks: [block({ start: 1320, length: 240 })] })).toBe(420);
+    expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [] })).toBe(420);
+    expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [block({ start: 330 })] })).toBe(300);
+    expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [block({ start: 1320, length: 240 })] })).toBe(420);
   });
 });
 
@@ -227,7 +250,7 @@ describe("defaults", () => {
   });
 
   it("gives the example week the shapes listed in examples/example-week.json", () => {
-    const looks: { hue: number; shape: string }[] = [];
+    const looks: { hue: Hue; shape: Shape }[] = [];
     for (const { id, shape } of exampleWeek.activities) {
       const look = pickDefaultLook(id, looks);
       expect(look.shape).toBe(shape);
@@ -236,7 +259,7 @@ describe("defaults", () => {
   });
 
   it("avoids colors and shapes already in use while any are left", () => {
-    const others = DEFAULT_SHAPES.slice(0, 29).map((shape, index) => ({ hue: [255, 28][index % 2]!, shape }));
+    const others = DEFAULT_SHAPES.slice(0, 29).map((shape, index) => ({ hue: ([255, 28] as const)[index % 2]!, shape }));
     const look = pickDefaultLook("anything", others);
     expect(look.shape).toBe(DEFAULT_SHAPES[29]);
     expect([255, 28]).not.toContain(look.hue);
@@ -256,10 +279,10 @@ describe("defaults", () => {
   });
 
   it("caps new blocks at the end of the day hours when they start inside them", () => {
-    const hours = { dayStart: 7, dayEnd: 22 };
-    expect(fitToDayHours(1260, 90, hours)).toBe(60);
-    expect(fitToDayHours(1320, 240, hours)).toBe(240);
-    expect(fitToDayHours(600, 90, hours)).toBe(90);
+    const dayHours = hours(7, 22);
+    expect(fitToDayHours(1260, length(90), dayHours)).toBe(60);
+    expect(fitToDayHours(1320, length(240), dayHours)).toBe(240);
+    expect(fitToDayHours(600, length(90), dayHours)).toBe(90);
   });
 });
 
@@ -305,9 +328,26 @@ describe("sanitize", () => {
   });
 
   it("creates 12-character ids without lookalike characters", () => {
-    const ids = Array.from({ length: 200 }, createId);
+    const ids = [...Array.from({ length: 100 }, createActivityId), ...Array.from({ length: 100 }, createBlockId)];
     for (const id of ids) expect(id).toMatch(/^[6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz]{12}$/);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("gives invalid and repeated ids new ones, keeping their blocks with the first", () => {
+    const plan = sanitizePlan({
+      activities: [
+        { id: "x".repeat(41), name: "Too long" },
+        { id: "keep", name: "Kept" },
+        { id: "keep", name: "Repeated" },
+      ],
+      blocks: [
+        { id: "1", activityId: "keep", day: 0, start: 600, length: 60 },
+        { id: "2", activityId: "x".repeat(41), day: 0, start: 700, length: 60 },
+      ],
+    });
+    expect(plan.activities.map((each) => each.id)).toEqual([expect.not.stringMatching(/^x+$/), "keep", expect.not.stringMatching(/^keep$/)]);
+    // The block of the activity whose id was invalid can't be matched any more and is dropped.
+    expect(plan.blocks.map((each) => each.activityId)).toEqual(["keep"]);
   });
 
   it("returns an empty plan for anything that isn't a plan", () => {
@@ -339,5 +379,35 @@ describe("activity form", () => {
       message: "A week has 168 hours. Enter 168 or less.",
     });
     expect(readActivityForm({ ...base, mode: "day", days: "8" })).toMatchObject({ field: "days" });
+    expect(readActivityForm({ ...base, mode: "day", days: "2.5" })).toMatchObject({ field: "days" });
+    expect(readActivityForm({ ...base, hours: "1.5h" })).toMatchObject({ field: "hours" });
+  });
+
+  it("reads hours with the language's decimal separator, strictly", () => {
+    expect(parseDecimal("1.5")).toBe(1.5);
+    expect(parseDecimal(" 1,5 ")).toBe(1.5);
+    expect(parseDecimal("1,5", "de")).toBe(1.5);
+    expect(parseDecimal(".5")).toBe(0.5);
+    expect(parseDecimal("1.5h")).toBeNaN();
+    expect(parseDecimal("1.2.3")).toBeNaN();
+    expect(parseDecimal("-1")).toBeNaN();
+    expect(parseDecimal("")).toBeNaN();
+  });
+});
+
+describe("strict parsers", () => {
+  it("reject what is out of range instead of clamping it", () => {
+    expect(parseBudgetMinutes(97, "week")).toBe(90);
+    expect(parseBudgetMinutes(0, "week")).toBe("too-small");
+    expect(parseBudgetMinutes(Number.NaN, "day")).toBe("too-small");
+    expect(parseBudgetMinutes(1441, "day")).toBe("too-large");
+    expect(parseBudgetMinutes(1441, "week")).toBe(1440);
+    expect(parseDayCount(7)).toBe(7);
+    expect(parseDayCount(0)).toBeUndefined();
+    expect(parseDayCount(2.5)).toBeUndefined();
+    expect(parseDayStart(12)).toBe(12);
+    expect(parseDayStart(13)).toBeUndefined();
+    expect(parseDayEnd(24)).toBe(24);
+    expect(parseDayEnd(12)).toBeUndefined();
   });
 });

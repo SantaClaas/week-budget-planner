@@ -1,3 +1,4 @@
+import type { ActivityId } from "./id";
 import type { Activity, Block, Plan } from "./types";
 
 /** The activity's weekly budget in minutes. */
@@ -5,8 +6,8 @@ export const calculateWeeklyBudget = (activity: Pick<Activity, "mode" | "budgetM
   activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes;
 
 /** Minutes placed per activity id. */
-export function sumPlacedByActivity(blocks: readonly Block[]): Map<string, number> {
-  const placed = new Map<string, number>();
+export function sumPlacedByActivity(blocks: readonly Block[]): Map<ActivityId, number> {
+  const placed = new Map<ActivityId, number>();
   for (const block of blocks) placed.set(block.activityId, (placed.get(block.activityId) ?? 0) + block.length);
   return placed;
 }

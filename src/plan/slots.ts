@@ -1,16 +1,14 @@
-import { DAY, SLOT, type Activity, type Block, type Plan } from "./types";
+import { SLOT, sanitizeDayIndex, sanitizeDayMinute, type DayIndex, type DayMinute, type Length } from "./time";
+import type { Activity, Block, Plan } from "./types";
 import { isRangeOverlapping, calculateWeekStart } from "./week";
 
 /** Whether a block of `length` starting at `day`/`start` would overlap any existing block. */
-export function isFree(
-  blocks: readonly Block[],
-  day: number,
-  start: number,
-  length: number,
-): boolean {
-  const from = day * DAY + start;
+export function isFree(blocks: readonly Block[], day: DayIndex, start: DayMinute, length: Length): boolean {
+  const from = calculateWeekStart({ day, start });
   return !blocks.some((block) => isRangeOverlapping(from, length, calculateWeekStart(block), block.length));
 }
+
+const DAYS = [0, 1, 2, 3, 4, 5, 6].map((day) => sanitizeDayIndex(day));
 
 /**
  * The earliest gap that fits `length`, scanning Monday to Sunday in slot steps within the day
@@ -19,20 +17,19 @@ export function isFree(
 export function findFirstFreeSlot(
   plan: Pick<Plan, "blocks" | "dayStart" | "dayEnd">,
   activity: Activity,
-  length: number,
-): { day: number; start: number } | undefined {
-  const days = [0, 1, 2, 3, 4, 5, 6];
+  length: Length,
+): { day: DayIndex; start: DayMinute } | undefined {
   const taken = new Set(
     plan.blocks.filter((block) => block.activityId === activity.id).map((block) => block.day),
   );
   const order =
     activity.mode === "day"
-      ? [...days.filter((day) => !taken.has(day)), ...days.filter((day) => taken.has(day))]
-      : days;
-  const from = plan.dayStart * 60;
+      ? [...DAYS.filter((day) => !taken.has(day)), ...DAYS.filter((day) => taken.has(day))]
+      : DAYS;
   const to = plan.dayEnd * 60;
   for (const day of order) {
-    for (let start = from; start + length <= to; start += SLOT) {
+    for (let minute = plan.dayStart * 60; minute + length <= to; minute += SLOT) {
+      const start = sanitizeDayMinute(minute);
       if (isFree(plan.blocks, day, start, length)) return { day, start };
     }
   }
