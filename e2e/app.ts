@@ -3,7 +3,7 @@
 // window.weekBudgetPlanner. The tests use both; with the UI they'll drive the real controls.
 import { expect, type Locator, type Page } from "@playwright/test";
 
-import type { PlanStore } from "../src/storage/plan-store";
+import type { PlanStore } from "../src/storage/plan-store.ts";
 
 declare global {
   interface Window {
