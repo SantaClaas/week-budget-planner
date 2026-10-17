@@ -1,8 +1,7 @@
 /* Google Sans Flex (SIL Open Font License, see OFL.txt), self-hosted from Google Fonts, Latin only.
-   This file has weights 400 to 700 and the ROND axis (49 KB). src/font/index.ts later swaps in a
-   copy with the optical size axis too (121 KB), so the first paint doesn't wait for the larger
-   file. Both files come from the Google Fonts API with the same axes otherwise:
-   wght,ROND@400..700,0..100 and opsz,wght,ROND@6..144,400..700,0..100. */
+   This file has weights 400 to 700 (36 KB). src/font/index.ts later swaps in a copy with the
+   optical size axis too (85 KB), so the first paint doesn't wait for the larger file. Both files
+   come from the Google Fonts API, Latin subset: wght@400..700 and opsz,wght@6..144,400..700. */
 @font-face {
   font-family: "Google Sans Flex";
   src: url("./google-sans-flex.woff2") format("woff2");
