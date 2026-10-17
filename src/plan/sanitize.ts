@@ -1,3 +1,5 @@
+import { customAlphabet } from "nanoid";
+
 import { pickDefaultLook } from "./defaults";
 import { clamp, snap } from "./time";
 import {
@@ -13,7 +15,14 @@ import {
   type Plan,
 } from "./types";
 
-export const createId = (): string => crypto.randomUUID();
+/**
+ * nanoid-dictionary's `nolookalikesSafe`: no characters that look alike and no vowels, so ids read
+ * back easily from a URL and never spell words (see Data model in docs/SPEC.md).
+ */
+const ID_ALPHABET = "6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz";
+
+/** A new 12-character id. */
+export const createId: () => string = customAlphabet(ID_ALPHABET, 12);
 
 const PALETTE_HUES = new Set<number>(PALETTE.map((color) => color.hue));
 const SHAPE_NAMES = new Set<string>(SHAPES);
@@ -23,11 +32,14 @@ function readInteger(value: unknown, low: number, high: number, fallback: number
   return Number.isFinite(number) ? clamp(number, low, high) : fallback;
 }
 
-/** A valid date as a normalized ISO 8601 time in UTC, or null. */
+/** A valid instant as a normalized ISO 8601 time in UTC, or null. */
 function readTime(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? new Date(time).toISOString() : null;
+  try {
+    return Temporal.Instant.from(value).toString();
+  } catch {
+    return null;
+  }
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
