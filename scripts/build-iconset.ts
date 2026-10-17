@@ -1,7 +1,7 @@
 // Builds src/icons/iconset.svg from the official Material Symbols SVGs listed in icons/icons.json.
 //
-//   node scripts/build-iconset.mjs --fetch   download missing SVGs from Google's repository, then build
-//   node scripts/build-iconset.mjs           build from the SVGs already in icons/material-symbols/
+//   node scripts/build-iconset.ts --fetch   download missing SVGs from Google's repository, then build
+//   node scripts/build-iconset.ts           build from the SVGs already in icons/material-symbols/
 //
 // Each icon is optimized with SVGO and becomes a <symbol> filled with currentColor. The app bundles
 // the sprite (`import iconset from "./icons/iconset.svg?raw"`) and inserts it into the page once,
@@ -12,8 +12,44 @@
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
 
+type Manifest = {
+  source: { repository: string; commit: string; style: string };
+  icons: { name: string; fill: boolean }[];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+/** Checks the manifest's shape, since JSON.parse can't. */
+function readManifest(value: unknown): Manifest {
+  const source = isRecord(value) ? value["source"] : undefined;
+  const icons = isRecord(value) ? value["icons"] : undefined;
+  if (
+    !isRecord(source) ||
+    typeof source["repository"] !== "string" ||
+    typeof source["commit"] !== "string" ||
+    typeof source["style"] !== "string" ||
+    !Array.isArray(icons)
+  ) {
+    throw new Error(
+      "icons/icons.json needs a source (repository, commit, style) and a list of icons.",
+    );
+  }
+  return {
+    source: { repository: source["repository"], commit: source["commit"], style: source["style"] },
+    icons: icons.map((icon: unknown) => {
+      if (!isRecord(icon) || typeof icon["name"] !== "string") {
+        throw new Error(`An icon in icons/icons.json has no name: ${JSON.stringify(icon)}`);
+      }
+      return { name: icon["name"], fill: icon["fill"] === true };
+    }),
+  };
+}
+
 const root = new URL("../", import.meta.url);
-const manifest = JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8"));
+const manifest = readManifest(
+  JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8")),
+);
 const sourceDir = new URL("icons/material-symbols/", root);
 const output = new URL("src/icons/iconset.svg", root);
 
@@ -38,7 +74,7 @@ if (process.argv.includes("--fetch")) {
   }
 }
 
-const symbols = [];
+const symbols: string[] = [];
 for (const { id, file } of variants) {
   const source = await readFile(new URL(file, sourceDir), "utf8").catch(() => {
     throw new Error(`Missing icons/material-symbols/${file}. Run \`pnpm icons:fetch\`.`);
@@ -47,11 +83,13 @@ for (const { id, file } of variants) {
     multipass: true,
     plugins: ["preset-default", "removeDimensions"],
   });
-  const match = data.match(/^<svg[^>]*viewBox="([^"]+)"[^>]*>([\s\S]*)<\/svg>$/);
-  if (!match) throw new Error(`Unexpected SVG shape in ${file}: ${data}`);
-  const [, viewBox, body] = match;
+  const match = /^<svg[^>]*viewBox="([^"]+)"[^>]*>([\s\S]*)<\/svg>$/u.exec(data);
+  const viewBox = match?.[1];
+  const body = match?.[2];
+  if (viewBox === undefined || body === undefined)
+    throw new Error(`Unexpected SVG shape in ${file}: ${data}`);
   // The icons are single-color glyphs. Anything else would ignore currentColor.
-  if (/fill=|style=|<(?!path)/.test(body))
+  if (/fill=|style=|<(?!path)/u.test(body))
     throw new Error(`${file} has more than plain paths: ${body}`);
 
   symbols.push(`<symbol id="${id}" viewBox="${viewBox}" fill="currentColor">${body}</symbol>`);
@@ -63,7 +101,7 @@ await mkdir(new URL("src/icons/", root), { recursive: true });
 await writeFile(output, iconset);
 console.log(`wrote src/icons/iconset.svg with ${variants.length} icons (${iconset.length} bytes)`);
 
-async function exists(url) {
+async function exists(url: URL): Promise<boolean> {
   try {
     await access(url);
     return true;
