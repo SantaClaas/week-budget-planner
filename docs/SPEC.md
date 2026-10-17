@@ -225,9 +225,24 @@ Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `
 
 - **Export database:** downloads the raw SQLite file as `week-budget-planner-YYYY-MM-DD.db` (`application/vnd.sqlite3`). The leader runs `PRAGMA wal_checkpoint(TRUNCATE)`, briefly closes the database, reads the file bytes from OPFS, then reopens. Calls that arrive in the meantime queue behind the reopen. Export works from any tab.
 - **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` ("Replace your plan?") that names the file and how many activities and blocks it replaces, with a link to export first. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
+- **An import never replaces the plan with something that can't be opened.** Before touching the database, the leader checks that the file starts with the SQLite header (the 16 bytes `SQLite format 3\0`), then writes it to a separate file in OPFS, opens that copy, runs the migrations on it and reads the plan from it. Only if all of that works does it replace the database. Otherwise the plan stays as it was, the copy is deleted, and the snackbar says: "This file isn't a Week Budget Planner database, so nothing was changed."
 - **Delete all data:** confirm, delete the database files and reload every tab.
+- **While the database is closed** for an export, an import or a delete, calls from every tab wait. After an export they continue on the reopened database. After an import or a delete they never run, because every tab reloads. Nothing may reopen the database in between. An export reopens the database even when reading the file failed.
+- Deleting a file that doesn't exist is fine. Any other error deleting or writing a database file fails the action and is shown to the user. It is never ignored.
+- **A database that can't be opened isn't hidden.** If the database file exists but fails to open, the app falls back to limited storage (see Progressive enhancement), and Settings › Your data says so: "The database in this browser couldn't be opened, so your plan is in limited storage for now. Import a backup, or delete all data to start over." Delete all data then also deletes the database files.
 - At the limited storage levels (see Progressive enhancement), export and import use a `.json` file of the plan instead. The full app also imports such a `.json` file.
 - These live on the Settings page (see Layout), which says that the data lives only in this browser and that export is the backup.
+
+### Keeping the data
+
+Browsers may delete a site's storage when space runs low, unless the site has persistent storage. Safari also deletes storage written by script after 7 days without a visit, unless the site was added to the home screen.
+
+- After the user's first change that gets saved (not loading the example week), call `navigator.storage.persist()` once per page load, at the full and limited levels. Chrome and Safari decide on their own, and Firefox asks the user, which is why it follows something the user did.
+- Settings › Your data shows the result with `navigator.storage.persisted()`. Persisted: "This browser keeps your plan until you delete it." Not persisted: "This browser may delete your plan when it runs low on space. Export now and then to keep a copy." with a "Keep my plan" button that calls `persist()` again.
+
+### Calls between tabs
+
+A tab waits at most 10 seconds for the leader tab: to find it, and for each answer. A leader can stop answering without letting go of the lock, for example when the browser freezes a background tab. After the time limit the call fails like any failed write ("Couldn't save your last change. It's still on screen."), or, while opening, the app falls back to limited storage. A call that timed out may still have been applied by the leader, so it isn't retried on its own.
 
 ### Hosting on GitHub Pages
 
@@ -251,6 +266,41 @@ Moving up a level later (for example the same browser outside a private window) 
 
 - Sanitize values read from the database, especially after an import.
 - "Load an example week" from `examples/example-week.json` (bundle it), with `exampleLoadedAt` set to the time it was loaded. Offer it in the empty state. "Keep these" and "Start empty" set it back to null.
+
+## Security
+
+There is no backend and no account, but the plan is the user's own data, and an imported file is untrusted input. The page carries a Content Security Policy that blocks any script it didn't ship, and Trusted Types, so nothing can write a string as HTML unless the build put it on an allowlist. That second part also stops us from adding a way to write untrusted HTML by mistake later.
+
+**Content Security Policy.** GitHub Pages can't send headers, so the policy is a `<meta http-equiv="Content-Security-Policy">` that the build adds as the first element of `<head>` (`vite-plugins/content-security-policy.ts`), in front of the inline scripts:
+
+```
+default-src 'self';
+script-src 'self' 'sha256-…' 'sha256-…' 'wasm-unsafe-eval';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:;
+object-src 'none';
+base-uri 'none';
+form-action 'self';
+require-trusted-types-for 'script';
+trusted-types default service-worker
+```
+
+- The hashes are of the two inline scripts in `index.html` (the theme and the service worker registration), computed by the build, so editing them never needs a manual hash update.
+- `'wasm-unsafe-eval'` lets the database engine compile its WebAssembly. Nothing may use `eval`.
+- Styles allow `'unsafe-inline'`, because inline `style` attributes are part of Solid templates and the icon sprite, and the Trusted Types guard already covers injected markup.
+- `frame-ancestors` doesn't work in a `<meta>` policy. The service worker adds it as a header to the page, together with the companion headers below, and `public/_headers` sends the same for hosts that read it.
+- **Companion headers:** `Content-Security-Policy: frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+- In development, Vite sends the Trusted Types part as `Content-Security-Policy-Report-Only`, so a mistake shows up as a violation in the console without breaking Vite's own error overlay. The full policy is enforced in `pnpm preview` and in production.
+
+**Trusted Types.** With `require-trusted-types-for 'script'`, the browser refuses plain strings at every place where a string turns into HTML or code (`innerHTML`, `insertAdjacentHTML`, `outerHTML`, `DOMParser`, `eval`, `new Worker(url)`, `serviceWorker.register(url)` and the like). Only values made by an allowed policy pass. There are two policies:
+
+- **`default`** (`src/trusted-html.ts`, imported first by `src/index.tsx`). The browser calls it for every plain string at those places.
+  - **HTML:** only exact strings on the allowlist pass. The build puts every template the Solid compiler produced on it: Solid builds the DOM from static template strings (`template()` in `@solidjs/web`, its only HTML sink), and the plugin reads them from the compiled code and registers them with the module that uses them. The icon sprite is on the list too. Anything else, for example a JSX `innerHTML={…}` with a string, or `insertAdjacentHTML` with an activity name, is refused with a Trusted Types violation.
+  - **Script URLs:** only same-origin URLs, which covers the database worker.
+  - **Scripts:** none.
+- **`service-worker`** (the inline registration script): returns the one service worker URL, whatever it's given.
+- `allowHtml()` is only for the build. The plugin fails the build when any other file imports `src/trusted-html.ts`, except `src/index.tsx`, which only imports it.
+- To show user text, use text: JSX children and attributes, `textContent`. If a feature ever needs real untrusted HTML, it needs the Sanitizer API (`setHTML()`) and a decision recorded here first.
 
 ## Design
 
@@ -361,6 +411,7 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | Popover API for the menus, the placing toolbar and snackbars | Chrome 114, Firefox 125, Safari 17 | OddBird's [`@oddbird/popover-polyfill`](https://github.com/oddbird/popover-polyfill), loaded only when `"popover" in HTMLElement.prototype` is false. It can't add the real `:popover-open` pseudo-class and sets a `.\:popover-open` class instead, so popover rules must match both with `:is(:popover-open, .\:popover-open)`, or older browsers drop the whole rule. |
 | Temporal, for dates and times | Chrome 144, Firefox 139, not yet in Safari | FullCalendar's [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) (MIT, 20 KB gzipped), loaded with a dynamic `import()` only when `globalThis.Temporal` is missing, and awaited before the app renders. Chosen over the proposal champions' `@js-temporal/polyfill`, whose README doesn't call it ready for production yet, and which is 47 KB gzipped. |
 | `Intl.DurationFormat`, for lengths | Chrome 129, Firefox 136, Safari 16.4 | FormatJS's [`@formatjs/intl-durationformat`](https://formatjs.github.io/docs/polyfills/intl-durationformat) (MIT, 18 KB gzipped), loaded the same way when `Intl.DurationFormat` is missing. It uses the browser's `Intl.NumberFormat` for the units, so it needs no locale data. |
+| Trusted Types | Chrome 83, Firefox 148, Safari 26 | Not enforced: the page works the same, without the guard. Development in any current browser still catches mistakes. |
 | Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
 
 Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>` and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. With the polyfills, the floor is set by `:user-invalid` and `:has()`: about Chrome 119, Firefox 121 and Safari 16.5. `@starting-style` only animates, so without it things appear without a transition.
