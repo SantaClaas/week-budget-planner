@@ -24,11 +24,21 @@ const sources = new URL(`androidx-${ANDROIDX_COMMIT}/`, cache);
 const build = new URL("build/", cache);
 const output = new URL("docs/design/m3-shapes.css", root);
 
-const raw = (path) => `https://raw.githubusercontent.com/androidx/androidx/${ANDROIDX_COMMIT}/${path}`;
+const raw = (path) =>
+  `https://raw.githubusercontent.com/androidx/androidx/${ANDROIDX_COMMIT}/${path}`;
 const SHAPES_DIR = "graphics/graphics-shapes/src/commonMain/kotlin/androidx/graphics/shapes";
 // FloatMapping.kt and Morph are only needed for morphing between shapes, not for static outlines.
-const GRAPHICS_SHAPES = ["CornerRounding", "Cubic", "Features", "Point", "RoundedPolygon", "Shapes", "Utils"];
-const MATERIAL_SHAPES = "compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MaterialShapes.kt";
+const GRAPHICS_SHAPES = [
+  "CornerRounding",
+  "Cubic",
+  "Features",
+  "Point",
+  "RoundedPolygon",
+  "Shapes",
+  "Utils",
+];
+const MATERIAL_SHAPES =
+  "compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/MaterialShapes.kt";
 
 await mkdir(sources, { recursive: true });
 await mkdir(build, { recursive: true });
@@ -37,8 +47,18 @@ await mkdir(build, { recursive: true });
 const kotlinc = new URL(`kotlinc-${KOTLIN_VERSION}/kotlinc/bin/kotlinc`, cache);
 if (!(await exists(kotlinc))) {
   const zip = new URL(`kotlin-compiler-${KOTLIN_VERSION}.zip`, cache);
-  await download(`https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip`, zip, "binary");
-  execFileSync("unzip", ["-q", "-o", zip.pathname, "-d", new URL(`kotlinc-${KOTLIN_VERSION}/`, cache).pathname]);
+  await download(
+    `https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip`,
+    zip,
+    "binary",
+  );
+  execFileSync("unzip", [
+    "-q",
+    "-o",
+    zip.pathname,
+    "-d",
+    new URL(`kotlinc-${KOTLIN_VERSION}/`, cache).pathname,
+  ]);
 }
 
 // 2. Google's sources at the pinned commit
@@ -50,18 +70,29 @@ const materialShapes = new URL("MaterialShapes.kt", sources);
 if (!(await exists(materialShapes))) await download(raw(MATERIAL_SHAPES), materialShapes);
 
 // 3. Assemble: graphics-shapes as is, MaterialShapes reduced to its companion object's shape builders
-for (const file of await readdir(build)) if (file.endsWith(".kt")) await writeFile(new URL(file, build), "");
-for (const name of GRAPHICS_SHAPES) await copyFile(new URL(`${name}.kt`, sources), new URL(`${name}.kt`, build));
+for (const file of await readdir(build))
+  if (file.endsWith(".kt")) await writeFile(new URL(file, build), "");
+for (const name of GRAPHICS_SHAPES)
+  await copyFile(new URL(`${name}.kt`, sources), new URL(`${name}.kt`, build));
 for (const file of await readdir(new URL("scripts/material-shapes/", root))) {
   await copyFile(new URL(`scripts/material-shapes/${file}`, root), new URL(file, build));
 }
-await writeFile(new URL("MaterialShapes.kt", build), extractMaterialShapes(await readFile(materialShapes, "utf8")));
+await writeFile(
+  new URL("MaterialShapes.kt", build),
+  extractMaterialShapes(await readFile(materialShapes, "utf8")),
+);
 
 // 4. Compile and print the curves
 const jar = new URL("shapes.jar", build).pathname;
-const kt = (await readdir(build)).filter((f) => f.endsWith(".kt")).map((f) => new URL(f, build).pathname);
-execFileSync(kotlinc.pathname, [...kt, "-nowarn", "-include-runtime", "-d", jar], { stdio: "inherit" });
-const cubics = JSON.parse(execFileSync("java", ["-jar", jar], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+const kt = (await readdir(build))
+  .filter((f) => f.endsWith(".kt"))
+  .map((f) => new URL(f, build).pathname);
+execFileSync(kotlinc.pathname, [...kt, "-nowarn", "-include-runtime", "-d", jar], {
+  stdio: "inherit",
+});
+const cubics = JSON.parse(
+  execFileSync("java", ["-jar", jar], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }),
+);
 
 // 5. CSS
 const pct = (v) => `${+(v * 100).toFixed(2)}%`;
@@ -69,7 +100,8 @@ const point = (x, y) => `${pct(x)} ${pct(y)}`;
 const lines = Object.entries(cubics).map(([name, curves]) => {
   const [x0, y0] = curves[0];
   const segments = curves.map(
-    ([, , c0x, c0y, c1x, c1y, x1, y1]) => `curve to ${point(x1, y1)} with ${point(c0x, c0y)} / ${point(c1x, c1y)}`,
+    ([, , c0x, c0y, c1x, c1y, x1, y1]) =>
+      `curve to ${point(x1, y1)} with ${point(c0x, c0y)} / ${point(c1x, c1y)}`,
   );
   return `  --shape-${name}: shape(from ${point(x0, y0)}, ${segments.join(", ")}, close);`;
 });
@@ -90,7 +122,8 @@ console.log(`wrote docs/design/m3-shapes.css with ${lines.length} shapes (${css.
 function extractMaterialShapes(source) {
   const start = source.indexOf("public companion object {");
   const end = source.lastIndexOf("}", source.lastIndexOf("}") - 1);
-  if (start < 0 || end < start) throw new Error("MaterialShapes.kt changed shape; update extractMaterialShapes()");
+  if (start < 0 || end < start)
+    throw new Error("MaterialShapes.kt changed shape; update extractMaterialShapes()");
   const body = source.slice(source.indexOf("{", start) + 1, end);
   return `package androidx.compose.material3
 import androidx.compose.ui.geometry.Offset
@@ -118,7 +151,10 @@ ${body.replaceAll("@ExperimentalMaterial3ExpressiveApi", "").replaceAll("public 
 async function download(url, target, mode = "text") {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Couldn't download ${url}: ${response.status}`);
-  await writeFile(target, mode === "binary" ? Buffer.from(await response.arrayBuffer()) : await response.text());
+  await writeFile(
+    target,
+    mode === "binary" ? Buffer.from(await response.arrayBuffer()) : await response.text(),
+  );
   console.log(`downloaded ${url}`);
 }
 

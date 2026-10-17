@@ -29,15 +29,59 @@
 @layer reset {
   /* Element types instead of a global `*` rule, so web components and lower layers can still
      override it. */
-  :where(body, div, span, p, h1, h2, h3, ul, ol, li, dl, dt, dd, header, footer, main, nav, aside,
-    section, article, form, fieldset, legend, label, a, button, input, select, textarea, dialog,
-    svg),
+  :where(
+    body,
+    div,
+    span,
+    p,
+    h1,
+    h2,
+    h3,
+    ul,
+    ol,
+    li,
+    dl,
+    dt,
+    dd,
+    header,
+    footer,
+    main,
+    nav,
+    aside,
+    section,
+    article,
+    form,
+    fieldset,
+    legend,
+    label,
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    dialog,
+    svg
+  ),
   :where(div, span, button, label)::before,
-  :where(div, span, button, label)::after { box-sizing: border-box; }
-  :where(body, h1, h2, h3, p, ul, ol, fieldset, dl, dd) { margin: 0; padding: 0; }
-  :where(ul, ol) { list-style: none; }
-  :where(fieldset) { border: 0; min-width: 0; }
-  :where(button, input, select, textarea) { font: inherit; color: inherit; letter-spacing: inherit; }
+  :where(div, span, button, label)::after {
+    box-sizing: border-box;
+  }
+  :where(body, h1, h2, h3, p, ul, ol, fieldset, dl, dd) {
+    margin: 0;
+    padding: 0;
+  }
+  :where(ul, ol) {
+    list-style: none;
+  }
+  :where(fieldset) {
+    border: 0;
+    min-width: 0;
+  }
+  :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
 }
 
 @layer base {
@@ -45,7 +89,9 @@
     font-family: var(--font);
     /* The fallback font takes the x-height of Google Sans Flex, so text doesn't jump when it loads. */
     font-size-adjust: from-font;
-    font-size: .875rem; line-height: calc(20 / 14); letter-spacing: .0125rem;
+    font-size: 0.875rem;
+    line-height: calc(20 / 14);
+    letter-spacing: 0.0125rem;
     font-variant-numeric: tabular-nums;
     /* A long word without spaces (a name, a pasted link) wraps instead of spilling out of its box. */
     overflow-wrap: break-word;
@@ -55,8 +101,13 @@
   }
   /* Native controls (select, checkbox, switch) and scrollbars take the theme's colors. outline
      keeps at least 3:1 against the surfaces, so the thumb shows on any track. */
-  :root { accent-color: var(--primary); scrollbar-color: var(--outline) transparent; }
-  a { color: var(--primary); }
+  :root {
+    accent-color: var(--primary);
+    scrollbar-color: var(--outline) transparent;
+  }
+  a {
+    color: var(--primary);
+  }
   /* Keyboard focus on everything interactive. outline survives forced colors, box-shadow doesn't. */
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--primary);
@@ -70,37 +121,65 @@
        through the color-scheme meta (mapped below). Keep the default at "light dark". */
     color-scheme: light dark;
 
-    --primary: light-dark(#4f5b92, #b8c4ff); --on-primary: light-dark(#ffffff, #202c61);
-    --primary-container: light-dark(#dde1ff, #374379); --on-primary-container: light-dark(#374379, #dde1ff);
-    --secondary: light-dark(#5a5d72, #c2c5dd); --secondary-container: light-dark(#dfe1f9, #424659); --on-secondary-container: light-dark(#424659, #dfe1f9);
-    --tertiary: light-dark(#76546e, #e4bad9); --tertiary-container: light-dark(#ffd7f3, #5c3d56); --on-tertiary-container: light-dark(#5c3d56, #ffd7f3);
-    --error: light-dark(#ba1a1a, #ffb4ab); --on-error: light-dark(#ffffff, #690005); --error-container: light-dark(#ffdad6, #93000a); --on-error-container: light-dark(#93000a, #ffdad6);
-    --surface: light-dark(#fbf8ff, #121318); --on-surface: light-dark(#1b1b21, #e3e1e9); --on-surface-variant: light-dark(#45464f, #c6c5d0);
-    --surface-container-lowest: light-dark(#ffffff, #0d0e13); --surface-container-low: light-dark(#f5f2fa, #1b1b21);
-    --surface-container: light-dark(#efedf4, #1f1f25); --surface-container-high: light-dark(#e9e7ef, #292a2f); --surface-container-highest: light-dark(#e3e1e9, #34343a);
-    --outline: light-dark(#767680, #90909a); --outline-variant: light-dark(#c6c5d0, #45464f);
-    --inverse-surface: light-dark(#2f3036, #e3e1e9); --inverse-on-surface: light-dark(#f2f0f7, #2f3036); --inverse-primary: light-dark(#b8c4ff, #4f5b92);
+    --primary: light-dark(#4f5b92, #b8c4ff);
+    --on-primary: light-dark(#ffffff, #202c61);
+    --primary-container: light-dark(#dde1ff, #374379);
+    --on-primary-container: light-dark(#374379, #dde1ff);
+    --secondary: light-dark(#5a5d72, #c2c5dd);
+    --secondary-container: light-dark(#dfe1f9, #424659);
+    --on-secondary-container: light-dark(#424659, #dfe1f9);
+    --tertiary: light-dark(#76546e, #e4bad9);
+    --tertiary-container: light-dark(#ffd7f3, #5c3d56);
+    --on-tertiary-container: light-dark(#5c3d56, #ffd7f3);
+    --error: light-dark(#ba1a1a, #ffb4ab);
+    --on-error: light-dark(#ffffff, #690005);
+    --error-container: light-dark(#ffdad6, #93000a);
+    --on-error-container: light-dark(#93000a, #ffdad6);
+    --surface: light-dark(#fbf8ff, #121318);
+    --on-surface: light-dark(#1b1b21, #e3e1e9);
+    --on-surface-variant: light-dark(#45464f, #c6c5d0);
+    --surface-container-lowest: light-dark(#ffffff, #0d0e13);
+    --surface-container-low: light-dark(#f5f2fa, #1b1b21);
+    --surface-container: light-dark(#efedf4, #1f1f25);
+    --surface-container-high: light-dark(#e9e7ef, #292a2f);
+    --surface-container-highest: light-dark(#e3e1e9, #34343a);
+    --outline: light-dark(#767680, #90909a);
+    --outline-variant: light-dark(#c6c5d0, #45464f);
+    --inverse-surface: light-dark(#2f3036, #e3e1e9);
+    --inverse-on-surface: light-dark(#f2f0f7, #2f3036);
+    --inverse-primary: light-dark(#b8c4ff, #4f5b92);
     --success: light-dark(#126d34, #84d994);
     /* overrun in progress bars: error palette tone 40 light, tone 60 dark, so it reads as red in both themes */
     --over-budget: light-dark(#ba1a1a, #ff5449);
     --card: light-dark(var(--surface-container-lowest), var(--surface-container-high));
     --weekend: var(--surface-container-low);
     /* shape: ShapeKeyTokens */
-    --corner-extra-small: .25rem; --corner-small: .5rem; --corner-medium: .75rem;
-    --corner-large: 1rem; --corner-large-increased: 1.25rem;
-    --corner-extra-large: 1.75rem; --corner-extra-large-increased: 2rem;
-    --corner-extra-extra-large: 3rem; --corner-full: 999rem;
+    --corner-extra-small: 0.25rem;
+    --corner-small: 0.5rem;
+    --corner-medium: 0.75rem;
+    --corner-large: 1rem;
+    --corner-large-increased: 1.25rem;
+    --corner-extra-large: 1.75rem;
+    --corner-extra-large-increased: 2rem;
+    --corner-extra-extra-large: 3rem;
+    --corner-full: 999rem;
     /* elevation: ElevationTokens */
-    --elevation-level-1: 0 1px .125rem rgb(0 0 0 / .3), 0 1px .1875rem 1px rgb(0 0 0 / .15);
-    --elevation-level-2: 0 1px .125rem rgb(0 0 0 / .3), 0 .125rem .375rem .125rem rgb(0 0 0 / .15);
-    --elevation-level-3: 0 1px .1875rem rgb(0 0 0 / .3), 0 .25rem .5rem .1875rem rgb(0 0 0 / .15);
+    --elevation-level-1: 0 1px 0.125rem rgb(0 0 0 / 0.3), 0 1px 0.1875rem 1px rgb(0 0 0 / 0.15);
+    --elevation-level-2:
+      0 1px 0.125rem rgb(0 0 0 / 0.3), 0 0.125rem 0.375rem 0.125rem rgb(0 0 0 / 0.15);
+    --elevation-level-3:
+      0 1px 0.1875rem rgb(0 0 0 / 0.3), 0 0.25rem 0.5rem 0.1875rem rgb(0 0 0 / 0.15);
     /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
     --hour: 3rem;
     --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
   }
   @supports (color: light-dark(#000, #fff)) {
-    :root:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
-    :root:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
+    :root:has(> head > meta[name="color-scheme"][content="light"]) {
+      color-scheme: light;
+    }
+    :root:has(> head > meta[name="color-scheme"][content="dark"]) {
+      color-scheme: dark;
+    }
   }
 
   /* Without light-dark() (Chrome 123, Firefox 120, Safari 17.5), every color above would be invalid.
@@ -164,89 +243,262 @@
      The filled variant is #name-fill. Color the icon with `color` on it or on its parent.
      Size classes name the size in dp: size-20 is 20dp (1.25rem). */
   .icon {
-    width: 1.5rem; height: 1.5rem; flex: none; display: inline-block; vertical-align: middle;
-    &.size-20 { width: 1.25rem; height: 1.25rem; }
-    &.size-18 { width: 1.125rem; height: 1.125rem; }
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+    display: inline-block;
+    vertical-align: middle;
+    &.size-20 {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    &.size-18 {
+      width: 1.125rem;
+      height: 1.125rem;
+    }
   }
 
   /* buttons: expressive sizes, round by default */
   .button {
-    display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem; padding: 0 1rem; border-radius: var(--corner-full); border: 0; font-size: .875rem; font-weight: 500; letter-spacing: .0063rem; text-align: center; cursor: pointer; background: transparent; color: var(--primary);
-    @media (forced-colors: active) { border: 1px solid ButtonBorder; }
-    & .icon { width: 1.25rem; height: 1.25rem; }
-    &[data-size="extra-small"] {
-      min-height: 2rem; padding: 0 .75rem; gap: .25rem;
-      & .icon { width: 1.125rem; height: 1.125rem; }
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border-radius: var(--corner-full);
+    border: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.0063rem;
+    text-align: center;
+    cursor: pointer;
+    background: transparent;
+    color: var(--primary);
+    @media (forced-colors: active) {
+      border: 1px solid ButtonBorder;
     }
-    &[data-size="medium"] { min-height: 3.5rem; padding: 0 1.5rem; font-size: 1rem; }
-    &[data-variant="filled"] { background: var(--primary); color: var(--on-primary); }
-    &[data-variant="tonal"] { background: var(--secondary-container); color: var(--on-secondary-container); }
-    &[data-variant="outlined"] { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
-    &[data-variant="danger"] { background: var(--error); color: var(--on-error); }
-    &[data-variant="text-danger"] { color: var(--error); }
+    & .icon {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    &[data-size="extra-small"] {
+      min-height: 2rem;
+      padding: 0 0.75rem;
+      gap: 0.25rem;
+      & .icon {
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+    }
+    &[data-size="medium"] {
+      min-height: 3.5rem;
+      padding: 0 1.5rem;
+      font-size: 1rem;
+    }
+    &[data-variant="filled"] {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    &[data-variant="tonal"] {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+    }
+    &[data-variant="outlined"] {
+      border: 1px solid var(--outline-variant);
+      color: var(--on-surface-variant);
+    }
+    &[data-variant="danger"] {
+      background: var(--error);
+      color: var(--on-error);
+    }
+    &[data-variant="text-danger"] {
+      color: var(--error);
+    }
     /* Disabled: only buttons with a container get the disabled container. */
     &:disabled {
       color: color-mix(in srgb, var(--on-surface) 38%, transparent);
-      @media (forced-colors: active) { border-color: GrayText; }
+      @media (forced-colors: active) {
+        border-color: GrayText;
+      }
     }
-    &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+    &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled {
+      background: color-mix(in srgb, var(--on-surface) 10%, transparent);
+    }
   }
   .icon-button {
-    width: 2.5rem; height: 2.5rem; display: inline-grid; place-items: center; border-radius: var(--corner-full); border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; padding: 0;
-    @media (forced-colors: active) { border: 1px solid ButtonBorder; }
-    &[data-variant="tonal"] { background: var(--secondary-container); color: var(--on-secondary-container); }
-    &[data-variant="filled"] { background: var(--primary); color: var(--on-primary); }
-    &[data-shape="square"] { border-radius: var(--corner-medium); }
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-grid;
+    place-items: center;
+    border-radius: var(--corner-full);
+    border: 0;
+    background: transparent;
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    padding: 0;
+    @media (forced-colors: active) {
+      border: 1px solid ButtonBorder;
+    }
+    &[data-variant="tonal"] {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+    }
+    &[data-variant="filled"] {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    &[data-shape="square"] {
+      border-radius: var(--corner-medium);
+    }
   }
 
   /* connected button group: inner corners 8, selected item goes fully round. For one choice out of
      several it's a <fieldset> of radio inputs, each in its <label> (see "Radio inputs that look like
      something else" below); toggle buttons with aria-pressed work the same. */
   .connected-button-group {
-    display: flex; gap: .125rem;
+    display: flex;
+    gap: 0.125rem;
     & > :is(label, button) {
-      position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2.5rem; padding: 0 .875rem; border: 0; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: .875rem; font-weight: 500; text-align: center; border-radius: var(--corner-small); cursor: pointer;
-      @media (forced-colors: active) { border: 1px solid ButtonBorder; }
+      position: relative;
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      min-height: 2.5rem;
+      padding: 0 0.875rem;
+      border: 0;
+      background: var(--surface-container-highest);
+      color: var(--on-surface-variant);
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: center;
+      border-radius: var(--corner-small);
+      cursor: pointer;
+      @media (forced-colors: active) {
+        border: 1px solid ButtonBorder;
+      }
     }
-    & > :is(label, button):first-of-type { border-start-start-radius: var(--corner-full); border-end-start-radius: var(--corner-full); }
-    & > :is(label, button):last-of-type { border-start-end-radius: var(--corner-full); border-end-end-radius: var(--corner-full); }
-    & > label:has(:checked), & > [aria-pressed="true"] {
-      background: var(--primary); color: var(--on-primary); border-radius: var(--corner-full);
-      @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+    & > :is(label, button):first-of-type {
+      border-start-start-radius: var(--corner-full);
+      border-end-start-radius: var(--corner-full);
     }
-    &[data-size="extra-small"] > :is(label, button) { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
+    & > :is(label, button):last-of-type {
+      border-start-end-radius: var(--corner-full);
+      border-end-end-radius: var(--corner-full);
+    }
+    & > label:has(:checked),
+    & > [aria-pressed="true"] {
+      background: var(--primary);
+      color: var(--on-primary);
+      border-radius: var(--corner-full);
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+        background: Highlight;
+        color: HighlightText;
+        border-color: Highlight;
+      }
+    }
+    &[data-size="extra-small"] > :is(label, button) {
+      min-height: 2rem;
+      padding: 0 0.75rem;
+      font-size: 0.8125rem;
+    }
   }
 
   /* Radio inputs that look like something else (a connected button, a swatch): the input keeps its
      behavior (one checked per name, arrow keys within the group, form value, validity) and loses only
      its look. It covers its whole label, so the label's area is what's clicked, tapped and focused, and
      the base layer's focus ring draws around it. The label shows the state with :has(:checked). */
-  :is(.connected-button-group, .picker) input[type="radio"] { appearance: none; position: absolute; inset: 0; margin: 0; border-radius: inherit; cursor: pointer; }
+  :is(.connected-button-group, .picker) input[type="radio"] {
+    appearance: none;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    border-radius: inherit;
+    cursor: pointer;
+  }
 
   /* extended floating action button */
   .floating-action-button {
-    display: inline-flex; align-items: center; gap: .75rem; min-height: 3.5rem; padding-block: 0; padding-inline: 1rem 1.25rem; border: 0; border-radius: var(--corner-large); background: var(--primary-container); color: var(--on-primary-container); font-size: 1rem; font-weight: 500; box-shadow: var(--elevation-level-3); cursor: pointer;
-    @media (forced-colors: active) { border: 1px solid ButtonBorder; }
-    &[data-icon-only] { width: 3.5rem; padding: 0; justify-content: center; }
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding-block: 0;
+    padding-inline: 1rem 1.25rem;
+    border: 0;
+    border-radius: var(--corner-large);
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+    font-size: 1rem;
+    font-weight: 500;
+    box-shadow: var(--elevation-level-3);
+    cursor: pointer;
+    @media (forced-colors: active) {
+      border: 1px solid ButtonBorder;
+    }
+    &[data-icon-only] {
+      width: 3.5rem;
+      padding: 0;
+      justify-content: center;
+    }
   }
 
   /* small app bar (androidx AppBarSmallTokens, AppBar.kt): 64dp tall, the headline 16dp from the leading edge,
      4dp after the last icon button, no space between icon buttons */
   .top-app-bar {
-    display: flex; align-items: center; min-height: 4rem; padding-block: .5rem; padding-inline: 1rem .25rem;
-    & .grow { flex: 1; min-width: 0; }
+    display: flex;
+    align-items: center;
+    min-height: 4rem;
+    padding-block: 0.5rem;
+    padding-inline: 1rem 0.25rem;
+    & .grow {
+      flex: 1;
+      min-width: 0;
+    }
   }
 
   /* navigation bar (flexible, 64dp) */
-  .navigation-bar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); min-height: 4rem; background: var(--surface-container); }
+  .navigation-bar {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    min-height: 4rem;
+    background: var(--surface-container);
+  }
   .navigation-item {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .375rem 0; text-decoration: none; color: var(--on-surface-variant); font-size: .75rem; line-height: calc(16 / 12); font-weight: 500; letter-spacing: .0312rem;
-    & .active-indicator { display: grid; place-items: center; width: 3.5rem; height: 2rem; border-radius: var(--corner-full); }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0;
+    text-decoration: none;
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    line-height: calc(16 / 12);
+    font-weight: 500;
+    letter-spacing: 0.0312rem;
+    & .active-indicator {
+      display: grid;
+      place-items: center;
+      width: 3.5rem;
+      height: 2rem;
+      border-radius: var(--corner-full);
+    }
     &[aria-current="page"] {
-      color: var(--secondary); font-weight: 700;
+      color: var(--secondary);
+      font-weight: 700;
       & .active-indicator {
-        background: var(--secondary-container); color: var(--on-secondary-container);
-        @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+        background: var(--secondary-container);
+        color: var(--on-secondary-container);
+        @media (forced-colors: active) {
+          forced-color-adjust: none;
+          background: Highlight;
+          color: HighlightText;
+        }
       }
     }
   }
@@ -258,40 +510,102 @@
      on the page background. It is at least 96dp wide and grows when a label needs more (a translation,
      large text) instead of cutting it off. */
   .navigation-rail {
-    display: flex; flex-direction: column; align-items: center; gap: .25rem; inline-size: fit-content; min-inline-size: 6rem; flex: none; padding: .75rem 0 1rem;
-    & > .icon-button { margin-block-end: .5rem; }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    inline-size: fit-content;
+    min-inline-size: 6rem;
+    flex: none;
+    padding: 0.75rem 0 1rem;
+    & > .icon-button {
+      margin-block-end: 0.5rem;
+    }
     /* in the rail the FAB rests at elevation level 0 (m3.material.io, navigation rail guidelines) */
-    & > .floating-action-button { margin-block-end: 2.25rem; box-shadow: none; }
-    & .navigation-item { width: 100%; padding: .25rem 0 .5rem; }
+    & > .floating-action-button {
+      margin-block-end: 2.25rem;
+      box-shadow: none;
+    }
+    & .navigation-item {
+      width: 100%;
+      padding: 0.25rem 0 0.5rem;
+    }
     /* expanded (220-360dp; androidx NavigationRailExpandedTokens, NavigationRailHorizontalItemTokens): the
        same header, the FAB extended, and items as rows whose active indicator hugs the icon and label (56dp
        tall, 16dp leading space, 8dp between icon and label, Label Large). The menu button's aria-expanded
        is the state, so no class has to repeat it. */
     &:has(> [aria-expanded="true"]) {
-      align-items: stretch; min-inline-size: 13.75rem; max-inline-size: 22.5rem; padding-inline: 1.25rem;
-      & > .icon-button, & > .floating-action-button { align-self: flex-start; }
-      & > .floating-action-button { gap: .5rem; padding: 0 1rem; }
-      & .navigation-item { flex-direction: row; justify-content: flex-start; padding: 0; font-size: .875rem; line-height: 1.25rem; letter-spacing: .00625rem; }
-      & .navigation-item .active-indicator { width: auto; height: 3.5rem; padding: 0 1rem; display: flex; align-items: center; gap: .5rem; }
+      align-items: stretch;
+      min-inline-size: 13.75rem;
+      max-inline-size: 22.5rem;
+      padding-inline: 1.25rem;
+      & > .icon-button,
+      & > .floating-action-button {
+        align-self: flex-start;
+      }
+      & > .floating-action-button {
+        gap: 0.5rem;
+        padding: 0 1rem;
+      }
+      & .navigation-item {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 0;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        letter-spacing: 0.00625rem;
+      }
+      & .navigation-item .active-indicator {
+        width: auto;
+        height: 3.5rem;
+        padding: 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
     }
   }
 
   /* floating toolbar: 64dp, full shape */
   .toolbar {
-    display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: 0 .5rem; border-radius: var(--corner-full); background: var(--surface-container); color: var(--on-surface); box-shadow: var(--elevation-level-3);
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 4rem;
+    padding: 0 0.5rem;
+    border-radius: var(--corner-full);
+    background: var(--surface-container);
+    color: var(--on-surface);
+    box-shadow: var(--elevation-level-3);
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
     &[data-variant="vibrant"] {
-      background: var(--primary-container); color: var(--on-primary-container);
-      & .icon-button { color: var(--on-primary-container); }
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      & .icon-button {
+        color: var(--on-primary-container);
+      }
     }
   }
 
   /* segmented list (expressive grouped list): 2dp gaps, large outer, small inner corners */
   .segmented-list {
-    display: grid; align-content: start; gap: .125rem;
-    & > * { background: var(--card); border-radius: .25rem; }
-    & > *:first-child { border-start-start-radius: var(--corner-large-increased); border-start-end-radius: var(--corner-large-increased); }
-    & > *:last-child { border-end-start-radius: var(--corner-large-increased); border-end-end-radius: var(--corner-large-increased); }
+    display: grid;
+    align-content: start;
+    gap: 0.125rem;
+    & > * {
+      background: var(--card);
+      border-radius: 0.25rem;
+    }
+    & > *:first-child {
+      border-start-start-radius: var(--corner-large-increased);
+      border-start-end-radius: var(--corner-large-increased);
+    }
+    & > *:last-child {
+      border-end-start-radius: var(--corner-large-increased);
+      border-end-end-radius: var(--corner-large-increased);
+    }
   }
   /* activity list (the Activities pane and page): a segmented list whose rows line up. The list defines
      its columns once and every activity takes them over with subgrid, so the shapes, names, hours left
@@ -300,118 +614,300 @@
      aria-describedby="…"><span class="swatch"></span><span class="name">…</span><span class="left-to-place">…</span>
      </button><button class="icon-button">…</button><div class="progress" aria-hidden="true">…</div></li> */
   .activity-list {
-    grid-template-columns: auto minmax(0, 1fr) auto auto; column-gap: .875rem;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    column-gap: 0.875rem;
     /* every row spans the columns; an activity takes them over, anything else (such as the form of
        the activity being edited) just fills the row */
-    & > * { grid-column: 1 / -1; }
+    & > * {
+      grid-column: 1 / -1;
+    }
     & > .activity {
-      display: grid; grid-template-columns: subgrid; align-items: center; row-gap: .625rem; padding: .75rem .5rem .875rem 1rem;
-      & .name { display: grid; grid-template-columns: minmax(0, 1fr); }
-      & .left-to-place { display: grid; justify-items: end; text-align: end; }
-      & .progress { grid-column: 1 / -1; margin-inline-end: .5rem; }
+      display: grid;
+      grid-template-columns: subgrid;
+      align-items: center;
+      row-gap: 0.625rem;
+      padding: 0.75rem 0.5rem 0.875rem 1rem;
+      & .name {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+      & .left-to-place {
+        display: grid;
+        justify-items: end;
+        text-align: end;
+      }
+      & .progress {
+        grid-column: 1 / -1;
+        margin-inline-end: 0.5rem;
+      }
       /* The button that starts placing holds the shape, the name and the hours left, and takes their
          columns over, so they still line up with the other rows. It's labelled by the name and
          described by the budget and the hours left (see Activities in docs/spec/accessibility.md). */
       & > .activity-button {
-        grid-column: 1 / 4; display: grid; grid-template-columns: subgrid; align-items: center;
-        margin: 0; padding: 0; border: 0; border-radius: var(--corner-small); background: transparent; text-align: start; cursor: grab;
+        grid-column: 1 / 4;
+        display: grid;
+        grid-template-columns: subgrid;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: var(--corner-small);
+        background: transparent;
+        text-align: start;
+        cursor: grab;
       }
       &:has(> .activity-button[aria-pressed="true"]) {
-        background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary);
-        @media (forced-colors: active) { outline: 2px solid Highlight; outline-offset: -2px; }
+        background: var(--secondary-container);
+        box-shadow: inset 0 0 0 2px var(--primary);
+        @media (forced-colors: active) {
+          outline: 2px solid Highlight;
+          outline-offset: -2px;
+        }
       }
     }
   }
   /* A row whose parts vary (an icon or not, a trailing value, a control that wraps) is a single run,
      so it stays flexbox. */
   .list-item {
-    display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding: .625rem 1rem;
-    & .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    & .trailing { display: flex; flex-direction: column; align-items: flex-end; text-align: end; }
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding: 0.625rem 1rem;
+    & .grow {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    & .trailing {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: end;
+    }
   }
 
   /* activity shape: the activity's solid color clipped to its Material 3 Expressive shape. Set
      --activity-shape: var(--shape-<name>) on the activity's element (shapes in m3-shapes.css). */
   .swatch {
-    display: inline-block; width: 1.5rem; height: 1.5rem; flex: none; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle));
-    &.size-20 { width: 1.25rem; height: 1.25rem; }
-    &.size-32 { width: 2rem; height: 2rem; }
-    &.size-12 { width: .75rem; height: .75rem; }
-    &.size-10 { width: .625rem; height: .625rem; }
-    @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) { clip-path: none; border-radius: 50%; }
-    @media (forced-colors: active) { forced-color-adjust: none; }
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+    background: var(--activity-color);
+    clip-path: var(--activity-shape, var(--shape-circle));
+    &.size-20 {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    &.size-32 {
+      width: 2rem;
+      height: 2rem;
+    }
+    &.size-12 {
+      width: 0.75rem;
+      height: 0.75rem;
+    }
+    &.size-10 {
+      width: 0.625rem;
+      height: 0.625rem;
+    }
+    @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
+      clip-path: none;
+      border-radius: 50%;
+    }
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+    }
   }
-  .avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--corner-medium); background: var(--activity-container); color: var(--on-activity-container); display: grid; place-items: center; flex: none; font-weight: 700; font-size: 1rem; }
+  .avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--corner-medium);
+    background: var(--activity-container);
+    color: var(--on-activity-container);
+    display: grid;
+    place-items: center;
+    flex: none;
+    font-weight: 700;
+    font-size: 1rem;
+  }
 
   /* linear progress: active indicator + gap + track + stop indicator */
   .progress {
-    position: relative; display: flex; align-items: center; gap: .25rem; height: .625rem; /* 10dp: room for the wavy state */
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 0.625rem; /* 10dp: room for the wavy state */
     & .indicator {
-      height: .25rem; border-radius: .125rem; background: var(--activity-color, var(--primary));
-      &.wavy { height: .625rem; border-radius: 0; }
-      @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; }
-    }
-    & .track {
-      flex: 1; height: .25rem; border-radius: .125rem; background: var(--secondary-container); position: relative;
-      @media (forced-colors: active) { forced-color-adjust: none; background: GrayText; }
-      &::after {
-        content: ""; position: absolute; inset-inline-end: 0; inset-block-start: 0; width: .25rem; height: .25rem; border-radius: .125rem; background: var(--activity-color, var(--primary));
-        @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; }
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: var(--activity-color, var(--primary));
+      &.wavy {
+        height: 0.625rem;
+        border-radius: 0;
+      }
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+        background: Highlight;
       }
     }
-    &.full .track { display: none; }
+    & .track {
+      flex: 1;
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: var(--secondary-container);
+      position: relative;
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+        background: GrayText;
+      }
+      &::after {
+        content: "";
+        position: absolute;
+        inset-inline-end: 0;
+        inset-block-start: 0;
+        width: 0.25rem;
+        height: 0.25rem;
+        border-radius: 0.125rem;
+        background: var(--activity-color, var(--primary));
+        @media (forced-colors: active) {
+          forced-color-adjust: none;
+          background: Highlight;
+        }
+      }
+    }
+    &.full .track {
+      display: none;
+    }
     /* over budget (approved deviation, see Deviations in docs/spec/design.md): the bar spans max(budget, placed). The within-budget
        part keeps the activity color, then the usual gap, then the overrun in red (--over-budget), sized by
        flex in minutes:
        <span class="indicator" style="flex: 720"></span><span class="over-budget" style="flex: 30"></span> */
     & .over-budget {
-      height: .25rem; min-width: .25rem; border-radius: .125rem; background: var(--over-budget);
-      @media (forced-colors: active) { forced-color-adjust: none; background: Mark; }
+      height: 0.25rem;
+      min-width: 0.25rem;
+      border-radius: 0.125rem;
+      background: var(--over-budget);
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+        background: Mark;
+      }
     }
-    &.over-budget .track { display: none; }
+    &.over-budget .track {
+      display: none;
+    }
   }
 
   /* week grid */
   /* overflow: clip rounds the corners without making the week a scroll container (overflow: hidden
      would), so the sticky day header and hour gutter stick to the pane that scrolls. */
   .week {
-    display: grid; background: var(--card); border-radius: var(--corner-extra-large); overflow: clip;
+    display: grid;
+    background: var(--card);
+    border-radius: var(--corner-extra-large);
+    overflow: clip;
     /* <div class="week"><div class="gutter" aria-hidden="true">…</div><ol class="days" aria-label="Week">
        <li class="day"><h2 class="day-header">…</h2><ol class="day-column">…</ol></li>…</ol></div>
        The days take the week's columns and its two rows (the header and the hours) over with subgrid,
        so each day's heading sits in the header row with no separate row of headers (see The week in
        docs/spec/accessibility.md). */
-    & > .gutter { grid-area: 2 / 1; }
-    & > .days { grid-column: 2 / -1; grid-row: 1 / -1; display: grid; grid-template-columns: subgrid; grid-template-rows: subgrid; }
-    & .day { grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; }
+    & > .gutter {
+      grid-area: 2 / 1;
+    }
+    & > .days {
+      grid-column: 2 / -1;
+      grid-row: 1 / -1;
+      display: grid;
+      grid-template-columns: subgrid;
+      grid-template-rows: subgrid;
+    }
+    & .day {
+      grid-row: 1 / -1;
+      display: grid;
+      grid-template-rows: subgrid;
+    }
   }
   .day-header {
-    font: inherit; min-height: 3rem; display: flex; flex-direction: column; justify-content: center; padding: 0 .625rem;
-    & .day-name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; letter-spacing: .0312rem; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
-    & .day-total { font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
+    font: inherit;
+    min-height: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 0.625rem;
+    & .day-name {
+      font-size: 0.75rem;
+      line-height: calc(16 / 12);
+      font-weight: 700;
+      letter-spacing: 0.0312rem;
+      color: var(--on-surface-variant);
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    & .day-total {
+      font-size: 0.6875rem;
+      line-height: calc(14 / 11);
+      color: var(--on-surface-variant);
+    }
     /* today's weekday: the header carries aria-current="date" */
     &[aria-current="date"] .day-name {
       color: var(--primary);
       &::before {
-        content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary);
-        @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; }
+        content: "";
+        width: 0.375rem;
+        height: 0.375rem;
+        border-radius: 0.1875rem;
+        background: var(--primary);
+        @media (forced-colors: active) {
+          forced-color-adjust: none;
+          background: Highlight;
+        }
       }
     }
   }
   .day-column {
-    position: relative; border-inline-start: 1px solid var(--outline-variant); background-image: repeating-linear-gradient(to bottom, var(--outline-variant) 0 1px, transparent 1px calc(var(--hour) / 2), color-mix(in srgb, var(--outline-variant) 45%, transparent) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour));
-    &.weekend { background-color: var(--weekend); }
+    position: relative;
+    border-inline-start: 1px solid var(--outline-variant);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--outline-variant) 0 1px,
+      transparent 1px calc(var(--hour) / 2),
+      color-mix(in srgb, var(--outline-variant) 45%, transparent) calc(var(--hour) / 2)
+        calc(var(--hour) / 2 + 1px),
+      transparent calc(var(--hour) / 2 + 1px) var(--hour)
+    );
+    &.weekend {
+      background-color: var(--weekend);
+    }
     /* Forced colors drop the gradient, so draw the hour lines in GrayText, and let the blocks inside
        take forced colors again (forced-color-adjust is inherited). */
     @media (forced-colors: active) {
-      forced-color-adjust: none; background-color: Canvas; border-inline-start-color: GrayText;
-      background-image: repeating-linear-gradient(to bottom, GrayText 0 1px, transparent 1px var(--hour));
-      & > * { forced-color-adjust: auto; }
+      forced-color-adjust: none;
+      background-color: Canvas;
+      border-inline-start-color: GrayText;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        GrayText 0 1px,
+        transparent 1px var(--hour)
+      );
+      & > * {
+        forced-color-adjust: auto;
+      }
     }
   }
   .gutter {
-    position: relative; font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant);
-    & span { position: absolute; inset-inline-end: .5rem; translate: 0 -50%; }
+    position: relative;
+    font-size: 0.6875rem;
+    line-height: calc(14 / 11);
+    color: var(--on-surface-variant);
+    & span {
+      position: absolute;
+      inset-inline-end: 0.5rem;
+      translate: 0 -50%;
+    }
   }
 
   /* blocks: the <li> draws the block, and a <button> laid over it is what gets focus, is pressed while
@@ -420,84 +916,275 @@
      <span class="visually-hidden">Gym, Monday 18:00 to 19:30, 1 hour, 30 minutes</span></button>
      <span class="name" aria-hidden="true">Gym</span><span class="time" aria-hidden="true">18:00–19:30 · 1h30</span></li> */
   .block {
-    position: absolute; isolation: isolate; inset-inline: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: grid; grid-template-rows: minmax(0, auto) auto; align-content: start;
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
+    position: absolute;
+    isolation: isolate;
+    inset-inline: 0.1875rem;
+    border-radius: var(--corner-small);
+    background: var(--activity-container);
+    color: var(--on-activity-container);
+    padding: 0.25rem 0.5rem;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: minmax(0, auto) auto;
+    align-content: start;
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
     /* The name takes what the time leaves (the time row always shows), and --name-lines, set from the
        block's height, puts the ellipsis on the last line that fits (see Blocks in `docs/spec/grid-geometry.md`). */
-    & .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--name-lines, 2); line-clamp: var(--name-lines, 2); }
-    &[data-length="short"] .name, &[data-length="tiny"] .name { display: block; white-space: nowrap; text-overflow: ellipsis; }
-    & .time { font-size: .6875rem; line-height: calc(14 / 11); opacity: .85; }
+    & .name {
+      font-size: 0.75rem;
+      line-height: calc(16 / 12);
+      font-weight: 700;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--name-lines, 2);
+      line-clamp: var(--name-lines, 2);
+    }
+    &[data-length="short"] .name,
+    &[data-length="tiny"] .name {
+      display: block;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    & .time {
+      font-size: 0.6875rem;
+      line-height: calc(14 / 11);
+      opacity: 0.85;
+    }
     /* the shape on a block: top-right corner, out of the name's way */
-    & .swatch.corner { position: absolute; inset-block-start: .25rem; inset-inline-end: .25rem; z-index: 1; }
-    &:has(.swatch.corner) .name { padding-inline-end: .875rem; }
-    &[data-length="short"] { grid-template-rows: none; grid-auto-flow: column; grid-template-columns: minmax(0, auto) auto; justify-content: start; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
-    &[data-length="tiny"] { border-radius: var(--corner-extra-small); padding: 0; }
+    & .swatch.corner {
+      position: absolute;
+      inset-block-start: 0.25rem;
+      inset-inline-end: 0.25rem;
+      z-index: 1;
+    }
+    &:has(.swatch.corner) .name {
+      padding-inline-end: 0.875rem;
+    }
+    &[data-length="short"] {
+      grid-template-rows: none;
+      grid-auto-flow: column;
+      grid-template-columns: minmax(0, auto) auto;
+      justify-content: start;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0 0.5rem;
+      border-radius: 0.375rem;
+    }
+    &[data-length="tiny"] {
+      border-radius: var(--corner-extra-small);
+      padding: 0;
+    }
     & > .block-button {
-      position: absolute; inset: 0; z-index: 2; margin: 0; padding: 0; border: 0; border-radius: inherit; background: transparent; cursor: grab;
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: inherit;
+      background: transparent;
+      cursor: grab;
       /* The block clips its content, so the focus ring goes on the block itself. */
-      &:focus-visible { outline: none; }
+      &:focus-visible {
+        outline: none;
+      }
     }
-    &:has(> .block-button:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+    &:has(> .block-button:focus-visible) {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
     /* the remove button sits above the block's button, as its sibling: a button can't hold a button */
-    & > .remove { z-index: 3; }
-    &:has(> .block-button[aria-pressed="true"]) {
-      box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium);
-      @media (forced-colors: active) { outline: 2px solid Highlight; outline-offset: 2px; }
+    & > .remove {
+      z-index: 3;
     }
-    & .handle { position: absolute; inset-inline: 0; width: 1.5rem; height: .25rem; margin-inline: auto; border-radius: .125rem; background: var(--on-activity-container); opacity: .5; }
-    &.preview { background: transparent; border: 2px dashed var(--activity-color); color: var(--activity-color); }
+    &:has(> .block-button[aria-pressed="true"]) {
+      box-shadow:
+        0 0 0 2px var(--surface-container-lowest),
+        0 0 0 4px var(--primary),
+        var(--elevation-level-2);
+      z-index: 2;
+      border-radius: var(--corner-medium);
+      @media (forced-colors: active) {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+      }
+    }
+    & .handle {
+      position: absolute;
+      inset-inline: 0;
+      width: 1.5rem;
+      height: 0.25rem;
+      margin-inline: auto;
+      border-radius: 0.125rem;
+      background: var(--on-activity-container);
+      opacity: 0.5;
+    }
+    &.preview {
+      background: transparent;
+      border: 2px dashed var(--activity-color);
+      color: var(--activity-color);
+    }
   }
   /* the focused empty slot, a button named for the slot ("Empty slot, Friday 14:00") */
-  .slot-highlight { margin: 0; padding: 0; cursor: pointer; position: absolute; inset-inline: .1875rem; border-radius: var(--corner-small); background: color-mix(in srgb, var(--primary) 12%, transparent); border: 2px solid var(--primary); }
+  .slot-highlight {
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    position: absolute;
+    inset-inline: 0.1875rem;
+    border-radius: var(--corner-small);
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border: 2px solid var(--primary);
+  }
 
   /* menus, bottom sheets, dialogs, snackbar */
   .menu {
-    background: var(--surface-container); border-radius: var(--corner-large); box-shadow: var(--elevation-level-2); padding: .25rem; display: flex; flex-direction: column; gap: .125rem;
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
+    background: var(--surface-container);
+    border-radius: var(--corner-large);
+    box-shadow: var(--elevation-level-2);
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
     & .menu-item {
-      display: flex; align-items: center; gap: .75rem; min-height: 3rem; padding: 0 .75rem; border-radius: var(--corner-medium); border: 0; background: transparent; text-align: start; width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 3rem;
+      padding: 0 0.75rem;
+      border-radius: var(--corner-medium);
+      border: 0;
+      background: transparent;
+      text-align: start;
+      width: 100%;
       &.highlighted {
-        background: var(--secondary-container); color: var(--on-secondary-container);
-        @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+        background: var(--secondary-container);
+        color: var(--on-secondary-container);
+        @media (forced-colors: active) {
+          forced-color-adjust: none;
+          background: Highlight;
+          color: HighlightText;
+        }
       }
     }
   }
   .bottom-sheet {
     /* a modal <dialog>: replace the browser's border and text color */
-    border: 0; color: var(--on-surface); background: var(--surface-container-low); border-radius: var(--corner-extra-large) var(--corner-extra-large) 0 0; box-shadow: var(--elevation-level-1);
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
-    & .drag-handle { width: 2rem; height: .25rem; border-radius: .125rem; background: var(--on-surface-variant); opacity: .4; margin: 1rem auto .5rem; }
+    border: 0;
+    color: var(--on-surface);
+    background: var(--surface-container-low);
+    border-radius: var(--corner-extra-large) var(--corner-extra-large) 0 0;
+    box-shadow: var(--elevation-level-1);
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
+    & .drag-handle {
+      width: 2rem;
+      height: 0.25rem;
+      border-radius: 0.125rem;
+      background: var(--on-surface-variant);
+      opacity: 0.4;
+      margin: 1rem auto 0.5rem;
+    }
   }
   .dialog {
     /* a modal <dialog>: replace the browser's border and text color */
-    border: 0; color: var(--on-surface); background: var(--surface-container-high); border-radius: var(--corner-extra-large); padding: 1.5rem; box-shadow: var(--elevation-level-3); display: flex; flex-direction: column; gap: 1rem;
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
+    border: 0;
+    color: var(--on-surface);
+    background: var(--surface-container-high);
+    border-radius: var(--corner-extra-large);
+    padding: 1.5rem;
+    box-shadow: var(--elevation-level-3);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
   }
   /* scrim: dialogs and bottom sheets are modal <dialog>s, so the scrim is their own backdrop */
-  :is(.dialog, .bottom-sheet)::backdrop { background: rgb(0 0 0 / .32); }
+  :is(.dialog, .bottom-sheet)::backdrop {
+    background: rgb(0 0 0 / 0.32);
+  }
   .snackbar {
-    display: flex; align-items: center; gap: .5rem; min-height: 3rem; padding-block: .25rem; padding-inline: 1rem .5rem; border-radius: var(--corner-extra-small); background: var(--inverse-surface); color: var(--inverse-on-surface); box-shadow: var(--elevation-level-3);
-    @media (forced-colors: active) { border: 1px solid CanvasText; }
-    & .button { color: var(--inverse-primary); min-height: 2.25rem; padding: 0 .75rem; }
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding-block: 0.25rem;
+    padding-inline: 1rem 0.5rem;
+    border-radius: var(--corner-extra-small);
+    background: var(--inverse-surface);
+    color: var(--inverse-on-surface);
+    box-shadow: var(--elevation-level-3);
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
+    & .button {
+      color: var(--inverse-primary);
+      min-height: 2.25rem;
+      padding: 0 0.75rem;
+    }
   }
 
   /* outlined text field */
   .text-field {
-    position: relative; display: flex; flex-direction: column;
-    & input, & select { min-height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-extra-small); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
-    & label { position: absolute; inset-block-start: -.5rem; inset-inline-start: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); background: var(--text-field-background, var(--surface)); }
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    & input,
+    & select {
+      min-height: 3.5rem;
+      padding: 0 1rem;
+      border: 1px solid var(--outline);
+      border-radius: var(--corner-extra-small);
+      background: transparent;
+      font-size: 1rem;
+      letter-spacing: 0.0312rem;
+    }
+    & label {
+      position: absolute;
+      inset-block-start: -0.5rem;
+      inset-inline-start: 0.75rem;
+      padding: 0 0.25rem;
+      font-size: 0.75rem;
+      line-height: calc(16 / 12);
+      color: var(--on-surface-variant);
+      background: var(--text-field-background, var(--surface));
+    }
     /* Focus and errors come from the platform: :focus-within, and :user-invalid with the aria-invalid the
        app sets at the same moment (see Activities in docs/spec/interactions.md). The supporting text then
        reads as the error message. */
     &:focus-within {
-      & input { border: 2px solid var(--primary); }
-      & label { color: var(--primary); }
+      & input {
+        border: 2px solid var(--primary);
+      }
+      & label {
+        color: var(--primary);
+      }
     }
     &:has(:user-invalid, [aria-invalid="true"]) {
-      & input { border: 2px solid var(--error); }
-      & label, & .supporting-text { color: var(--error); }
+      & input {
+        border: 2px solid var(--error);
+      }
+      & label,
+      & .supporting-text {
+        color: var(--error);
+      }
     }
-    & .supporting-text { padding: .25rem 1rem 0; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); }
+    & .supporting-text {
+      padding: 0.25rem 1rem 0;
+      font-size: 0.75rem;
+      line-height: calc(16 / 12);
+      color: var(--on-surface-variant);
+    }
   }
 
   /* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
@@ -505,17 +1192,43 @@
      sets --activity-shape inline; both inherit the other half from the form. */
   /* <fieldset class="picker"><legend>Color</legend><label class="picker-option color-blue"><input type="radio"
      name="color" value="blue"><span class="visually-hidden">Blue</span></label>…</fieldset> */
-  .picker { display: flex; gap: .25rem; flex-wrap: wrap; }
+  .picker {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
   .picker-option {
-    position: relative; width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-medium); background: transparent; cursor: pointer;
+    position: relative;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    padding: 0;
+    border-radius: var(--corner-medium);
+    background: transparent;
+    cursor: pointer;
     &::before {
-      content: ""; width: 1.75rem; height: 1.75rem; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle));
-      @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) { clip-path: none; border-radius: 50%; }
-      @media (forced-colors: active) { forced-color-adjust: none; }
+      content: "";
+      width: 1.75rem;
+      height: 1.75rem;
+      background: var(--activity-color);
+      clip-path: var(--activity-shape, var(--shape-circle));
+      @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
+        clip-path: none;
+        border-radius: 50%;
+      }
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+      }
     }
     &:has(:checked) {
-      background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary);
-      @media (forced-colors: active) { outline: 2px solid Highlight; outline-offset: 2px; }
+      background: var(--secondary-container);
+      box-shadow: inset 0 0 0 2px var(--primary);
+      @media (forced-colors: active) {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+      }
     }
   }
 }
@@ -523,22 +1236,102 @@
 @layer utilities {
   /* type scale: Material's type roles (TypographyTokens). Add .emphasized for the emphasized style,
      one weight step up. */
-  .display-small { font-size: 2.25rem; line-height: calc(44 / 36); font-weight: 400; letter-spacing: 0; }
-  .headline-large { font-size: 2rem; line-height: calc(40 / 32); font-weight: 400; letter-spacing: 0; }
-  .headline-medium { font-size: 1.75rem; line-height: calc(36 / 28); font-weight: 400; letter-spacing: 0; }
-  .headline-small { font-size: 1.5rem; line-height: calc(32 / 24); font-weight: 400; letter-spacing: 0; }
-  .title-large { font-size: 1.375rem; line-height: calc(28 / 22); font-weight: 400; letter-spacing: 0; }
-  .title-medium { font-size: 1rem; line-height: calc(24 / 16); font-weight: 500; letter-spacing: .0094rem; }
-  .title-small { font-size: .875rem; line-height: calc(20 / 14); font-weight: 500; letter-spacing: .0063rem; }
-  .body-large { font-size: 1rem; line-height: calc(24 / 16); font-weight: 400; letter-spacing: .0312rem; }
-  .body-medium { font-size: .875rem; line-height: calc(20 / 14); font-weight: 400; letter-spacing: .0125rem; }
-  .body-small { font-size: .75rem; line-height: calc(16 / 12); font-weight: 400; letter-spacing: .025rem; }
-  .label-large { font-size: .875rem; line-height: calc(20 / 14); font-weight: 500; letter-spacing: .0063rem; }
-  .label-medium { font-size: .75rem; line-height: calc(16 / 12); font-weight: 500; letter-spacing: .0312rem; }
-  .label-small { font-size: .6875rem; line-height: calc(16 / 11); font-weight: 500; letter-spacing: .0312rem; }
-  .emphasized:is(.display-small, .headline-large, .headline-medium, .headline-small, .title-large, .body-large, .body-medium, .body-small) { font-weight: 500; }
-  .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) { font-weight: 700; }
-  .muted { color: var(--on-surface-variant); }
+  .display-small {
+    font-size: 2.25rem;
+    line-height: calc(44 / 36);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .headline-large {
+    font-size: 2rem;
+    line-height: calc(40 / 32);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .headline-medium {
+    font-size: 1.75rem;
+    line-height: calc(36 / 28);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .headline-small {
+    font-size: 1.5rem;
+    line-height: calc(32 / 24);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .title-large {
+    font-size: 1.375rem;
+    line-height: calc(28 / 22);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .title-medium {
+    font-size: 1rem;
+    line-height: calc(24 / 16);
+    font-weight: 500;
+    letter-spacing: 0.0094rem;
+  }
+  .title-small {
+    font-size: 0.875rem;
+    line-height: calc(20 / 14);
+    font-weight: 500;
+    letter-spacing: 0.0063rem;
+  }
+  .body-large {
+    font-size: 1rem;
+    line-height: calc(24 / 16);
+    font-weight: 400;
+    letter-spacing: 0.0312rem;
+  }
+  .body-medium {
+    font-size: 0.875rem;
+    line-height: calc(20 / 14);
+    font-weight: 400;
+    letter-spacing: 0.0125rem;
+  }
+  .body-small {
+    font-size: 0.75rem;
+    line-height: calc(16 / 12);
+    font-weight: 400;
+    letter-spacing: 0.025rem;
+  }
+  .label-large {
+    font-size: 0.875rem;
+    line-height: calc(20 / 14);
+    font-weight: 500;
+    letter-spacing: 0.0063rem;
+  }
+  .label-medium {
+    font-size: 0.75rem;
+    line-height: calc(16 / 12);
+    font-weight: 500;
+    letter-spacing: 0.0312rem;
+  }
+  .label-small {
+    font-size: 0.6875rem;
+    line-height: calc(16 / 11);
+    font-weight: 500;
+    letter-spacing: 0.0312rem;
+  }
+  .emphasized:is(
+    .display-small,
+    .headline-large,
+    .headline-medium,
+    .headline-small,
+    .title-large,
+    .body-large,
+    .body-medium,
+    .body-small
+  ) {
+    font-weight: 500;
+  }
+  .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) {
+    font-weight: 700;
+  }
+  .muted {
+    color: var(--on-surface-variant);
+  }
   /* Hidden on screen, still read by screen readers: names icon-only buttons and adds context. It
      shows again when focus is inside it, for skip links. !important so no component can undo it. */
   .visually-hidden:where(:not(:focus-within, :active)) {
@@ -555,24 +1348,88 @@
 
   /* activity color: a tonal palette per palette color. Sets the activity's container color (block
      background), the text on it, and its solid color (swatch, progress, preview outline). */
-  .color-blue   { --activity-container: light-dark(#d2e4ff, #00497f); --on-activity-container: light-dark(#001c37, #d2e4ff); --activity-color: light-dark(#0b61a4, #a0c9ff); }
-  .color-red    { --activity-container: light-dark(#ffdad4, #7d2b20); --on-activity-container: light-dark(#400100, #ffdad4); --activity-color: light-dark(#9c4234, #ffb4a7); }
-  .color-green  { --activity-container: light-dark(#a0f6ae, #005323); --on-activity-container: light-dark(#00210a, #a0f6ae); --activity-color: light-dark(#126d34, #84d994); }
-  .color-amber  { --activity-container: light-dark(#ffdeae, #604100); --on-activity-container: light-dark(#281900, #ffdeae); --activity-color: light-dark(#7f5600, #fcbb4a); }
-  .color-violet { --activity-container: light-dark(#ecdcff, #563587); --on-activity-container: light-dark(#280056, #ecdcff); --activity-color: light-dark(#6e4da1, #d6baff); }
-  .color-teal   { --activity-container: light-dark(#6ff6f8, #004f50); --on-activity-container: light-dark(#002020, #6ff6f8); --activity-color: light-dark(#00696b, #4cdadc); }
-  .color-pink   { --activity-container: light-dark(#ffd8e8, #772957); --on-activity-container: light-dark(#3c0028, #ffd8e8); --activity-color: light-dark(#944170, #ffafd6); }
-  .color-lime   { --activity-container: light-dark(#dceb78, #434b00); --on-activity-container: light-dark(#1a1e00, #dceb78); --activity-color: light-dark(#596400, #c0cf5f); }
+  .color-blue {
+    --activity-container: light-dark(#d2e4ff, #00497f);
+    --on-activity-container: light-dark(#001c37, #d2e4ff);
+    --activity-color: light-dark(#0b61a4, #a0c9ff);
+  }
+  .color-red {
+    --activity-container: light-dark(#ffdad4, #7d2b20);
+    --on-activity-container: light-dark(#400100, #ffdad4);
+    --activity-color: light-dark(#9c4234, #ffb4a7);
+  }
+  .color-green {
+    --activity-container: light-dark(#a0f6ae, #005323);
+    --on-activity-container: light-dark(#00210a, #a0f6ae);
+    --activity-color: light-dark(#126d34, #84d994);
+  }
+  .color-amber {
+    --activity-container: light-dark(#ffdeae, #604100);
+    --on-activity-container: light-dark(#281900, #ffdeae);
+    --activity-color: light-dark(#7f5600, #fcbb4a);
+  }
+  .color-violet {
+    --activity-container: light-dark(#ecdcff, #563587);
+    --on-activity-container: light-dark(#280056, #ecdcff);
+    --activity-color: light-dark(#6e4da1, #d6baff);
+  }
+  .color-teal {
+    --activity-container: light-dark(#6ff6f8, #004f50);
+    --on-activity-container: light-dark(#002020, #6ff6f8);
+    --activity-color: light-dark(#00696b, #4cdadc);
+  }
+  .color-pink {
+    --activity-container: light-dark(#ffd8e8, #772957);
+    --on-activity-container: light-dark(#3c0028, #ffd8e8);
+    --activity-color: light-dark(#944170, #ffafd6);
+  }
+  .color-lime {
+    --activity-container: light-dark(#dceb78, #434b00);
+    --on-activity-container: light-dark(#1a1e00, #dceb78);
+    --activity-color: light-dark(#596400, #c0cf5f);
+  }
 
   /* Light colors where light-dark() is missing, as for the tokens above. */
   @supports not (color: light-dark(#000, #fff)) {
-    .color-blue { --activity-container: #d2e4ff; --on-activity-container: #001c37; --activity-color: #0b61a4; }
-    .color-red { --activity-container: #ffdad4; --on-activity-container: #400100; --activity-color: #9c4234; }
-    .color-green { --activity-container: #a0f6ae; --on-activity-container: #00210a; --activity-color: #126d34; }
-    .color-amber { --activity-container: #ffdeae; --on-activity-container: #281900; --activity-color: #7f5600; }
-    .color-violet { --activity-container: #ecdcff; --on-activity-container: #280056; --activity-color: #6e4da1; }
-    .color-teal { --activity-container: #6ff6f8; --on-activity-container: #002020; --activity-color: #00696b; }
-    .color-pink { --activity-container: #ffd8e8; --on-activity-container: #3c0028; --activity-color: #944170; }
-    .color-lime { --activity-container: #dceb78; --on-activity-container: #1a1e00; --activity-color: #596400; }
+    .color-blue {
+      --activity-container: #d2e4ff;
+      --on-activity-container: #001c37;
+      --activity-color: #0b61a4;
+    }
+    .color-red {
+      --activity-container: #ffdad4;
+      --on-activity-container: #400100;
+      --activity-color: #9c4234;
+    }
+    .color-green {
+      --activity-container: #a0f6ae;
+      --on-activity-container: #00210a;
+      --activity-color: #126d34;
+    }
+    .color-amber {
+      --activity-container: #ffdeae;
+      --on-activity-container: #281900;
+      --activity-color: #7f5600;
+    }
+    .color-violet {
+      --activity-container: #ecdcff;
+      --on-activity-container: #280056;
+      --activity-color: #6e4da1;
+    }
+    .color-teal {
+      --activity-container: #6ff6f8;
+      --on-activity-container: #002020;
+      --activity-color: #00696b;
+    }
+    .color-pink {
+      --activity-container: #ffd8e8;
+      --on-activity-container: #3c0028;
+      --activity-color: #944170;
+    }
+    .color-lime {
+      --activity-container: #dceb78;
+      --on-activity-container: #1a1e00;
+      --activity-color: #596400;
+    }
   }
 }

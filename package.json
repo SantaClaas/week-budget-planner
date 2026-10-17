@@ -2,26 +2,18 @@
   "name": "week-budget-planner",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.mjs --fetch",
     "icons": "node scripts/build-iconset.mjs",
     "shapes": "node scripts/build-shapes.mjs"
-  },
-  "devDependencies": {
-    "@solidjs/vite-plugin": "3.0.0-next.47",
-    "@tursodatabase/database": "0.8.3",
-    "@types/node": "26.6.5",
-    "drizzle-kit": "1.0.0-rc.4",
-    "svgo": "4.1.0",
-    "typescript": "7.0.2",
-    "vite": "8.3.4",
-    "vitest": "5.0.4"
   },
   "dependencies": {
     "@formatjs/intl-durationformat": "0.11.1",
@@ -32,9 +24,23 @@
     "solid-js": "2.0.0-rc.14",
     "temporal-polyfill": "1.0.6"
   },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.47",
+    "@tursodatabase/database": "0.8.3",
+    "@types/node": "26.6.5",
+    "drizzle-kit": "1.0.0-rc.4",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "svgo": "4.1.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  },
   "engines": {
     "node": ">=22.12.0"
   },
+  "packageManager": "pnpm@10.28.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"

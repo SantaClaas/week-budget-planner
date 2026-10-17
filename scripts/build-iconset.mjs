@@ -20,10 +20,10 @@ const output = new URL("src/icons/iconset.svg", root);
 const { repository, commit, style } = manifest.source;
 
 /** One entry per file: the outline, plus the filled variant when asked for. */
-const variants = manifest.icons.flatMap(({ name, fill }) => [
-  { id: name, file: `${name}_24px.svg`, name },
-  ...(fill ? [{ id: `${name}-fill`, file: `${name}_fill1_24px.svg`, name }] : []),
-]);
+const variants = manifest.icons.flatMap(({ name, fill }) => {
+  const outline = { id: name, file: `${name}_24px.svg`, name };
+  return fill ? [outline, { id: `${name}-fill`, file: `${name}_fill1_24px.svg`, name }] : [outline];
+});
 
 if (process.argv.includes("--fetch")) {
   await mkdir(sourceDir, { recursive: true });
@@ -51,7 +51,8 @@ for (const { id, file } of variants) {
   if (!match) throw new Error(`Unexpected SVG shape in ${file}: ${data}`);
   const [, viewBox, body] = match;
   // The icons are single-color glyphs. Anything else would ignore currentColor.
-  if (/fill=|style=|<(?!path)/.test(body)) throw new Error(`${file} has more than plain paths: ${body}`);
+  if (/fill=|style=|<(?!path)/.test(body))
+    throw new Error(`${file} has more than plain paths: ${body}`);
 
   symbols.push(`<symbol id="${id}" viewBox="${viewBox}" fill="currentColor">${body}</symbol>`);
 }
