@@ -101,7 +101,7 @@ Sanitize every loaded plan (from storage or sync): give activities with a missin
 
 The database checks the same rules again with `CHECK` constraints on its columns (see Suggested tables), so nothing that skipped the types can be stored.
 
-The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.theme` as `light` or `dark`, and System removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme).
+The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.color-scheme`. The stored value is the CSS `color-scheme` value it stands for, `light` or `dark`, and System, which is `light dark`, removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme). The copy calls it the theme; the code calls it the color scheme, after the CSS property (see Names in `docs/CODING-GUIDELINES.md`).
 
 ## Layout
 
