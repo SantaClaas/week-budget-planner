@@ -11,7 +11,8 @@ const FALLBACK_START = "@supports not (color: light-dark(#000, #fff))";
 function findLightValue(value: string): string {
   const inner = value.slice("light-dark(".length, -1);
   let depth = 0;
-  for (const [index, character] of [...inner].entries()) {
+  for (let index = 0; index < inner.length; index++) {
+    const character = inner[index];
     if (character === "(") depth++;
     else if (character === ")") depth--;
     else if (character === "," && depth === 0) return inner.slice(0, index).trim();
@@ -35,7 +36,11 @@ function splitFallbacks(text: string): { rest: string; fallbacks: string } {
   let rest = "";
   let fallbacks = "";
   let position = 0;
-  for (let start = text.indexOf(FALLBACK_START); start >= 0; start = text.indexOf(FALLBACK_START, position)) {
+  for (
+    let start = text.indexOf(FALLBACK_START);
+    start >= 0;
+    start = text.indexOf(FALLBACK_START, position)
+  ) {
     const end = text.indexOf("\n  }\n", start);
     rest += text.slice(position, start);
     fallbacks += text.slice(start, end);
