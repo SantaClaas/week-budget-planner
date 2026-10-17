@@ -132,8 +132,11 @@ describe("time", () => {
     expect(formatClock(1080, { locale: "en-GB", hourCycle: "h12" })).toBe("6:00 pm");
     expect(formatClock(450, { locale: "de", hourCycle: "h23" })).toBe("07:30");
     expect(formatClockRange(600, 690, { locale: "en-GB" })).toBe("10:00–11:30");
-    // Thin spaces around the dash and a narrow no-break space before AM.
-    expect(formatClockRange(600, 690, { locale: "en-US" })).toBe("10:00\u2009–\u200911:30\u202FAM");
+    // Which spaces go around the dash and before AM changes between ICU versions (thin, narrow
+    // no-break or plain), so this compares them all as plain spaces.
+    expect(formatClockRange(600, 690, { locale: "en-US" }).replaceAll(/\s/gu, " ")).toBe(
+      "10:00 – 11:30 AM",
+    );
     expect(formatWeekday(0, "short", { locale: "en-GB" })).toBe("Mon");
     expect(formatWeekday(6, "long", { locale: "de" })).toBe("Sonntag");
   });
