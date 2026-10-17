@@ -6,6 +6,7 @@
 export async function loadPolyfills(): Promise<void> {
   const loading: Promise<unknown>[] = [];
   if (!("Temporal" in globalThis)) loading.push(import("temporal-polyfill/global"));
-  if (!("DurationFormat" in Intl)) loading.push(import("@formatjs/intl-durationformat/polyfill.js"));
+  if (!("DurationFormat" in Intl))
+    loading.push(import("@formatjs/intl-durationformat/polyfill.js"));
   await Promise.all(loading);
 }
