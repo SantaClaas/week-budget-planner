@@ -38,9 +38,14 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 ### Branded types
 
-**A value with rules is a branded type.** When a number or a string has to meet rules (a block's length, an id, a day of the week), give it its own type with `Brand` from `src/brand.ts`: `type Length = Brand<number, "Length">`. At runtime it's still the plain value, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it.
+**Give a value its own type when it means something of its own.** A branded type is a plain number or string at runtime, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it. Make one with `Brand` from `src/brand.ts`: `type Length = Brand<number, "Length">`. Two reasons call for one, often both at once:
 
-- **Only the module that defines a brand creates one**, with `as`, inside its sanitizer or parser. Everywhere else, a value gets its brand by going through one of those. So a branded value is always valid, and code that takes one doesn't check again.
+- **The value has rules.** A block's length is a multiple of 15 from 15 to 1440. Once only its sanitizer can make a `Length`, every `Length` is valid, and code that takes one doesn't check again.
+- **It could be mixed up with another value of the same plain type.** `updateName(userId: string, name: string)` accepts `updateName(newName, userId)` without complaint. At runtime it finds no such user and fails quietly, or at best returns an error. With `updateName(id: UserId, name: string)` the swap doesn't compile. Ids are the clearest case, since they're often passed next to other strings: an `ActivityId` can't stand in for a `BlockId` either. The same goes for numbers that share a unit but not a meaning, such as `DayMinute` and `WeekMinute`. Whether the other argument (`name` here) needs a brand too is a judgment call: brand it when it's easy to swap with something else, not by reflex.
+
+How to use them:
+
+- **Only the module that defines a brand creates one**, with `as`, inside its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those.
 - **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
 - **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
 - **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.
