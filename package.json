@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
+    "dev": "vite --configLoader native",
+    "build": "tsc -b && vite build --configLoader native",
+    "preview": "vite preview --configLoader native",
+    "test": "vitest run --configLoader native",
     "test:browser": "pnpm build && playwright test",
     "typecheck": "tsc -b",
     "lint": "oxlint",
@@ -42,7 +42,7 @@
     "vitest": "5.0.4"
   },
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=26.12.0"
   },
   "packageManager": "pnpm@10.28.0",
   "pnpm": {
