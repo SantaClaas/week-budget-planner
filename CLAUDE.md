@@ -67,7 +67,7 @@ This project uses Google Chrome's [Modern Web Guidance](https://github.com/Googl
 
 ## Working agreements
 
-- **The interface comes first.** Start from what the user interface (or, for an API, the contract) needs and derive the types and structure from it. The user experience outranks every other guideline. See "The interface comes first" in `docs/CODING-GUIDELINES.md`.
+- **The consumer's needs come first.** Start from what the user (or, for an API, the program using it) needs, derive the interface from that, and the types and structure from the interface. Those needs outrank every other guideline. See "The consumer's needs come first" in `docs/CODING-GUIDELINES.md`.
 - Match the prototype's interactions exactly, including the keyboard and touch paths, except for the spec's "Changes from the prototype" or other changes the user asks for.
 - **Ask before the browser asks.** Never trigger a browser permission prompt (persistent storage, location, camera and so on) without the app first explaining why in its own UI, with a button that makes the request. See Browser permissions in the spec.
 - Use the spec's glossary for every name, in UI copy and in code: "block" (never "tile"), "slot", "length", "placing" (never "armed"), "left to place", "over budget". Keep the copy plain. If you need a new term, add it to the glossary first.
