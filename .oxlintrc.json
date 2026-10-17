@@ -49,7 +49,11 @@
     "max-lines": "off",
     "max-lines-per-function": "off",
     "max-classes-per-file": "off",
-    "import/max-dependencies": "off"
+    "import/max-dependencies": "off",
+    // Imports name the file in full, as Node's type stripping needs, in every file and not only
+    // the ones Node runs, so any module could run there as it is (see Formatting and linting in
+    // docs/CODING-GUIDELINES.md).
+    "import/extensions": ["error", "always", { "ignorePackages": true }]
   },
   "env": {
     "builtin": true,
@@ -63,10 +67,7 @@
       "rules": {
         // The build scripts work through files one at a time on purpose: downloads stay polite,
         // and the output is the same on every run.
-        "no-await-in-loop": "off",
-        // Node runs these files through its type stripping, which only finds a file by its full
-        // name (see Formatting and linting in docs/CODING-GUIDELINES.md).
-        "import/extensions": ["error", "always", { "ignorePackages": true }]
+        "no-await-in-loop": "off"
       }
     },
     {
