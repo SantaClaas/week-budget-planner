@@ -1,16 +1,9 @@
 import { sumPlacedByActivity, calculateWeeklyBudget } from "./budget";
-import { clamp } from "./time";
-import {
-  DAY,
-  DEFAULT_SHAPES,
-  MAX_LENGTH,
-  PALETTE,
-  SLOT,
-  WEEKLY_DEFAULT_LENGTH,
-  type Activity,
-  type Block,
-  type Plan,
-} from "./types";
+import { DAY, MAX_LENGTH, SLOT, clamp, sanitizeLength, type Length } from "./time";
+import { DEFAULT_SHAPES, PALETTE, type Activity, type Block, type Hue, type Plan, type Shape } from "./types";
+
+/** Default length for activities counted per week: one lecture slot. */
+const WEEKLY_DEFAULT_LENGTH = 90;
 
 /** 32-bit FNV-1a over the UTF-8 bytes of `text`. */
 export function hashFnv1a32(text: string): number {
@@ -38,11 +31,11 @@ function findFirstUnused<T>(items: readonly T[], start: number, used: ReadonlySe
 export function pickDefaultLook(
   id: string,
   others: readonly Pick<Activity, "hue" | "shape">[],
-): { hue: number; shape: string } {
+): { hue: Hue; shape: Shape } {
   const hash = hashFnv1a32(id);
-  const hues = PALETTE.map((color) => color.hue);
+  const hues: Hue[] = PALETTE.map((color) => color.hue);
   const hue = findFirstUnused(hues, hash % hues.length, new Set(others.map((other) => other.hue)));
-  const shape = findFirstUnused<string>(
+  const shape = findFirstUnused<Shape>(
     DEFAULT_SHAPES,
     (hash >>> 8) % DEFAULT_SHAPES.length,
     new Set(others.map((other) => other.shape)),
@@ -54,11 +47,11 @@ export function pickDefaultLook(
  * The length a new block gets: the per-day budget for per-day activities, otherwise one lecture
  * slot, capped at what's left when something is, never under one slot or over a day.
  */
-export function pickDefaultLength(activity: Activity, blocks: readonly Block[]): number {
+export function pickDefaultLength(activity: Activity, blocks: readonly Block[]): Length {
   const left = calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
-  let length = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
+  let length: number = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
   if (left > 0) length = Math.min(length, left);
-  return clamp(length, SLOT, MAX_LENGTH);
+  return sanitizeLength(clamp(length, SLOT, MAX_LENGTH));
 }
 
 /**
@@ -67,11 +60,11 @@ export function pickDefaultLength(activity: Activity, blocks: readonly Block[]):
  */
 export function fitToDayHours(
   start: number,
-  length: number,
+  length: Length,
   plan: Pick<Plan, "dayStart" | "dayEnd">,
-): number {
+): Length {
   const dayStart = plan.dayStart * 60;
   const dayEnd = plan.dayEnd * 60;
   if (start < dayStart || start >= dayEnd) return length;
-  return clamp(Math.min(length, dayEnd - start), SLOT, DAY);
+  return sanitizeLength(clamp(Math.min(length, dayEnd - start), SLOT, DAY));
 }
