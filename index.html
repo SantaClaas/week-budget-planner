@@ -59,8 +59,12 @@
           storage?.setItem(flag, "1");
           location.reload();
         };
+        const url = new URL("service-worker.js", document.baseURI).href;
+        // Registering takes a trusted script URL (see Security in docs/SPEC.md). This policy
+        // only ever returns the one service worker URL.
+        const policy = window.trustedTypes?.createPolicy("service-worker", { createScriptURL: () => url });
         navigator.serviceWorker
-          .register(new URL("service-worker.js", document.baseURI))
+          .register(policy ? policy.createScriptURL(url) : url)
           .then(() => {
             if (navigator.serviceWorker.controller) reloadOnce();
             else navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
