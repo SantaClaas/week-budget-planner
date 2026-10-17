@@ -2,6 +2,6 @@
 
 /** The app's version, from vite-plugins/app-version.ts. */
 declare module "virtual:app-version" {
-  const version: { date: string; commit?: { hash: string; url: string } };
+  const version: { date: string; commit?: string; url: string };
   export default version;
 }
