@@ -2,7 +2,7 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "es2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "ESNext.Temporal"],
     "types": ["node"],
     "skipLibCheck": true,
 
@@ -30,6 +30,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "drizzle.config.ts",
+    "vite-plugins",
     "scripts",
     "oxlint-plugins"
   ]
