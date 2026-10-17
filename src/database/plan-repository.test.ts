@@ -39,6 +39,22 @@ describe("migrations", () => {
     for (const name of MIGRATION_NAMES) expect(name).toMatch(/^\d{14}_/u);
   });
 
+  it("makes every table STRICT, which drizzle-kit leaves out", async () => {
+    // A migration drizzle-kit generates later, for example one that rebuilds a table to change it,
+    // comes without STRICT. Add it to that migration's SQL by hand, as in the first one.
+    const connection = await connect(":memory:");
+    await runMigrations(connection);
+    const statement = await connection.prepare(
+      "SELECT name, strict FROM pragma_table_list WHERE schema = 'main' AND name NOT LIKE 'sqlite%' AND name <> '__drizzle_migrations' ORDER BY name",
+    );
+    const tables: unknown[] = await statement.all();
+    expect(tables).toEqual([
+      { name: "activities", strict: 1 },
+      { name: "blocks", strict: 1 },
+      { name: "settings", strict: 1 },
+    ]);
+  });
+
   it("can run again on a migrated database", async () => {
     const connection = await connect(":memory:");
     await runMigrations(connection);
