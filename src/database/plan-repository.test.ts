@@ -1,20 +1,20 @@
 import { connect } from "@tursodatabase/database";
 import { describe, expect, it } from "vitest";
 
-import { createExampleWeek } from "../plan/example";
-import { sanitizeActivityId, sanitizeBlockId } from "../plan/id";
+import { createExampleWeek } from "../plan/example.ts";
+import { sanitizeActivityId, sanitizeBlockId } from "../plan/id.ts";
 import {
   sanitizeDayIndex,
   sanitizeDayMinute,
   sanitizeDayStart,
   sanitizeLength,
-} from "../plan/time";
-import type { Plan } from "../plan/types";
-import { createLocalQueryService, type TursoConnection } from "./connection";
-import { createDatabase, type Database } from "./drizzle";
-import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migrations";
-import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository";
-import { blocks as blocksTable } from "./schema";
+} from "../plan/time.ts";
+import type { Plan } from "../plan/types.ts";
+import { createLocalQueryService, type TursoConnection } from "./connection.ts";
+import { createDatabase, type Database } from "./drizzle.ts";
+import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migrations.ts";
+import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository.ts";
+import { blocks as blocksTable } from "./schema.ts";
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
 async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {

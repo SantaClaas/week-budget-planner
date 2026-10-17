@@ -8,7 +8,7 @@ import {
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
-import type { ActivityId, BlockId } from "../plan/id";
+import type { ActivityId, BlockId } from "../plan/id.ts";
 import {
   DAY,
   MAX_LENGTH,
@@ -20,8 +20,8 @@ import {
   type DayMinute,
   type Hour,
   type Length,
-} from "../plan/time";
-import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/types";
+} from "../plan/time.ts";
+import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/types.ts";
 
 // The columns hold the plan's branded values, and CHECK constraints enforce the same rules as their
 // sanitizers (see Data model in docs/SPEC.md), so nothing that skipped the types can be stored.
