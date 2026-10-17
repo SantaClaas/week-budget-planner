@@ -321,7 +321,6 @@
   .label-small { font-size: .6875rem; line-height: calc(16 / 11); font-weight: 500; letter-spacing: .0312rem; }
   .emphasized:is(.display-small, .headline-large, .headline-medium, .headline-small, .title-large, .body-large, .body-medium, .body-small) { font-weight: 500; }
   .emphasized:is(.title-medium, .title-small, .label-large, .label-medium, .label-small) { font-weight: 700; }
-  .brand { font-variation-settings: "ROND" 100; font-weight: 600; letter-spacing: -.0125rem; }
   .muted { color: var(--on-surface-variant); }
   /* Hidden on screen, still read by screen readers: names icon-only buttons and adds context. It
      shows again when focus is inside it, for skip links. !important so no component can undo it. */
