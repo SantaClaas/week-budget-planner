@@ -5,9 +5,10 @@ import { readActivityForm } from "./activity-form";
 import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget";
 import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "./defaults";
 import { layoutLanes } from "./lanes";
-import { sanitizePlan } from "./sanitize";
 import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots";
-import { snapDown, formatClock, formatLength, formatShort, snap } from "./time";
+import { formatClock, formatClockRange, formatLength, formatWeekday } from "./format";
+import { createId, sanitizePlan } from "./sanitize";
+import { snapDown, snap } from "./time";
 import { DEFAULT_SHAPES, SHAPES, type Activity, type Block } from "./types";
 import {
   splitIntoParts,
@@ -50,16 +51,34 @@ describe("time", () => {
     expect(snapDown(59)).toBe(45);
   });
 
-  it("formats lengths and clock times", () => {
-    expect(formatLength(90)).toBe("1 h 30 min");
-    expect(formatLength(45)).toBe("45 min");
-    expect(formatLength(180)).toBe("3 h");
-    expect(formatLength(-30)).toBe("30 min");
-    expect(formatShort(90)).toBe("1h30");
-    expect(formatShort(65)).toBe("1h05");
-    expect(formatShort(30)).toBe("30m");
-    expect(formatClock(450)).toBe("07:30");
-    expect(formatClock(1500)).toBe("01:00");
+  it("formats lengths with Intl", () => {
+    const british = { locale: "en-GB" };
+    const american = { locale: "en-US" };
+    expect(formatLength(90, "short", american)).toBe("1 hr, 30 min");
+    expect(formatLength(45, "short", american)).toBe("45 min");
+    expect(formatLength(180, "short", american)).toBe("3 hr");
+    expect(formatLength(-30, "short", american)).toBe("30 min");
+    expect(formatLength(0, "short", american)).toBe("0 min");
+    expect(formatLength(90, "short", british)).toBe("1 hr, 30 mins");
+    expect(formatLength(90, "narrow", british)).toBe("1h 30m");
+    expect(formatLength(65, "narrow", british)).toBe("1h 5m");
+    expect(formatLength(30, "narrow", british)).toBe("30m");
+    expect(formatLength(1440, "narrow", british)).toBe("24h");
+    expect(formatLength(90, "short", { locale: "de" })).toBe("1 Std., 30 Min.");
+  });
+
+  it("formats clock times and weekdays with Intl", () => {
+    expect(formatClock(450, { locale: "en-GB" })).toBe("07:30");
+    expect(formatClock(1500, { locale: "en-GB" })).toBe("01:00");
+    expect(formatClock(450, { locale: "en-US" })).toBe("7:30 AM");
+    expect(formatClock(450, { locale: "en-US", hourCycle: "h23" })).toBe("07:30");
+    expect(formatClock(1080, { locale: "en-GB", hourCycle: "h12" })).toBe("6:00 pm");
+    expect(formatClock(450, { locale: "de", hourCycle: "h23" })).toBe("07:30");
+    expect(formatClockRange(600, 690, { locale: "en-GB" })).toBe("10:00–11:30");
+    // Thin spaces around the dash and a narrow no-break space before AM.
+    expect(formatClockRange(600, 690, { locale: "en-US" })).toBe("10:00\u2009–\u200911:30\u202fAM");
+    expect(formatWeekday(0, "short", { locale: "en-GB" })).toBe("Mon");
+    expect(formatWeekday(6, "long", { locale: "de" })).toBe("Sonntag");
   });
 });
 
@@ -125,7 +144,7 @@ describe("week", () => {
   it("moves keeping the length, overflowing into the next day", () => {
     const moved = moveTo(block({ length: 240 }), 1, 1320);
     expect(moved).toMatchObject({ day: 1, start: 1320, length: 240 });
-    expect(describeTime(moved)).toBe("Tue 22:00 – Wed 02:00 · 4h");
+    expect(describeTime(moved, { locale: "en-GB" })).toBe("Tue 22:00 – Wed 02:00 · 4h");
     expect(moveTo(block(), 7, 1500)).toMatchObject({ day: 0, start: 1425 });
   });
 
@@ -281,8 +300,14 @@ describe("sanitize", () => {
 
   it("keeps a valid example time, normalized to UTC", () => {
     expect(sanitizePlan({ exampleLoadedAt: "2026-10-15T22:30:00+02:00" }).exampleLoadedAt).toBe(
-      "2026-10-15T20:30:00.000Z",
+      "2026-10-15T20:30:00Z",
     );
+  });
+
+  it("creates 12-character ids without lookalike characters", () => {
+    const ids = Array.from({ length: 200 }, createId);
+    for (const id of ids) expect(id).toMatch(/^[6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz]{12}$/);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("returns an empty plan for anything that isn't a plan", () => {
