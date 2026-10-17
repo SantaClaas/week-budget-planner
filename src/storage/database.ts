@@ -1,9 +1,10 @@
 import { databaseService, getDatabase } from "../database/client";
+
+export { hasDatabaseFile, removeBrokenDatabase } from "../database/client";
 import { loadPlan, savePlan } from "../database/plan-repository";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast";
-import * as planFile from "../plan/file";
 import * as jsonFile from "./json-file";
-import type { PlanStore } from "./plan-store";
+import { InvalidFileError, type PlanStore } from "./plan-store";
 
 /** The full level: the SQLite database in OPFS, shared by every tab through the leader. */
 export function create(): PlanStore {
@@ -25,13 +26,17 @@ export function create(): PlanStore {
     async importFile(file) {
       if (jsonFile.isJson(file)) {
         // A plan exported at a limited level: replace the stored plan with it.
+        const imported = await jsonFile.read(file);
         const { plan: current } = await loadPlan(database);
-        await savePlan(database, current, planFile.parse(await file.text()));
+        await savePlan(database, current, imported);
         broadcastMessage({ type: "Plan changed" });
         return;
       }
-      // The leader writes the file to OPFS and reloads every tab, including this one.
-      await databaseService.importFile(new Uint8Array(await file.arrayBuffer()));
+      // The leader checks the file, writes it to OPFS and reloads every tab, including this one.
+      const result = await databaseService.importFile(new Uint8Array(await file.arrayBuffer()));
+      if (result === "invalid-file") {
+        throw new InvalidFileError("This file isn't a Week Budget Planner database, so nothing was changed.");
+      }
     },
     wipe: () => databaseService.wipe(),
     onExternalChange(callback) {
