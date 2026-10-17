@@ -385,6 +385,7 @@ The design canvas made these choices without a Google source. Confirm each again
 - Google Sans Flex as the typeface. Google's baseline type tokens use the system sans-serif (Roboto on Android).
 - Approximating the springs with CSS `linear()` easing.
 - The focus ring (2px outline in `primary`, 2px offset). Look up Material's focus indicator.
+- In-place prompts as cards (the example-week card, the keep-your-plan card). Material 2 had a banner component for persistent, nonmodal messages. Material 3's code (androidx `material3`, Material Components for Android) has none, but m3.material.io couldn't be checked. If M3 recommends a pattern for this, use it.
 
 Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 
