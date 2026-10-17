@@ -142,17 +142,6 @@ export const DEFAULT_SHAPES = [
   "cookie-12",
 ] as const satisfies readonly (typeof SHAPES)[number][];
 
-export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-export const DAY_NAMES_LONG = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-] as const;
-
 export function createEmptyPlan(): Plan {
   return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, exampleLoadedAt: null };
 }
