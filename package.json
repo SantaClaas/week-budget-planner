@@ -11,9 +11,9 @@
     "lint": "oxlint",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "icons:fetch": "node scripts/build-iconset.mjs --fetch",
-    "icons": "node scripts/build-iconset.mjs",
-    "shapes": "node scripts/build-shapes.mjs",
+    "icons:fetch": "node scripts/build-iconset.ts --fetch",
+    "icons": "node scripts/build-iconset.ts",
+    "shapes": "node scripts/build-shapes.ts",
     "database:generate": "drizzle-kit generate"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "temporal-polyfill": "1.0.6"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.88.0",
     "@solidjs/vite-plugin": "3.0.0-next.47",
     "@tursodatabase/database": "0.8.3",
     "@types/node": "26.6.5",
@@ -39,7 +40,7 @@
     "vitest": "5.0.4"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "packageManager": "pnpm@10.28.0",
   "pnpm": {

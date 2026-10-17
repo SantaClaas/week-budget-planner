@@ -1,3 +1,4 @@
+import type { JSX } from "@solidjs/web";
 import { createSignal, onSettled, Show } from "solid-js";
 
 import { createExampleWeek } from "./plan/example";
@@ -7,7 +8,7 @@ import { NewerVersionError, type PlanStore } from "./storage/plan-store";
 
 // Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
 // shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.
-export function App() {
+export function App(): JSX.Element {
   const [store, setStore] = createSignal<PlanStore>();
   const [plan, setPlan] = createSignal<Plan>();
   const [problem, setProblem] = createSignal<"newer-version">();
