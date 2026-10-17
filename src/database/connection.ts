@@ -1,4 +1,12 @@
-type SqlValue = string | number | bigint | null | Uint8Array;
+/** A value SQLite can store, as Drizzle and Turso pass them. */
+export type SqlValue = string | number | bigint | null | Uint8Array;
+
+export const isSqlValue = (value: unknown): value is SqlValue =>
+  value === null ||
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "bigint" ||
+  value instanceof Uint8Array;
 
 /**
  * One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. `params` is
@@ -55,7 +63,7 @@ async function execute(
   if (method === "get") {
     // One row, or undefined when nothing matched. Drizzle handles both, though its type only
     // names the row.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- Drizzle's type names only the row, but it takes undefined for no row.
     return { rows: (await statement.get(...parameters)) as unknown[] };
   }
   return { rows: await statement.all(...parameters) };
@@ -76,7 +84,7 @@ export function createLocalQueryService(
         const results: QueryResult[] = [];
         for (const { sql, params: parameters, method } of statements) {
           // One after another, in order, inside the transaction.
-          // oxlint-disable-next-line no-await-in-loop -- see above
+          // oxlint-disable-next-line no-await-in-loop -- a transaction runs its statements in order.
           results.push(await execute(connection, sql, parameters, method));
         }
         await connection.exec("COMMIT");

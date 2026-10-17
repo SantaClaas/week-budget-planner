@@ -12,11 +12,8 @@ const createStorage = () => {
   };
 };
 
-const storageEvent = (key: string | null) => {
-  const event = new Event("storage") as Event & { key: string | null };
-  Object.defineProperty(event, "key", { value: key });
-  return event;
-};
+// Node has no StorageEvent, so a plain event carries the key.
+const storageEvent = (key: string | null): Event => Object.assign(new Event("storage"), { key });
 
 describe("theme", () => {
   it("follows the system until a choice is stored", () => {
@@ -24,7 +21,7 @@ describe("theme", () => {
     expect(theme.read(storage)).toBe("system");
     storage.setItem("week-budget-planner.theme", "sepia");
     expect(theme.read(storage)).toBe("system");
-    expect(theme.read(undefined)).toBe("system");
+    expect(theme.read()).toBe("system");
   });
 
   it("stores light and dark, and removes the entry for system", () => {
@@ -61,7 +58,14 @@ describe("theme", () => {
     const meta = { content: "light dark" };
     const events = new EventTarget();
     const seen: theme.Theme[] = [];
-    const stop = theme.listenForChanges((next) => seen.push(next), events, storage, meta);
+    const stop = theme.listenForChanges(
+      (next) => {
+        seen.push(next);
+      },
+      events,
+      storage,
+      meta,
+    );
     storage.setItem("week-budget-planner.theme", "dark");
     events.dispatchEvent(storageEvent("week-budget-planner.theme"));
     events.dispatchEvent(storageEvent("something-else"));

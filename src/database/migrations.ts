@@ -12,7 +12,7 @@ const loaders = import.meta.glob<string>("../../drizzle/*/migration.sql", {
 });
 
 /** A migration's name is its folder name, which starts with the timestamp the migrator sorts by. */
-const readName = (path: string) => path.split("/").at(-2)!;
+const readName = (path: string): string => path.split("/").at(-2) ?? path;
 
 const loaderByName = new Map(Object.entries(loaders).map(([path, load]) => [readName(path), load]));
 
@@ -57,23 +57,23 @@ export async function runMigrations(connection: TursoConnection): Promise<void> 
   if ([...applied].some((name) => !loaderByName.has(name))) {
     throw new NewerDatabaseError("The database was made by a newer version of the app.");
   }
-  const pending = MIGRATION_NAMES.filter((name) => !applied.has(name));
+  const pending = [...loaderByName].filter(([name]) => !applied.has(name));
   if (pending.length === 0) return;
 
   const [{ migrate }, driverCore, files] = await Promise.all([
     import("drizzle-orm/tursodatabase/wasm-migrator"),
     import("drizzle-orm/tursodatabase/driver-core"),
-    Promise.all(pending.map((name) => loaderByName.get(name)!())),
+    Promise.all(pending.map(async ([name, load]) => [name, await load()] as const)),
   ]);
   // `construct` wraps an already open Turso client in Drizzle's Turso driver. It is exported at
   // runtime but missing from the type declarations. Using it (rather than drizzle-orm/tursodatabase/wasm)
   // avoids importing a second entry point of @tursodatabase/database-wasm next to the Vite one.
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- construct() exists at runtime, but Drizzle's types leave it out.
   const driver = driverCore as unknown as {
     construct(client: unknown): Parameters<typeof migrate>[0];
   };
   // Drizzle runs every migration whose name isn't in its table, so only the pending ones are passed.
-  const migrations = Object.fromEntries(pending.map((name, index) => [name, files[index]!]));
+  const migrations = Object.fromEntries(files);
   const result = await migrate(driver.construct(connection), { migrations });
   if (result) throw new Error(`Database migration failed: ${JSON.stringify(result)}`);
 }

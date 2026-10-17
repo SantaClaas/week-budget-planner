@@ -21,8 +21,8 @@ const TRUSTED_HTML_MODULE = "src/trusted-html.ts";
 /** The only file that may import the module, and only to create the policy before anything else. */
 const ENTRY_MODULE = "src/index.tsx";
 
-const IMPORT_PATTERN = /(?:from|import)\s*\(?\s*["'][^"']*trusted-html(?:\.ts)?["']/;
-const INLINE_SCRIPT_PATTERN = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
+const IMPORT_PATTERN = /(?:from|import)\s*\(?\s*["'][^"']*trusted-html(?:\.ts)?["']/u;
+const INLINE_SCRIPT_PATTERN = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gu;
 
 function buildPolicy(scriptHashes: string[]): string {
   return [
@@ -65,7 +65,7 @@ export function findTemplates(code: string): string[] {
       const html = node.arguments[0];
       if (html?.type === "TemplateLiteral" && html.expressions.length === 0) {
         const cooked = html.quasis[0]?.value.cooked;
-        if (cooked != null) templates.push(cooked);
+        if (typeof cooked === "string") templates.push(cooked);
       } else if (html?.type === "Literal" && typeof html.value === "string") {
         templates.push(html.value);
       } else {
@@ -85,7 +85,11 @@ export function contentSecurityPolicy({
   trustedHtmlFiles = [],
 }: { trustedHtmlFiles?: string[] } = {}): Plugin[] {
   let root = process.cwd();
-  const relative = (id: string) => path.relative(root, id.split("?")[0]).split(path.sep).join("/");
+  const relative = (id: string) =>
+    path
+      .relative(root, id.split("?")[0] ?? id)
+      .split(path.sep)
+      .join("/");
 
   return [
     {
@@ -130,7 +134,7 @@ export function contentSecurityPolicy({
         handler(html, context) {
           // Development has the report-only header instead: Vite's own scripts aren't hashed.
           if (context.server) return html;
-          const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script]) =>
+          const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script = ""]) =>
             hashScript(script),
           );
           return [

@@ -1,3 +1,5 @@
+/* oxlint-disable require-await, typescript/require-await -- PlanStore's methods are async so that a
+   throw (localStorage full or blocked, for example) arrives as a rejection, like the database's. */
 import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
 import * as jsonFile from "./json-file";
@@ -24,7 +26,8 @@ export function create(): PlanStore {
       plan = undefined;
     },
     onExternalChange() {
-      return () => undefined;
+      // Nothing else can change a plan that only this tab holds.
+      return () => {};
     },
   };
 }

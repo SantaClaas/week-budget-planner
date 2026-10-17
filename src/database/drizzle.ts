@@ -1,8 +1,16 @@
 import { drizzle, type SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
-import type { QueryService } from "./connection";
+import { isSqlValue, type QueryService, type SqlValue } from "./connection";
 
 export type Database = SqliteRemoteDatabase;
+
+/** Drizzle types its parameters as `any[]`. Every one has to be a value SQLite can store. */
+function checkParameters(parameters: unknown[]): SqlValue[] {
+  return parameters.map((parameter) => {
+    if (!isSqlValue(parameter)) throw new TypeError(`Can't store ${typeof parameter} in SQLite.`);
+    return parameter;
+  });
+}
 
 /**
  * The app's Drizzle instance. It has no database of its own: Drizzle builds the SQL and hands it to
@@ -12,7 +20,7 @@ export type Database = SqliteRemoteDatabase;
  */
 export function createDatabase(service: QueryService): Database {
   return drizzle(
-    (sql, parameters, method) => service.query(sql, parameters, method),
+    (sql, parameters: unknown[], method) => service.query(sql, checkParameters(parameters), method),
     (statements) => service.batch(statements),
   );
 }

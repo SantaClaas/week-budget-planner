@@ -73,5 +73,7 @@ export function listenForChanges(
     callback(theme);
   };
   events.addEventListener("storage", listener);
-  return () => events.removeEventListener("storage", listener);
+  return () => {
+    events.removeEventListener("storage", listener);
+  };
 }
