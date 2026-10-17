@@ -5,3 +5,7 @@ rules:
       policies:
         # Every action, GitHub's own included, is pinned to a commit hash.
         "*": hash-pin
+  # Reads the version from a comment at the end of the `uses:` line. Ours sits on the line above,
+  # and scripts/check-action-pins.ts checks that the hash is that version's commit instead.
+  ref-version-mismatch:
+    disable: true
