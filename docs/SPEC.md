@@ -107,7 +107,10 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
 
 ### Wide screens (desktop and tablets, 52.5em and up)
 
-- **Navigation rail** on the left, the full height of the window: what the navigation bar is on a phone, and never shown together with it. It's the collapsed rail (96dp wide; androidx `NavigationRailCollapsedTokens`), with its container fill off so it sits on the page background (m3.material.io allows this as long as items keep 3:1 contrast). From the top: 44dp of space, a "New activity" floating action button (56dp, icon only, named "New activity" with a tooltip, resting at elevation level 0 as Google asks for a FAB inside the rail), at least 40dp of space, then **Week** and **Activities**. **Settings** sits at the very bottom. Destinations are 4dp apart and use the same active indicator and filled icon as the navigation bar (56×32dp, `secondary-container`). Google asks for 3 to 7 destinations in a collapsed rail, so all three of the bar's are here. **Week** is the week with the Activities pane beside it, Google's supporting-pane layout (a fixed 360dp pane beside the focus pane). **Activities** is the activity list as its own page, for managing activities without the week.
+- **Navigation rail** on the left, the full height of the window: what the navigation bar is on a phone, and never shown together with it. Its container fill is off, so it sits on the page background (m3.material.io allows this as long as items keep 3:1 contrast). From the top: 44dp of space, a menu button that expands and collapses the rail, the "New activity" floating action button, at least 40dp of space, then **Week**, **Activities** and **Settings** as one group, 4dp apart. Google asks for 3 to 7 destinations, so the rail has the same three as the bar. The FAB rests at elevation level 0, as Google asks for a FAB inside the rail.
+  - **Collapsed** (the default; 96dp, androidx `NavigationRailCollapsedTokens`): the menu button shows `menu` and is named "Expand navigation". The FAB is 56dp with only its icon, named "New activity" with a tooltip. Destinations show the icon above the label, with the navigation bar's active indicator (56×32dp, `secondary-container`) and the filled icon when active.
+  - **Expanded** (220 to 360dp, androidx `NavigationRailExpandedTokens`, standard: beside the page, which narrows to make room): the menu button shows `menu_open` and is named "Collapse navigation". The FAB becomes the extended "New activity" FAB. Destinations become rows with the label beside the icon (Label Large, 8dp apart), and the active indicator hugs both (56dp tall, 16dp leading space). The menu button carries `aria-expanded`.
+  - **Week** is the week with the Activities pane beside it, Google's supporting-pane layout (a fixed 360dp pane beside the focus pane). **Activities** is the activity list as its own page (see below).
 - **Top app bar:** the app name, the save status ("Saved in this browser", "Saving…", "Saved in limited storage", "Not saved") and an Undo icon button. The save status is a link to Settings › Your data (see Writes and undo).
 - **Left pane, Activities** (360px wide, scrolls on its own):
   - The example-week card, shown only while `exampleLoadedAt` is set: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
@@ -115,6 +118,7 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
   - The activity list. Each item has a color swatch, the name, the budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress indicator, and an Edit icon button.
   - A hint line: "Drag an activity onto the week, or click an empty slot to add a block there."
   - The rail's "New activity" button opens the form at the top of this pane: name, hours (step 0.25), counted per week or per day, days (shown only for per day), a color picker with 8 colors, and a shape picker with the 35 shapes drawn in the chosen color.
+- **Activities page** (the rail's Activities): the same list as the pane, in a centered column up to 48rem wide, under the summary ("12 h left to place across 4 activities"). Editing works as everywhere, inline in the list item, and the form has room to lay out name, hours and per week or per day on one line. The rail's "New activity" opens the form at the top of the list.
 - **Right pane, the week:**
   - A summary ("20 h placed of 32 h · 12 h left to place") with an overall progress indicator.
   - Tools: a "Day hours" button (opens a menu with the two hour selects, for example "07:00 – 22:00") and "Clear week".
@@ -392,7 +396,6 @@ The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-w
 Every deviation from Google's guidance needs the user's approval before it is built. Approved so far:
 
 - **Over-budget progress** (approved 2026-10): Google's linear progress indicator has no over state. Ours splits the filled part into a within-budget part and an overrun part in `error`, separated by the indicator's own gap (see "Progress over budget" above). In dark mode the overrun uses the error palette's tone 60 instead of the scheme's `error` (tone 80) so it reads as red.
-- **Settings at the bottom of the navigation rail** (approved 2026-10): Google's rail aligns its destinations as one group, at the top or the center, with the FAB and menu always at the top. Ours keeps Week and Activities at the top under the FAB and puts Settings alone at the very bottom, as Google's own rail samples do with a spacer.
 - **GitHub mark** (approved 2026-10): Material Symbols has no brand icons, so the About section's version item, which opens the repository on GitHub, starts with GitHub's own mark from Octicons instead. It sits in the iconset like the Material icons and takes the text color, with 2 units of padding around its 24-unit drawing so it matches Material's drawn area. It's the only icon not from Material Symbols, and GitHub's logo guidelines allow it for linking to GitHub.
 
 ### To check against Google
@@ -402,7 +405,6 @@ The design canvas made these choices without a Google source. Confirm each again
 - The grouped list (20px outer corners, 4px inner corners, 2px gaps). These values came from looking at Android's settings, not from a Google spec.
 - The activity color palettes at chroma 48. M3's guidance for extra, custom colors may prescribe something else, such as harmonizing them with the scheme.
 - Block shapes (8px, 12px when selected, 4px at 15 minutes) and the selected ring.
-- The 16dp of space below Settings at the bottom of the navigation rail. Neither androidx nor the guidelines page gives a value for it.
 - The size and placement of the shape on blocks, and the pickers' selected style.
 - Google Sans Flex as the typeface. Google's baseline type tokens use the system sans-serif (Roboto on Android).
 - Approximating the springs with CSS `linear()` easing.
