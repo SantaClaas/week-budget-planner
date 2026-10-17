@@ -4,6 +4,16 @@ How code in this project is named, split and styled. These are guidelines, not l
 
 The behavior and the design are in `docs/SPEC.md`. The words for things are in its glossary, and the code uses those words too (see "Names" below).
 
+## The interface comes first
+
+**Start every piece of work at its interface.** In an application people use, that's the user interface. For an API it's the contract, and the same holds between machines: the interface is what the other side needs. Work out what the interface needs first, then derive the types, the data and the structure behind it from that.
+
+Working the other way round, from the backend or a data model toward the screen, builds abstractions the interface didn't ask for. When they don't fit, the interface is usually what gets bent, because it's the harder part to change. That's how an app ends up fetching more than it shows, or making several calls where one would do, and the people using it pay for that.
+
+**It outranks every other guideline here.** An application exists to serve the people who use it, and other goals only count through them. Backend architecture, code "cleanness" and other metrics that look good in a review don't matter if the experience gets worse because of them. Maintainability, speed, security and keeping the user's data safe aren't exceptions to this: they matter because users need them, now and in later versions. When a guideline in this file and the experience pull in different directions, the experience wins, and the change says why.
+
+This is the same direction as "Bottom-up" under Refactoring: start with the specific thing in front of you, the screen the user sees, and let the structure come out of it.
+
 ## Names
 
 **Name things for what they are.** A name should tell a reader what the thing is or does without opening it.
@@ -92,7 +102,7 @@ Code adapted from another project, such as flashcut's tab leader and broadcast s
 
 ## Refactoring
 
-**Bottom-up.** Start with the details: write the specific code each case needs and get it working. Structure comes out of that code, not from a plan drawn up before it.
+**Bottom-up.** Start with the details: write the specific code each case needs and get it working. Structure comes out of that code, not from a plan drawn up before it. The first details are the interface's (see "The interface comes first"): the code a screen or a contract needs.
 
 **Compress when it starts to repeat.** Around the second or third time the same thing shows up is when it starts making sense to think about pulling it out. That's a point to think, not a rule. Other reasons to do it can make it earlier or later: a file that has grown too big to read gets split by meaning before anything repeats, and code that only looks alike but means different things stays apart.
 
