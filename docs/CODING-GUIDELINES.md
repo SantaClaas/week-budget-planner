@@ -36,6 +36,17 @@ The behavior and the design are in `docs/SPEC.md`. The words for things are in i
 
 Inside a function, a boolean for a condition is fine. Naming a long condition with one is often clearer, and it doesn't need anything more.
 
+### Branded types
+
+**A value with rules is a branded type.** When a number or a string has to meet rules (a block's length, an id, a day of the week), give it its own type with `Brand` from `src/brand.ts`: `type Length = Brand<number, "Length">`. At runtime it's still the plain value, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it.
+
+- **Only the module that defines a brand creates one**, with `as`, inside its sanitizer or parser. Everywhere else, a value gets its brand by going through one of those. So a branded value is always valid, and code that takes one doesn't check again.
+- **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
+- **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
+- **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.
+- **A fixed set of values is a literal union**, not a brand: `Hue` and `Shape` come from the palette and the shape library.
+- At the edges, the database checks the same rules again with `CHECK` constraints.
+
 ## Modules
 
 **Name a module for what it is.** There are no catch-all folders such as `lib`, `utils`, `shared`, `common` or `helpers`. All code is shared and all of it is useful, so those names say nothing.
