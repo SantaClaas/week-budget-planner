@@ -48,7 +48,10 @@ export function readActivityForm(input: ActivityFormInput, locale?: string): Act
     return { ok: false, field: "hours", message: "Enter the hours it needs, for example 1.5." };
   }
   if (budgetMinutes === "too-large") {
-    const message = input.mode === "day" ? "A day has 24 hours. Enter 24 or less." : "A week has 168 hours. Enter 168 or less.";
+    const message =
+      input.mode === "day"
+        ? "A day has 24 hours. Enter 24 or less."
+        : "A week has 168 hours. Enter 168 or less.";
     return { ok: false, field: "hours", message };
   }
   // Per week, the days aren't asked for and keep their default.

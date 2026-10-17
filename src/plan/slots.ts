@@ -1,11 +1,25 @@
-import { SLOT, sanitizeDayIndex, sanitizeDayMinute, type DayIndex, type DayMinute, type Length } from "./time";
+import {
+  SLOT,
+  sanitizeDayIndex,
+  sanitizeDayMinute,
+  type DayIndex,
+  type DayMinute,
+  type Length,
+} from "./time";
 import type { Activity, Block, Plan } from "./types";
 import { isRangeOverlapping, calculateWeekStart } from "./week";
 
 /** Whether a block of `length` starting at `day`/`start` would overlap any existing block. */
-export function isFree(blocks: readonly Block[], day: DayIndex, start: DayMinute, length: Length): boolean {
+export function isFree(
+  blocks: readonly Block[],
+  day: DayIndex,
+  start: DayMinute,
+  length: Length,
+): boolean {
   const from = calculateWeekStart({ day, start });
-  return !blocks.some((block) => isRangeOverlapping(from, length, calculateWeekStart(block), block.length));
+  return !blocks.some((block) =>
+    isRangeOverlapping(from, length, calculateWeekStart(block), block.length),
+  );
 }
 
 const DAYS = [0, 1, 2, 3, 4, 5, 6].map((day) => sanitizeDayIndex(day));
