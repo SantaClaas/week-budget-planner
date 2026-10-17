@@ -71,6 +71,12 @@
       }
     },
     {
+      // Only the module that defines a brand may create one with `as` (see Branded types in
+      // docs/CODING-GUIDELINES.md). Everywhere else, the rule catches a narrowing `as`.
+      "files": ["src/plan/time.ts", "src/plan/id.ts"],
+      "rules": { "typescript/no-unsafe-type-assertion": "off" }
+    },
+    {
       "files": ["public/service-worker.js"],
       "env": { "serviceworker": true }
     }
