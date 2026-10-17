@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { ISOLATED_URL, PAGES_URL, expectStatus } from "./app";
+import { ISOLATED_URL, PAGES_URL, expectStatus } from "./app.ts";
 
 // The Content Security Policy and Trusted Types (see Security in docs/SPEC.md). They're checked by
 // the browser at runtime, so only a browser can test them.
