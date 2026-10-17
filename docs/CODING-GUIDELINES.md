@@ -107,7 +107,7 @@ This is close to what Casey Muratori calls [semantic compression](https://caseym
 **oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
 
 - The lint runs the correctness, suspicious and perf categories as errors, with type-aware rules (floating promises, unsafe assertions and the like).
-- **A rule that doesn't fit is turned off with a reason**, in `.oxlintrc.json` for a whole kind of file, or with `// oxlint-disable-next-line rule -- why` on one line. A disable without a reason, or one that no longer disables anything, is an error.
+- **A rule that doesn't fit is turned off with a reason**, in `.oxlintrc.json` for a whole kind of file, or with `// oxlint-disable-next-line rule -- why` on one line. Always give the reason; the linter can't check that, but it does fail on a disable that no longer disables anything.
 - `typescript/no-unsafe-type-assertion` is off only where brands are defined (`src/plan/time.ts`, `src/plan/id.ts`) and in tests, so it enforces the branded types rule: a narrowing `as` anywhere else is an error.
 
 ## CSS
