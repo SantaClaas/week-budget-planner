@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { PAGES_URL, expectStatus } from "./app";
+import { PAGES_URL, expectStatus } from "./app.ts";
 
 // The storage levels (see Progressive enhancement in docs/SPEC.md). GitHub Pages can't send the
 // isolation headers, so the full level depends on the service worker adding them. Where that's
