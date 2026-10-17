@@ -13,7 +13,7 @@ import {
   removeFirstBlock,
   toBytes,
   tryLoading,
-} from "./app";
+} from "./app.ts";
 
 // The paths where a failure costs the user their plan: storing it, sharing it between tabs,
 // exporting and importing it, and what happens to a database that can't be opened.

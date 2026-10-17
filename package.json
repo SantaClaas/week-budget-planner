@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build --configLoader native",
     "preview": "vite preview --configLoader native",
     "test": "vitest run --configLoader native",
-    "test:browser": "pnpm build && playwright test",
+    "test:browser": "pnpm build && PW_DISABLE_TS_ESM=1 playwright test",
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "format": "oxfmt",
