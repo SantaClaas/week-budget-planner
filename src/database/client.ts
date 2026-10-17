@@ -29,13 +29,13 @@ const SCOPE = "database";
  */
 type DatabaseService = QueryService & {
   /** Checkpoints the WAL, briefly closes the database, and returns the raw SQLite file bytes. */
-  exportFile(): Promise<Uint8Array>;
+  exportFile(): Promise<Uint8Array<ArrayBuffer>>;
   /**
    * Replaces the database file and reloads every tab. Destructive. Leaves the database as it was
    * and returns "invalid-file" when the file isn't a database this app can open, or
    * "newer-version" when a newer version of the app made it.
    */
-  importFile(bytes: Uint8Array): Promise<ImportCheck | "imported">;
+  importFile(bytes: Uint8Array<ArrayBuffer>): Promise<ImportCheck | "imported">;
   /** Deletes the database files entirely and reloads every tab. Destructive. */
   wipe(): Promise<void>;
 };
@@ -52,13 +52,18 @@ let isElectionStarted = false;
  */
 const REMOVAL_KEY = "week-budget-planner.remove-database";
 
+/** Opens a database file in OPFS through the engine, typed as the part of its API this app uses. */
+async function connectFile(path: string): Promise<TursoConnection> {
+  return connect(path);
+}
+
 async function open(): Promise<TursoConnection> {
   if (readRemovalRequest()) {
     await removeDatabaseFiles();
     localStorage.removeItem(REMOVAL_KEY);
   }
   await removeImportLeftovers();
-  const connection = (await connect(DATABASE_FILE)) as unknown as TursoConnection;
+  const connection = await connectFile(DATABASE_FILE);
   await runMigrations(connection);
   return connection;
 }
@@ -93,11 +98,15 @@ async function removeFile(root: FileSystemDirectoryHandle, name: string): Promis
 }
 
 /** Writes a whole file in OPFS. The file only changes when the write completes. */
-async function writeFile(root: FileSystemDirectoryHandle, name: string, bytes: Uint8Array): Promise<void> {
+async function writeFile(
+  root: FileSystemDirectoryHandle,
+  name: string,
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<void> {
   const handle = await root.getFileHandle(name, { create: true });
   const writable = await handle.createWritable();
   try {
-    await writable.write(bytes as Uint8Array<ArrayBuffer>);
+    await writable.write(bytes);
     await writable.close();
   } catch (error) {
     await writable.abort();
@@ -110,11 +119,15 @@ async function removeImportLeftovers(): Promise<void> {
   const root = await navigator.storage.getDirectory();
   for await (const name of root.keys()) {
     if (!name.startsWith(IMPORT_FILE_PREFIX)) continue;
-    await root.removeEntry(name).catch((error: unknown) => console.debug("[database] kept a locked import copy", name, error));
+    await root
+      .removeEntry(name)
+      .catch((error: unknown) =>
+        console.debug("[database] kept a locked import copy", name, error),
+      );
   }
 }
 
-async function readFileBytes(): Promise<Uint8Array> {
+async function readFileBytes(): Promise<Uint8Array<ArrayBuffer>> {
   const root = await navigator.storage.getDirectory();
   const handle = await root.getFileHandle(DATABASE_FILE);
   const file = await handle.getFile();
@@ -122,7 +135,8 @@ async function readFileBytes(): Promise<Uint8Array> {
 }
 
 const hasSqliteHeader = (bytes: Uint8Array): boolean =>
-  bytes.length >= SQLITE_HEADER.length && SQLITE_HEADER.every((byte, index) => bytes[index] === byte);
+  bytes.length >= SQLITE_HEADER.length &&
+  SQLITE_HEADER.every((byte, index) => bytes[index] === byte);
 
 type ImportCheck = "importable" | "invalid-file" | "newer-version";
 
@@ -130,14 +144,14 @@ type ImportCheck = "importable" | "invalid-file" | "newer-version";
  * Whether the file is a database this app can open: it has the SQLite header, and a copy of it
  * opens, migrates and holds a readable plan. The copy is deleted again either way.
  */
-async function checkImport(bytes: Uint8Array): Promise<ImportCheck> {
+async function checkImport(bytes: Uint8Array<ArrayBuffer>): Promise<ImportCheck> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
   const root = await navigator.storage.getDirectory();
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   await writeFile(root, name, bytes);
   let connection: TursoConnection | undefined;
   try {
-    connection = (await connect(name)) as unknown as TursoConnection;
+    connection = await connectFile(name);
     await runMigrations(connection);
     const opened = connection;
     await loadPlan(createDatabase(createLocalQueryService(async () => opened)));
@@ -243,9 +257,12 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
   if (!channel || !consumer) {
     channel = new BroadcastChannel(CHANNEL_NAME);
     consumer = consume<DatabaseService>(channel, SCOPE);
-    channel.addEventListener("message", (event: MessageEvent<{ scope?: string; kind?: string }>) => {
-      if (event.data?.scope === SCOPE && event.data.kind === "reload") location.reload();
-    });
+    channel.addEventListener(
+      "message",
+      (event: MessageEvent<{ scope?: string; kind?: string }>) => {
+        if (event.data?.scope === SCOPE && event.data.kind === "reload") location.reload();
+      },
+    );
   }
   return { channel, consumer };
 }
@@ -253,13 +270,13 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
 function startElection(): void {
   if (isElectionStarted) return;
   isElectionStarted = true;
-  const { channel, consumer } = setUp();
+  const connected = setUp();
   void navigator.locks.request(LOCK_NAME, async () => {
     isLeader = true;
-    consumer.handlePromotion();
+    connected.consumer.handlePromotion();
     // Serve right away: calls wait for the database inside the service, and the other tabs see
     // this tab answering while the engine loads (see "Calls between tabs" in docs/SPEC.md).
-    provide(channel, SCOPE, localService);
+    provide(connected.channel, SCOPE, localService);
     console.debug("[database] acquired leader lock, serving the database");
     await getLocalConnection().catch(() => undefined);
     // Hold the lock, and with it leadership, until this tab dies.
@@ -270,11 +287,13 @@ function startElection(): void {
 /** Runs `operation` locally when leader, otherwise through the leader tab. */
 async function callService<T>(operation: (service: DatabaseService) => Promise<T>): Promise<T> {
   startElection();
-  const { consumer } = setUp();
+  const leader = setUp().consumer;
   while (true) {
     if (isLeader) return operation(localService);
     try {
-      return await operation(consumer.proxy);
+      // Tried again only after a promotion, so this loop runs at most twice.
+      // oxlint-disable-next-line no-await-in-loop -- see above
+      return await operation(leader.proxy);
     } catch (error) {
       // Promoted mid-wait: the call was never sent, safe to redispatch locally.
       if (error instanceof ProviderChangedError) continue;
@@ -285,7 +304,8 @@ async function callService<T>(operation: (service: DatabaseService) => Promise<T
 
 /** Role-independent `DatabaseService`: local on the leader, proxied elsewhere. */
 export const databaseService: DatabaseService = {
-  query: (sql, parameters, method) => callService((service) => service.query(sql, parameters, method)),
+  query: (sql, parameters, method) =>
+    callService((service) => service.query(sql, parameters, method)),
   batch: (statements) => callService((service) => service.batch(statements)),
   exportFile: () => callService((service) => service.exportFile()),
   importFile: (bytes) => callService((service) => service.importFile(bytes)),

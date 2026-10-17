@@ -53,18 +53,25 @@ const isSameBlock = (previous: Block, next: Block): boolean =>
  * The statements that turn the stored `before` into `after`: deletes first (a deleted activity's
  * blocks before the activity), then upserts. Only what changed is written.
  */
-export function buildPlanStatements(database: Database, before: Plan | undefined, after: Plan): BatchItem<"sqlite">[] {
+export function buildPlanStatements(
+  database: Database,
+  before: Plan | undefined,
+  after: Plan,
+): BatchItem<"sqlite">[] {
   const statements: BatchItem<"sqlite">[] = [];
   const now = Temporal.Now.instant().toString();
 
-  const beforeActivities = new Map(before?.activities.map((activity, index) => [activity.id, { activity, index }]));
+  const beforeActivities = new Map(
+    before?.activities.map((activity, index) => [activity.id, { activity, index }]),
+  );
   const afterActivityIds = new Set(after.activities.map((activity) => activity.id));
   const beforeBlocks = new Map(before?.blocks.map((block) => [block.id, block]));
   const afterBlockIds = new Set(after.blocks.map((block) => block.id));
 
   const removedActivities = [...beforeActivities.keys()].filter((id) => !afterActivityIds.has(id));
   const removedBlocks = [...beforeBlocks.keys()].filter((id) => !afterBlockIds.has(id));
-  if (removedBlocks.length) statements.push(database.delete(blocks).where(inArray(blocks.id, removedBlocks)));
+  if (removedBlocks.length)
+    statements.push(database.delete(blocks).where(inArray(blocks.id, removedBlocks)));
   if (removedActivities.length) {
     // Blocks of a deleted activity go with it, whether or not `after` still lists them.
     statements.push(database.delete(blocks).where(inArray(blocks.activityId, removedActivities)));
@@ -94,7 +101,12 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
   for (const block of after.blocks) {
     const previous = beforeBlocks.get(block.id);
     if (previous && isSameBlock(previous, block)) continue;
-    const values = { activityId: block.activityId, day: block.day, start: block.start, length: block.length };
+    const values = {
+      activityId: block.activityId,
+      day: block.day,
+      start: block.start,
+      length: block.length,
+    };
     statements.push(
       database
         .insert(blocks)
@@ -109,7 +121,11 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
     before.dayEnd !== after.dayEnd ||
     before.exampleLoadedAt !== after.exampleLoadedAt
   ) {
-    const values = { dayStart: after.dayStart, dayEnd: after.dayEnd, exampleLoadedAt: after.exampleLoadedAt };
+    const values = {
+      dayStart: after.dayStart,
+      dayEnd: after.dayEnd,
+      exampleLoadedAt: after.exampleLoadedAt,
+    };
     statements.push(
       database
         .insert(settings)
@@ -124,7 +140,11 @@ export function buildPlanStatements(database: Database, before: Plan | undefined
  * Writes one user action: everything that differs between `before` (what is stored) and `after`,
  * in one transaction. Undo uses the same path, with the restored plan as `after`.
  */
-export async function savePlan(database: Database, before: Plan | undefined, after: Plan): Promise<void> {
+export async function savePlan(
+  database: Database,
+  before: Plan | undefined,
+  after: Plan,
+): Promise<void> {
   const [first, ...rest] = buildPlanStatements(database, before, after);
   if (first) await database.batch([first, ...rest]);
 }

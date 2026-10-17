@@ -10,10 +10,17 @@
  */
 
 /** The part of the Trusted Types API this uses. TypeScript's DOM types don't have it yet. */
+declare global {
+  var trustedTypes: TrustedTypePolicyFactory | undefined;
+}
+
 type TrustedTypePolicyFactory = {
   createPolicy(
     name: string,
-    rules: { createHTML(input: string): string | null; createScriptURL(input: string): string | null },
+    rules: {
+      createHTML(input: string): string | null;
+      createScriptURL(input: string): string | null;
+    },
   ): unknown;
 };
 
@@ -26,7 +33,7 @@ export function allowHtml(html: readonly string[]): void {
 
 const isSameOrigin = (url: string) => new URL(url, document.baseURI).origin === location.origin;
 
-(globalThis as { trustedTypes?: TrustedTypePolicyFactory }).trustedTypes?.createPolicy("default", {
+globalThis.trustedTypes?.createPolicy("default", {
   // Returning null makes the browser refuse the string.
   createHTML: (input) => (allowedHtml.has(input) ? input : null),
   createScriptURL: (input) => (isSameOrigin(input) ? input : null),

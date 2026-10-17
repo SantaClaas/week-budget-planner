@@ -11,6 +11,11 @@
     "typeAware": true,
     "reportUnusedDisableDirectives": "error"
   },
+  "rules": {
+    // It's about window.postMessage. Every postMessage here is a BroadcastChannel's, which has no
+    // target origin: a channel only ever reaches the same origin.
+    "unicorn/require-post-message-target-origin": "off"
+  },
   "env": {
     "builtin": true,
     "browser": true
@@ -30,6 +35,11 @@
       // Only the module that defines a brand may create one with `as` (see Branded types in
       // docs/CODING-GUIDELINES.md). Everywhere else, the rule catches a narrowing `as`.
       "files": ["src/plan/time.ts", "src/plan/id.ts"],
+      "rules": { "typescript/no-unsafe-type-assertion": "off" }
+    },
+    {
+      // Tests stand in fakes for browser and library objects, which takes a cast.
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "typescript/no-unsafe-type-assertion": "off" }
     },
     {
