@@ -13,4 +13,11 @@ describe("plan file", () => {
   it("turns malformed text into an empty plan", () => {
     expect(planFile.parse("{not json").activities).toEqual([]);
   });
+
+  it("reads only real plan files on import", () => {
+    expect(planFile.read(planFile.serialize(example()))).toEqual(example());
+    expect(planFile.read("{not json")).toBeUndefined();
+    expect(planFile.read('{"name": "something else"}')).toBeUndefined();
+    expect(planFile.read("null")).toBeUndefined();
+  });
 });

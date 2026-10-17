@@ -1,6 +1,6 @@
 import * as planFile from "../plan/file";
 import type { Plan } from "../plan/types";
-import type { ExportedFile } from "./plan-store";
+import { InvalidFileError, type ExportedFile } from "./plan-store";
 
 /** The plan as a `.json` file, the export below the full level. */
 
@@ -17,7 +17,9 @@ export function create(plan: Plan): ExportedFile {
 /** Reads an imported `.json` plan file. Refuses anything else, such as a `.db` file. */
 export async function read(file: File): Promise<Plan> {
   if (!isJson(file)) {
-    throw new Error("Only a .json plan file can be imported here, because this browser can't open the database.");
+    throw new InvalidFileError("Only a .json plan file can be imported here, because this browser can't open the database.");
   }
-  return planFile.parse(await file.text());
+  const plan = planFile.read(await file.text());
+  if (!plan) throw new InvalidFileError("This file isn't a Week Budget Planner plan.");
+  return plan;
 }
