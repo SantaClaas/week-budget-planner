@@ -4,9 +4,9 @@ import "./trusted-html";
 
 import { render } from "@solidjs/web";
 
-import { App } from "./App";
-import { loadOpticalSizes } from "./font";
-import { loadPolyfills } from "./polyfills";
+import { App } from "./App.tsx";
+import { loadOpticalSizes } from "./font/index.ts";
+import { loadPolyfills } from "./polyfills.ts";
 
 const root = document.querySelector("#root");
 if (!root) throw new Error("The #root element is missing from index.html.");

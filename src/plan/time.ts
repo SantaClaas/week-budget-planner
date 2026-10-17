@@ -1,4 +1,4 @@
-import type { Brand } from "../brand";
+import type { Brand } from "../brand.ts";
 
 /** Minutes per slot. Every start and length snaps to it. */
 export const SLOT = 15;

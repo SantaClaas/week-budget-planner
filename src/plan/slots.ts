@@ -5,9 +5,9 @@ import {
   type DayIndex,
   type DayMinute,
   type Length,
-} from "./time";
-import type { Activity, Block, Plan } from "./types";
-import { isRangeOverlapping, calculateWeekStart } from "./week";
+} from "./time.ts";
+import type { Activity, Block, Plan } from "./types.ts";
+import { isRangeOverlapping, calculateWeekStart } from "./week.ts";
 
 /** Whether a block of `length` starting at `day`/`start` would overlap any existing block. */
 export function isFree(

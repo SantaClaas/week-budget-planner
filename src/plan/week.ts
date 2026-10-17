@@ -1,4 +1,4 @@
-import { formatClock, formatClockRange, formatLength, formatWeekday, type Format } from "./format";
+import { formatClock, formatClockRange, formatLength, formatWeekday, type Format } from "./format.ts";
 import {
   DAY,
   MAX_LENGTH,
@@ -13,8 +13,8 @@ import {
   type DayIndex,
   type DayMinute,
   type WeekMinute,
-} from "./time";
-import type { Block } from "./types";
+} from "./time.ts";
+import type { Block } from "./types.ts";
 
 /**
  * Where a block shows on one day. An overnight block has two parts: the end of its own day and the
