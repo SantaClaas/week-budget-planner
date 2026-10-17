@@ -16,7 +16,16 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "./time";
-import { PALETTE, SHAPES, createEmptyPlan, type Activity, type Block, type Hue, type Plan, type Shape } from "./types";
+import {
+  PALETTE,
+  SHAPES,
+  createEmptyPlan,
+  type Activity,
+  type Block,
+  type Hue,
+  type Plan,
+  type Shape,
+} from "./types";
 
 const PALETTE_HUES = new Set<number>(PALETTE.map((color) => color.hue));
 const SHAPE_NAMES = new Set<string>(SHAPES);
@@ -38,7 +47,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 /** Anything loaded becomes a number for the sanitizers; what isn't one becomes NaN, their fallback. */
-const readNumber = (value: unknown): number => (typeof value === "number" || typeof value === "string" ? Number(value) : NaN);
+const readNumber = (value: unknown): number =>
+  typeof value === "number" || typeof value === "string" ? Number(value) : NaN;
 const readString = (value: unknown): string => (typeof value === "string" ? value : "");
 
 /**

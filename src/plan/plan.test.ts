@@ -17,7 +17,7 @@ import {
   sanitizeBudgetMinutes,
   sanitizeDayCount,
   sanitizeDayEnd,
-  sanitizeDayIndex as day,
+  sanitizeDayIndex as dayIndex,
   sanitizeDayMinute,
   sanitizeDayStart,
   sanitizeLength as length,
@@ -44,8 +44,22 @@ import {
 const activityId = (id: string) => sanitizeActivityId(id)!;
 const blockId = (id: string) => sanitizeBlockId(id)!;
 
-type ActivityValues = { id?: string; name?: string; hue?: Hue; shape?: Shape; mode?: Activity["mode"]; budgetMinutes?: number; days?: number };
-const activity = ({ id = "a", mode = "week", budgetMinutes = 720, days = 5, ...rest }: ActivityValues = {}): Activity => ({
+type ActivityValues = {
+  id?: string;
+  name?: string;
+  hue?: Hue;
+  shape?: Shape;
+  mode?: Activity["mode"];
+  budgetMinutes?: number;
+  days?: number;
+};
+const activity = ({
+  id = "a",
+  mode = "week",
+  budgetMinutes = 720,
+  days = 5,
+  ...rest
+}: ActivityValues = {}): Activity => ({
   name: "Work",
   hue: 78,
   shape: "square",
@@ -56,16 +70,25 @@ const activity = ({ id = "a", mode = "week", budgetMinutes = 720, days = 5, ...r
   days: sanitizeDayCount(days),
 });
 
-type BlockValues = { id?: string; activityId?: string; day?: number; start?: number; length?: number };
+type BlockValues = {
+  id?: string;
+  activityId?: string;
+  day?: number;
+  start?: number;
+  length?: number;
+};
 const block = (values: BlockValues = {}): Block => ({
   id: blockId(values.id ?? "b"),
   activityId: activityId(values.activityId ?? "a"),
-  day: day(values.day ?? 0),
+  day: dayIndex(values.day ?? 0),
   start: sanitizeDayMinute(values.start ?? 600),
   length: length(values.length ?? 90),
 });
 
-const hours = (dayStart: number, dayEnd: number) => ({ dayStart: sanitizeDayStart(dayStart), dayEnd: sanitizeDayEnd(dayEnd) });
+const hours = (dayStart: number, dayEnd: number) => ({
+  dayStart: sanitizeDayStart(dayStart),
+  dayEnd: sanitizeDayEnd(dayEnd),
+});
 
 describe("time", () => {
   it("snaps to 15 minutes", () => {
@@ -139,7 +162,9 @@ describe("budget", () => {
 describe("week", () => {
   it("splits an overnight block into two parts", () => {
     const night = block({ day: 1, start: 1320, length: 240 });
-    expect(splitIntoParts(night).map(({ day, start, end, kind }) => ({ day, start, end, kind }))).toEqual([
+    expect(
+      splitIntoParts(night).map(({ day, start, end, kind }) => ({ day, start, end, kind })),
+    ).toEqual([
       { day: 1, start: 1320, end: 1440, kind: "first" },
       { day: 2, start: 0, end: 120, kind: "second" },
     ]);
@@ -148,11 +173,14 @@ describe("week", () => {
   it("wraps Sunday night into Monday", () => {
     const sunday = block({ day: 6, start: 1380, length: 120 });
     expect(splitIntoParts(sunday)[1]).toMatchObject({ day: 0, start: 0, end: 60 });
-    expect(findPartsOnDay([sunday], day(0))).toHaveLength(1);
+    expect(findPartsOnDay([sunday], dayIndex(0))).toHaveLength(1);
   });
 
   it("counts day totals per day, splitting overnight blocks", () => {
-    const totals = sumDayTotals([block({ day: 1, start: 1320, length: 240 }), block({ id: "c", day: 1 })]);
+    const totals = sumDayTotals([
+      block({ day: 1, start: 1320, length: 240 }),
+      block({ id: "c", day: 1 }),
+    ]);
     expect(totals).toEqual([0, 120 + 90, 120, 0, 0, 0, 0]);
   });
 
@@ -179,10 +207,19 @@ describe("week", () => {
   });
 
   it("resizes from the top keeping the end, within limits", () => {
-    expect(resizeStart(block({ start: 600, length: 90 }), 540)).toMatchObject({ start: 540, length: 150 });
-    expect(resizeStart(block({ start: 600, length: 90 }), 690)).toMatchObject({ start: 675, length: 15 });
+    expect(resizeStart(block({ start: 600, length: 90 }), 540)).toMatchObject({
+      start: 540,
+      length: 150,
+    });
+    expect(resizeStart(block({ start: 600, length: 90 }), 690)).toMatchObject({
+      start: 675,
+      length: 15,
+    });
     // The top edge never leaves the block's own day.
-    expect(resizeStart(block({ start: 1320, length: 240 }), 1500)).toMatchObject({ start: 1425, length: 135 });
+    expect(resizeStart(block({ start: 1320, length: 240 }), 1500)).toMatchObject({
+      start: 1425,
+      length: 135,
+    });
   });
 
   it("resizes from the bottom without crossing into another day", () => {
@@ -203,7 +240,7 @@ describe("lanes", () => {
       block({ id: "c", start: 750, length: 60 }),
       block({ id: "d", start: 900, length: 60 }),
     ];
-    const lanes = layoutLanes(findPartsOnDay(blocks, day(0)));
+    const lanes = layoutLanes(findPartsOnDay(blocks, dayIndex(0)));
     expect(lanes.get(blockId("a"))).toEqual({ lane: 0, lanes: 2 });
     expect(lanes.get(blockId("b"))).toEqual({ lane: 1, lanes: 2 });
     expect(lanes.get(blockId("c"))).toEqual({ lane: 1, lanes: 2 });
@@ -232,14 +269,21 @@ describe("slots", () => {
 
   it("treats an overnight part as taken", () => {
     const night = block({ day: 0, start: 1320, length: 600 });
-    expect(isFree([night], day(1), sanitizeDayMinute(420), length(60))).toBe(false);
-    expect(isFree([night], day(1), sanitizeDayMinute(480), length(60))).toBe(true);
+    expect(isFree([night], dayIndex(1), sanitizeDayMinute(420), length(60))).toBe(false);
+    expect(isFree([night], dayIndex(1), sanitizeDayMinute(480), length(60))).toBe(true);
   });
 
   it("opens at the day hours or an earlier block start, ignoring overnight continuations", () => {
     expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [] })).toBe(420);
-    expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [block({ start: 330 })] })).toBe(300);
-    expect(findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [block({ start: 1320, length: 240 })] })).toBe(420);
+    expect(
+      findOpeningMinute({ dayStart: sanitizeDayStart(7), blocks: [block({ start: 330 })] }),
+    ).toBe(300);
+    expect(
+      findOpeningMinute({
+        dayStart: sanitizeDayStart(7),
+        blocks: [block({ start: 1320, length: 240 })],
+      }),
+    ).toBe(420);
   });
 });
 
@@ -259,7 +303,10 @@ describe("defaults", () => {
   });
 
   it("avoids colors and shapes already in use while any are left", () => {
-    const others = DEFAULT_SHAPES.slice(0, 29).map((shape, index) => ({ hue: ([255, 28] as const)[index % 2]!, shape }));
+    const others = DEFAULT_SHAPES.slice(0, 29).map((shape, index) => ({
+      hue: ([255, 28] as const)[index % 2]!,
+      shape,
+    }));
     const look = pickDefaultLook("anything", others);
     expect(look.shape).toBe(DEFAULT_SHAPES[29]);
     expect([255, 28]).not.toContain(look.hue);
@@ -310,7 +357,13 @@ describe("sanitize", () => {
       exampleLoadedAt: "yesterday",
     });
     const [first, second] = plan.activities;
-    expect(first).toMatchObject({ id: "x", name: "Untitled", mode: "day", budgetMinutes: 1440, days: 7 });
+    expect(first).toMatchObject({
+      id: "x",
+      name: "Untitled",
+      mode: "day",
+      budgetMinutes: 1440,
+      days: 7,
+    });
     expect(SHAPES).toContain(first!.shape);
     expect(second!.id).not.toBe("x");
     expect(second!.budgetMinutes).toBe(15);
@@ -328,7 +381,10 @@ describe("sanitize", () => {
   });
 
   it("creates 12-character ids without lookalike characters", () => {
-    const ids = [...Array.from({ length: 100 }, createActivityId), ...Array.from({ length: 100 }, createBlockId)];
+    const ids = [
+      ...Array.from({ length: 100 }, createActivityId),
+      ...Array.from({ length: 100 }, createBlockId),
+    ];
     for (const id of ids) expect(id).toMatch(/^[6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz]{12}$/);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -345,7 +401,11 @@ describe("sanitize", () => {
         { id: "2", activityId: "x".repeat(41), day: 0, start: 700, length: 60 },
       ],
     });
-    expect(plan.activities.map((each) => each.id)).toEqual([expect.not.stringMatching(/^x+$/), "keep", expect.not.stringMatching(/^keep$/)]);
+    expect(plan.activities.map((each) => each.id)).toEqual([
+      expect.not.stringMatching(/^x+$/),
+      "keep",
+      expect.not.stringMatching(/^keep$/),
+    ]);
     // The block of the activity whose id was invalid can't be matched any more and is dropped.
     expect(plan.blocks.map((each) => each.activityId)).toEqual(["keep"]);
   });
@@ -364,7 +424,10 @@ describe("activity form", () => {
       ok: true,
       value: { name: "Gym", budgetMinutes: 90, mode: "week", days: 5 },
     });
-    expect(readActivityForm({ ...base, mode: "day" })).toMatchObject({ ok: true, value: { days: 3 } });
+    expect(readActivityForm({ ...base, mode: "day" })).toMatchObject({
+      ok: true,
+      value: { days: 3 },
+    });
   });
 
   it("explains what is wrong", () => {
@@ -379,7 +442,9 @@ describe("activity form", () => {
       message: "A week has 168 hours. Enter 168 or less.",
     });
     expect(readActivityForm({ ...base, mode: "day", days: "8" })).toMatchObject({ field: "days" });
-    expect(readActivityForm({ ...base, mode: "day", days: "2.5" })).toMatchObject({ field: "days" });
+    expect(readActivityForm({ ...base, mode: "day", days: "2.5" })).toMatchObject({
+      field: "days",
+    });
     expect(readActivityForm({ ...base, hours: "1.5h" })).toMatchObject({ field: "hours" });
   });
 

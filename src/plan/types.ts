@@ -1,5 +1,14 @@
 import type { ActivityId, BlockId } from "./id";
-import { sanitizeDayEnd, sanitizeDayStart, type BudgetMinutes, type DayCount, type DayIndex, type DayMinute, type Hour, type Length } from "./time";
+import {
+  sanitizeDayEnd,
+  sanitizeDayStart,
+  type BudgetMinutes,
+  type DayCount,
+  type DayIndex,
+  type DayMinute,
+  type Hour,
+  type Length,
+} from "./time";
 
 export type Mode = "week" | "day";
 
@@ -135,5 +144,12 @@ export type Hue = (typeof PALETTE)[number]["hue"];
 export type Shape = (typeof SHAPES)[number];
 
 export function createEmptyPlan(): Plan {
-  return { version: 1, activities: [], blocks: [], dayStart: sanitizeDayStart(7), dayEnd: sanitizeDayEnd(22), exampleLoadedAt: null };
+  return {
+    version: 1,
+    activities: [],
+    blocks: [],
+    dayStart: sanitizeDayStart(7),
+    dayEnd: sanitizeDayEnd(22),
+    exampleLoadedAt: null,
+  };
 }
