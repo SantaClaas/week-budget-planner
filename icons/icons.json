@@ -19,6 +19,7 @@
     { "name": "cloud_done" },
     { "name": "cloud_off" },
     { "name": "contrast" },
+    { "name": "database" },
     { "name": "delete" },
     { "name": "delete_forever" },
     { "name": "delete_sweep" },
@@ -26,13 +27,17 @@
     { "name": "drag_indicator" },
     { "name": "edit" },
     { "name": "error" },
+    { "name": "gpp_bad" },
+    { "name": "gpp_maybe" },
     { "name": "more_vert" },
+    { "name": "refresh" },
     { "name": "remove" },
     { "name": "schedule" },
     { "name": "settings", "fill": true },
     { "name": "sync" },
     { "name": "undo" },
     { "name": "upload" },
-    { "name": "upload_file" }
+    { "name": "upload_file" },
+    { "name": "verified_user" }
   ]
 }
