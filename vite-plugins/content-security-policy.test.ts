@@ -14,7 +14,9 @@ describe("findTemplates", () => {
   });
 
   it("ignores code without Solid templates", () => {
-    expect(findTemplates('import { render } from "@solidjs/web"; render(() => 1, root);')).toEqual([]);
+    expect(findTemplates('import { render } from "@solidjs/web"; render(() => 1, root);')).toEqual(
+      [],
+    );
     expect(findTemplates("element.innerHTML = text;")).toEqual([]);
   });
 

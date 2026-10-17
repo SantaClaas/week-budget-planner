@@ -20,6 +20,8 @@ export function broadcastMessage(message: BroadcastMessage): void {
 export function listenForBroadcasts(callback: (message: BroadcastMessage) => void): () => void {
   if (typeof BroadcastChannel === "undefined") return () => undefined;
   const receiver = new BroadcastChannel(BROADCAST_NAME);
-  receiver.addEventListener("message", (event: MessageEvent<BroadcastMessage>) => callback(event.data));
+  receiver.addEventListener("message", (event: MessageEvent<BroadcastMessage>) =>
+    callback(event.data),
+  );
   return () => receiver.close();
 }

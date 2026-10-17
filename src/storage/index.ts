@@ -5,7 +5,7 @@ import { NewerVersionError, type PlanStore } from "./plan-store";
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
 function isDatabaseUsable(): boolean {
   return (
-    globalThis.crossOriginIsolated === true &&
+    globalThis.crossOriginIsolated &&
     typeof navigator !== "undefined" &&
     typeof navigator.storage?.getDirectory === "function" &&
     typeof navigator.locks?.request === "function" &&
@@ -45,7 +45,10 @@ export async function open(): Promise<PlanStore> {
     return store;
   } catch (error) {
     if (isFromNewerVersion(error)) {
-      throw new NewerVersionError("Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.", { cause: error });
+      throw new NewerVersionError(
+        "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.",
+        { cause: error },
+      );
     }
     console.warn("[storage] the database couldn't be opened, using limited storage", error);
     const fallback = openFallback();

@@ -39,7 +39,8 @@ const events = () => {
 };
 
 const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
-const file = (text: string, name: string) => new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
+const file = (text: string, name: string) =>
+  new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
 describe("localStorage store", () => {
   it("starts empty, then keeps what was saved", async () => {
@@ -47,7 +48,10 @@ describe("localStorage store", () => {
     const store = local.create(storage, events());
     expect(await store.load()).toMatchObject({ isStored: false });
     await store.save(undefined, example());
-    expect(await local.create(storage, events()).load()).toEqual({ plan: example(), isStored: true });
+    expect(await local.create(storage, events()).load()).toEqual({
+      plan: example(),
+      isStored: true,
+    });
   });
 
   it("exports and imports .json and refuses .db files", async () => {
@@ -67,9 +71,15 @@ describe("localStorage store", () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
     await store.save(undefined, example());
-    await expect(store.importFile(file('{"name": "notes"}', "notes.json"))).rejects.toThrow(InvalidFileError);
-    await expect(store.importFile(file("{broken", "broken.json"))).rejects.toThrow(InvalidFileError);
-    await expect(store.importFile(file('{"version": 2}', "newer.json"))).rejects.toThrow(NewerVersionError);
+    await expect(store.importFile(file('{"name": "notes"}', "notes.json"))).rejects.toThrow(
+      InvalidFileError,
+    );
+    await expect(store.importFile(file("{broken", "broken.json"))).rejects.toThrow(
+      InvalidFileError,
+    );
+    await expect(store.importFile(file('{"version": 2}', "newer.json"))).rejects.toThrow(
+      NewerVersionError,
+    );
     expect((await store.load()).plan).toEqual(example());
   });
 

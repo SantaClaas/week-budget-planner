@@ -53,14 +53,18 @@ async function execute(
   }
   statement.raw(true);
   if (method === "get") {
-    // One row, or undefined when nothing matched; Drizzle handles both.
+    // One row, or undefined when nothing matched. Drizzle handles both, though its type only
+    // names the row.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
     return { rows: (await statement.get(...parameters)) as unknown[] };
   }
   return { rows: await statement.all(...parameters) };
 }
 
 /** The {@link QueryService} for a local connection: the leader tab's, or a test database. */
-export function createLocalQueryService(getConnection: () => Promise<TursoConnection>): QueryService {
+export function createLocalQueryService(
+  getConnection: () => Promise<TursoConnection>,
+): QueryService {
   return {
     async query(sql, parameters, method) {
       return execute(await getConnection(), sql, parameters, method);
@@ -71,6 +75,8 @@ export function createLocalQueryService(getConnection: () => Promise<TursoConnec
       try {
         const results: QueryResult[] = [];
         for (const { sql, params: parameters, method } of statements) {
+          // One after another, in order, inside the transaction.
+          // oxlint-disable-next-line no-await-in-loop -- see above
           results.push(await execute(connection, sql, parameters, method));
         }
         await connection.exec("COMMIT");

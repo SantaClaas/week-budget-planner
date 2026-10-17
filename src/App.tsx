@@ -19,8 +19,9 @@ export function App() {
       try {
         opened = await openStorage();
       } catch (error) {
-        if (error instanceof NewerVersionError) return setProblem("newer-version");
-        throw error;
+        if (!(error instanceof NewerVersionError)) throw error;
+        setProblem("newer-version");
+        return;
       }
       let { plan: loaded, isStored } = await opened.load();
       if (!isStored) {

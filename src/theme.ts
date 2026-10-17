@@ -72,6 +72,6 @@ export function listenForChanges(
     apply(theme, meta);
     callback(theme);
   };
-  events.addEventListener("storage", listener as EventListener);
-  return () => events.removeEventListener("storage", listener as EventListener);
+  events.addEventListener("storage", listener);
+  return () => events.removeEventListener("storage", listener);
 }

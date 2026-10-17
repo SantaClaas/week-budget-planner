@@ -18,7 +18,13 @@ export function serialize(plan: Plan): string {
         budgetMinutes,
         days,
       })),
-      blocks: plan.blocks.map(({ id, activityId, day, start, length }) => ({ id, activityId, day, start, length })),
+      blocks: plan.blocks.map(({ id, activityId, day, start, length }) => ({
+        id,
+        activityId,
+        day,
+        start,
+        length,
+      })),
     },
     null,
     2,
@@ -37,7 +43,12 @@ export function read(text: string): Plan | "not-a-plan" | "newer-version" {
   } catch {
     return "not-a-plan";
   }
-  if (typeof data !== "object" || data === null || !("version" in data) || typeof data.version !== "number") {
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("version" in data) ||
+    typeof data.version !== "number"
+  ) {
     return "not-a-plan";
   }
   if (data.version > 1) return "newer-version";
