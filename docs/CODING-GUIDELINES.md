@@ -169,7 +169,7 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 - `base`: the document's own font, colors and links.
 - `theme`: the design tokens as custom properties (`m3-shapes.css` puts its shapes here itself).
 - `components`: Material's components and the app's own.
-- `utilities`: single-purpose classes that combine with anything: the type roles, `.muted`, `.brand`, the activity colors.
+- `utilities`: single-purpose classes that combine with anything: the type roles, `.muted`, the activity colors.
 
 **Avoid px.** Sizes are relative, so the user's text size setting works (WCAG 1.4.4 Resize Text, 1.4.10 Reflow).
 
@@ -178,5 +178,7 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 - px is only for hairlines of 1–2px: borders, outlines, grid lines, selection rings.
 - Never set a font size on `:root` or `html`. `index.html` opts into the operating system's text size with `<meta name="text-scale" content="scale">`.
 - Controls that hold text use a minimum height and grow with the text instead of clipping it.
+
+**Nesting.** Use CSS nesting to keep a component's states, parts and media queries inside its rule, like `.navigation-rail { … &.expanded { … } }`. Start every nested selector with `&` (`& .icon`, not `.icon`): browsers before Chrome 120 and Safari 17.2 drop a nested rule that doesn't, and with it nesting works from Chrome 112, Firefox 117 and Safari 16.5, below the app's floor. Keep it shallow: about three levels at most, since each level adds specificity and makes the selector harder to find by searching.
 
 See the Design section of `docs/SPEC.md` for the details and for Material 3 Expressive itself.
