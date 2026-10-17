@@ -40,7 +40,7 @@ export type BlockPart = {
 export const calculateWeekStart = (block: Pick<Block, "day" | "start">): WeekMinute =>
   wrapWeekMinute(block.day * DAY + block.start);
 
-export const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
+const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
   block.start + block.length > DAY;
 
 export function splitIntoParts(block: Block): BlockPart[] {
