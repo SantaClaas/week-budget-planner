@@ -4,7 +4,7 @@
  * the first paint. Applying means setting the color-scheme meta, which the tokens map onto the
  * CSS color-scheme (see Design, Theme in docs/SPEC.md).
  */
-export const THEMES = ["system", "light", "dark"] as const;
+const THEMES = ["system", "light", "dark"] as const;
 
 export type Theme = (typeof THEMES)[number];
 
@@ -37,7 +37,7 @@ export function read(storage: ThemeStorage | undefined = findStorage()): Theme {
 }
 
 /** Points the color-scheme meta at the choice. */
-export function apply(theme: Theme, meta = findMeta()): void {
+function apply(theme: Theme, meta = findMeta()): void {
   if (meta) meta.content = theme === "system" ? "light dark" : theme;
 }
 

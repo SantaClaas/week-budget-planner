@@ -55,22 +55,30 @@ minimumReleaseAgeExclude:
   - "@oxlint/plugins@1.88.0"
   - "@playwright/test@1.64.1"
   - "@solidjs/babel-plugin@2.0.0-rc.15"
-  - "@solidjs/compiler@2.0.0-rc.15"
   - "@solidjs/compiler-darwin-arm64@2.0.0-rc.15"
   - "@solidjs/compiler-darwin-x64@2.0.0-rc.15"
   - "@solidjs/compiler-linux-arm64-gnu@2.0.0-rc.15"
   - "@solidjs/compiler-linux-x64-gnu@2.0.0-rc.15"
   - "@solidjs/compiler-wasm32-wasi@2.0.0-rc.15"
   - "@solidjs/compiler-win32-x64-msvc@2.0.0-rc.15"
+  - "@solidjs/compiler@2.0.0-rc.15"
   - "@solidjs/signals@2.0.0-rc.15"
+  - "@tursodatabase/database-common@0.8.3"
+  - "@tursodatabase/database-darwin-arm64@0.8.3"
+  - "@tursodatabase/database-linux-arm64-gnu@0.8.3"
+  - "@tursodatabase/database-linux-x64-gnu@0.8.3"
+  - "@tursodatabase/database-wasm-common@0.8.3"
+  - "@tursodatabase/database-wasm@0.8.3"
+  - "@tursodatabase/database-win32-x64-msvc@0.8.3"
+  - "@tursodatabase/database@0.8.3"
   - "@vitest/mocker@5.0.4"
   - "@vitest/spy@5.0.4"
   - "caniuse-lite@1.0.30001816"
   - "electron-to-chromium@1.5.454"
   - "oxfmt@0.73.0"
   - "oxlint@1.88.0"
-  - "playwright@1.64.1"
   - "playwright-core@1.64.1"
+  - "playwright@1.64.1"
   - "postcss@8.5.30"
   - "temporal-polyfill@1.0.6"
   - "tinybench@6.2.2"
@@ -102,3 +110,11 @@ savePrefix: ""
 
 # Fails instead of downloading another pnpm when the running one isn't the packageManager version.
 pmOnFail: error
+
+overrides:
+  # @tursodatabase/database-wasm 0.8.3 pins emnapi 1.8.1 and hands its objects to
+  # @napi-rs/wasm-runtime, which accepts any emnapi ^1.5.0. When pnpm picks a newer emnapi for the
+  # runtime, the two copies don't fit and the database can't start its worker threads, so the
+  # runtime gets Turso's version. Revisit when Turso is updated.
+  "@napi-rs/wasm-runtime@1.0.7>@emnapi/core": "1.8.1"
+  "@napi-rs/wasm-runtime@1.0.7>@emnapi/runtime": "1.8.1"
