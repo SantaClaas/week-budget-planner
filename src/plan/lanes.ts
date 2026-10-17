@@ -1,3 +1,4 @@
+import type { BlockId } from "./id";
 import type { BlockPart } from "./week";
 
 export type Lane = { lane: number; lanes: number };
@@ -7,9 +8,9 @@ export type Lane = { lane: number; lanes: number };
  * through others) form a group, each part takes the first lane whose last end is at or before its
  * start, and every part in the group shares the group's lane count. Keyed by block id.
  */
-export function layoutLanes(parts: readonly BlockPart[]): Map<string, Lane> {
+export function layoutLanes(parts: readonly BlockPart[]): Map<BlockId, Lane> {
   const sorted = [...parts].sort((first, second) => first.start - second.start || second.end - first.end);
-  const result = new Map<string, Lane>();
+  const result = new Map<BlockId, Lane>();
   let group: BlockPart[] = [];
   let groupEnd = -1;
 

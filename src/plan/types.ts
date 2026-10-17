@@ -1,42 +1,31 @@
-/** Minutes per slot. Every start and length snaps to it. */
-export const SLOT = 15;
-/** Minutes in a day. */
-export const DAY = 1440;
-/** Minutes in the week. The week wraps: Sunday night continues into Monday morning. */
-export const WEEK = 7 * DAY;
-/** The longest a block can be. */
-export const MAX_LENGTH = DAY;
-/** Default length for activities counted per week: one lecture slot. */
-export const WEEKLY_DEFAULT_LENGTH = 90;
+import type { ActivityId, BlockId } from "./id";
+import { sanitizeDayEnd, sanitizeDayStart, type BudgetMinutes, type DayCount, type DayIndex, type DayMinute, type Hour, type Length } from "./time";
 
 export type Mode = "week" | "day";
 
 export type Activity = {
-  id: string;
+  id: ActivityId;
   /** At most 60 characters. */
   name: string;
   /** One of the palette hues, see {@link PALETTE}. */
-  hue: number;
+  hue: Hue;
   /** One of the Material shape names, see {@link SHAPES}. */
-  shape: string;
+  shape: Shape;
   /** How the budget is counted. */
   mode: Mode;
-  /** Budget in minutes, per week or per day. A multiple of the slot, at least one slot. */
-  budgetMinutes: number;
-  /** Days per week, 1 to 7. Used only when `mode` is "day". */
-  days: number;
+  /** Budget in minutes, per week or per day. */
+  budgetMinutes: BudgetMinutes;
+  /** Days per week. Used only when `mode` is "day". */
+  days: DayCount;
 };
 
 export type Block = {
-  id: string;
-  /** The activity's id. */
-  activityId: string;
-  /** 0 is Monday, 6 is Sunday. */
-  day: number;
-  /** Minutes from midnight, 0 to 1425, a multiple of the slot. */
-  start: number;
-  /** Length in minutes, 15 to 1440. `start + length` may pass midnight (an overnight block). */
-  length: number;
+  id: BlockId;
+  activityId: ActivityId;
+  day: DayIndex;
+  start: DayMinute;
+  /** `start + length` may pass midnight (an overnight block). */
+  length: Length;
 };
 
 export type Plan = {
@@ -44,9 +33,9 @@ export type Plan = {
   activities: Activity[];
   blocks: Block[];
   /** First of the day hours, 0 to 12. */
-  dayStart: number;
+  dayStart: Hour;
   /** End of the day hours, 13 to 24. */
-  dayEnd: number;
+  dayEnd: Hour;
   /**
    * When the example week was loaded, as an ISO 8601 time in UTC. Null when there is no example
    * week: it was never loaded, or it was kept or replaced.
@@ -142,6 +131,9 @@ export const DEFAULT_SHAPES = [
   "cookie-12",
 ] as const satisfies readonly (typeof SHAPES)[number][];
 
+export type Hue = (typeof PALETTE)[number]["hue"];
+export type Shape = (typeof SHAPES)[number];
+
 export function createEmptyPlan(): Plan {
-  return { version: 1, activities: [], blocks: [], dayStart: 7, dayEnd: 22, exampleLoadedAt: null };
+  return { version: 1, activities: [], blocks: [], dayStart: sanitizeDayStart(7), dayEnd: sanitizeDayEnd(22), exampleLoadedAt: null };
 }
