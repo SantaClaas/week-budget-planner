@@ -1,3 +1,4 @@
+// oxlint-disable-next-line import/no-unassigned-import -- a stylesheet: Vite adds it to the page.
 import "./font.css";
 
 /** The same Latin range as font.css, so both faces cover the same text. */

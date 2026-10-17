@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "drizzle/**",
+    "docs/design/m3-shapes.css",
+    "prototype/**",
+    ".agents/**",
+    "**/*.md",
+    "pnpm-lock.yaml",
+    "skills-lock.json"
+  ]
+}

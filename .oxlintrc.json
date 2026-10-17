@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Type-aware rules (floating promises, misused spreads and so on) need oxlint-tsgolint.
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "ignorePatterns": ["dist/**", "drizzle/**", "prototype/**", ".agents/**"],
+  "overrides": [
+    {
+      "files": ["scripts/**", "*.config.ts", "vite-plugins/**"],
+      "env": { "node": true },
+      "rules": {
+        // The build scripts work through files one at a time on purpose: downloads stay polite,
+        // and the output is the same on every run.
+        "no-await-in-loop": "off"
+      }
+    },
+    {
+      "files": ["public/service-worker.js"],
+      "env": { "serviceworker": true }
+    }
+  ]
+}
