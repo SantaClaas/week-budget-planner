@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createExampleWeek } from "../plan/example";
 import * as memory from "./memory";
 
-const example = () => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
+const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
 
 describe("memory store", () => {
   it("keeps the plan only in memory", async () => {

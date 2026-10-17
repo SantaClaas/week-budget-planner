@@ -16,7 +16,7 @@ async function openTestDatabase(): Promise<{ database: Database; connection: Tur
   return { database: createDatabase(createLocalQueryService(async () => connection)), connection };
 }
 
-const example = (): Plan => createExampleWeek(new Date("2026-10-15T08:00:00Z"));
+const example = (): Plan => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
