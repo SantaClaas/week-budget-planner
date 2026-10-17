@@ -55,7 +55,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       try {
         const method = target[message.property];
         if (typeof method !== "function") {
-          throw new Error(`Unknown service method: ${message.property}`);
+          throw new TypeError(`Unknown service method: ${message.property}`);
         }
         const result: unknown = await Reflect.apply(method, target, message.parameters);
         channel.postMessage({
@@ -72,7 +72,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
             kind: "error",
             id: message.id,
             error,
-            name: error instanceof Error ? error.name : undefined,
+            ...(error instanceof Error && { name: error.name }),
           } satisfies ServiceMessage);
         } catch {
           // The error wasn't structured-cloneable; send its string form.
@@ -101,7 +101,7 @@ export interface Consumer<T> {
 }
 
 interface PendingCall {
-  resolve(value: unknown): void;
+  resolve(value?: unknown): void;
   reject(reason: unknown): void;
 }
 
@@ -122,8 +122,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   let queryTimer: ReturnType<typeof setInterval> | undefined;
   let lastHeardAt = 0;
 
-  const query = () =>
+  const query = (): void => {
     channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
+  };
 
   function failSent(reason: Error) {
     const calls = [...sent.values()];
@@ -152,9 +153,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       if (performance.now() - lastHeardAt > SILENCE_LIMIT_MILLISECONDS) {
         // Forget the silent provider, so the next call looks for one again.
         providerId = undefined;
-        settleWaiters((waiter) =>
-          waiter.reject(new ProviderMissingError("No database leader tab answered.")),
-        );
+        settleWaiters((waiter) => {
+          waiter.reject(new ProviderMissingError("No database leader tab answered."));
+        });
         failSent(new CallLostError("The database leader tab stopped answering."));
         stopQueryingWhenIdle();
         return;
@@ -172,7 +173,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       }
       providerId = message.providerId;
       lastHeardAt = performance.now();
-      settleWaiters((waiter) => waiter.resolve(undefined));
+      settleWaiters((waiter) => {
+        waiter.resolve();
+      });
       stopQueryingWhenIdle();
       return;
     }
@@ -186,7 +189,8 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       call.resolve(message.result);
       return;
     }
-    if (message.error instanceof Error && message.name) message.error.name = message.name;
+    if (message.error instanceof Error && message.name !== undefined)
+      message.error.name = message.name;
     call.reject(
       new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }),
     );
@@ -195,20 +199,30 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   function waitForProvider(): Promise<void> {
     if (providerId !== undefined) return Promise.resolve();
     return new Promise((resolve, reject) => {
-      readyWaiters.push({ resolve: () => resolve(), reject });
+      readyWaiters.push({
+        resolve: () => {
+          resolve();
+        },
+        reject,
+      });
       startQuerying();
     });
   }
 
   const handler: ProxyHandler<object> = {
-    get(_target, property) {
-      // Awaiting the proxy itself must not treat it as a thenable (see crackle).
-      if (property === "then") return undefined;
+    get(target, property) {
+      // Awaiting the proxy itself must not treat it as a thenable (see crackle), so `then` and
+      // symbols read the empty target's own (missing) property.
+      if (property === "then" || typeof property !== "string") {
+        const own: unknown = Reflect.get(target, property);
+        return own;
+      }
       return async (...parameters: unknown[]) => {
-        if (typeof property !== "string") throw new TypeError("Only string methods can be proxied");
         await waitForProvider();
         const id = crypto.randomUUID();
-        const response = new Promise((resolve, reject) => sent.set(id, { resolve, reject }));
+        const response = new Promise((resolve, reject) => {
+          sent.set(id, { resolve, reject });
+        });
         startQuerying();
         channel.postMessage({
           scope,
@@ -224,12 +238,12 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
 
   return {
     // The proxy answers every method name, so it stands in for whatever T the caller asks for.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- a Proxy answers any method name, which TypeScript can't see.
     proxy: new Proxy({}, handler) as T,
     handlePromotion() {
-      settleWaiters((waiter) =>
-        waiter.reject(new ProviderChangedError("This tab became the provider.")),
-      );
+      settleWaiters((waiter) => {
+        waiter.reject(new ProviderChangedError("This tab became the provider."));
+      });
       failSent(
         new CallLostError("This tab became the database leader while a call was in flight."),
       );

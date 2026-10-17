@@ -23,15 +23,15 @@ export function App() {
         setProblem("newer-version");
         return;
       }
-      let { plan: loaded, isStored } = await opened.load();
-      if (!isStored) {
-        loaded = createExampleWeek();
-        await opened.save(undefined, loaded);
-      }
+      const stored = await opened.load();
+      const loaded = stored.isStored ? stored.plan : createExampleWeek();
+      if (!stored.isStored) await opened.save(undefined, loaded);
       setStore(opened);
       setPlan(loaded);
       Object.assign(window, { weekBudgetPlanner: { store: opened } });
-      opened.onExternalChange(async () => setPlan((await opened.load()).plan));
+      opened.onExternalChange(() => {
+        void opened.load().then(({ plan: changed }) => setPlan(changed));
+      });
     })();
   });
 
@@ -43,7 +43,12 @@ export function App() {
           Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.
           Your plan is safe.
         </p>
-        <button type="button" onClick={() => location.reload()}>
+        <button
+          type="button"
+          onClick={() => {
+            location.reload();
+          }}
+        >
           Reload
         </button>
       </Show>

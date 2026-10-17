@@ -16,12 +16,16 @@ export function broadcastMessage(message: BroadcastMessage): void {
   sender.postMessage(message);
 }
 
+const doNothing = (): void => {};
+
 /** Listens for change events from other tabs. Returns a function that stops listening. */
 export function listenForBroadcasts(callback: (message: BroadcastMessage) => void): () => void {
-  if (typeof BroadcastChannel === "undefined") return () => undefined;
+  if (typeof BroadcastChannel === "undefined") return doNothing;
   const receiver = new BroadcastChannel(BROADCAST_NAME);
-  receiver.addEventListener("message", (event: MessageEvent<BroadcastMessage>) =>
-    callback(event.data),
-  );
-  return () => receiver.close();
+  receiver.addEventListener("message", (event: MessageEvent<BroadcastMessage>) => {
+    callback(event.data);
+  });
+  return () => {
+    receiver.close();
+  };
 }

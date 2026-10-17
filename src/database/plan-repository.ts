@@ -70,12 +70,14 @@ export function buildPlanStatements(
 
   const removedActivities = [...beforeActivities.keys()].filter((id) => !afterActivityIds.has(id));
   const removedBlocks = [...beforeBlocks.keys()].filter((id) => !afterBlockIds.has(id));
-  if (removedBlocks.length)
+  if (removedBlocks.length > 0)
     statements.push(database.delete(blocks).where(inArray(blocks.id, removedBlocks)));
-  if (removedActivities.length) {
+  if (removedActivities.length > 0) {
     // Blocks of a deleted activity go with it, whether or not `after` still lists them.
-    statements.push(database.delete(blocks).where(inArray(blocks.activityId, removedActivities)));
-    statements.push(database.delete(activities).where(inArray(activities.id, removedActivities)));
+    statements.push(
+      database.delete(blocks).where(inArray(blocks.activityId, removedActivities)),
+      database.delete(activities).where(inArray(activities.id, removedActivities)),
+    );
   }
 
   after.activities.forEach((activity, position) => {

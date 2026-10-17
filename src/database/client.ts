@@ -53,7 +53,7 @@ let isElectionStarted = false;
 const REMOVAL_KEY = "week-budget-planner.remove-database";
 
 /** Opens a database file in OPFS through the engine, typed as the part of its API this app uses. */
-async function connectFile(path: string): Promise<TursoConnection> {
+function connectFile(path: string): Promise<TursoConnection> {
   return connect(path);
 }
 
@@ -119,11 +119,9 @@ async function removeImportLeftovers(): Promise<void> {
   const root = await navigator.storage.getDirectory();
   for await (const name of root.keys()) {
     if (!name.startsWith(IMPORT_FILE_PREFIX)) continue;
-    await root
-      .removeEntry(name)
-      .catch((error: unknown) =>
-        console.debug("[database] kept a locked import copy", name, error),
-      );
+    await root.removeEntry(name).catch((error: unknown) => {
+      console.debug("[database] kept a locked import copy", name, error);
+    });
   }
 }
 
@@ -154,7 +152,7 @@ async function checkImport(bytes: Uint8Array<ArrayBuffer>): Promise<ImportCheck>
     connection = await connectFile(name);
     await runMigrations(connection);
     const opened = connection;
-    await loadPlan(createDatabase(createLocalQueryService(async () => opened)));
+    await loadPlan(createDatabase(createLocalQueryService(() => Promise.resolve(opened))));
     return "importable";
   } catch (error) {
     if (error instanceof NewerDatabaseError) return "newer-version";
@@ -278,7 +276,8 @@ function startElection(): void {
     // this tab answering while the engine loads (see "Calls between tabs" in docs/SPEC.md).
     provide(connected.channel, SCOPE, localService);
     console.debug("[database] acquired leader lock, serving the database");
-    await getLocalConnection().catch(() => undefined);
+    // A failure to open shows up again on every call, so here it only must not end the lock.
+    await getLocalConnection().catch(() => {});
     // Hold the lock, and with it leadership, until this tab dies.
     await new Promise<never>(() => {});
   });
@@ -291,8 +290,7 @@ async function callService<T>(operation: (service: DatabaseService) => Promise<T
   while (true) {
     if (isLeader) return operation(localService);
     try {
-      // Tried again only after a promotion, so this loop runs at most twice.
-      // oxlint-disable-next-line no-await-in-loop -- see above
+      // oxlint-disable-next-line no-await-in-loop -- tried again only after a promotion, so this runs at most twice.
       return await operation(leader.proxy);
     } catch (error) {
       // Promoted mid-wait: the call was never sent, safe to redispatch locally.

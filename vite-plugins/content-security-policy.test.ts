@@ -22,6 +22,6 @@ describe("findTemplates", () => {
 
   it("refuses a template that isn't a static string", () => {
     const code = 'import { template } from "@solidjs/web"; template(`<p>${name}`);';
-    expect(() => findTemplates(code)).toThrow(/static string/);
+    expect(() => findTemplates(code)).toThrow(/static string/u);
   });
 });

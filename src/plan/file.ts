@@ -1,5 +1,5 @@
 import { sanitizePlan } from "./sanitize";
-import type { Plan } from "./types";
+import { createEmptyPlan, type Plan } from "./types";
 
 /** The stored format, as in examples/example-week.json, with keys in a stable order. */
 export function serialize(plan: Plan): string {
@@ -60,6 +60,6 @@ export function parse(text: string): Plan {
   try {
     return sanitizePlan(JSON.parse(text));
   } catch {
-    return sanitizePlan(undefined);
+    return createEmptyPlan();
   }
 }
