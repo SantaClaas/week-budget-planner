@@ -49,6 +49,8 @@ These were decided after the prototype and override it:
 - **Settings is a page**, holding the theme choice and the data actions (export, import, delete). The theme choice (System, Light, Dark) is new.
 - **Names are spelled out** in the stored format and the database: `version` (was `v`), `budgetMinutes` (was `mins`), `activityId` (was `act`) and `length` (was `dur`). Nothing was stored in the old format outside the prototype, so there is no conversion.
 - **The example week is marked with a time, not a boolean:** `exampleLoadedAt` says when it was loaded and is null once it's kept or replaced (the prototype stored `example: true`). See `docs/CODING-GUIDELINES.md` on stored booleans.
+- **Ids are nanoids** from an alphabet without lookalike characters, so they can appear in URLs (see Data model). The prototype used `crypto.randomUUID()`.
+- **Dates, times and lengths are formatted by the browser** with the `Intl` APIs, in the user's language and conventions, and dates use Temporal instead of `Date` (see Dates, times and language). The prototype built strings like "1 h 30 min" and "07:30" by hand.
 - **The new-activity form** is behind a "New activity" button once at least one activity exists. In the empty state it is shown open.
 
 ## Data model
@@ -83,6 +85,8 @@ type Block = {
   length: number;         // length in minutes, multiple of 15, 15..1440; start + length may pass 1440 (overnight block)
 };
 ```
+
+Ids are made with [nanoid](https://github.com/ai/nanoid)'s `customAlphabet`: 12 characters from `6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz`, which is `nolookalikesSafe` from `nanoid-dictionary`. It leaves out characters that look alike (1, l and I, 0 and O, and others) and vowels, so ids are easy to read back from a URL and never spell words. 36¹² is about 4.7 × 10¹⁸ (62 bits), plenty for one plan. nanoid draws its randomness from `crypto.getRandomValues()`, which, unlike `crypto.randomUUID()`, also works outside secure contexts. Ids are stored as text. A 12-character id is a third of a UUID string, and Turso's binary `uuid4()` wouldn't help, since ids are made in the browser and appear in URLs and files as text. Ids that come from storage, an import or the example week are kept as they are, as long as they are non-empty and at most 40 characters.
 
 Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `calculateWeeklyBudget(activity) = activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes`. Placed: the sum of `length` over that activity's blocks. Left to place: `weekly budget − placed`. It can go negative, which means over budget.
 
@@ -167,6 +171,12 @@ All of these must work with a mouse, touch and the keyboard.
 
 **Activities**
 - Add with validation messages: "Give the activity a name.", "Enter the hours it needs, for example 1.5.", "A day has 24 hours. Enter 24 or less.", "A week has 168 hours. Enter 168 or less.", "Enter how many days per week, from 1 to 7." Hours are rounded to 15 minutes.
+- **Validation uses the platform's constraint validation**, not a form library and not CSS classes:
+  - The inputs carry their own rules (`required`, `min`, `max`), and the browser decides what's invalid. For the rules attributes can't express, and to use the messages above instead of the browser's, set them with `setCustomValidity()` on the field: an empty string when it's valid, so `validationMessage` is always ours.
+  - **Timing:** a field shows its error only once the user is done with it: when it loses focus, or when the form is submitted. That's what `:user-invalid` matches, so the error styling and the message (the text field's supporting text) hang off `:user-invalid`. No error shows on an untouched form or while typing for the first time. Run the field's check on every `input` event, so the error clears as soon as the value is fixed.
+  - Submitting runs the browser's validation. Handle the `invalid` event with `preventDefault()` to hide the browser's bubble, since the message already shows under the field, and move focus to the first invalid field.
+  - The message is linked to its field with `aria-describedby`. Set `aria-invalid` whenever the field matches `:user-invalid` (checked on `blur`, `focus` and `input`), so screen readers hear about the error at the same moment it appears on screen.
+  - Hours accept the user's decimal separator ("1.5" and "1,5" in German), read with the separators from `Intl.NumberFormat(…).formatToParts()`.
 - Edit inline in the list item (same form, plus Save, Cancel and Delete). Escape cancels.
 - Deleting an activity also deletes its blocks. Show a snackbar with Undo: "Deleted Gym and its 3 blocks."
 - A new activity gets a default color and shape, ideally ones no other activity uses yet (see Activity shapes under Design). The user can change both.
@@ -305,6 +315,33 @@ The design canvas made these choices without a Google source. Confirm each again
 
 Screenshots of the old prototype are in `docs/`. They show the earlier look, not the target design.
 
+## Dates, times and language
+
+Dates and times use **Temporal**, never `Date`. The plan itself has no dates: block times are integer minutes in a Monday-to-Sunday week. Dates only show up at the edges:
+
+- Times that are stored, such as `exampleLoadedAt` and an activity's `created_at` in the database, are `Temporal.Now.instant().toString()`, an ISO 8601 time in UTC. Reading them back uses `Temporal.Instant.from()`, and anything that doesn't parse becomes null.
+- Export file names use today's local date, `Temporal.Now.plainDateISO()` ("week-budget-planner-2026-10-17.json").
+- Formatting a week minute goes through `Temporal.PlainTime` (and a reference Monday, `Temporal.PlainDate`, for weekdays), because `Intl.DateTimeFormat` formats Temporal values directly.
+
+Everything the user reads is **formatted by `Intl`**, never assembled by hand, so it follows the user's language and conventions. With no setting, that is the browser's language (`navigator.languages`). The copy in this spec writes lengths as "1 h 30 min" and times as "07:30" for readability. The app shows whatever `Intl` gives, for example:
+
+| What | API | en-GB | en-US | de |
+| --- | --- | --- | --- | --- |
+| Lengths and budgets in text ("left to place", the budget line, the placing toolbar) | `Intl.DurationFormat`, `style: "short"` | 1 hr, 30 mins | 1 hr, 30 min | 1 Std., 30 Min. |
+| Lengths on blocks and day totals | `Intl.DurationFormat`, `style: "narrow"` | 1h 30m | 1h 30m | 1 Std., 30 Min. |
+| Clock times (the gutter, day hours, snackbars) | `Intl.DateTimeFormat`, `timeStyle: "short"` | 07:30 | 7:30 AM | 07:30 |
+| A block's time range | `formatRange()` of the same formatter | 10:00–11:30 | 10:00 – 11:30 AM | 10:00–11:30 Uhr |
+| Weekdays | `Intl.DateTimeFormat`, `weekday: "short"` or `"long"` | Mon, Monday | Mon, Monday | Mo, Montag |
+
+- A length of zero would format as an empty string, so it shows its minutes (`minutesDisplay: "always"`): "0 min".
+- An overnight block's range puts the weekday before each end: "Tue 22:00 – Wed 02:00". `formatRange()` would add the day of the month, which a week without dates doesn't have.
+- Creating an `Intl` formatter is slow, and the grid formats on every drag frame, so formatters are created once per set of options and reused.
+- Every formatting function takes the format options as a parameter (see below), so a setting can change them without touching the callers.
+
+**Format settings (later).** The app may become a calendar app, and calendar apps let people choose their formats apart from their language, for example English with a 24-hour clock and weeks starting on Monday. Plan for these settings, each with "System" as the default: the language, the time format (12-hour or 24-hour, `hourCycle: "h12"` or `"h23"`) and the first day of the week (`Intl.Locale.prototype.getWeekInfo()` gives the system's). For now the week always starts on Monday, as the data model says. They'd be device preferences in `localStorage`, like the theme.
+
+**Translations (later).** The copy is English only for now, written as plain strings next to where it's used. When the app is translated, use Mozilla's [Fluent](https://projectfluent.org/) (`@fluent/bundle`, with `@fluent/dom` or a small Solid binding): one `.ftl` file per language, loaded with a dynamic `import()` for the language in use. Fluent's plurals and number formatting come from `Intl` as well, and it has a Rust implementation (`fluent-rs`), as nanoid does. An alternative from a standards body is Unicode MessageFormat 2 (the `messageformat` package, and the basis of the proposed `Intl.MessageFormat`). Decide between the two when translations start.
+
 ## Browser support
 
 This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed (see `docs/LOADING.md` for where everything loads), and never in the initial bundle: each one comes in through a dynamic `import()`, which Vite splits into its own chunk, so browsers that don't need it never download it. Check the build output to confirm the chunk is separate. Versions are from MDN's browser compat data.
@@ -322,6 +359,8 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Light mode only: an `@supports not` block in the tokens gives every color its light value (a test checks they match), and the theme setting has no effect. |
 | `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Every swatch is a circle, so activities differ by color only, and the shape picker shows circles. |
 | Popover API for the menus, the placing toolbar and snackbars | Chrome 114, Firefox 125, Safari 17 | OddBird's [`@oddbird/popover-polyfill`](https://github.com/oddbird/popover-polyfill), loaded only when `"popover" in HTMLElement.prototype` is false. It can't add the real `:popover-open` pseudo-class and sets a `.\:popover-open` class instead, so popover rules must match both with `:is(:popover-open, .\:popover-open)`, or older browsers drop the whole rule. |
+| Temporal, for dates and times | Chrome 144, Firefox 139, not yet in Safari | FullCalendar's [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) (MIT, 20 KB gzipped), loaded with a dynamic `import()` only when `globalThis.Temporal` is missing, and awaited before the app renders. Chosen over the proposal champions' `@js-temporal/polyfill`, whose README doesn't call it ready for production yet, and which is 47 KB gzipped. |
+| `Intl.DurationFormat`, for lengths | Chrome 129, Firefox 136, Safari 16.4 | FormatJS's [`@formatjs/intl-durationformat`](https://formatjs.github.io/docs/polyfills/intl-durationformat) (MIT, 18 KB gzipped), loaded the same way when `Intl.DurationFormat` is missing. It uses the browser's `Intl.NumberFormat` for the units, so it needs no locale data. |
 | Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
 
 Everything else in use is older than these: cascade layers, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>` and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. With the polyfills, the floor is set by `:user-invalid` and `:has()`: about Chrome 119, Firefox 121 and Safari 16.5. `@starting-style` only animates, so without it things appear without a transition.
@@ -336,4 +375,5 @@ Everything else in use is older than these: cascade layers, `:has()`, `:user-inv
 - Fixed blocks such as lectures that are locked in place
 - A picture inside an activity's shape instead of a color
 - Sync across devices (for example Turso sync, since the database is already Turso)
+- Format settings and translations (see Dates, times and language)
 - Installing as a PWA, like flashcut (its Workbox config raises the precache size limit for the large WASM file)
