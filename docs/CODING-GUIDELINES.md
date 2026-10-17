@@ -102,6 +102,26 @@ Code adapted from another project, such as flashcut's tab leader and broadcast s
 
 This is close to what Casey Muratori calls [semantic compression](https://caseymuratori.com/blog_0015), or compression-oriented programming. He avoids the word "refactoring", which he calls "a ridiculous term". His rule is "make your code usable before you try to make it reusable": type out exactly what each case needs, get it working, and pull out the shared part once it repeats. In his example, the variables and calls a UI panel kept repeating became a `Panel_Layout` struct with `row()`, `push_button()` and `complete()`. Its methods don't repeat "layout", just as this project's module functions don't repeat their module's noun.
 
+## Where rules are enforced
+
+**Catch a mistake at the earliest stage that can catch it.** The earlier a stage, the cheaper the mistake: the editor marks it while it's typed, instead of a user finding it later. In order:
+
+1. **Design time.** Shape the types so a wrong value can't be written at all: a branded `Length` instead of a `number`, a `Hue` union instead of any number, a `status` enum instead of two booleans. What can't be represented needs no check anywhere else.
+2. **Compile time:** TypeScript and the lint, on every edit and in CI. This is the default home for every rule.
+3. **Build time:** what the build itself refuses, such as the Content Security Policy plugin failing on an import of `src/trusted-html.ts`, or drizzle-kit generating the migrations from the schema instead of by hand.
+4. **Test time:** what the compiler can't prove. Runtime checks, parsers and sanitizers get tested here, before they're relied on.
+5. **Review time:** what no tool checks, like whether a name says what a thing is, or whether an exception's reason holds.
+6. **Runtime**, last: checks in the app at its edges (sanitizers on loaded data, type guards on JSON and on what other tabs send), and checks the platform makes for us (the database's `CHECK` constraints, the browser's Content Security Policy and Trusted Types). A runtime check is a safety net, not the plan.
+
+Monitoring would come after runtime, for what only shows up with real use, but the app has no backend to send anything to.
+
+**An exception moves a rule to a later stage, so it owes a test.** A type assertion (`as`, `!`), a `@ts-expect-error` or a disabled lint rule is like `unsafe`, `unwrap()` or `expect()` in Rust. It isn't bad in itself: it's the tool for when the developer knows something is safe and the compiler can't prove it. But the proof becomes the developer's job, in two parts:
+
+- **Say why it's safe**, in the comment the lint requires, the way Rust code puts a `// SAFETY:` comment on an `unsafe` block.
+- **Make the reason a test**, so it can't change under our feet. The runtime check that replaces a compile-time proof gets unit tests, including the cases it rejects. The parsers and sanitizers are the example: `parseDecimal`, `parseBudgetMinutes`, `planFile.read` and `sanitizePlan` each have tests for valid input and for input they must refuse or repair, and the brand modules' one `brand()` assertion is only reached through them. The same goes for type guards such as `isSqlValue`, and for code that leans on a library's runtime behavior past its types, such as the RPC proxy or Drizzle's `construct()`.
+
+**Test where a test adds something.** Coverage numbers aren't the goal. A test is worth its code when it pins down a rule, a parser, an edge case or an exception's reason. A smoke test (does it run at all?) only earns its place on a sensitive path that's hard to recover from, where a failure loses or damages the user's data: export and import, migrations, deleting all data, the database opening and the isolation reload. Elsewhere it adds maintenance without telling us anything the types and the other tests don't.
+
 ## Formatting and linting
 
 **oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
@@ -119,7 +139,7 @@ This is close to what Casey Muratori calls [semantic compression](https://caseym
 
 - Check the value: a type guard (`isSqlValue`, `isRecord`), a sanitizer or parser for branded types, or a check that throws with a clear message.
 - For a value that may be missing, handle the missing case (`?? fallback`, an early return, or a helper like the tests' `required()` that throws).
-- Where an assertion is truly needed, at the edge of a library whose types are wrong or missing, or in a brand module's `brand()` helper, disable the rule on that line with the reason. Today there are six, and each says why: the two `brand()` helpers, Drizzle's untyped `construct()` and its row type, the RPC proxy, and the service worker's `self`.
+- Where an assertion is truly needed, at the edge of a library whose types are wrong or missing, or in a brand module's `brand()` helper, disable the rule on that line with the reason, and cover what it relies on with a test (see Where rules are enforced). Today there are six, and each says why: the two `brand()` helpers, Drizzle's untyped `construct()` and its row type, the RPC proxy, and the service worker's `self`.
 
 ## CSS
 
