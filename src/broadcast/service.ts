@@ -39,11 +39,7 @@ export class ProviderMissingError extends Error {}
 export class RemoteCallError extends Error {}
 
 /** Serve `target`'s methods to all consumer tabs on the channel. */
-export function provide<T extends AsyncApi>(
-  channel: BroadcastChannel,
-  scope: string,
-  target: T,
-): void {
+export function provide(channel: BroadcastChannel, scope: string, target: AsyncApi): void {
   const providerId = crypto.randomUUID();
   const ready: ServiceMessage = { scope, kind: "provider-ready", providerId };
 
@@ -126,7 +122,8 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   let queryTimer: ReturnType<typeof setInterval> | undefined;
   let lastHeardAt = 0;
 
-  const query = () => channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
+  const query = () =>
+    channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
 
   function failSent(reason: Error) {
     const calls = [...sent.values()];
@@ -155,7 +152,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       if (performance.now() - lastHeardAt > SILENCE_LIMIT_MILLISECONDS) {
         // Forget the silent provider, so the next call looks for one again.
         providerId = undefined;
-        settleWaiters((waiter) => waiter.reject(new ProviderMissingError("No database leader tab answered.")));
+        settleWaiters((waiter) =>
+          waiter.reject(new ProviderMissingError("No database leader tab answered.")),
+        );
         failSent(new CallLostError("The database leader tab stopped answering."));
         stopQueryingWhenIdle();
         return;
@@ -188,7 +187,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       return;
     }
     if (message.error instanceof Error && message.name) message.error.name = message.name;
-    call.reject(new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }));
+    call.reject(
+      new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }),
+    );
   });
 
   function waitForProvider(): Promise<void> {
@@ -222,6 +223,8 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   };
 
   return {
+    // The proxy answers every method name, so it stands in for whatever T the caller asks for.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see above
     proxy: new Proxy({}, handler) as T,
     handlePromotion() {
       settleWaiters((waiter) =>

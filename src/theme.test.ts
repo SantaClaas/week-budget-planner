@@ -40,9 +40,15 @@ describe("theme", () => {
 
   it("still applies the choice when storage is blocked", () => {
     const blocked = {
-      getItem: () => { throw new Error("blocked"); },
-      setItem: () => { throw new Error("blocked"); },
-      removeItem: () => { throw new Error("blocked"); },
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+      removeItem: () => {
+        throw new Error("blocked");
+      },
     };
     const meta = { content: "light dark" };
     theme.save("light", blocked, meta);

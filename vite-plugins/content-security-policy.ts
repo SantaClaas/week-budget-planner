@@ -38,7 +38,8 @@ function buildPolicy(scriptHashes: string[]): string {
   ].join("; ");
 }
 
-const hashScript = (script: string) => `sha256-${createHash("sha256").update(script).digest("base64")}`;
+const hashScript = (script: string) =>
+  `sha256-${createHash("sha256").update(script).digest("base64")}`;
 
 /** The static HTML of every Solid `template()` call in compiled code, as the runtime receives it. */
 export function findTemplates(code: string): string[] {
@@ -50,7 +51,11 @@ export function findTemplates(code: string): string[] {
     ImportDeclaration(node) {
       if (node.source.value !== "@solidjs/web") return;
       for (const specifier of node.specifiers) {
-        if (specifier.type === "ImportSpecifier" && "name" in specifier.imported && specifier.imported.name === "template") {
+        if (
+          specifier.type === "ImportSpecifier" &&
+          "name" in specifier.imported &&
+          specifier.imported.name === "template"
+        ) {
           templateName = specifier.local.name;
         }
       }
@@ -64,18 +69,23 @@ export function findTemplates(code: string): string[] {
       } else if (html?.type === "Literal" && typeof html.value === "string") {
         templates.push(html.value);
       } else {
-        throw new Error("A Solid template() call without a static string can't be put on the Trusted Types allowlist.");
+        throw new Error(
+          "A Solid template() call without a static string can't be put on the Trusted Types allowlist.",
+        );
       }
     },
   }).visit(program);
   return templates;
 }
 
+const isOwnCode = (id: string) => !id.startsWith("\0") && !id.includes("/node_modules/");
+
 /** `trustedHtmlFiles`: files, relative to the project root, that are imported with `?raw` and written as HTML. */
-export function contentSecurityPolicy({ trustedHtmlFiles = [] }: { trustedHtmlFiles?: string[] } = {}): Plugin[] {
+export function contentSecurityPolicy({
+  trustedHtmlFiles = [],
+}: { trustedHtmlFiles?: string[] } = {}): Plugin[] {
   let root = process.cwd();
-  const relative = (id: string) => path.relative(root, id.split("?")[0]!).split(path.sep).join("/");
-  const isOwnCode = (id: string) => !id.startsWith("\0") && !id.includes("/node_modules/");
+  const relative = (id: string) => path.relative(root, id.split("?")[0]).split(path.sep).join("/");
 
   return [
     {
@@ -99,14 +109,18 @@ export function contentSecurityPolicy({ trustedHtmlFiles = [] }: { trustedHtmlFi
       name: "content-security-policy",
       // After the Solid compiler, so the templates are in the code.
       enforce: "post",
-      config: () => ({ server: { headers: { "Content-Security-Policy-Report-Only": TRUSTED_TYPES } } }),
+      config: () => ({
+        server: { headers: { "Content-Security-Policy-Report-Only": TRUSTED_TYPES } },
+      }),
       transform(code, id) {
         // Libraries count too: a prebuilt Solid component library ships template() calls as well.
-        if (id.startsWith("\0")) return;
+        if (id.startsWith("\0")) return null;
         const file = relative(id);
         const isTrustedFile = id.includes("?raw") && trustedHtmlFiles.includes(file);
-        const html = isTrustedFile ? [readFileSync(path.join(root, file), "utf8")] : findTemplates(code);
-        if (html.length === 0) return;
+        const html = isTrustedFile
+          ? [readFileSync(path.join(root, file), "utf8")]
+          : findTemplates(code);
+        if (html.length === 0) return null;
         // On the first line, so the source map of every other line stays right.
         const allow = `import { allowHtml } from "/${TRUSTED_HTML_MODULE}"; allowHtml(${JSON.stringify(html)}); `;
         return { code: allow + code, map: null };
@@ -116,7 +130,9 @@ export function contentSecurityPolicy({ trustedHtmlFiles = [] }: { trustedHtmlFi
         handler(html, context) {
           // Development has the report-only header instead: Vite's own scripts aren't hashed.
           if (context.server) return html;
-          const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script]) => hashScript(script!));
+          const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script]) =>
+            hashScript(script),
+          );
           return [
             {
               tag: "meta",

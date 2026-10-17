@@ -1,5 +1,12 @@
 import { sql, type SQL } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  type AnySQLiteColumn,
+} from "drizzle-orm/sqlite-core";
 
 import type { ActivityId, BlockId } from "../plan/id";
 import {
@@ -75,8 +82,14 @@ export const blocks = sqliteTable(
     index("blocks_activity_id").on(table.activityId),
     check("blocks_id", isIdLength(table.id)),
     check("blocks_day", isBetween(table.day, 0, 6)),
-    check("blocks_start", sql`${isBetween(table.start, 0, DAY - SLOT)} AND ${isSlotMultiple(table.start)}`),
-    check("blocks_length", sql`${isBetween(table.length, SLOT, MAX_LENGTH)} AND ${isSlotMultiple(table.length)}`),
+    check(
+      "blocks_start",
+      sql`${isBetween(table.start, 0, DAY - SLOT)} AND ${isSlotMultiple(table.start)}`,
+    ),
+    check(
+      "blocks_length",
+      sql`${isBetween(table.length, SLOT, MAX_LENGTH)} AND ${isSlotMultiple(table.length)}`,
+    ),
   ],
 );
 
