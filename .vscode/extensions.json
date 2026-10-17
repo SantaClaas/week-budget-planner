@@ -1,0 +1,6 @@
+{
+  // Oxc runs oxlint and oxfmt from node_modules, Typos spell checks with typos.toml, and Knip shows
+  // unused files, exports and dependencies.
+  "recommendations": ["oxc.oxc-vscode", "tekumara.typos-vscode", "webpro.vscode-knip"],
+  "unwantedRecommendations": ["esbenp.prettier-vscode", "dbaeumer.vscode-eslint"]
+}

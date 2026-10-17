@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Finds unused files, exports and dependencies (https://knip.dev). Its plugins read the entry
+  // points from the Vite, Vitest, Playwright, drizzle-kit and oxlint configs.
+  "entry": ["scripts/*.ts"],
+  // A system tool, not a package: build-shapes.ts compiles Google's Kotlin sources with it.
+  "ignoreBinaries": ["java"],
+}
