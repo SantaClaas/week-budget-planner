@@ -26,7 +26,11 @@ type TrustedTypePolicyFactory = {
 
 const allowedHtml = new Set<string>();
 
-/** Lets these exact strings be written as HTML. Only code the build adds may call this. */
+/**
+ * Lets these exact strings be written as HTML. Only code the build adds may call this.
+ *
+ * @public The content security policy plugin imports it from the code it adds to each module.
+ */
 export function allowHtml(html: readonly string[]): void {
   for (const item of html) allowedHtml.add(item);
 }

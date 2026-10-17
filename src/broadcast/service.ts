@@ -30,7 +30,7 @@ export class ProviderChangedError extends Error {}
  * The provider changed or went silent while the call was in flight. The old provider may or may
  * not have applied it, so it is NOT retried automatically.
  */
-export class CallLostError extends Error {}
+class CallLostError extends Error {}
 
 /** No provider answered within the time limit. The call was never sent. */
 export class ProviderMissingError extends Error {}
