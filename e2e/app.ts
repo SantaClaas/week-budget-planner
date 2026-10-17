@@ -17,9 +17,9 @@ export const ISOLATED_URL = "http://localhost:4311/week-budget-planner/";
 export const PAGES_URL = "http://localhost:4312/week-budget-planner/";
 
 /** The example week: 5 activities and 8 blocks. */
-export const EXAMPLE_WEEK = "5 activities · 8 blocks";
+const EXAMPLE_WEEK = "5 activities · 8 blocks";
 
-export const status = (page: Page): Locator => page.getByTestId("status");
+const status = (page: Page): Locator => page.getByTestId("status");
 
 export async function expectStatus(
   page: Page,
