@@ -15,10 +15,6 @@ export function sumPlacedByActivity(blocks: readonly Block[]): Map<ActivityId, n
   return placed;
 }
 
-/** Budget minus placed. Negative means over budget. */
-export const calculateLeftToPlace = (activity: Activity, blocks: readonly Block[]): number =>
-  calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
-
 export type Summary = {
   /** Sum of all budgets. */
   budget: number;
