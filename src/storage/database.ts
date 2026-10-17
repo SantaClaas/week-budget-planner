@@ -47,7 +47,9 @@ export function create(): PlanStore {
     },
     wipe: () => databaseService.wipe(),
     onExternalChange(callback) {
-      return listenForBroadcasts(() => callback());
+      return listenForBroadcasts(() => {
+        callback();
+      });
     },
   };
 }

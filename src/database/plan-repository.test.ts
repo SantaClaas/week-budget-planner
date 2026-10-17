@@ -18,9 +18,17 @@ import { blocks as blocksTable } from "./schema";
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
 async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {
-  const connection = (await connect(":memory:")) as unknown as TursoConnection;
+  const connection = await connect(":memory:");
   await runMigrations(connection);
-  return { database: createDatabase(createLocalQueryService(async () => connection)), connection };
+  return {
+    database: createDatabase(createLocalQueryService(() => Promise.resolve(connection))),
+    connection,
+  };
+}
+
+function required<Value>(value: Value | undefined, what: string): Value {
+  if (value === undefined) throw new Error(`The test has no ${what}.`);
+  return value;
 }
 
 const example = (): Plan => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
@@ -28,17 +36,17 @@ const example = (): Plan => createExampleWeek(Temporal.Instant.from("2026-10-15T
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
     expect(MIGRATION_NAMES.length).toBeGreaterThan(0);
-    for (const name of MIGRATION_NAMES) expect(name).toMatch(/^\d{14}_/);
+    for (const name of MIGRATION_NAMES) expect(name).toMatch(/^\d{14}_/u);
   });
 
   it("can run again on a migrated database", async () => {
-    const connection = (await connect(":memory:")) as unknown as TursoConnection;
+    const connection = await connect(":memory:");
     await runMigrations(connection);
     await expect(runMigrations(connection)).resolves.toBeUndefined();
   });
 
   it("refuses a database from a newer version of the app", async () => {
-    const connection = (await connect(":memory:")) as unknown as TursoConnection;
+    const connection = await connect(":memory:");
     await runMigrations(connection);
     await connection.exec(
       `INSERT INTO __drizzle_migrations (hash, created_at, name) VALUES ('', 0, '29991231000000_future')`,
@@ -68,12 +76,9 @@ describe("plan repository", () => {
     const { database } = await openTestDatabase();
     const before = example();
     await savePlan(database, undefined, before);
-    const after: Plan = {
-      ...before,
-      blocks: before.blocks.map((block) =>
-        block.id === "block-1" ? { ...block, start: sanitizeDayMinute(660) } : block,
-      ),
-    };
+    const [first, ...rest] = before.blocks;
+    const moved = { ...required(first, "first block"), start: sanitizeDayMinute(660) };
+    const after: Plan = { ...before, blocks: [moved, ...rest] };
     expect(buildPlanStatements(database, before, after)).toHaveLength(1);
     expect(buildPlanStatements(database, before, before)).toHaveLength(0);
     await savePlan(database, before, after);
@@ -114,15 +119,15 @@ describe("plan repository", () => {
     const [settingsUpdate] = buildPlanStatements(database, before, after);
     // A duplicate primary key makes the second statement fail after the first one ran.
     const duplicate = database.insert(blocksTable).values({
-      id: sanitizeBlockId("block-1")!,
-      activityId: sanitizeActivityId("stats")!,
+      id: required(sanitizeBlockId("block-1"), "block id"),
+      activityId: required(sanitizeActivityId("stats"), "activity id"),
       day: sanitizeDayIndex(0),
       start: sanitizeDayMinute(0),
       length: sanitizeLength(15),
     });
-    await expect(database.batch([settingsUpdate!, duplicate])).rejects.toThrow(
-      /UNIQUE|constraint/i,
-    );
+    await expect(
+      database.batch([required(settingsUpdate, "settings update"), duplicate]),
+    ).rejects.toThrow(/UNIQUE|constraint/iu);
     expect((await loadPlan(database)).plan.dayStart).toBe(7);
   });
 
@@ -133,18 +138,18 @@ describe("plan repository", () => {
       connection.exec(
         `INSERT INTO blocks (id, activity_id, day, start, length) VALUES (${values})`,
       );
-    await expect(insert("'b1', 'stats', 7, 600, 60")).rejects.toThrow(/CHECK constraint failed/);
-    await expect(insert("'b2', 'stats', 0, 607, 60")).rejects.toThrow(/CHECK constraint failed/);
-    await expect(insert("'b3', 'stats', 0, 600, 1455")).rejects.toThrow(/CHECK constraint failed/);
-    await expect(insert("'', 'stats', 0, 600, 60")).rejects.toThrow(/CHECK constraint failed/);
+    await expect(insert("'b1', 'stats', 7, 600, 60")).rejects.toThrow(/CHECK constraint failed/u);
+    await expect(insert("'b2', 'stats', 0, 607, 60")).rejects.toThrow(/CHECK constraint failed/u);
+    await expect(insert("'b3', 'stats', 0, 600, 1455")).rejects.toThrow(/CHECK constraint failed/u);
+    await expect(insert("'', 'stats', 0, 600, 60")).rejects.toThrow(/CHECK constraint failed/u);
     await expect(connection.exec("UPDATE activities SET hue = 1")).rejects.toThrow(
-      /CHECK constraint failed/,
+      /CHECK constraint failed/u,
     );
     await expect(
       connection.exec("UPDATE activities SET mode = 'day', budget_minutes = 1500"),
-    ).rejects.toThrow(/CHECK constraint failed/);
+    ).rejects.toThrow(/CHECK constraint failed/u);
     await expect(connection.exec("UPDATE settings SET day_end = 12")).rejects.toThrow(
-      /CHECK constraint failed/,
+      /CHECK constraint failed/u,
     );
     await insert("'b4', 'stats', 6, 1425, 1440");
   });

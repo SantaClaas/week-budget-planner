@@ -30,7 +30,8 @@ import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/types";
 const quote = (value: number | string): string =>
   typeof value === "number" ? String(value) : `'${value.replaceAll("'", "''")}'`;
 const literal = (value: number | string): SQL => sql.raw(quote(value));
-const list = (values: readonly (number | string)[]): SQL => sql.raw(values.map(quote).join(", "));
+const list = (values: readonly (number | string)[]): SQL =>
+  sql.raw(values.map((value) => quote(value)).join(", "));
 
 const isBetween = (column: AnySQLiteColumn, low: number, high: number): SQL =>
   sql`${column} BETWEEN ${literal(low)} AND ${literal(high)}`;

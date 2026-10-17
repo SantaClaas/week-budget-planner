@@ -8,10 +8,20 @@
 //
 // It also adds the security headers a <meta> policy can't set (see Security in docs/SPEC.md).
 
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+// TypeScript checks this file through tsconfig.worker.json. Its WebWorker types give `self` the type
+// of any worker, so it's typed here as the service worker it is: a JSDoc cast, since this plain
+// script can't redeclare `self`, and the one assertion in the file.
+// oxlint-disable-next-line no-inline-comments -- a JSDoc cast is written inline, in the expression it casts.
+const worker = /** @type {ServiceWorkerGlobalScope} */ (/** @type {unknown} */ (self));
 
-self.addEventListener("fetch", (event) => {
+worker.addEventListener("install", () => {
+  void worker.skipWaiting();
+});
+worker.addEventListener("activate", (event) => {
+  event.waitUntil(worker.clients.claim());
+});
+
+worker.addEventListener("fetch", (event) => {
   const request = event.request;
   // Chrome throws for this combination when the request is forwarded.
   if (request.cache === "only-if-cached" && request.mode !== "same-origin") return;
@@ -30,7 +40,7 @@ self.addEventListener("fetch", (event) => {
         headers.set("Content-Security-Policy", "frame-ancestors 'none'");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
       }
-      if (new URL(request.url).origin === self.location.origin) {
+      if (new URL(request.url).origin === worker.location.origin) {
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
       }
       return new Response(response.body, {

@@ -31,9 +31,8 @@ const events = () => {
   const target = new EventTarget();
   return Object.assign(target, {
     dispatchStorage(key: string | null) {
-      const event = new Event("storage") as Event & { key: string | null };
-      Object.defineProperty(event, "key", { value: key });
-      target.dispatchEvent(event);
+      // Node has no StorageEvent, so a plain event carries the key.
+      target.dispatchEvent(Object.assign(new Event("storage"), { key }));
     },
   });
 };
@@ -59,7 +58,7 @@ describe("localStorage store", () => {
     const store = local.create(storage, events());
     await store.save(undefined, example());
     const exported = await store.exportFile();
-    expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
     await store.wipe();
     expect(storage.getItem(PLAN_KEY)).toBeNull();
     await store.importFile(file(await exported.blob.text(), "backup.json"));
@@ -83,11 +82,13 @@ describe("localStorage store", () => {
     expect((await store.load()).plan).toEqual(example());
   });
 
-  it("reports changes from other tabs", async () => {
+  it("reports changes from other tabs", () => {
     const target = events();
     const store = local.create(new MemoryStorage(), target);
     let calls = 0;
-    const stop = store.onExternalChange(() => calls++);
+    const stop = store.onExternalChange(() => {
+      calls++;
+    });
     target.dispatchStorage(PLAN_KEY);
     target.dispatchStorage("something-else");
     stop();
