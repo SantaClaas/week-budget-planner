@@ -133,7 +133,7 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
 - **Week** (phones only): Day hours, Clear week.
 - **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
 - **Storage:** number of activities, number of blocks, database size.
-- **About**, the last section: one list item, "Version", with "2026-10-17 · 74ea982" (the date and the short commit hash) under it. The whole item is a link that opens the repository at that commit in a new tab, and it ends with the `open_in_new` icon instead of a chevron, so it reads as leaving the app. The icon's label says "Opens in a new tab". A build without git shows only the date, and the item isn't a link then (see Version).
+- **About**, the last section: one list item, "Version", with "2026-10-17 · 74ea982" (the date and the short commit hash) under it. The whole item is a link that opens the repository at that commit in a new tab, and it ends with the `open_in_new` icon instead of a chevron, so it reads as leaving the app. The icon's label says "Opens in a new tab". A build without git shows only the date, and the item opens the repository's main branch instead (see Version).
 - On wide screens it is a full page with a back button to the week.
 
 ### Version
@@ -141,8 +141,8 @@ The theme choice is a device preference, not part of the plan. It isn't in the d
 Releases are numbered by date, not with semantic versioning. A version number like semver's tells whatever depends on a package whether an update could break it, and nothing depends on this app's version. Where compatibility does matter, for the database and the exported files, the migrations track it, and the app refuses a database or a file from a newer version (see Persistence).
 
 - **The version is the date of the commit the app was built from**, as an ISO 8601 date in UTC (`2026-10-17`), plus that commit's hash. The commit's date rather than the build's keeps two builds of the same commit the same version, and the hash tells two releases on the same day apart.
-- **The hash is optional.** A build without git, for example from a downloaded archive, has the build's date and no hash.
-- The build reads both from git (`vite-plugins/app-version.ts`) and gives them to the app as the module `virtual:app-version`. The link goes to `https://github.com/SantaClaas/week-budget-planner/tree/<hash>`, the repository at that commit.
+- **The hash is optional.** A build without git, for example from a downloaded archive, has the build's date and no hash, and links to the repository's main branch instead of a commit.
+- The build reads both from git (`vite-plugins/app-version.ts`) and gives them to the app as the module `virtual:app-version`. The link goes to `https://github.com/SantaClaas/week-budget-planner/tree/<hash>`, the repository at that commit, or to `…/tree/main` without one.
 
 ## Grid geometry
 
