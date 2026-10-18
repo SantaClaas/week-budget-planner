@@ -22,7 +22,7 @@ const isValidId = (value: string): boolean => value.length > 0 && value.length <
  */
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Value is the brand to give: a return-only type parameter is what makes this the cast.
 function brand<Value extends Brand<string, string>>(value: string): Value {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place an id becomes a brand (see Branded types in docs/CODING-GUIDELINES.md).
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place an id becomes a brand (see Branded types in docs/guidelines/typescript.md).
   return value as Value;
 }
 
