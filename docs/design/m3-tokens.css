@@ -320,7 +320,7 @@
       }
     }
     &.full .track { display: none; }
-    /* over budget (approved deviation, see the spec): the bar spans max(budget, placed). The within-budget
+    /* over budget (approved deviation, see Deviations in docs/spec/design.md): the bar spans max(budget, placed). The within-budget
        part keeps the activity color, then the usual gap, then the overrun in red (--over-budget), sized by
        flex in minutes:
        <span class="indicator" style="flex: 720"></span><span class="over-budget" style="flex: 30"></span> */
@@ -368,7 +368,7 @@
     position: absolute; isolation: isolate; inset-inline: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: grid; grid-template-rows: minmax(0, auto) auto; align-content: start;
     @media (forced-colors: active) { border: 1px solid CanvasText; }
     /* The name takes what the time leaves (the time row always shows), and --name-lines, set from the
-       block's height, puts the ellipsis on the last line that fits (see Blocks in the spec). */
+       block's height, puts the ellipsis on the last line that fits (see Blocks in `docs/spec/grid-geometry.md`). */
     & .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--name-lines, 2); line-clamp: var(--name-lines, 2); }
     &.short .name, &.tiny .name { display: block; white-space: nowrap; text-overflow: ellipsis; }
     & .time { font-size: .6875rem; line-height: calc(14 / 11); opacity: .85; }

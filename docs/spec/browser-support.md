@@ -1,0 +1,24 @@
+# Browser support
+
+This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed (see `docs/LOADING.md` for where everything loads), and never in the initial bundle: each one comes in through a dynamic `import()`, which Vite splits into its own chunk, so browsers that don't need it never download it. Check the build output to confirm the chunk is separate. Versions are from MDN's browser compat data.
+
+**With a fallback, or degrading on purpose:**
+
+| Feature | Supported from | Without it |
+| --- | --- | --- |
+| SQLite in OPFS (`createSyncAccessHandle`), Web Locks, BroadcastChannel, cross-origin isolation | Chrome 102, Firefox 111, Safari 15.4 | The lower storage levels (see Progressive enhancement in [Persistence](persistence.md)). |
+| `<meta name="text-scale">` | Chrome 146 | Ignored. Browser text size and zoom still work. |
+| View Transitions | Chrome 111, Firefox 144, Safari 18 | Changes apply without the animation. |
+| `clip-path: shape()` for the wavy progress bar | Chrome 135, Firefox 148, Safari 18.4 | The bar stays flat. |
+| `forced-colors` rules, `forced-color-adjust`, `Mark` | Chrome, Firefox (Windows High Contrast) | Not needed where forced colors don't exist. |
+| Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
+| `light-dark()` in every color token | Chrome 123, Firefox 120, Safari 17.5 | Light mode only: an `@supports not` block in the tokens gives every color its light value (a test checks they match), and the theme setting has no effect. |
+| `clip-path: shape()` for activity shapes | Chrome 135, Firefox 148, Safari 18.4 | Every swatch is a circle, so activities differ by color only, and the shape picker shows circles. |
+| Popover API for the menus, the placing toolbar and snackbars | Chrome 114, Firefox 125, Safari 17 | OddBird's [`@oddbird/popover-polyfill`](https://github.com/oddbird/popover-polyfill), loaded only when `"popover" in HTMLElement.prototype` is false. It can't add the real `:popover-open` pseudo-class and sets a `.\:popover-open` class instead, so popover rules must match both with `:is(:popover-open, .\:popover-open)`, or older browsers drop the whole rule. |
+| Temporal, for dates and times | Chrome 144, Firefox 139, not yet in Safari | FullCalendar's [`temporal-polyfill`](https://github.com/fullcalendar/temporal-polyfill) (MIT, 20 KB gzipped), loaded with a dynamic `import()` only when `globalThis.Temporal` is missing, and awaited before the app renders. Chosen over the proposal champions' `@js-temporal/polyfill`, whose README doesn't call it ready for production yet, and which is 47 KB gzipped. |
+| `Intl.DurationFormat`, for lengths | Chrome 129, Firefox 136, Safari 16.4 | FormatJS's [`@formatjs/intl-durationformat`](https://formatjs.github.io/docs/polyfills/intl-durationformat) (MIT, 18 KB gzipped), loaded the same way when `Intl.DurationFormat` is missing. It uses the browser's `Intl.NumberFormat` for the units, so it needs no locale data. |
+| `accent-color` and `scrollbar-color`, for native controls and scrollbars in the theme's colors | Chrome 93 and 121, Firefox 92 and 64, Safari 26.2 | Native controls and scrollbars keep the system's colors. |
+| Trusted Types | Chrome 83, Firefox 148, Safari 26 | Not enforced: the page works the same, without the guard. Development in any current browser still catches mistakes. |
+| Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
+
+Everything else in use is older than these: cascade layers, CSS nesting, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>` and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. With the polyfills, the floor is set by `:user-invalid` and `:has()`: about Chrome 119, Firefox 121 and Safari 16.5. `@starting-style` only animates, so without it things appear without a transition.

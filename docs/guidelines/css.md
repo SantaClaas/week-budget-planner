@@ -5,7 +5,7 @@ paths:
 
 # CSS
 
-How the styles are written. It adds to `docs/guidelines/principles.md`, which always applies, and the same rules hold for styles set from TypeScript. The design itself, Material 3 Expressive, is in the Design section of `docs/SPEC.md`, and its tokens and components in `docs/design/m3-tokens.css`.
+How the styles are written. It adds to `docs/guidelines/principles.md`, which always applies, and the same rules hold for styles set from TypeScript. The design itself, Material 3 Expressive, is in `docs/spec/design.md`, and its tokens and components in `docs/design/m3-tokens.css`.
 
 **Google is the only source for Material Design**, and only the user approves a deviation from it (see `CLAUDE.md`). Build the components (navigation bar, bottom sheet, snackbar, floating toolbar and so on) in plain CSS, without a component library, and use the `modern-web-guidance` skill before writing a new one.
 
@@ -40,4 +40,4 @@ How the styles are written. It adds to `docs/guidelines/principles.md`, which al
 
 **Nesting.** Use CSS nesting to keep a component's states, parts and media queries inside its rule, like `.navigation-rail { … &.expanded { … } }`. Start every nested selector with `&` (`& .icon`, not `.icon`): browsers before Chrome 120 and Safari 17.2 drop a nested rule that doesn't, and with it nesting works from Chrome 112, Firefox 117 and Safari 16.5, below the app's floor. Keep it shallow: about three levels at most, since each level adds specificity and makes the selector harder to find by searching.
 
-See the Design section of `docs/SPEC.md` for the details and for Material 3 Expressive itself.
+See `docs/spec/design.md` for the details and for Material 3 Expressive itself.
