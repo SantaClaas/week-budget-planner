@@ -23,6 +23,16 @@ The other goals an application can have lead back to its consumers too:
 
 This is the same direction as "Bottom-up" under Refactoring: start with the specific thing in front of you, what the consumer needs, and let the structure come out of it.
 
+## The rule of least power
+
+**Solve a problem with the least powerful language that can solve it** ([The Rule of Least Power](https://www.w3.org/2001/tag/doc/leastPower.html), a W3C TAG finding by Tim Berners-Lee and Noah Mendelsohn). A declarative language says *what*, so anything can read and reuse it: the browser, a screen reader, a search engine, reader mode, a translation tool, a tool nobody has written yet. A program in a Turing-complete language says *how*, and you usually have to run it to know what it does. In the finding's words: "Powerful languages inhibit information reuse." Less powerful languages are also easier to secure.
+
+In a web app that order is HTML, then CSS, then JavaScript:
+
+- **HTML** holds the structure and the meaning, and does natively what it can: `<dialog>`, `popover`, `<details>`, form validation, links that navigate. See `docs/guidelines/html.md`.
+- **CSS** draws: looks, layout, states and motion (`:has()`, `:user-invalid`, transitions, container queries), instead of a script that toggles classes or measures elements.
+- **JavaScript** does what only it can: the planner's logic, storage, dragging. Where it touches the page, it sets state (an attribute, a value) and leaves the drawing to CSS.
+
 ## Names
 
 **Name things for what they are.** A name should tell a reader what the thing is or does without opening it.
