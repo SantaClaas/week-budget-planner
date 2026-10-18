@@ -12,4 +12,6 @@ What gets a test and how the tests run. It adds to `docs/guidelines/principles.m
 
 **Unit tests** run with Vitest (`pnpm test`), next to the code they test as `*.test.ts`. The repository functions take the Drizzle database as a parameter, so their tests pass a Node-backed instance (see `docs/guidelines/database.md`).
 
+**Find elements the way users do**: by role and accessible name (`getByRole("button", { name: "Undo" })`), by label or by text, as Playwright recommends. That tests the semantics too. Use a `data-` attribute to check a variant, not to find an element.
+
 **Browser tests** run with Playwright, in `e2e/` (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data.

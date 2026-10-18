@@ -22,3 +22,17 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | Anchor positioning for the add-block menu | Chrome 125, Firefox 147, Safari 26 | OddBird's [`@oddbird/css-anchor-positioning`](https://github.com/oddbird/css-anchor-positioning) polyfill, loaded with a dynamic `import()` only when `"anchorName" in document.documentElement.style` is false, so other browsers never download it. It needs an explicit `anchor-name` on the slot (no implicit anchors) and `anchor()` insets instead of `position-area` on the popover. Check whether it has to run again when the menu moves to another slot. |
 
 Everything else in use is older than these: cascade layers, CSS nesting, subgrid, `:has()`, `:user-invalid`, `color-mix()`, `linear()` easing, `<dialog>` and `@starting-style`. So the full look needs Chrome 135, Firefox 148 or Safari 18.4. Below that, shapes become circles, and below Chrome 123, Firefox 120 or Safari 17.5 the app is light only. With the polyfills, the floor is set by `:user-invalid` and `:has()`: about Chrome 119, Firefox 121 and Safari 16.5. `@starting-style` only animates, so without it things appear without a transition.
+
+## Waiting for wider support
+
+What changes once a feature is widely available, so the workaround doesn't outlive its reason. Add a row whenever something is built around a missing feature, and go through the list when the browser floor above moves.
+
+| Waiting for | Missing in | Then |
+| --- | --- | --- |
+| Typed `attr()` (`attr(data-lines type(<number>), 2)`) | Safari (only in Technology Preview); in Chrome 133 and Firefox 155 | Move the values set as custom properties in `style` (a block's `--name-lines`, top and height, an activity's `--activity-shape`) to `data-` attributes that CSS reads with `attr()`. Once nothing needs inline `style` attributes any more, drop `'unsafe-inline'` from `style-src` (see [Security](security.md)). |
+| Temporal | Safari | Remove `temporal-polyfill` and its feature check, which also takes the wait out of startup. |
+| Popover API (Safari 17) | Below the floor | Remove `@oddbird/popover-polyfill` and the `.\:popover-open` half of every popover selector. |
+| Anchor positioning (Firefox 147, Safari 26) | Below the floor | Remove `@oddbird/css-anchor-positioning`, and use `position-area` and implicit anchors instead of the explicit `anchor-name` and `anchor()` insets it needs. |
+| `Intl.DurationFormat` (Safari 16.4) | Below the floor | Remove `@formatjs/intl-durationformat` and its feature check. |
+| `light-dark()` (Chrome 123, Firefox 120, Safari 17.5) | Below the floor | Remove the `@supports not (color: light-dark(…))` blocks from the tokens and the test that checks them. |
+| `clip-path: shape()` (Chrome 135, Firefox 148, Safari 18.4) | Below the floor | Remove the circle fallback for swatches and the shape picker. |
