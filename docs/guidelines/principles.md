@@ -4,7 +4,7 @@ How code in this project is named, split and kept honest, whatever the language.
 
 **This is an idealistic document.** It describes the code we strive for, not code we expect to reach perfectly. Falling short of it in places is normal; the direction is what counts. And as with the severability clause in a contract, if one guideline turns out wrong, or doesn't hold in some case, that doesn't void the others: set that one aside, say why, and the rest still apply.
 
-The behavior and the design are in `docs/SPEC.md`. The words for things are in its glossary, and the code uses those words too (see "Names" below).
+The behavior and the design are in the spec (`docs/SPEC.md` lists its files in `docs/spec/`). The words for things are in its glossary (`docs/spec/glossary.md`), and the code uses those words too (see "Names" below).
 
 ## The consumer's needs come first
 
@@ -97,7 +97,7 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 4. **Test time:** what the compiler can't prove: the sanitizers and parsers that turn raw input into checked values, the week arithmetic across midnight and the week's wrap, the first free slot, and what an import accepts and refuses.
 5. **Review time:** whether a rule is the right rule. No tool can say whether a block should be allowed to last more than a day, or whether "1,5" should mean one and a half hours.
 6. **Runtime**, last, as a safety net, not the plan: the app's checks at its edges (`sanitizePlan` on everything loaded, the strict parsers on what the user types, the import checks), and the checks the platform makes for us (the database's `CHECK` constraints, the browser's Content Security Policy and Trusted Types).
-7. **Monitoring**, after release: what only real use shows. How often loaded plans need repairing, how often imports are refused, which errors users run into and which Content Security Policy violations happen tells us whether a rule is wrong, or whether some version wrote data it shouldn't have. The app doesn't monitor anything yet: it has no backend to report to, and reporting would need the user's consent first (see Browser permissions in docs/SPEC.md). When it's added, it goes here.
+7. **Monitoring**, after release: what only real use shows. How often loaded plans need repairing, how often imports are refused, which errors users run into and which Content Security Policy violations happen tells us whether a rule is wrong, or whether some version wrote data it shouldn't have. The app doesn't monitor anything yet: it has no backend to report to, and reporting would need the user's consent first (see Browser permissions in `docs/spec/security.md`). When it's added, it goes here.
 
 **An exception to the type checks moves a rule to a later stage, so it owes a test.** A type assertion (`as`, `!`), a `@ts-expect-error` or a disabled lint rule takes a rule out of compile time. It's like `unsafe`, `unwrap()` or `expect()` in Rust: not bad in itself, but the tool for when the developer knows something is safe and the compiler can't prove it. The proof then becomes the developer's job, in two parts:
 
