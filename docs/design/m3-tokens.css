@@ -279,11 +279,27 @@
 
   /* segmented list (expressive grouped list): 2dp gaps, large outer, small inner corners */
   .segmented-list {
-    display: flex; flex-direction: column; gap: .125rem;
+    display: grid; align-content: start; gap: .125rem;
     & > * { background: var(--card); border-radius: .25rem; }
     & > *:first-child { border-start-start-radius: var(--corner-large-increased); border-start-end-radius: var(--corner-large-increased); }
     & > *:last-child { border-end-start-radius: var(--corner-large-increased); border-end-end-radius: var(--corner-large-increased); }
   }
+  /* activity list (the Activities pane and page): a segmented list whose rows line up. The list defines
+     its columns once and every activity takes them over with subgrid, so the shapes, names, hours left
+     and buttons line up from row to row, whatever their lengths. The progress bar spans the row below.
+     <li class="activity color-blue"><span class="swatch"></span><span class="name">…</span>
+     <span class="left-to-place">…</span><button class="icon-button">…</button><div class="progress">…</div></li> */
+  .activity-list {
+    grid-template-columns: auto minmax(0, 1fr) auto auto; column-gap: .875rem;
+    & > .activity {
+      grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; row-gap: .625rem; padding: .75rem .5rem .875rem 1rem;
+      & .name { display: grid; grid-template-columns: minmax(0, 1fr); }
+      & .left-to-place { display: grid; justify-items: end; text-align: end; }
+      & .progress { grid-column: 1 / -1; margin-inline-end: .5rem; }
+    }
+  }
+  /* A row whose parts vary (an icon or not, a trailing value, a control that wraps) is a single run,
+     so it stays flexbox. */
   .list-item {
     display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding: .625rem 1rem;
     & .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
