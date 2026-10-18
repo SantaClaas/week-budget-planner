@@ -359,7 +359,8 @@
     min-height: 3rem; display: flex; flex-direction: column; justify-content: center; padding: 0 .625rem;
     & .day-name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; letter-spacing: .0312rem; color: var(--on-surface-variant); display: flex; align-items: center; gap: .375rem; }
     & .day-total { font-size: .6875rem; line-height: calc(14 / 11); color: var(--on-surface-variant); }
-    &.today .day-name {
+    /* today's weekday: the header carries aria-current="date" */
+    &[aria-current="date"] .day-name {
       color: var(--primary);
       &::before {
         content: ""; width: .375rem; height: .375rem; border-radius: .1875rem; background: var(--primary);
@@ -442,18 +443,18 @@
     position: relative; display: flex; flex-direction: column;
     & input, & select { min-height: 3.5rem; padding: 0 1rem; border: 1px solid var(--outline); border-radius: var(--corner-extra-small); background: transparent; font-size: 1rem; letter-spacing: .0312rem; }
     & label { position: absolute; inset-block-start: -.5rem; inset-inline-start: .75rem; padding: 0 .25rem; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); background: var(--text-field-background, var(--surface)); }
-    &:is(.focused, :focus-within) {
+    /* Focus and errors come from the platform: :focus-within, and :user-invalid with the aria-invalid the
+       app sets at the same moment (see Activities in docs/spec/interactions.md). The supporting text then
+       reads as the error message. */
+    &:focus-within {
       & input { border: 2px solid var(--primary); }
       & label { color: var(--primary); }
     }
-    &:is(.error, :has(:user-invalid)) {
+    &:has(:user-invalid, [aria-invalid="true"]) {
       & input { border: 2px solid var(--error); }
-      & label { color: var(--error); }
+      & label, & .supporting-text { color: var(--error); }
     }
-    & .supporting-text {
-      padding: .25rem 1rem 0; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant);
-      &.error { color: var(--error); }
-    }
+    & .supporting-text { padding: .25rem 1rem 0; font-size: .75rem; line-height: calc(16 / 12); color: var(--on-surface-variant); }
   }
 
   /* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
