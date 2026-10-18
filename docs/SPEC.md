@@ -48,7 +48,7 @@ These were decided after the prototype and override it:
 - **Navigation is the same on every screen size.** Phones use a navigation bar with Week, Activities and Settings instead of stacking the panes, and wide screens a navigation rail with the same three destinations (see Layout).
 - **Settings is a page**, holding the theme choice and the data actions (export, import, delete). The theme choice (System, Light, Dark) is new.
 - **Names are spelled out** in the stored format and the database: `version` (was `v`), `budgetMinutes` (was `mins`), `activityId` (was `act`) and `length` (was `dur`). Nothing was stored in the old format outside the prototype, so there is no conversion.
-- **The example week is marked with a time, not a boolean:** `exampleLoadedAt` says when it was loaded and is null once it's kept or replaced (the prototype stored `example: true`). See `docs/CODING-GUIDELINES.md` on stored booleans.
+- **The example week is marked with a time, not a boolean:** `exampleLoadedAt` says when it was loaded and is null once it's kept or replaced (the prototype stored `example: true`). See "Stored booleans" in `docs/guidelines/typescript.md`.
 - **Ids are nanoids** from an alphabet without lookalike characters, so they can appear in URLs (see Data model). The prototype used `crypto.randomUUID()`.
 - **Dates, times and lengths are formatted by the browser** with the `Intl` APIs, in the user's language and conventions, and dates use Temporal instead of `Date` (see Dates, times and language). The prototype built strings like "1 h 30 min" and "07:30" by hand.
 - **The new-activity form** is behind the "New activity" floating action button once at least one activity exists: in the navigation rail on wide screens, on the Activities screen on phones. In the empty state it is shown open.
@@ -101,7 +101,7 @@ Sanitize every loaded plan (from storage or sync): give activities with a missin
 
 The database checks the same rules again with `CHECK` constraints on its columns (see Suggested tables), so nothing that skipped the types can be stored.
 
-The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.color-scheme`. The stored value is the CSS `color-scheme` value it stands for, `light` or `dark`, and System, which is `light dark`, removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme). The copy calls it the theme; the code calls it the color scheme, after the CSS property (see Names in `docs/CODING-GUIDELINES.md`).
+The theme choice is a device preference, not part of the plan. It isn't in the database or in exports: it lives in `localStorage` under `week-budget-planner.color-scheme`. The stored value is the CSS `color-scheme` value it stands for, `light` or `dark`, and System, which is `light dark`, removes the entry. It has to be readable before the first paint, which the database isn't (see Design, Theme). The copy calls it the theme; the code calls it the color scheme, after the CSS property (see Names in `docs/guidelines/principles.md`).
 
 ## Layout
 
@@ -219,7 +219,7 @@ In the prototype, the plan lived in the claude.ai artifact database. That API ex
 ### Drizzle (new compared to flashcut)
 
 - Use `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4`, pinned exactly. The 1.0 line ships `drizzle-orm/tursodatabase/wasm` and a filesystem-free `drizzle-orm/tursodatabase/wasm-migrator`, and 0.45 doesn't have them. Check the installed package's types before relying on these details.
-- **Schema** in `src/db/schema.ts`. Migrations are **generated** with `drizzle-kit generate` into `drizzle/` and committed. Never hand-edit an applied migration.
+- **Schema** in `src/database/schema.ts`. Migrations are **generated** with `drizzle-kit generate` into `drizzle/` and committed. Never hand-edit an applied migration.
 - **Drizzle sits on top of flashcut's RPC; it doesn't replace it.** Follower tabs have no local database object, so the app's Drizzle instance uses `drizzle-orm/sqlite-proxy`. That driver has no database of its own. It builds the SQL, calls one async callback with `(sql, params, method)`, and maps the returned rows to typed results. The callback just calls the existing `dbService`, which runs the SQL locally on the leader and over BroadcastChannel everywhere else. So every tab uses the same typed queries.
   - **Row shape:** the proxy expects rows as arrays of values in column order (one row for `method === "get"`, a list otherwise). Flashcut's `DbService` returns rows as objects, so add a method that returns arrays, for example using Turso's raw statement mode if its API has one (check it), and verify against Drizzle's sqlite-proxy docs and types.
   - **Atomic writes:** `db.transaction()` over the proxy would send BEGIN, the statements and COMMIT as separate RPC calls, so another tab's query could land in between. Instead, pass Drizzle's batch callback (`drizzle(callback, batchCallback, config)`) and add a `DbService.batch(statements)` that the leader runs inside one transaction (flashcut's `withTransaction`). Use `db.batch([...])` for every multi-statement user action.
