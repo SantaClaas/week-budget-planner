@@ -199,21 +199,29 @@
     &[data-shape="square"] { border-radius: var(--corner-medium); }
   }
 
-  /* connected button group: inner corners 8, selected item goes fully round */
+  /* connected button group: inner corners 8, selected item goes fully round. For one choice out of
+     several it's a <fieldset> of radio inputs, each in its <label> (see "Radio inputs that look like
+     something else" below); toggle buttons with aria-pressed work the same. */
   .connected-button-group {
     display: flex; gap: .125rem;
-    & > * {
-      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2.5rem; padding: 0 .875rem; border: 0; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: .875rem; font-weight: 500; text-align: center; border-radius: var(--corner-small); cursor: pointer;
+    & > :is(label, button) {
+      position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .375rem; min-height: 2.5rem; padding: 0 .875rem; border: 0; background: var(--surface-container-highest); color: var(--on-surface-variant); font-size: .875rem; font-weight: 500; text-align: center; border-radius: var(--corner-small); cursor: pointer;
       @media (forced-colors: active) { border: 1px solid ButtonBorder; }
     }
-    & > *:first-child { border-start-start-radius: var(--corner-full); border-end-start-radius: var(--corner-full); }
-    & > *:last-child { border-start-end-radius: var(--corner-full); border-end-end-radius: var(--corner-full); }
-    & > [aria-pressed="true"], & > [aria-checked="true"] {
+    & > :is(label, button):first-of-type { border-start-start-radius: var(--corner-full); border-end-start-radius: var(--corner-full); }
+    & > :is(label, button):last-of-type { border-start-end-radius: var(--corner-full); border-end-end-radius: var(--corner-full); }
+    & > label:has(:checked), & > [aria-pressed="true"] {
       background: var(--primary); color: var(--on-primary); border-radius: var(--corner-full);
       @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
     }
-    &[data-size="extra-small"] > * { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
+    &[data-size="extra-small"] > :is(label, button) { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
   }
+
+  /* Radio inputs that look like something else (a connected button, a swatch): the input keeps its
+     behavior (one checked per name, arrow keys within the group, form value, validity) and loses only
+     its look. It covers its whole label, so the label's area is what's clicked, tapped and focused, and
+     the base layer's focus ring draws around it. The label shows the state with :has(:checked). */
+  :is(.connected-button-group, .picker) input[type="radio"] { appearance: none; position: absolute; inset: 0; margin: 0; border-radius: inherit; cursor: pointer; }
 
   /* extended floating action button */
   .floating-action-button {
@@ -460,15 +468,17 @@
   /* color and shape pickers: every option is a swatch (color in shape); the selected one sits on a
      tonal rounded square with a primary ring. A color option sets its color-* class, a shape option
      sets --activity-shape inline; both inherit the other half from the form. */
+  /* <fieldset class="picker"><legend>Color</legend><label class="picker-option color-blue"><input type="radio"
+     name="color" value="blue"><span class="visually-hidden">Blue</span></label>…</fieldset> */
   .picker { display: flex; gap: .25rem; flex-wrap: wrap; }
   .picker-option {
-    width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-medium); background: transparent; cursor: pointer;
+    position: relative; width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border: 0; padding: 0; border-radius: var(--corner-medium); background: transparent; cursor: pointer;
     &::before {
       content: ""; width: 1.75rem; height: 1.75rem; background: var(--activity-color); clip-path: var(--activity-shape, var(--shape-circle));
       @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) { clip-path: none; border-radius: 50%; }
       @media (forced-colors: active) { forced-color-adjust: none; }
     }
-    &[aria-checked="true"] {
+    &:has(:checked) {
       background: var(--secondary-container); box-shadow: inset 0 0 0 2px var(--primary);
       @media (forced-colors: active) { outline: 2px solid Highlight; outline-offset: 2px; }
     }

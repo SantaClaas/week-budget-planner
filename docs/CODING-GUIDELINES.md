@@ -5,7 +5,7 @@ How code in this project is named, split, styled and checked. The guidelines liv
 | File | Applies to | What's in it |
 | --- | --- | --- |
 | [`principles.md`](guidelines/principles.md) | all code, always | the consumer's needs first, the rule of least power, names, modules and coupling, refactoring, where rules are enforced |
-| [`html.md`](guidelines/html.md) | `.tsx`, `.html` | HTML for the document and CSS for the look, the CSS-off test, no elements for styling, classes for what, `data-` attributes for how and native or ARIA attributes for state, boolean attributes, `display: contents` |
+| [`html.md`](guidelines/html.md) | `.tsx`, `.html` | HTML for the document and CSS for the look, the CSS-off test, the first rule of ARIA, no elements for styling, radio groups that look like buttons, classes for what, `data-` attributes for how and native or ARIA attributes for state, boolean attributes, `display: contents` |
 | [`typescript.md`](guidelines/typescript.md) | `.ts`, `.tsx`, `.js` | function and boolean names, branded types, formatting and linting, no type assertions, explained exceptions |
 | [`css.md`](guidelines/css.md) | `.css`, and styles set from TypeScript | cascade layers, selectors, rem instead of px, intrinsic sizing, logical properties, forced colors, nesting |
 | [`solid.md`](guidelines/solid.md) | `src/` | Solid 2.0's official sources, the app's shape, no HTML from strings |
