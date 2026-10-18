@@ -95,7 +95,7 @@ export const sanitizeDayEnd = (value: number, fallback = 22): Hour =>
   brand<Hour>(sanitizeInteger(value, 13, 24, fallback));
 
 // Strict parsers, for what the user types or picks: they reject a value out of range instead of
-// clamping it, so the form can say what's wrong (see Activities in docs/SPEC.md).
+// clamping it, so the form can say what's wrong (see Activities in docs/spec/interactions.md).
 
 /**
  * The budget for minutes the user entered, rounded to the slot. "too-small" when there's nothing
