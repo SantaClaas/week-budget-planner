@@ -7,7 +7,7 @@ export type BlockId = Brand<string, "BlockId">;
 
 /**
  * nanoid-dictionary's `nolookalikesSafe`: no characters that look alike and no vowels, so ids read
- * back easily from a URL and never spell words (see Data model in docs/SPEC.md).
+ * back easily from a URL and never spell words (see docs/spec/data-model.md).
  */
 const ID_ALPHABET = "6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz";
 

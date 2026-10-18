@@ -1,6 +1,6 @@
 /**
  * Lengths, clock times and weekdays as the user reads them, written by `Intl` in the user's
- * language and conventions (see Dates, times and language in docs/SPEC.md).
+ * language and conventions (see docs/spec/dates-and-language.md).
  */
 
 /** How things are written. Empty means the browser's language and its conventions. */
