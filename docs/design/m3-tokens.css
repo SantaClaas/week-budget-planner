@@ -174,29 +174,29 @@
     display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem; padding: 0 1rem; border-radius: var(--corner-full); border: 0; font-size: .875rem; font-weight: 500; letter-spacing: .0063rem; text-align: center; cursor: pointer; background: transparent; color: var(--primary);
     @media (forced-colors: active) { border: 1px solid ButtonBorder; }
     & .icon { width: 1.25rem; height: 1.25rem; }
-    &.extra-small {
+    &[data-size="extra-small"] {
       min-height: 2rem; padding: 0 .75rem; gap: .25rem;
       & .icon { width: 1.125rem; height: 1.125rem; }
     }
-    &.medium { min-height: 3.5rem; padding: 0 1.5rem; font-size: 1rem; }
-    &.filled { background: var(--primary); color: var(--on-primary); }
-    &.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
-    &.outlined { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
-    &.danger { background: var(--error); color: var(--on-error); }
-    &.text-danger { color: var(--error); }
+    &[data-size="medium"] { min-height: 3.5rem; padding: 0 1.5rem; font-size: 1rem; }
+    &[data-variant="filled"] { background: var(--primary); color: var(--on-primary); }
+    &[data-variant="tonal"] { background: var(--secondary-container); color: var(--on-secondary-container); }
+    &[data-variant="outlined"] { border: 1px solid var(--outline-variant); color: var(--on-surface-variant); }
+    &[data-variant="danger"] { background: var(--error); color: var(--on-error); }
+    &[data-variant="text-danger"] { color: var(--error); }
     /* Disabled: only buttons with a container get the disabled container. */
     &:disabled {
       color: color-mix(in srgb, var(--on-surface) 38%, transparent);
       @media (forced-colors: active) { border-color: GrayText; }
     }
-    &:is(.filled, .tonal, .danger):disabled { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+    &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
   }
   .icon-button {
     width: 2.5rem; height: 2.5rem; display: inline-grid; place-items: center; border-radius: var(--corner-full); border: 0; background: transparent; color: var(--on-surface-variant); cursor: pointer; padding: 0;
     @media (forced-colors: active) { border: 1px solid ButtonBorder; }
-    &.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
-    &.filled { background: var(--primary); color: var(--on-primary); }
-    &.square { border-radius: var(--corner-medium); }
+    &[data-variant="tonal"] { background: var(--secondary-container); color: var(--on-secondary-container); }
+    &[data-variant="filled"] { background: var(--primary); color: var(--on-primary); }
+    &[data-shape="square"] { border-radius: var(--corner-medium); }
   }
 
   /* connected button group: inner corners 8, selected item goes fully round */
@@ -212,14 +212,14 @@
       background: var(--primary); color: var(--on-primary); border-radius: var(--corner-full);
       @media (forced-colors: active) { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
     }
-    &.extra-small > * { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
+    &[data-size="extra-small"] > * { min-height: 2rem; padding: 0 .75rem; font-size: .8125rem; }
   }
 
   /* extended floating action button */
   .floating-action-button {
     display: inline-flex; align-items: center; gap: .75rem; min-height: 3.5rem; padding-block: 0; padding-inline: 1rem 1.25rem; border: 0; border-radius: var(--corner-large); background: var(--primary-container); color: var(--on-primary-container); font-size: 1rem; font-weight: 500; box-shadow: var(--elevation-level-3); cursor: pointer;
     @media (forced-colors: active) { border: 1px solid ButtonBorder; }
-    &.icon-only { width: 3.5rem; padding: 0; justify-content: center; }
+    &[data-icon-only] { width: 3.5rem; padding: 0; justify-content: center; }
   }
 
   /* small app bar (androidx AppBarSmallTokens, AppBar.kt): 64dp tall, the headline 16dp from the leading edge,
@@ -257,8 +257,9 @@
     & .navigation-item { width: 100%; padding: .25rem 0 .5rem; }
     /* expanded (220-360dp; androidx NavigationRailExpandedTokens, NavigationRailHorizontalItemTokens): the
        same header, the FAB extended, and items as rows whose active indicator hugs the icon and label (56dp
-       tall, 16dp leading space, 8dp between icon and label, Label Large) */
-    &.expanded {
+       tall, 16dp leading space, 8dp between icon and label, Label Large). The menu button's aria-expanded
+       is the state, so no class has to repeat it. */
+    &:has(> [aria-expanded="true"]) {
       align-items: stretch; min-inline-size: 13.75rem; max-inline-size: 22.5rem; padding-inline: 1.25rem;
       & > .icon-button, & > .floating-action-button { align-self: flex-start; }
       & > .floating-action-button { gap: .5rem; padding: 0 1rem; }
@@ -271,7 +272,7 @@
   .toolbar {
     display: flex; align-items: center; gap: .25rem; min-height: 4rem; padding: 0 .5rem; border-radius: var(--corner-full); background: var(--surface-container); color: var(--on-surface); box-shadow: var(--elevation-level-3);
     @media (forced-colors: active) { border: 1px solid CanvasText; }
-    &.vibrant {
+    &[data-variant="vibrant"] {
       background: var(--primary-container); color: var(--on-primary-container);
       & .icon-button { color: var(--on-primary-container); }
     }
@@ -389,13 +390,13 @@
     /* The name takes what the time leaves (the time row always shows), and --name-lines, set from the
        block's height, puts the ellipsis on the last line that fits (see Blocks in `docs/spec/grid-geometry.md`). */
     & .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--name-lines, 2); line-clamp: var(--name-lines, 2); }
-    &.short .name, &.tiny .name { display: block; white-space: nowrap; text-overflow: ellipsis; }
+    &[data-length="short"] .name, &[data-length="tiny"] .name { display: block; white-space: nowrap; text-overflow: ellipsis; }
     & .time { font-size: .6875rem; line-height: calc(14 / 11); opacity: .85; }
     /* the shape on a block: top-right corner, out of the name's way */
     & .swatch.corner { position: absolute; inset-block-start: .25rem; inset-inline-end: .25rem; z-index: 1; }
     &:has(.swatch.corner) .name { padding-inline-end: .875rem; }
-    &.short { grid-template-rows: none; grid-auto-flow: column; grid-template-columns: minmax(0, auto) auto; justify-content: start; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
-    &.tiny { border-radius: var(--corner-extra-small); padding: 0; }
+    &[data-length="short"] { grid-template-rows: none; grid-auto-flow: column; grid-template-columns: minmax(0, auto) auto; justify-content: start; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
+    &[data-length="tiny"] { border-radius: var(--corner-extra-small); padding: 0; }
     &.selected {
       box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium);
       @media (forced-colors: active) { outline: 2px solid Highlight; outline-offset: 2px; }
