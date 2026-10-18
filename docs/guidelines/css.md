@@ -17,7 +17,9 @@ How the styles are written. It adds to `docs/guidelines/principles.md`, which al
 - `components`: Material's components and the app's own.
 - `utilities`: single-purpose classes that combine with anything: the type roles, `.muted`, the activity colors.
 
-**Express intent in selectors.** A state that applies to some variants names them, instead of applying to all and being undone for the rest: `&:is(.filled, .tonal):disabled { … }`, not `&:disabled { … }` followed by `&.text:disabled { background: transparent }`. Then rules can't fight when they're reordered. Write hover and pressed states as `:hover:not(:disabled)` for the same reason.
+**Select variants by attribute, state by the platform's attributes.** A class names the component (`.button`), a `data-` attribute its variant or size (`&[data-variant="filled"]`, `&[data-size="extra-small"]`, a boolean as `&[data-icon-only]`), and state comes from native or ARIA attributes and pseudo-classes (`&[aria-pressed="true"]`, `&:disabled`, `&:has(> [aria-expanded="true"])`). An attribute selector weighs the same as a class. See `docs/guidelines/html.md` for why. Values (a block's number of name lines, an activity's shape) go through custom properties set in `style` until typed `attr()` is widely available (see `docs/spec/browser-support.md`).
+
+**Express intent in selectors.** A state that applies to some variants names them, instead of applying to all and being undone for the rest: `&:is([data-variant="filled"], [data-variant="tonal"]):disabled { … }`, not `&:disabled { … }` followed by `&[data-variant="text"]:disabled { background: transparent }`. Then rules can't fight when they're reordered. Write hover and pressed states as `:hover:not(:disabled)` for the same reason.
 
 **Avoid px.** Sizes are relative, so the user's text size setting works (WCAG 1.4.4 Resize Text, 1.4.10 Reflow).
 
@@ -42,6 +44,6 @@ How the styles are written. It adds to `docs/guidelines/principles.md`, which al
 
 **Forced colors.** Windows High Contrast drops shadows, gradients and background colors. Anything that shows a boundary or a state only that way needs an alternative under `@media (forced-colors: active)`: a border or outline in a system color (`CanvasText`, `ButtonBorder`, `Highlight`). Use `forced-color-adjust: none` only where the color is the information, such as an activity's swatch, and then draw with system colors or the activity's own.
 
-**Nesting.** Use CSS nesting to keep a component's states, parts and media queries inside its rule, like `.navigation-rail { … &.expanded { … } }`. Start every nested selector with `&` (`& .icon`, not `.icon`): browsers before Chrome 120 and Safari 17.2 drop a nested rule that doesn't, and with it nesting works from Chrome 112, Firefox 117 and Safari 16.5, below the app's floor. Keep it shallow: about three levels at most, since each level adds specificity and makes the selector harder to find by searching.
+**Nesting.** Use CSS nesting to keep a component's states, parts and media queries inside its rule, like `.navigation-rail { … &:has(> [aria-expanded="true"]) { … } }`. Start every nested selector with `&` (`& .icon`, not `.icon`): browsers before Chrome 120 and Safari 17.2 drop a nested rule that doesn't, and with it nesting works from Chrome 112, Firefox 117 and Safari 16.5, below the app's floor. Keep it shallow: about three levels at most, since each level adds specificity and makes the selector harder to find by searching.
 
 See `docs/spec/design.md` for the details and for Material 3 Expressive itself.
