@@ -328,14 +328,17 @@
 
   /* blocks */
   .block {
-    position: absolute; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: flex; flex-direction: column;
+    position: absolute; isolation: isolate; left: .1875rem; right: .1875rem; border-radius: var(--corner-small); background: var(--activity-container); color: var(--on-activity-container); padding: .25rem .5rem; overflow: hidden; display: grid; grid-template-rows: minmax(0, auto) auto; align-content: start;
     @media (forced-colors: active) { border: 1px solid CanvasText; }
-    & .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* The name takes what the time leaves (the time row always shows), and --name-lines, set from the
+       block's height, puts the ellipsis on the last line that fits (see Blocks in the spec). */
+    & .name { font-size: .75rem; line-height: calc(16 / 12); font-weight: 700; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--name-lines, 2); line-clamp: var(--name-lines, 2); }
+    &.short .name, &.tiny .name { display: block; white-space: nowrap; text-overflow: ellipsis; }
     & .time { font-size: .6875rem; line-height: calc(14 / 11); opacity: .85; }
     /* the shape on a block: top-right corner, out of the name's way */
     & .swatch.corner { position: absolute; top: .25rem; right: .25rem; z-index: 1; }
     &:has(.swatch.corner) .name { padding-right: .875rem; }
-    &.short { flex-direction: row; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
+    &.short { grid-template-rows: none; grid-auto-flow: column; grid-template-columns: minmax(0, auto) auto; justify-content: start; align-items: center; gap: .25rem; padding: 0 .5rem; border-radius: .375rem; }
     &.tiny { border-radius: var(--corner-extra-small); padding: 0; }
     &.selected {
       box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--primary), var(--elevation-level-2); z-index: 2; border-radius: var(--corner-medium);
