@@ -114,6 +114,12 @@ for (const forcedColors of ["none", "active"] as const) {
     await openApp(page);
     const stops = await collectTabStops(page);
     expect(stops.length).toBeGreaterThan(0);
-    expect(stops.filter(({ isRingVisible }) => !isRingVisible).map(({ name }) => name)).toEqual([]);
+    expect(
+      stops
+        .values()
+        .filter(({ isRingVisible }) => !isRingVisible)
+        .map(({ name }) => name)
+        .toArray(),
+    ).toEqual([]);
   });
 }
