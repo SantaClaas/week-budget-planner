@@ -3,7 +3,10 @@
   // Strict on purpose (see Formatting and linting in docs/CODING-GUIDELINES.md). Where a rule doesn't
   // apply to one line, disable it there with a reason after "--"; require-reason checks that.
   // Type-aware rules (floating promises, unsafe any and so on) need oxlint-tsgolint.
-  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest"],
+  // jsx-a11y checks the markup in JSX (alt text, labels, roles and their required states, keyboard
+  // handlers next to click handlers): the earliest stage that catches those mistakes (see "Where
+  // rules are enforced" in docs/guidelines/principles.md).
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest", "jsx-a11y"],
   "jsPlugins": ["./oxlint-plugins/require-reason.ts"],
   "categories": {
     "correctness": "error",
