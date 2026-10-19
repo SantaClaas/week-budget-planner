@@ -4,7 +4,7 @@ A drag-and-drop week planner. Activities get a weekly or daily hour budget, the 
 
 ## Where things are
 
-- `docs/SPEC.md`: the behavior and design spec, split by topic in `docs/spec/` and listed there. Read the overview and the **glossary** (which loads in every session), then the files for the feature you're building, before you start. Persistence, security and design load by themselves when you touch matching files.
+- `docs/SPEC.md`: the behavior and design spec, split by topic in `docs/spec/` and listed there. Read the overview and the **glossary** (which loads in every session), then the files for the feature you're building, before you start. Persistence, security, design and accessibility (what screen readers hear, the keyboard paths) load by themselves when you touch matching files.
 - `docs/guidelines/`: how code is named, split, styled and checked, one file per kind of code, listed in `docs/CODING-GUIDELINES.md`. `principles.md` always applies; the others (HTML, TypeScript, CSS, Solid, database, tests) load by themselves when you touch matching files, through `.claude/rules/`. Read the one for the code you're about to write before planning it.
 - `docs/LOADING.md`: what the page loads, in which order and why. When you add anything the page loads (a script, chunk, font, image, polyfill), give it a tier there and check the build output.
 - **Design canvas: https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk** (private, ask the user for access). It is the visual reference for every screen and state, in Material 3 Expressive. Its tokens are extracted to `docs/design/m3-tokens.css`.
