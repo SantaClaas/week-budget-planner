@@ -10,7 +10,7 @@ How code in this project is named, split, styled and checked. The guidelines liv
 | [`css.md`](guidelines/css.md) | `.css`, and styles set from TypeScript | cascade layers, selectors, rem instead of px, intrinsic sizing, logical properties, forced colors, nesting |
 | [`solid.md`](guidelines/solid.md) | `src/` | Solid 2.0's official sources, the app's shape, no HTML from strings |
 | [`database.md`](guidelines/database.md) | `src/database/`, `src/storage/`, `drizzle/` | libraries, schema and migrations, repository functions, the storage layer from flashcut |
-| [`tests.md`](guidelines/tests.md) | `*.test.ts`, `e2e/` | what earns a test, unit and browser tests, keyboard tests, screen reader checks (Orca in a cloud container) |
+| [`tests.md`](guidelines/tests.md) | `*.test.ts`, `e2e/` | what earns a test, unit and browser tests, keyboard tests, automatic accessibility checks, screen reader checks (Orca in a cloud container) |
 
 Start with the principles; they hold everywhere. Before working on a kind of code, read its file too. Claude Code loads them by itself: `.claude/rules/` links to each file, and each file lists the paths it applies to in its front matter, so it loads the first time a matching file is read or edited. The principles have no paths, so they load at the start of every session.
 

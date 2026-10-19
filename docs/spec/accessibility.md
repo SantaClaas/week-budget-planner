@@ -58,4 +58,4 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 
 ## Checking it
 
-Check each screen and state with a screen reader before calling it done (see Screen reader checks in `docs/guidelines/tests.md`), and with the keyboard alone: every block, every empty slot and every activity must be reachable and usable without a pointer.
+Check each screen and state with a screen reader before calling it done (see Screen reader checks in `docs/guidelines/tests.md`), and with the keyboard alone: every block, every empty slot and every activity must be reachable and usable without a pointer. The automatic checks (the lint, the contrast tests, axe and the browser checks in `e2e/accessibility.spec.ts`) catch what a machine can; add each new screen to them too (see Automatic accessibility checks in `docs/guidelines/tests.md`).
