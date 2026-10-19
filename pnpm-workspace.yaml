@@ -90,6 +90,8 @@ blockExoticSubdeps: true
 strictDepBuilds: true
 allowBuilds:
   esbuild: true
+  # Its postinstall script only prints a funding message; the polyfill works without it.
+  core-js: false
 
 # Fails when a dependency says it doesn't support the Node version in use.
 engineStrict: true
