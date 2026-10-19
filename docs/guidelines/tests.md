@@ -16,7 +16,17 @@ What gets a test and how the tests run. It adds to `docs/guidelines/principles.m
 
 **Every path gets a keyboard test.** Everything a pointer can do needs a keyboard way too (WCAG 2.1.1), and a test that only presses keys (Tab, the arrow keys, Enter, Space, Escape) and checks where focus lands (`toBeFocused()`) finds what's missing or out of order. Keep pointer tests where the pointer path is a different path: dragging a block, resizing from either edge, placing by tap on touch. Testing only with the keyboard would leave those untested.
 
-**Browser tests** run with Playwright, in `e2e/` (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data.
+**Browser tests** run with Playwright, in `e2e/` (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan, and for the automatic accessibility checks below. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data.
+
+## Automatic accessibility checks
+
+**Machines check what they can, at the earliest stage that can.** They find part of the problems, never all: they can't tell whether a name makes sense, whether the reading order tells the story, or whether the week works for someone who can't see it. The screen reader checks below, the keyboard by hand and asking users stay the main check.
+
+- **Lint time:** oxlint's `jsx-a11y` rules check the markup in JSX: alt text, labels, valid roles and their required ARIA states, keyboard handlers next to click handlers.
+- **Unit tests:** `src/design-tokens.test.ts` measures the WCAG contrast of every text and surface pair the components use, in light and dark, and of the eight activity colors: 4.5:1 for text, 3:1 for swatches, bars and outlines. Add a pair there when a component puts a color on a new surface.
+- **Browser tests:** `e2e/accessibility.spec.ts` runs axe's WCAG 2.2 AA rules in both themes, and checks reflow at 320 CSS px, the WCAG text spacing and a focus ring at every Tab stop, with and without forced colors. It covers the placeholder page today; add each screen and state as it lands, opened the way a user gets there.
+- **When the screens exist:** pin each screen's accessibility tree with Playwright's `toMatchAriaSnapshot`, so a lost name, a changed role or a heading out of order shows up as a diff in review.
+- **Later:** [Guidepup](https://www.guidepup.dev/) drives VoiceOver on macOS and NVDA on Windows from Playwright, and GitHub's macOS and Windows runners can run it. Like the Orca setup below it's slow and timing-sensitive, so it belongs in a nightly or pre-release job, comparing what was said rather than asserting exact speech.
 
 ## Screen reader checks
 
