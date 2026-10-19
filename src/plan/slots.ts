@@ -34,7 +34,10 @@ export function findFirstFreeSlot(
   length: Length,
 ): { day: DayIndex; start: DayMinute } | undefined {
   const taken = new Set(
-    plan.blocks.filter((block) => block.activityId === activity.id).map((block) => block.day),
+    plan.blocks
+      .values()
+      .filter((block) => block.activityId === activity.id)
+      .map((block) => block.day),
   );
   const order =
     activity.mode === "day"
