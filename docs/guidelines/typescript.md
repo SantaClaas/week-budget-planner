@@ -49,6 +49,24 @@ How to use them:
 - **A fixed set of values is a literal union**, not a brand: `Hue` and `Shape` come from the palette and the shape library.
 - At the edges, the database checks the same rules again with `CHECK` constraints.
 
+## Iterators
+
+**Chain lazily with the iterator helpers, not with array methods.** `array.filter(…).map(…)` builds a whole new array at every step, only to throw it away at the next one. The iterator helpers (`map`, `filter`, `flatMap`, `take`, `drop`, `find`, `some`, `every`, `reduce`, `forEach` and `toArray` on `Iterator.prototype`, and `Iterator.from()`) do the same work lazily: each element goes through the whole chain before the next one starts, nothing is allocated in between, and `find`, `some`, `every` and `take` stop as soon as they have their answer. Older code and most examples use the array methods because the helpers are new (2025), not because they're better.
+
+- **Start from an iterator:** `array.values()`, a `Map`'s or `Set`'s `values()`, `keys()` or `entries()`, `string.matchAll()`, a generator, or `Iterator.from()` for anything else iterable.
+- **End with what the consumer needs:** a `for … of` loop, a terminal helper (`find`, `some`, `reduce`), `new Set(…)` or `new Map(…)` (they take an iterator directly), or `toArray()` only where an array is really needed.
+
+```ts
+// two arrays allocated and thrown away, just to fill a Set
+const taken = new Set(plan.blocks.filter((block) => block.activityId === activity.id).map((block) => block.day));
+// one pass, nothing in between
+const taken = new Set(plan.blocks.values().filter((block) => block.activityId === activity.id).map((block) => block.day));
+```
+
+**Keep the array methods where the result has to be an array anyway.** A single `array.map(f)` allocates the one array it returns, the same as `values().map(f).toArray()`, so it stays as it is. Arrays are also right when the result is used more than once, indexed or measured (an iterator can be walked only once), when it's sorted (`toSorted()`), and where an API or the framework takes an array, such as Solid's `<For each>` or `JSON.stringify`.
+
+The types come from the `ES2025.Iterator` lib in the TypeScript configs. Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from `src/polyfills.ts` (see `docs/spec/browser-support.md`), so code can use them anywhere.
+
 ## Formatting and linting
 
 **oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
