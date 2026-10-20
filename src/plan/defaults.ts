@@ -13,6 +13,9 @@ import {
 /** Default length for activities counted per week: one lecture slot. */
 const WEEKLY_DEFAULT_LENGTH = 90;
 
+/** The palette's hues, in its order. */
+const HUES: readonly Hue[] = PALETTE.map((color) => color.hue);
+
 /** 32-bit FNV-1a over the UTF-8 bytes of `text`. */
 export function hashFnv1a32(text: string): number {
   let hash = 0x811c9dc5;
@@ -44,12 +47,15 @@ export function pickDefaultLook(
   others: readonly Pick<Activity, "hue" | "shape">[],
 ): { hue: Hue; shape: Shape } {
   const hash = hashFnv1a32(id);
-  const hues: Hue[] = PALETTE.map((color) => color.hue);
-  const hue = findFirstUnused(hues, hash % hues.length, new Set(others.map((other) => other.hue)));
+  const hue = findFirstUnused(
+    HUES,
+    hash % HUES.length,
+    new Set(others.values().map((other) => other.hue)),
+  );
   const shape = findFirstUnused<Shape>(
     DEFAULT_SHAPES,
     (hash >>> 8) % DEFAULT_SHAPES.length,
-    new Set(others.map((other) => other.shape)),
+    new Set(others.values().map((other) => other.shape)),
   );
   return { hue, shape };
 }
