@@ -26,6 +26,10 @@ How TypeScript (and the little plain JavaScript) in this project is named, typed
 
 **A predicate is a question.** Functions, variables and fields that hold a boolean start with `is` and, where it reads well, end on an adjective: `isFree`, `isOvernight`, `isStored`, `isDatabaseUsable`, `isRangeOverlapping`. Use `can` or `has` only when `is` would sound really awkward. Type guards read the same way: `isTheme(value)`.
 
+**The `is` tells a boolean from a truthy value in a condition.** JavaScript tests any value for truth, so `if (selected)` could check a boolean, or a block that may be `undefined`, or a count that may be `0`, and each one fails differently: `0` and `""` are falsy although they are values. With the prefix, `if (isSelected)` is a yes-or-no question and `if (selectedBlock)` is a check for a value that may be missing, and a reader sees which one it is without looking up the type.
+
+**Names say what a value means, not its type.** `blocks`, not `blockArray`; `name`, not `nameString`; `activitiesById`, not `activityMap`. The type is already in the type, the editor shows it, and it can change (an array becomes a `Set`) while the meaning stays. Booleans are the one exception, for the reason above: in a condition, the name is all there is to tell a boolean from a value that's merely truthy.
+
 **Stored booleans are probably something else.** In data that is stored or sent (the database, file formats, messages), a boolean often hides a richer type ([That boolean should probably be something else](https://ntietz.com/blog/that-boolean-should-probably-be-something-else/), Nicole Tietz-Sokolskaya):
 
 - **A datetime**, when an action has to happen for the value to change and it only changes once: store when it happened (`confirmedAt`, null until then) instead of `isConfirmed`.
