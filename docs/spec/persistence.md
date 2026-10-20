@@ -151,6 +151,23 @@ The design canvas has every state above on its "Your data" board, and the Settin
 
 A leader can stop answering without letting go of the lock, for example when the browser freezes a background tab. So while a tab has calls open, it asks every half second whether the leader is still there, and gives up after 10 seconds without any answer. The leader starts answering as soon as it holds the lock, even while its database is still loading, so a slow first download doesn't count as silence. After the time limit the call fails like any failed write ("Couldn't save your last change. It's still on screen."), or, while opening, the app falls back to limited storage. A call that timed out may still have been applied by the leader, so it isn't retried on its own.
 
+```mermaid
+sequenceDiagram
+  participant Tab
+  participant Leader as Leader tab
+  Tab->>Leader: a call
+  loop every half second while a call is open
+    Tab->>Leader: still there?
+    Leader-->>Tab: here
+  end
+  Leader-->>Tab: the result
+  Note over Leader: the browser freezes the tab, which keeps the lock
+  Tab->>Leader: a call
+  Tab-xLeader: still there? (no answer)
+  Note over Tab: after 10 seconds without any answer
+  Tab->>Tab: the call fails, and isn't retried, since the leader may have applied it
+```
+
 ## Hosting on GitHub Pages
 
 - The app is a static site on GitHub Pages, deployed by [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) (pnpm install, test, build, then the Pages actions) on every push to `main`. The repository's Pages source must be set to GitHub Actions. It is served from the project path (`/week-budget-planner/`), so set Vite's `base` to it and resolve every URL (the iconset, fonts, the service worker and its scope) against the base.
