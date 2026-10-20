@@ -32,6 +32,15 @@ describe("the module graph", () => {
     expect(findCycles(graph)).toEqual([]);
   });
 
+  it("leaves out files outside src", () => {
+    expect(readGraph().has("..")).toBe(false);
+    expect([
+      ...readGraph()
+        .values()
+        .flatMap((edges) => edges.keys()),
+    ]).not.toContain("..");
+  });
+
   it("has no cycles between the app's modules", () => {
     expect(findCycles(readGraph())).toEqual([]);
   });

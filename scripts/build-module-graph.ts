@@ -3,10 +3,10 @@
 //   node scripts/build-module-graph.ts
 //
 // A module is a folder directly in src/ (src/plan/, src/storage/) or a file directly in it
-// (src/App.tsx). Imports between files of the same module don't show. Every import counts,
-// type-only ones too, since they couple the modules all the same. Its test fails when the graph has
-// a cycle, because dependencies go one way (see Coupling in docs/guidelines/principles.md), and when
-// docs/MODULES.md is out of date.
+// (src/App.tsx). Imports between files of the same module, and of files outside src/, don't show.
+// Every import counts, type-only ones too, since they couple the modules all the same. Its test
+// fails when the graph has a cycle, because dependencies go one way (see Coupling in
+// docs/guidelines/principles.md), and when docs/MODULES.md is out of date.
 
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -53,8 +53,10 @@ export function readGraph(folder = sourceFolder): Graph {
     ];
     for (const { path = "", isDynamic } of imports) {
       // Vite's queries, such as ?no-inline, aren't part of the path.
-      const target = resolve(dirname(file), path.replace(/\?.*$/u, ""));
-      const to = findModule(relative(folder, target).replaceAll("\\", "/"));
+      const target = relative(folder, resolve(dirname(file), path.replace(/\?.*$/u, "")));
+      // Files outside src/, such as the example week's JSON, aren't modules of the app.
+      if (target.startsWith("..")) continue;
+      const to = findModule(target.replaceAll("\\", "/"));
       if (to === from) continue;
       edges.set(to, { isDynamic: (edges.get(to)?.isDynamic ?? true) && isDynamic });
     }
