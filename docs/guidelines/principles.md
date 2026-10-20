@@ -118,4 +118,6 @@ How tests are chosen is in [`docs/guidelines/tests.md`](tests.md).
 
 ## Docs
 
+**Draw diagrams in Mermaid**, in a `mermaid` code block in the Markdown. GitHub and most editors render it, and it stays text: it changes in the same diff as the prose around it, and a review sees what changed. Use a diagram where prose makes the reader build a picture in their head: how data structures relate, the steps between tabs or between the page and a worker, a decision with several outcomes, the states of a mode. Don't draw what a list already says plainly. Render a new diagram once before committing, since a syntax error only shows as an error box on GitHub.
+
 **Link the files the docs mention.** In Markdown, a file or folder named in the text is a relative link, with the path in code: [`docs/spec/glossary.md`](../spec/glossary.md), written `` [`docs/spec/glossary.md`](../spec/glossary.md) ``. The link works on GitHub and in editors, and a broken one shows that a file moved. Write the path from the repository root so it reads the same in every doc, and make the link relative to the doc it's in. Paths that are examples or patterns rather than real files (`broadcast/index.ts`, `*.test.ts`) stay plain code.
