@@ -1,4 +1,5 @@
-// First, so the Trusted Types policy exists before anything writes HTML (see Security in docs/SPEC.md).
+// First, so the Trusted Types policy exists before anything writes HTML (see
+// docs/spec/security.md).
 // oxlint-disable-next-line import/no-unassigned-import -- importing it creates the policy.
 import "./trusted-html.ts";
 

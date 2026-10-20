@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Browser tests for the sensitive paths, the ones a failure would cost the user their plan (see
- * Where rules are enforced in docs/CODING-GUIDELINES.md). They run against the built app, so run
+ * Where rules are enforced in docs/guidelines/principles.md). They run against the built app, so run
  * `pnpm build` first (`pnpm test:browser` does both).
  *
  * CI installs the browser that matches this Playwright version. Elsewhere, an installed Chromium

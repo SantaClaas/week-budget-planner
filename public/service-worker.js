@@ -6,7 +6,7 @@
 // PWA step can extend it (a scope has only one service worker). index.html registers it and reloads
 // once when it takes control.
 //
-// It also adds the security headers a <meta> policy can't set (see Security in docs/SPEC.md).
+// It also adds the security headers a <meta> policy can't set (see docs/spec/security.md).
 
 // TypeScript checks this file through tsconfig.worker.json. Its WebWorker types give `self` the type
 // of any worker, so it's typed here as the service worker it is: a JSDoc cast, since this plain

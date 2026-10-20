@@ -24,7 +24,7 @@ import {
 import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/types.ts";
 
 // The columns hold the plan's branded values, and CHECK constraints enforce the same rules as their
-// sanitizers (see Data model in docs/SPEC.md), so nothing that skipped the types can be stored.
+// sanitizers (see docs/spec/data-model.md), so nothing that skipped the types can be stored.
 
 /** A constant as SQL text. Constraints are DDL, which can't take parameters. */
 const quote = (value: number | string): string =>
