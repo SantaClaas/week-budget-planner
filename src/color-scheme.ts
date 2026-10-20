@@ -3,7 +3,7 @@
  * always light or dark. The values are the CSS `color-scheme` values, and "light dark" follows the
  * system. It's a device preference, so it lives in localStorage, not in the database, and the inline
  * script in index.html applies it before the first paint. Applying means setting the color-scheme
- * meta, which the tokens map onto the CSS color-scheme (see Design, Theme in docs/SPEC.md).
+ * meta, which the tokens map onto the CSS color-scheme (see Theme in docs/spec/design.md).
  */
 export type ColorScheme = "light dark" | "light" | "dark";
 

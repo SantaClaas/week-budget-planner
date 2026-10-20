@@ -272,8 +272,8 @@ function startElection(): void {
   void navigator.locks.request(LOCK_NAME, async () => {
     isLeader = true;
     connected.consumer.handlePromotion();
-    // Serve right away: calls wait for the database inside the service, and the other tabs see
-    // this tab answering while the engine loads (see "Calls between tabs" in docs/SPEC.md).
+    // Serve right away: calls wait for the database inside the service, and the other tabs see this
+    // tab answering while the engine loads (see "Calls between tabs" in docs/spec/persistence.md).
     provide(connected.channel, SCOPE, localService);
     console.debug("[database] acquired leader lock, serving the database");
     // A failure to open shows up again on every call, so here it only must not end the lock.

@@ -1,7 +1,8 @@
 import type { Plan } from "../plan/types.ts";
 
 /**
- * How much the browser lets the app save (see "Progressive enhancement" in the spec):
+ * How much the browser lets the app save (see "Progressive enhancement" in
+ * docs/spec/persistence.md):
  * - "full": the SQLite database in OPFS, shared by every tab, with `.db` export and import.
  * - "limited": JSON in localStorage, for example in a private window or without isolation.
  * - "none": memory only; nothing survives closing the tab.
@@ -15,7 +16,7 @@ export class InvalidFileError extends Error {}
 
 /**
  * The plan, or an imported file, was saved by a newer version of the app. Reloading updates the
- * app (see Export, import and reset in docs/SPEC.md). Nothing was changed.
+ * app (see Export, import and reset in docs/spec/persistence.md). Nothing was changed.
  */
 export class NewerVersionError extends Error {}
 
@@ -23,7 +24,7 @@ export interface PlanStore {
   readonly level: StorageLevel;
   /**
    * Why this level is lower than the browser allows: "database-broken" when the database file
-   * exists but fails to open (see Export, import and reset in docs/SPEC.md).
+   * exists but fails to open (see Export, import and reset in docs/spec/persistence.md).
    */
   readonly fallbackReason?: "database-broken";
   /** `isStored` is false when nothing was ever saved here (first run). */

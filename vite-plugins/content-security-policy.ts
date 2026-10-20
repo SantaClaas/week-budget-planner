@@ -5,7 +5,7 @@ import path from "node:path";
 import { parseSync, Visitor, type Plugin } from "vite";
 
 /**
- * The Content Security Policy and Trusted Types (see Security in docs/SPEC.md).
+ * The Content Security Policy and Trusted Types (see docs/spec/security.md).
  *
  * - Adds the policy as a `<meta>` to the built `index.html`, with hashes of its inline scripts.
  * - Puts the HTML the page may write on the allowlist of the default Trusted Types policy in
@@ -104,7 +104,7 @@ export function contentSecurityPolicy({
         if (file === TRUSTED_HTML_MODULE || file === ENTRY_MODULE) return;
         if (IMPORT_PATTERN.test(code)) {
           this.error(
-            `${file} imports ${TRUSTED_HTML_MODULE}. Only the build may allow HTML (see Security in docs/SPEC.md). Show user text as text instead.`,
+            `${file} imports ${TRUSTED_HTML_MODULE}. Only the build may allow HTML (see docs/spec/security.md). Show user text as text instead.`,
           );
         }
       },

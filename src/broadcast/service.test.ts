@@ -4,7 +4,7 @@ import { consume, ProviderMissingError, provide, RemoteCallError } from "./servi
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
 // their class when they're cloned, and a missing provider shows only as silence. These tests pin
-// that down (see Where rules are enforced in docs/CODING-GUIDELINES.md).
+// that down (see Where rules are enforced in docs/guidelines/principles.md).
 
 type Calculator = {
   add(first: number, second: number): Promise<number>;

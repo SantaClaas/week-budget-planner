@@ -6,7 +6,7 @@ import { createLocalQueryService, isSqlValue } from "./connection.ts";
 import { createDatabase } from "./drizzle.ts";
 
 // Drizzle types query parameters as `any[]`, so the app checks them at runtime instead (see Where
-// rules are enforced in docs/CODING-GUIDELINES.md).
+// rules are enforced in docs/guidelines/principles.md).
 
 describe("query parameters", () => {
   it("accepts exactly the values SQLite can store", () => {
