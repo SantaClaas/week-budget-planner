@@ -18,6 +18,7 @@
     "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
     "icons": "node scripts/build-iconset.ts",
+    "modules": "node scripts/build-module-graph.ts",
     "shapes": "node scripts/build-shapes.ts"
   },
   "dependencies": {
