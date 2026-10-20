@@ -6,7 +6,7 @@ import { definePlugin, defineRule } from "@oxlint/plugins";
  *   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- connect() isn't typed.
  *
  * TypeScript's own `@ts-expect-error` is covered by `typescript/ban-ts-comment`, which asks for a
- * description the same way (see Formatting and linting in docs/CODING-GUIDELINES.md).
+ * description the same way (see Formatting and linting in docs/guidelines/typescript.md).
  */
 
 /** Long enough to say something, short enough not to invite padding. */

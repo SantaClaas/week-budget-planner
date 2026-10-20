@@ -1,6 +1,6 @@
 // Builds src/icons/iconset.svg from the official Material Symbols SVGs listed in icons/icons.json,
 // plus the few brand marks it lists, each from its owner's own repository (see Deviations in
-// docs/SPEC.md).
+// docs/spec/design.md).
 //
 //   node scripts/build-iconset.ts --fetch   download missing SVGs from those repositories, then build
 //   node scripts/build-iconset.ts           build from the SVGs already in icons/
