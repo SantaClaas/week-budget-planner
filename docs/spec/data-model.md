@@ -31,6 +31,40 @@ type Block = {
 };
 ```
 
+How the three relate, with the branded types the code gives each field (see below):
+
+```mermaid
+classDiagram
+  direction LR
+  class Plan {
+    version: 1
+    dayStart: Hour
+    dayEnd: Hour
+    exampleLoadedAt: string or null
+  }
+  class Activity {
+    id: ActivityId
+    name: string
+    hue: Hue
+    shape: Shape
+    mode: week or day
+    budgetMinutes: BudgetMinutes
+    days: DayCount
+  }
+  class Block {
+    id: BlockId
+    activityId: ActivityId
+    day: DayIndex
+    start: DayMinute
+    length: Length
+  }
+  Plan "1" *-- "0..*" Activity : activities, in list order
+  Plan "1" *-- "0..*" Block : blocks
+  Block "0..*" --> "1" Activity : activityId
+```
+
+A plan owns its activities and blocks, and every block belongs to exactly one activity of the same plan. Removing an activity removes its blocks.
+
 Ids are made with [nanoid](https://github.com/ai/nanoid)'s `customAlphabet`: 12 characters from `6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz`, which is `nolookalikesSafe` from `nanoid-dictionary`. It leaves out characters that look alike (1, l and I, 0 and O, and others) and vowels, so ids are easy to read back from a URL and never spell words. 36¹² is about 4.7 × 10¹⁸ (62 bits), plenty for one plan. nanoid draws its randomness from `crypto.getRandomValues()`, which, unlike `crypto.randomUUID()`, also works outside secure contexts. Ids are stored as text. A 12-character id is a third of a UUID string, and Turso's binary `uuid4()` wouldn't help, since ids are made in the browser and appear in URLs and files as text. Ids that come from storage, an import or the example week are kept as they are, as long as they are non-empty and at most 40 characters.
 
 Time is stored as integer minutes and everything snaps to 15 minutes. Weekly budget: `calculateWeeklyBudget(activity) = activity.mode === "day" ? activity.budgetMinutes * activity.days : activity.budgetMinutes`. Placed: the sum of `length` over that activity's blocks. Left to place: `weekly budget − placed`. It can go negative, which means over budget.
@@ -43,6 +77,14 @@ Sanitize every loaded plan (from storage or sync): give activities with a missin
 
 - **A sanitizer** for data that was loaded or computed: it takes any number and returns the nearest valid value, as described above. `sanitizePlan` is made of them.
 - **A strict parser** for what the user types or picks: it rejects a value out of range instead of clamping it, so the form can say what's wrong (see Activities in [Interactions](interactions.md)).
+
+```mermaid
+flowchart LR
+  loaded["A number that was loaded or computed:<br/>storage, an import, arithmetic"] --> sanitizer["sanitizeLength()"] --> length["Length"]
+  typed["What the user types"] --> parser["parseBudgetMinutes()"]
+  parser -->|valid| budget["BudgetMinutes"]
+  parser -->|"too-small or too-large"| form["The form says what's wrong"]
+```
 
 The database checks the same rules again with `CHECK` constraints on its columns (see Suggested tables in [Persistence](persistence.md)), so nothing that skipped the types can be stored.
 
