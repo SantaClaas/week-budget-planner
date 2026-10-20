@@ -1,17 +1,11 @@
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    "target": "es2023",
+    // Vitest runs the tests in Node, the version in .node-version, so they can use everything
+    // TypeScript knows. The app code they import is still checked against tsconfig.app.json.
+    "target": "esnext",
     "module": "esnext",
-    "lib": [
-      "ES2023",
-      "ES2025.Iterator",
-      "ES2025.Intl",
-      "ESNext.Intl",
-      "ESNext.Temporal",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
