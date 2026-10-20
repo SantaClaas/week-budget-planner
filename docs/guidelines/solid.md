@@ -23,6 +23,7 @@ Flashcut's [`CLAUDE.md`](../../CLAUDE.md) has project-tested notes from `beta.17
 
 ## Shape
 
+- **Render into `document.body`**, not into a wrapper: `render(() => <App />, document.body)`. A `<div id="root">` is an element that exists only for the framework (see No elements for styling in [`docs/guidelines/html.md`](html.md)), and without it the app's landmarks (`<header>`, `<nav>`, `<main>`) are the body's own children. Solid appends after what's already in the body, the `<noscript>` message and the icon sprite, and leaves them alone. The usual reason for a wrapper, other scripts adding to the body, doesn't apply: nothing else renders into this page.
 - Plan state in one store, with pure functions for budget math, lanes, snapping and the first free slot. These are easy to unit test, so test them with Vitest.
 - Components: `ActivityList` (activities and their forms), `WeekGrid` (header, gutter, day columns), `Block`, `AddBlock` (the menu or bottom sheet on an empty slot), `PlacingToolbar`, `Snackbar`, `SettingsPage`, and `NavigationBar` for phones. A suggestion, to adjust as the code asks.
 - Use pointer events (not HTML5 drag and drop) so mouse, pen and touch share one code path. Use a single drag controller with window listeners, and update during drags inside `requestAnimationFrame`.
