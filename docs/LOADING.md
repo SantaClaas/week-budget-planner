@@ -31,6 +31,32 @@ Sizes are from `pnpm build` of the full stack on 2026-10-17. Brackets give the g
 | 5. Only when missing | `@oddbird/css-anchor-positioning` | | Dynamic `import()` when `"anchorName" in document.documentElement.style` is false | Planned for phase 4, with the add-block menu. |
 | 6. Background | The service worker (`service-worker.js`) | | Registered by the inline script in [`index.html`](../index.html), only when the page isn't cross-origin isolated | It adds the isolation headers GitHub Pages can't send. The app never waits for it. |
 
+## What waits for what
+
+Solid arrows are waits: the step can't start until the one before it is done. Dashed boxes load only on some visits.
+
+```mermaid
+flowchart TD
+  html["index.html and the inline theme script"] --> css["Stylesheet"]
+  html --> main["Main script"]
+  html --> font["Google Sans Flex, small"]
+  css --> paint(["First paint, in the theme's colors"])
+  main --> polyfills["Polyfills, only when missing"]:::sometimes
+  polyfills --> opening(["The app's first frame: Opening your plan…"])
+  main --> opening
+  font -. "swaps in when it arrives" .-> opening
+  opening --> level{"Full level possible?"}
+  level -->|yes| database["Database chunk, worker and engine"]:::sometimes
+  database --> migrations["Pending migrations"]:::sometimes
+  migrations --> plan(["The plan shows"])
+  database --> plan
+  level -->|no| plan
+  main --> loaded(["load event"])
+  font --> loaded
+  loaded --> optical["Google Sans Flex with optical sizes"]
+  classDef sometimes stroke-dasharray: 5 5
+```
+
 ## A first visit on GitHub Pages
 
 1. The HTML arrives. The theme script sets the color scheme, and the font preload starts.

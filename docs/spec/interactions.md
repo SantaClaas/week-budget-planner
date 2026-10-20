@@ -2,6 +2,35 @@
 
 All of these must work with a mouse, touch and the keyboard.
 
+The week is in one of these states at a time. The sections below give the details of each:
+
+```mermaid
+stateDiagram-v2
+  [*] --> Idle
+  Idle --> Placing : pick an activity
+  Placing --> Idle : Done, Escape, all placed
+  Idle --> AddBlock : pick an empty slot
+  AddBlock --> Idle : choose, or Escape
+  Idle --> FromList : drag an activity
+  FromList --> Idle : drop on a day
+  Idle --> Selected : press or tap a block
+  Selected --> Idle : Escape, click elsewhere, Delete
+  Selected --> Moving : drag the body
+  Moving --> Selected : release
+  Selected --> Resizing : drag a handle
+  Resizing --> Selected : release
+  AddBlock : Add block
+  FromList : Dragging from the list
+  note right of Placing
+    Each empty slot picked adds a block
+  end note
+  note left of Selected
+    Arrow keys move or resize it
+  end note
+```
+
+Picking means a click, a tap, or Enter or Space on the focused slot or activity. Choosing an activity in Add block, dropping one on a day, and each slot picked while placing add a block; releasing a move or a resize saves it if it changed; Delete removes the block. On touch, only a selected block can be dragged, so the first tap selects and the grid stays scrollable. A mouse press selects and can start a move at once. For about 350ms after a drag ends, clicks are ignored, so the click that ends it doesn't add a block or deselect.
+
 **Adding blocks**
 - **Drag from the Activities list** (mouse or pen): a press on an activity followed by more than 4px of movement starts a drag. A chip follows the pointer, and a dashed preview shows where the block will land. Dropping on a day creates the block. The start is the slot under the pointer.
 - **Placing:** clicking or tapping an activity starts placing it. The placing toolbar appears: "Placing **Gym** · 1 h 30 min. Click a time slot." ("Tap a slot" on touch) with the activity's left-to-place figure, "Use first free slot" and "Done". While placing, a mouse hovering over the grid shows the preview, and each click or tap on an empty slot adds a block of the default length there. Placing stops on its own once that activity is all placed. Escape and Done also stop it.
