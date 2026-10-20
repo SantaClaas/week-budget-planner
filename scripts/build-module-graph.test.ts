@@ -34,11 +34,12 @@ describe("the module graph", () => {
 
   it("leaves out files outside src", () => {
     expect(readGraph().has("..")).toBe(false);
-    expect([
-      ...readGraph()
+    expect(
+      readGraph()
         .values()
-        .flatMap((edges) => edges.keys()),
-    ]).not.toContain("..");
+        .flatMap((edges) => edges.keys())
+        .toArray(),
+    ).not.toContain("..");
   });
 
   it("has no cycles between the app's modules", () => {
