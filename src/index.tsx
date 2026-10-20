@@ -4,11 +4,10 @@ import { App } from "./App.tsx";
 import { loadOpticalSizes } from "./font/index.ts";
 import { loadPolyfills } from "./polyfills.ts";
 
-const root = document.querySelector("#root");
-if (!root) throw new Error("The #root element is missing from index.html.");
-
 await loadPolyfills();
-render(() => <App />, root);
+// Straight into the body, with no wrapper element (see Shape in docs/guidelines/solid.md). Solid
+// appends after what's already there, the <noscript> message and the icon sprite.
+render(() => <App />, document.body);
 
 // The larger font file waits until the page has loaded, so it never delays the first paint.
 const swapFont = (): void => {
