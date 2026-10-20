@@ -42,4 +42,4 @@ Releases are numbered by date, not with semantic versioning. A version number li
 
 - **The version is the date of the commit the app was built from**, as an ISO 8601 date in UTC (`2026-10-17`), plus that commit's hash. The commit's date rather than the build's keeps two builds of the same commit the same version, and the hash tells two releases on the same day apart.
 - **The hash is optional.** A build without git, for example from a downloaded archive, has the build's date and no hash, and links to the repository's main branch instead of a commit.
-- The build reads both from git (`vite-plugins/app-version.ts`) and gives them to the app as the module `virtual:app-version`. The link goes to `https://github.com/SantaClaas/week-budget-planner/tree/<hash>`, the repository at that commit, or to `…/tree/main` without one.
+- The build reads both from git ([`vite-plugins/app-version.ts`](../../vite-plugins/app-version.ts)) and gives them to the app as the module `virtual:app-version`. The link goes to `https://github.com/SantaClaas/week-budget-planner/tree/<hash>`, the repository at that commit, or to `…/tree/main` without one.

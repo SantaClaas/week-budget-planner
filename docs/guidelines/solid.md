@@ -6,7 +6,7 @@ paths:
 
 # Solid 2.0
 
-The app is built with SolidJS 2.0, a release candidate, pinned to exact versions (see `CLAUDE.md`). This adds to `docs/guidelines/principles.md` and `docs/guidelines/typescript.md`.
+The app is built with SolidJS 2.0, a release candidate, pinned to exact versions (see [`CLAUDE.md`](../../CLAUDE.md)). This adds to [`docs/guidelines/principles.md`](principles.md) and [`docs/guidelines/typescript.md`](typescript.md).
 
 ## Read the official sources first
 
@@ -19,11 +19,11 @@ Solid 2.0 is not 1.x. Effects, batching, stores, async data, control flow and th
 5. **[docs.solidjs.com](https://docs.solidjs.com)**: the general documentation, which may still describe 1.x in places. If it disagrees with the cheatsheet or the migration guide, those two win for 2.0.
 6. **Type definitions** in `node_modules/solid-js` and `node_modules/@solidjs/signals`: the final word on signatures.
 
-Flashcut's `CLAUDE.md` has project-tested notes from `beta.17`: `<Loading>`/`<Errored>`, async `createMemo` with `refresh()`, `onSettled`, split `createEffect`, microtask batching, `render` from `@solidjs/web`, and a non-keyed `<Show>` stale-read bug. Treat them as hints and confirm each one against the sources above, since this project is on `rc.14`.
+Flashcut's [`CLAUDE.md`](../../CLAUDE.md) has project-tested notes from `beta.17`: `<Loading>`/`<Errored>`, async `createMemo` with `refresh()`, `onSettled`, split `createEffect`, microtask batching, `render` from `@solidjs/web`, and a non-keyed `<Show>` stale-read bug. Treat them as hints and confirm each one against the sources above, since this project is on `rc.14`.
 
 ## Shape
 
 - Plan state in one store, with pure functions for budget math, lanes, snapping and the first free slot. These are easy to unit test, so test them with Vitest.
 - Components: `ActivityList` (activities and their forms), `WeekGrid` (header, gutter, day columns), `Block`, `AddBlock` (the menu or bottom sheet on an empty slot), `PlacingToolbar`, `Snackbar`, `SettingsPage`, and `NavigationBar` for phones. A suggestion, to adjust as the code asks.
 - Use pointer events (not HTML5 drag and drop) so mouse, pen and touch share one code path. Use a single drag controller with window listeners, and update during drags inside `requestAnimationFrame`.
-- **No HTML from strings.** A Content Security Policy with Trusted Types only lets the build's own templates be written as HTML (see `docs/spec/security.md`). Show user text as text (JSX children, `textContent`), never through `innerHTML` or `insertAdjacentHTML`.
+- **No HTML from strings.** A Content Security Policy with Trusted Types only lets the build's own templates be written as HTML (see [`docs/spec/security.md`](../spec/security.md)). Show user text as text (JSX children, `textContent`), never through `innerHTML` or `insertAdjacentHTML`.
