@@ -1,6 +1,6 @@
 # Browser support
 
-This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed (see `docs/LOADING.md` for where everything loads), and never in the initial bundle: each one comes in through a dynamic `import()`, which Vite splits into its own chunk, so browsers that don't need it never download it. Check the build output to confirm the chunk is separate. Versions are from MDN's browser compat data.
+This is a cutting-edge app, built first for its author's own up-to-date browsers. Baseline Newly available features are fine to use. Where a fallback exists and is cheap, use it. Where there is none, or it isn't worth its code, list the feature here so it's a known gap, not a surprise. Polyfills are loaded only when feature detection says they're needed (see [`docs/LOADING.md`](../LOADING.md) for where everything loads), and never in the initial bundle: each one comes in through a dynamic `import()`, which Vite splits into its own chunk, so browsers that don't need it never download it. Check the build output to confirm the chunk is separate. Versions are from MDN's browser compat data.
 
 **With a fallback, or degrading on purpose:**
 

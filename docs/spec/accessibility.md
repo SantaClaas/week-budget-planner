@@ -6,7 +6,7 @@ paths:
 
 # Screen readers and the keyboard
 
-What assistive technology reads and how the keyboard moves, screen by screen. Everything a pointer can do has a keyboard way (see [Interactions](interactions.md)), and everything the screen shows has a text equivalent. The markup rules behind it (native elements first, then ARIA) are in `docs/guidelines/html.md`; the focus ring, forced colors and live regions are under Accessibility in [Design](design.md).
+What assistive technology reads and how the keyboard moves, screen by screen. Everything a pointer can do has a keyboard way (see [Interactions](interactions.md)), and everything the screen shows has a text equivalent. The markup rules behind it (native elements first, then ARIA) are in [`docs/guidelines/html.md`](../guidelines/html.md); the focus ring, forced colors and live regions are under Accessibility in [Design](design.md).
 
 ## Names and descriptions
 
@@ -58,4 +58,4 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 
 ## Checking it
 
-Check each screen and state with a screen reader before calling it done (see Screen reader checks in `docs/guidelines/tests.md`), and with the keyboard alone: every block, every empty slot and every activity must be reachable and usable without a pointer. The automatic checks (the lint, the contrast tests, axe and the browser checks in `e2e/accessibility.spec.ts`) catch what a machine can; add each new screen to them too (see Automatic accessibility checks in `docs/guidelines/tests.md`).
+Check each screen and state with a screen reader before calling it done (see Screen reader checks in [`docs/guidelines/tests.md`](../guidelines/tests.md)), and with the keyboard alone: every block, every empty slot and every activity must be reachable and usable without a pointer. The automatic checks (the lint, the contrast tests, axe and the browser checks in [`e2e/accessibility.spec.ts`](../../e2e/accessibility.spec.ts)) catch what a machine can; add each new screen to them too (see Automatic accessibility checks in [`docs/guidelines/tests.md`](../guidelines/tests.md)).

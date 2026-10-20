@@ -4,9 +4,9 @@ A planner for one reusable week (Monday to Sunday, no calendar dates). The user 
 
 The core loop is: set a budget, add blocks, resize them, and watch "left to place" count down to zero.
 
-This spec describes the behavior of the working prototype in `prototype/week-budget-planner.html`, plus the design decisions made after it (see [Changes from the prototype](changes-from-the-prototype.md)). The SolidJS app should match it. When the spec and the prototype disagree, the spec wins for anything listed in [Changes from the prototype](changes-from-the-prototype.md). For anything else the prototype is what the user has actually tried, so ask before diverging.
+This spec describes the behavior of the working prototype in [`prototype/week-budget-planner.html`](../../prototype/week-budget-planner.html), plus the design decisions made after it (see [Changes from the prototype](changes-from-the-prototype.md)). The SolidJS app should match it. When the spec and the prototype disagree, the spec wins for anything listed in [Changes from the prototype](changes-from-the-prototype.md). For anything else the prototype is what the user has actually tried, so ask before diverging.
 
-The visual design is the [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) (private, ask the user for access). Its tokens are extracted to `docs/design/m3-tokens.css`.
+The visual design is the [design canvas](https://claude.ai/artifact/7WBfh6DXVehhUMeD6TnoCk) (private, ask the user for access). Its tokens are extracted to [`docs/design/m3-tokens.css`](../design/m3-tokens.css).
 
 ## Ideas for later (not in the prototype)
 

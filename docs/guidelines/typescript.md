@@ -7,7 +7,7 @@ paths:
 
 # TypeScript
 
-How TypeScript (and the little plain JavaScript) in this project is named, typed, formatted and checked. It adds to `docs/guidelines/principles.md`, which always applies.
+How TypeScript (and the little plain JavaScript) in this project is named, typed, formatted and checked. It adds to [`docs/guidelines/principles.md`](principles.md), which always applies.
 
 ## Names
 
@@ -39,7 +39,7 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 ## Branded types
 
-**Give a value its own type when it means something of its own.** A branded type is a plain number or string at runtime, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it. Make one with `Brand` from `src/brand.ts`: `type Length = Brand<number, "Length">`. Two reasons call for one, often both at once:
+**Give a value its own type when it means something of its own.** A branded type is a plain number or string at runtime, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it. Make one with `Brand` from [`src/brand.ts`](../../src/brand.ts): `type Length = Brand<number, "Length">`. Two reasons call for one, often both at once:
 
 - **The value has rules.** A block's length is a multiple of 15 from 15 to 1440. Once only its sanitizer can make a `Length`, every `Length` is valid, and code that takes one doesn't check again.
 - **It could be mixed up with another value of the same plain type.** `updateName(userId: string, name: string)` accepts `updateName(newName, userId)` without complaint. At runtime it finds no such user and fails quietly, or at best returns an error. With `updateName(id: UserId, name: string)` the swap doesn't compile. Ids are the clearest case, since they're often passed next to other strings: an `ActivityId` can't stand in for a `BlockId` either. The same goes for numbers that share a unit but not a meaning, such as `DayMinute` and `WeekMinute`. Whether the other argument (`name` here) needs a brand too is a judgment call: brand it when it's easy to swap with something else, not by reflex.
@@ -69,19 +69,19 @@ const taken = new Set(plan.blocks.values().filter((block) => block.activityId ==
 
 **Keep the array methods where the result has to be an array anyway.** A single `array.map(f)` allocates the one array it returns, the same as `values().map(f).toArray()`, so it stays as it is. Arrays are also right when the result is used more than once, indexed or measured (an iterator can be walked only once), when it's sorted (`toSorted()`), and where an API or the framework takes an array, such as Solid's `<For each>` or `JSON.stringify`.
 
-The types come from the `ES2025.Iterator` lib in the TypeScript configs. Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from `src/polyfills.ts` (see `docs/spec/browser-support.md`), so code can use them anywhere.
+The types come from the `ES2025.Iterator` lib in the TypeScript configs. Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from [`src/polyfills.ts`](../../src/polyfills.ts) (see [`docs/spec/browser-support.md`](../spec/browser-support.md)), so code can use them anywhere.
 
 ## Formatting and linting
 
 **oxfmt formats, oxlint lints, and CI checks both.** Run `pnpm format` and `pnpm lint` before committing. The formatter keeps its defaults: 100 columns, double quotes, trailing commas. Markdown isn't formatted, so tables and long lines in the docs stay as written.
 
-**Both the linter and the compiler are strict.** The lint runs the correctness, suspicious, perf and pedantic categories as errors, with type-aware rules (floating promises, unsafe `any`, misused promises and the like), the `jsx-a11y` rules for the markup in JSX (alt text, labels, valid roles and ARIA states, keyboard access next to click handlers), and a few rules picked from the style and restriction categories. TypeScript runs with `strict` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `noImplicitOverride`, `noPropertyAccessFromIndexSignature` and `noUncheckedSideEffectImports`, and no unused or unreachable code. Everything is checked: the app, the tests, the Vite and oxlint plugins, the build scripts (TypeScript, run by Node directly) and the service worker (plain JavaScript, checked through JSDoc and `tsconfig.worker.json`).
+**Both the linter and the compiler are strict.** The lint runs the correctness, suspicious, perf and pedantic categories as errors, with type-aware rules (floating promises, unsafe `any`, misused promises and the like), the `jsx-a11y` rules for the markup in JSX (alt text, labels, valid roles and ARIA states, keyboard access next to click handlers), and a few rules picked from the style and restriction categories. TypeScript runs with `strict` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `noImplicitOverride`, `noPropertyAccessFromIndexSignature` and `noUncheckedSideEffectImports`, and no unused or unreachable code. Everything is checked: the app, the tests, the Vite and oxlint plugins, the build scripts (TypeScript, run by Node directly) and the service worker (plain JavaScript, checked through JSDoc and [`tsconfig.worker.json`](../../tsconfig.worker.json)).
 
 **An exception says why, and the tools check that it does.**
 
-- To skip a lint rule on one line: `// oxlint-disable-next-line rule-name -- why it doesn't apply here`. The reason after `--` is required, at least 10 characters. The local rule `week-budget-planner/require-reason` (in `oxlint-plugins/`) fails the lint without one, and the lint also fails on a disable that no longer disables anything.
+- To skip a lint rule on one line: `// oxlint-disable-next-line rule-name -- why it doesn't apply here`. The reason after `--` is required, at least 10 characters. The local rule `week-budget-planner/require-reason` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails the lint without one, and the lint also fails on a disable that no longer disables anything.
 - To skip a type error: `// @ts-expect-error -- why`, also with a reason of 10 characters or more (`typescript/ban-ts-comment`). `@ts-ignore` and `@ts-nocheck` aren't allowed, since they stay quiet once the error is gone.
-- To turn a rule off for a whole kind of file, do it in `.oxlintrc.json` with a comment saying why. A file-level `/* oxlint-disable rule -- why */` is for one file with one clear reason, like the stores whose methods are `async` without `await` on purpose.
+- To turn a rule off for a whole kind of file, do it in [`.oxlintrc.json`](../../.oxlintrc.json) with a comment saying why. A file-level `/* oxlint-disable rule -- why */` is for one file with one clear reason, like the stores whose methods are `async` without `await` on purpose.
 - Prefer fixing the code. An exception is for when the rule is wrong about this line, not for when the fix is more work.
 
 **Type assertions aren't allowed.** `as`, `<Type>value` and the non-null `!` are lint errors (`typescript/consistent-type-assertions` with `assertionStyle: "never"`, `typescript/no-non-null-assertion`). `as const` is fine, since it only narrows a literal. Instead:

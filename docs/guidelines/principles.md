@@ -1,10 +1,10 @@
 # Principles
 
-How code in this project is named, split and kept honest, whatever the language. The other files in `docs/guidelines/` add what's specific to one kind of code (see `docs/CODING-GUIDELINES.md` for the list). These are guidelines, not laws: follow them by default, and when one doesn't fit, say why in the change.
+How code in this project is named, split and kept honest, whatever the language. The other files in [`docs/guidelines/`](./) add what's specific to one kind of code (see [`docs/CODING-GUIDELINES.md`](../CODING-GUIDELINES.md) for the list). These are guidelines, not laws: follow them by default, and when one doesn't fit, say why in the change.
 
 **This is an idealistic document.** It describes the code we strive for, not code we expect to reach perfectly. Falling short of it in places is normal; the direction is what counts. And as with the severability clause in a contract, if one guideline turns out wrong, or doesn't hold in some case, that doesn't void the others: set that one aside, say why, and the rest still apply.
 
-The behavior and the design are in the spec (`docs/SPEC.md` lists its files in `docs/spec/`). The words for things are in its glossary (`docs/spec/glossary.md`), and the code uses those words too (see "Names" below).
+The behavior and the design are in the spec ([`docs/SPEC.md`](../SPEC.md) lists its files in [`docs/spec/`](../spec/)). The words for things are in its glossary ([`docs/spec/glossary.md`](../spec/glossary.md)), and the code uses those words too (see "Names" below).
 
 ## The consumer's needs come first
 
@@ -29,7 +29,7 @@ This is the same direction as "Bottom-up" under Refactoring: start with the spec
 
 In a web app that order is HTML, then CSS, then JavaScript:
 
-- **HTML** holds the structure and the meaning, and does natively what it can: `<dialog>`, `popover`, `<details>`, form validation, links that navigate. See `docs/guidelines/html.md`.
+- **HTML** holds the structure and the meaning, and does natively what it can: `<dialog>`, `popover`, `<details>`, form validation, links that navigate. See [`docs/guidelines/html.md`](html.md).
 - **CSS** draws: looks, layout, states and motion (`:has()`, `:user-invalid`, transitions, container queries), instead of a script that toggles classes or measures elements.
 - **JavaScript** does what only it can: the planner's logic, storage, dragging. Where it touches the page, it sets state (an attribute, a value) and leaves the drawing to CSS.
 
@@ -45,7 +45,7 @@ In a web app that order is HTML, then CSS, then JavaScript:
 - **Prefix every key in `localStorage` and `sessionStorage`** with `week-budget-planner.`, as in `week-budget-planner.color-scheme`. Storage is shared by everything on the same origin, and in development that's every app that ever ran on the same `localhost` port, so an unprefixed key like `theme` is bound to collide.
 - **The rules stop at the edges.** They apply inside the code we control. At the edges of the application, names belong to the other side: browser and library APIs (`localStorage`, Drizzle's `params` in a batch statement), file formats, network messages and data on disk. We can't rename those, so use them as they are, and say so in a comment where it isn't obvious. Abbreviations are fine there when they help the edge, for example to save space on the wire or on disk. Away from the edges, use names people understand, not the names someone chose for an outside API.
 
-Functions and booleans have naming rules of their own in `docs/guidelines/typescript.md`.
+Functions and booleans have naming rules of their own in [`docs/guidelines/typescript.md`](typescript.md).
 
 ## Modules
 
@@ -107,11 +107,15 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 4. **Test time:** what the compiler can't prove: the sanitizers and parsers that turn raw input into checked values, the week arithmetic across midnight and the week's wrap, the first free slot, and what an import accepts and refuses.
 5. **Review time:** whether a rule is the right rule. No tool can say whether a block should be allowed to last more than a day, or whether "1,5" should mean one and a half hours.
 6. **Runtime**, last, as a safety net, not the plan: the app's checks at its edges (`sanitizePlan` on everything loaded, the strict parsers on what the user types, the import checks), and the checks the platform makes for us (the database's `CHECK` constraints, the browser's Content Security Policy and Trusted Types).
-7. **Monitoring**, after release: what only real use shows. How often loaded plans need repairing, how often imports are refused, which errors users run into and which Content Security Policy violations happen tells us whether a rule is wrong, or whether some version wrote data it shouldn't have. The app doesn't monitor anything yet: it has no backend to report to, and reporting would need the user's consent first (see Browser permissions in `docs/spec/security.md`). When it's added, it goes here.
+7. **Monitoring**, after release: what only real use shows. How often loaded plans need repairing, how often imports are refused, which errors users run into and which Content Security Policy violations happen tells us whether a rule is wrong, or whether some version wrote data it shouldn't have. The app doesn't monitor anything yet: it has no backend to report to, and reporting would need the user's consent first (see Browser permissions in [`docs/spec/security.md`](../spec/security.md)). When it's added, it goes here.
 
 **An exception to the type checks moves a rule to a later stage, so it owes a test.** A type assertion (`as`, `!`), a `@ts-expect-error` or a disabled lint rule takes a rule out of compile time. It's like `unsafe`, `unwrap()` or `expect()` in Rust: not bad in itself, but the tool for when the developer knows something is safe and the compiler can't prove it. The proof then becomes the developer's job, in two parts:
 
 - **Say why it's safe**, in the comment the lint requires, the way Rust code puts a `// SAFETY:` comment on an `unsafe` block.
 - **Make the reason a test**, so it can't change under our feet. The runtime check that replaces a compile-time proof gets unit tests, including the cases it rejects. The parsers and sanitizers are the example: `parseDecimal`, `parseBudgetMinutes`, `planFile.read` and `sanitizePlan` each have tests for valid input and for input they must refuse or repair, and the brand modules' one `brand()` assertion is only reached through them. The same goes for type guards such as `isSqlValue`, and for code that leans on a library's runtime behavior past its types, such as the RPC proxy or Drizzle's `construct()`.
 
-How tests are chosen is in `docs/guidelines/tests.md`.
+How tests are chosen is in [`docs/guidelines/tests.md`](tests.md).
+
+## Docs
+
+**Link the files the docs mention.** In Markdown, a file or folder named in the text is a relative link, with the path in code: [`docs/spec/glossary.md`](../spec/glossary.md), written `` [`docs/spec/glossary.md`](../spec/glossary.md) ``. The link works on GitHub and in editors, and a broken one shows that a file moved. Write the path from the repository root so it reads the same in every doc, and make the link relative to the doc it's in. Paths that are examples or patterns rather than real files (`broadcast/index.ts`, `*.test.ts`) stay plain code.
