@@ -1,5 +1,5 @@
 /**
- * The page's default Trusted Types policy (see Security in docs/SPEC.md). With the page's Content
+ * The page's default Trusted Types policy (see docs/spec/security.md). With the page's Content
  * Security Policy, the browser calls it for every plain string written as HTML or loaded as a
  * script, and it lets through only:
  * - HTML the build allowed: the templates the Solid compiler produced and the files listed in

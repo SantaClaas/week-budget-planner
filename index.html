@@ -7,8 +7,8 @@
     <meta name="color-scheme" content="light dark" />
     <script>
       // Applies the stored color scheme (the Theme setting) before the first paint (see Theme in
-      // docs/spec/design.md). Kept tiny and blocking on purpose; src/color-scheme.ts handles changes
-      // later.
+      // docs/spec/design.md). Kept tiny and blocking on purpose; src/color-scheme.ts handles
+      // changes later.
       try {
         const colorScheme = localStorage.getItem("week-budget-planner.color-scheme");
         if (colorScheme === "light" || colorScheme === "dark") {
@@ -29,7 +29,8 @@
     <script>
       // GitHub Pages can't send the cross-origin isolation headers the database needs, so the
       // service worker adds them. Register it and reload once when it takes control. The app never
-      // waits for this: without isolation it starts with limited storage (see the spec).
+      // waits for this: without isolation it starts with limited storage (see Progressive
+      // enhancement in docs/spec/persistence.md).
       (() => {
         const flag = "week-budget-planner.isolation-reload";
         const storage = (() => {
@@ -51,9 +52,11 @@
           location.reload();
         };
         const url = new URL("service-worker.js", document.baseURI).href;
-        // Registering takes a trusted script URL (see Security in docs/SPEC.md). This policy
+        // Registering takes a trusted script URL (see docs/spec/security.md). This policy
         // only ever returns the one service worker URL.
-        const policy = window.trustedTypes?.createPolicy("service-worker", { createScriptURL: () => url });
+        const policy = window.trustedTypes?.createPolicy("service-worker", {
+          createScriptURL: () => url,
+        });
         navigator.serviceWorker
           .register(policy ? policy.createScriptURL(url) : url)
           .then(() => {

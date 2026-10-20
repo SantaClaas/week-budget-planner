@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test";
 
 import { PAGES_URL, expectStatus } from "./app.ts";
 
-// The storage levels (see Progressive enhancement in docs/SPEC.md). GitHub Pages can't send the
-// isolation headers, so the full level depends on the service worker adding them. Where that's
-// impossible, the app has to fall back without losing what it can keep.
+// The storage levels (see Progressive enhancement in docs/spec/persistence.md). GitHub Pages can't
+// send the isolation headers, so the full level depends on the service worker adding them. Where
+// that's impossible, the app has to fall back without losing what it can keep.
 
 test("gets the full level on GitHub Pages through the service worker", async ({ page }) => {
   await page.goto(PAGES_URL);
