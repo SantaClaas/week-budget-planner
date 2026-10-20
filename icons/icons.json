@@ -45,7 +45,7 @@
   ],
   "brands": [
     {
-      "$comment": "GitHub's own mark, from its Octicons (MIT), v19.33.0. The one non-Material icon, approved for the About section's link to the repository (see Deviations in docs/SPEC.md).",
+      "$comment": "GitHub's own mark, from its Octicons (MIT), v19.33.0. The one non-Material icon, approved for the About section's link to the repository (see Deviations in docs/spec/design.md).",
       "name": "mark-github",
       "repository": "primer/octicons",
       "commit": "cc4e12df6ff8292447ba9141eaa2a6f6e1c59a85",

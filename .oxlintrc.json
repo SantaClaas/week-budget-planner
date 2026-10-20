@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  // Strict on purpose (see Formatting and linting in docs/CODING-GUIDELINES.md). Where a rule doesn't
+  // Strict on purpose (see Formatting and linting in docs/guidelines/typescript.md). Where a rule doesn't
   // apply to one line, disable it there with a reason after "--"; require-reason checks that.
   // Type-aware rules (floating promises, unsafe any and so on) need oxlint-tsgolint.
   // jsx-a11y checks the markup in JSX (alt text, labels, roles and their required states, keyboard
@@ -47,7 +47,7 @@
     // Asks for deeply readonly parameters, which DOM and library objects can't be. Arrays that
     // must not change are `readonly` in their types instead.
     "typescript/prefer-readonly-parameter-types": "off",
-    // Modules are split by meaning, not by size (see Modules in docs/CODING-GUIDELINES.md), so
+    // Modules are split by meaning, not by size (see Modules in docs/guidelines/principles.md), so
     // limits on lines, functions, classes or imports would push splits for the wrong reason.
     "max-lines": "off",
     "max-lines-per-function": "off",
@@ -55,7 +55,7 @@
     "import/max-dependencies": "off",
     // Imports name the file in full, as Node's type stripping needs, in every file and not only
     // the ones Node runs, so any module could run there as it is (see Formatting and linting in
-    // docs/CODING-GUIDELINES.md).
+    // docs/guidelines/typescript.md).
     "import/extensions": ["error", "always", { "ignorePackages": true }]
   },
   "env": {

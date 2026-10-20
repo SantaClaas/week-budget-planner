@@ -4,7 +4,8 @@ import type { Plugin } from "vite";
 
 /**
  * Gives the app its version as the module `virtual:app-version`: the date of the commit it was
- * built from, and that commit with a link to the repository at it (see Version in docs/SPEC.md).
+ * built from, and that commit with a link to the repository at it (see Version in
+ * docs/spec/layout.md).
  * The commit's date rather than the build's keeps two builds of the same commit the same version.
  * A build without git, such as one from a downloaded archive, gets today's date and no commit, and
  * links to the repository's main branch instead.
