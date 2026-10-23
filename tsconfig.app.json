@@ -19,6 +19,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
+    "resolveJsonModule": true,
     "noEmit": true,
     "jsx": "preserve",
     "jsxImportSource": "@solidjs/web",
@@ -38,5 +39,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/sw.ts"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

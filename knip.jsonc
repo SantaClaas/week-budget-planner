@@ -2,7 +2,11 @@
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   // Finds unused files, exports and dependencies (https://knip.dev). Its plugins read the entry
   // points from the Vite, Vitest, Playwright, drizzle-kit and oxlint configs.
-  "entry": ["scripts/*.ts"],
+  // index.html registers the service worker by its URL, which knip can't follow.
+  "entry": ["scripts/*.ts", "public/service-worker.js"],
+  // The Settings page imports these once it exists (phase 4): downloading an exported database,
+  // and asking to keep the data. Take them out of this list then.
+  "ignore": ["src/download.ts", "src/storage/persistence.ts"],
   // A system tool, not a package: build-shapes.ts compiles Google's Kotlin sources with it.
   "ignoreBinaries": ["java"],
 }

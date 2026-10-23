@@ -1,0 +1,253 @@
+// Adapted from SantaClaas/flashcut (src/lib/broadcast-service.ts).
+/**
+ * Comlink-style RPC between same-origin tabs, in the spirit of crackle, but over a
+ * BroadcastChannel: exactly one tab (the provider, elected elsewhere via the Web Locks API) serves
+ * calls from every other tab.
+ *
+ * Unlike a MessagePort proxy, a BroadcastChannel cannot transfer ports, so each call is correlated
+ * with its response by a random id on the shared channel. Consumers discover the provider through a
+ * query/ready handshake; the provider announces itself with a random providerId so consumers can
+ * tell a leadership change apart from a plain "still here" reply.
+ */
+
+/** Every exposed method must be async — the channel makes everything async anyway. */
+type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
+
+type ServiceMessage =
+  | { scope: string; kind: "call"; id: string; property: string; parameters: unknown[] }
+  | { scope: string; kind: "result"; id: string; result: unknown }
+  | { scope: string; kind: "error"; id: string; error: unknown; name?: string }
+  | { scope: string; kind: "provider-ready"; providerId: string }
+  | { scope: string; kind: "provider-query" };
+
+/**
+ * The call had not been sent yet when this tab was promoted to provider — it was never delivered
+ * anywhere, so callers may safely retry.
+ */
+export class ProviderChangedError extends Error {}
+
+/**
+ * The provider changed or went silent while the call was in flight. The old provider may or may
+ * not have applied it, so it is NOT retried automatically.
+ */
+class CallLostError extends Error {}
+
+/** No provider answered within the time limit. The call was never sent. */
+export class ProviderMissingError extends Error {}
+
+/** A call that reached the provider but failed there. `cause` holds the provider-side error. */
+export class RemoteCallError extends Error {}
+
+/** Serve `target`'s methods to all consumer tabs on the channel. */
+export function provide(channel: BroadcastChannel, scope: string, target: AsyncApi): void {
+  const providerId = crypto.randomUUID();
+  const ready: ServiceMessage = { scope, kind: "provider-ready", providerId };
+
+  channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
+    const message = event.data;
+    if (message.scope !== scope) return;
+    if (message.kind === "provider-query") {
+      channel.postMessage(ready);
+      return;
+    }
+    if (message.kind !== "call") return;
+    void (async () => {
+      try {
+        const method = target[message.property];
+        if (typeof method !== "function") {
+          throw new TypeError(`Unknown service method: ${message.property}`);
+        }
+        const result: unknown = await Reflect.apply(method, target, message.parameters);
+        channel.postMessage({
+          scope,
+          kind: "result",
+          id: message.id,
+          result,
+        } satisfies ServiceMessage);
+      } catch (error) {
+        try {
+          // Structured cloning turns custom errors into a plain Error, so the name travels apart.
+          channel.postMessage({
+            scope,
+            kind: "error",
+            id: message.id,
+            error,
+            ...(error instanceof Error && { name: error.name }),
+          } satisfies ServiceMessage);
+        } catch {
+          // The error wasn't structured-cloneable; send its string form.
+          channel.postMessage({
+            scope,
+            kind: "error",
+            id: message.id,
+            error: String(error),
+          } satisfies ServiceMessage);
+        }
+      }
+    })();
+  });
+
+  channel.postMessage(ready);
+}
+
+export interface Consumer<T> {
+  proxy: T;
+  /**
+   * Call when this tab itself becomes the provider: calls still waiting for a provider are rejected
+   * with ProviderChangedError (retryable), calls already sent to the previous provider with
+   * CallLostError.
+   */
+  handlePromotion(): void;
+}
+
+interface PendingCall {
+  resolve(value?: unknown): void;
+  reject(reason: unknown): void;
+}
+
+const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
+
+/**
+ * How long a consumer waits without any sign of life from the provider. While calls are open it
+ * asks every half second, and a provider answers even while it's busy, so only a provider that
+ * stopped running (for example a frozen background tab) runs into this.
+ */
+const SILENCE_LIMIT_MILLISECONDS = 10_000;
+
+/** A proxy whose method calls are served by whichever tab currently provides `scope`. */
+export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: string): Consumer<T> {
+  const sent = new Map<string, PendingCall>();
+  let providerId: string | undefined;
+  let readyWaiters: PendingCall[] = [];
+  let queryTimer: ReturnType<typeof setInterval> | undefined;
+  let lastHeardAt = 0;
+
+  const query = (): void => {
+    channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
+  };
+
+  function failSent(reason: Error) {
+    const calls = [...sent.values()];
+    sent.clear();
+    for (const call of calls) call.reject(reason);
+  }
+
+  function settleWaiters(settle: (waiter: PendingCall) => void) {
+    const waiters = readyWaiters;
+    readyWaiters = [];
+    for (const waiter of waiters) settle(waiter);
+  }
+
+  function stopQueryingWhenIdle() {
+    if (queryTimer === undefined || readyWaiters.length > 0 || sent.size > 0) return;
+    clearInterval(queryTimer);
+    queryTimer = undefined;
+  }
+
+  /** Asks for the provider every half second while anything waits, and gives up after silence. */
+  function startQuerying() {
+    if (queryTimer !== undefined) return;
+    lastHeardAt = performance.now();
+    query();
+    queryTimer = setInterval(() => {
+      if (performance.now() - lastHeardAt > SILENCE_LIMIT_MILLISECONDS) {
+        // Forget the silent provider, so the next call looks for one again.
+        providerId = undefined;
+        settleWaiters((waiter) => {
+          waiter.reject(new ProviderMissingError("No database leader tab answered."));
+        });
+        failSent(new CallLostError("The database leader tab stopped answering."));
+        stopQueryingWhenIdle();
+        return;
+      }
+      query();
+    }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
+  }
+
+  channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
+    const message = event.data;
+    if (message.scope !== scope) return;
+    if (message.kind === "provider-ready") {
+      if (providerId !== undefined && providerId !== message.providerId) {
+        failSent(new CallLostError("The database leader changed while a call was in flight."));
+      }
+      providerId = message.providerId;
+      lastHeardAt = performance.now();
+      settleWaiters((waiter) => {
+        waiter.resolve();
+      });
+      stopQueryingWhenIdle();
+      return;
+    }
+    if (message.kind !== "result" && message.kind !== "error") return;
+    const call = sent.get(message.id);
+    if (!call) return;
+    lastHeardAt = performance.now();
+    sent.delete(message.id);
+    stopQueryingWhenIdle();
+    if (message.kind === "result") {
+      call.resolve(message.result);
+      return;
+    }
+    if (message.error instanceof Error && message.name !== undefined)
+      message.error.name = message.name;
+    call.reject(
+      new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }),
+    );
+  });
+
+  function waitForProvider(): Promise<void> {
+    if (providerId !== undefined) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      readyWaiters.push({
+        resolve: () => {
+          resolve();
+        },
+        reject,
+      });
+      startQuerying();
+    });
+  }
+
+  const handler: ProxyHandler<object> = {
+    get(target, property) {
+      // Awaiting the proxy itself must not treat it as a thenable (see crackle), so `then` and
+      // symbols read the empty target's own (missing) property.
+      if (property === "then" || typeof property !== "string") {
+        const own: unknown = Reflect.get(target, property);
+        return own;
+      }
+      return async (...parameters: unknown[]) => {
+        await waitForProvider();
+        const id = crypto.randomUUID();
+        const response = new Promise((resolve, reject) => {
+          sent.set(id, { resolve, reject });
+        });
+        startQuerying();
+        channel.postMessage({
+          scope,
+          kind: "call",
+          id,
+          property,
+          parameters,
+        } satisfies ServiceMessage);
+        return response;
+      };
+    },
+  };
+
+  return {
+    // The proxy answers every method name, so it stands in for whatever T the caller asks for.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- a Proxy answers any method name, which TypeScript can't see.
+    proxy: new Proxy({}, handler) as T,
+    handlePromotion() {
+      settleWaiters((waiter) => {
+        waiter.reject(new ProviderChangedError("This tab became the provider."));
+      });
+      failSent(
+        new CallLostError("This tab became the database leader while a call was in flight."),
+      );
+      stopQueryingWhenIdle();
+    },
+  };
+}

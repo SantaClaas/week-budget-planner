@@ -1,0 +1,337 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "1d8dd35f-1f33-400b-a011-f039f1dae989",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "activities",
+      "entityType": "tables"
+    },
+    {
+      "name": "blocks",
+      "entityType": "tables"
+    },
+    {
+      "name": "settings",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hue",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shape",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mode",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "budget_minutes",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "days",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "activity_id",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "start",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "length",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_start",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_end",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "example_loaded_at",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "columns": [
+        "activity_id"
+      ],
+      "tableTo": "activities",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_blocks_activity_id_activities_id_fk",
+      "entityType": "fks",
+      "table": "blocks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "activities_pk",
+      "table": "activities",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "blocks_pk",
+      "table": "blocks",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "settings_pk",
+      "table": "settings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "activity_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "blocks_activity_id",
+      "entityType": "indexes",
+      "table": "blocks"
+    },
+    {
+      "value": "length(\"id\") BETWEEN 1 AND 40",
+      "name": "activities_id",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "length(\"name\") BETWEEN 1 AND 60",
+      "name": "activities_name",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"hue\" IN (255, 28, 152, 78, 305, 198, 350, 118)",
+      "name": "activities_hue",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"shape\" IN ('circle', 'square', 'slanted', 'arch', 'fan', 'arrow', 'semi-circle', 'oval', 'pill', 'triangle', 'diamond', 'clam-shell', 'pentagon', 'gem', 'sunny', 'very-sunny', 'cookie-4', 'cookie-6', 'cookie-7', 'cookie-9', 'cookie-12', 'ghostish', 'clover-4', 'clover-8', 'burst', 'soft-burst', 'boom', 'soft-boom', 'flower', 'puffy', 'puffy-diamond', 'pixel-circle', 'pixel-triangle', 'bun', 'heart')",
+      "name": "activities_shape",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"mode\" IN ('week', 'day')",
+      "name": "activities_mode",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"budget_minutes\" % 15 = 0 AND \"budget_minutes\" >= 15 AND ((\"mode\" = 'day' AND \"budget_minutes\" <= 1440) OR (\"mode\" = 'week' AND \"budget_minutes\" <= 10080))",
+      "name": "activities_budget_minutes",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"days\" BETWEEN 1 AND 7",
+      "name": "activities_days",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "length(\"id\") BETWEEN 1 AND 40",
+      "name": "blocks_id",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"day\" BETWEEN 0 AND 6",
+      "name": "blocks_day",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"start\" BETWEEN 0 AND 1425 AND \"start\" % 15 = 0",
+      "name": "blocks_start",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"length\" BETWEEN 15 AND 1440 AND \"length\" % 15 = 0",
+      "name": "blocks_length",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"day_start\" BETWEEN 0 AND 12",
+      "name": "settings_day_start",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "\"day_end\" BETWEEN 13 AND 24",
+      "name": "settings_day_end",
+      "entityType": "checks",
+      "table": "settings"
+    }
+  ],
+  "renames": []
+}

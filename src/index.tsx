@@ -1,3 +1,8 @@
+// First, so the Trusted Types policy exists before anything writes HTML (see
+// docs/spec/security.md).
+// oxlint-disable-next-line import/no-unassigned-import -- importing it creates the policy.
+import "./trusted-html.ts";
+
 import { render } from "@solidjs/web";
 
 import { App } from "./App.tsx";

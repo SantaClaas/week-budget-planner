@@ -19,6 +19,23 @@ In the prototype, the plan lived in the claude.ai artifact database. That API ex
 - **Multiple tabs (already built in flashcut, reuse it):** OPFS allows one open database per origin. Flashcut's `src/db/client.ts` elects a leader with `navigator.locks.request(...)`. The tab holding the lock opens the database, runs migrations, and serves a `DbService` (`exec`/`run`/`get`/`all`/`exportFile`/`importFile`/`wipe`). `src/lib/broadcast-service.ts` exposes that service to the other tabs as a typed RPC proxy over BroadcastChannel. It handles request ids, provider discovery, retrying calls that were never sent when a tab gets promoted, and `CallLostError` for calls in flight when the leader changes. Copy both files with only renames (channel and lock names). Don't build a second mechanism.
 - **Cross-tab updates:** after a write, broadcast a change event so other open tabs reload the plan (flashcut's `src/lib/broadcast.ts` pattern). A tab never receives its own broadcast.
 
+How the tabs share the one database. Every tab runs the same typed Drizzle queries; only the leader has the database open:
+
+```mermaid
+flowchart LR
+  subgraph follower["Every other tab"]
+    followerDrizzle["Drizzle (sqlite-proxy)"] --> proxy["RPC proxy"]
+  end
+  subgraph leader["Leader tab: holds the Web Lock"]
+    leaderDrizzle["Drizzle (sqlite-proxy)"] --> service["DatabaseService"]
+    service --> engine["Turso SQLite"]
+  end
+  proxy <-->|"calls and results<br/>over BroadcastChannel"| service
+  engine --> file[("Database file in OPFS")]
+```
+
+When the leader tab closes, its lock is released and another tab takes it over, opens the database and starts serving. Calls that were never sent go to the new leader; calls in flight fail with `CallLostError` (see Calls between tabs).
+
 ## Drizzle (new compared to flashcut)
 
 - Use `drizzle-orm@1.0.0-rc.4` and `drizzle-kit@1.0.0-rc.4`, pinned exactly. The 1.0 line ships `drizzle-orm/tursodatabase/wasm` and a filesystem-free `drizzle-orm/tursodatabase/wasm-migrator`, and 0.45 doesn't have them. Check the installed package's types before relying on these details.
@@ -40,6 +57,37 @@ Map the data model above roughly like this. Adjust it if Drizzle suggests better
 - Every table is `STRICT`, so a column only takes values of its own type. drizzle-kit can't generate `STRICT` yet, so the generated SQL gets it by hand, in `drizzle/<timestamp>_<name>/migration.sql`, and a test fails if any table goes without it (for example after drizzle-kit rebuilds a table in a later migration). A `STRICT` table refuses a `CASE` in a `CHECK`, whose type it can't tell, so checks use `AND` and `OR` instead.
 - `settings`: a single row with `day_start`, `day_end`, and `example_loaded_at` (text, ISO 8601, null when there is no example week). The theme isn't stored here (see [Data model](data-model.md)).
 
+The tables as built in [`src/database/schema.ts`](../../src/database/schema.ts):
+
+```mermaid
+erDiagram
+  activities ||--o{ blocks : "has"
+  activities {
+    text id PK
+    text name "1 to 60 characters"
+    integer hue "a palette hue"
+    text shape "a shape name"
+    text mode "week or day"
+    integer budget_minutes "multiple of 15"
+    integer days "1 to 7"
+    integer position "list order"
+    text created_at
+  }
+  blocks {
+    text id PK
+    text activity_id FK "activities.id"
+    integer day "0 Monday to 6 Sunday"
+    integer start "minutes from midnight"
+    integer length "15 to 1440"
+  }
+  settings {
+    integer id PK "always 1"
+    integer day_start "0 to 12"
+    integer day_end "13 to 24"
+    text example_loaded_at "null when there is no example week"
+  }
+```
+
 ## Writes and undo
 
 - Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
@@ -54,6 +102,27 @@ Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `
 - **Export database:** downloads the raw SQLite file as `week-budget-planner-YYYY-MM-DD.db` (`application/vnd.sqlite3`). The leader runs `PRAGMA wal_checkpoint(TRUNCATE)`, briefly closes the database, reads the file bytes from OPFS, then reopens. Calls that arrive in the meantime queue behind the reopen. Export works from any tab.
 - **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` ("Replace your plan?") that names the file and how many activities and blocks it replaces, with a link to export first. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
 - **An import never replaces the plan with something that can't be opened.** Before touching the database, the leader checks that the file starts with the SQLite header (the 16 bytes `SQLite format 3\0`), then writes it to a separate file in OPFS (a new name for each try, because the engine keeps a file it failed to open locked until the page reloads; the leader removes leftover copies when it opens the database), opens that copy, runs the migrations on it and reads the plan from it. Only if all of that works does it replace the database. Otherwise the plan stays as it was, the copy is deleted, and the snackbar says: "This file isn't a Week Budget Planner database, so nothing was changed." A `.json` file has to be a plan in the stored format, or the snackbar says: "This file isn't a Week Budget Planner plan, so nothing was changed."
+```mermaid
+sequenceDiagram
+  actor User
+  participant Tab
+  participant Leader
+  participant OPFS
+  User->>Tab: picks a .db file and confirms
+  Tab->>Leader: importFile(bytes)
+  Leader->>Leader: starts with "SQLite format 3"?
+  Leader->>OPFS: write a copy under a new name
+  Leader->>OPFS: open the copy, migrate it, read the plan
+  alt every step worked
+    Leader->>OPFS: replace the database with the copy
+    Leader-->>Tab: every tab reloads
+  else any step failed
+    Leader->>OPFS: delete the copy
+    Leader-->>Tab: invalid file, nothing changed
+    Tab-->>User: snackbar: this file isn't a Week Budget Planner database
+  end
+```
+
 - **A file from a newer version of the app is refused**, since this version can't know what the newer one changed. A `.db` file is newer when Drizzle's table lists a migration this version doesn't have; a `.json` file is newer when its `version` is above 1. Nothing is changed, and the snackbar makes it actionable: "This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again." with the action "Reload".
 - **A plan saved by a newer version** (the database lists a migration this version doesn't have, for example after another tab updated the app) is neither opened nor replaced by a fallback. The app shows a full-page state instead: "Your plan was saved by a newer version" with "Reload to update Week Budget Planner. Your plan is safe, and nothing was changed." and a filled "Reload" button. This works in every tab, including tabs that reach the database through the leader.
 - **Delete all data:** confirm, delete the database files and reload every tab.
@@ -82,11 +151,48 @@ The design canvas has every state above on its "Your data" board, and the Settin
 
 A leader can stop answering without letting go of the lock, for example when the browser freezes a background tab. So while a tab has calls open, it asks every half second whether the leader is still there, and gives up after 10 seconds without any answer. The leader starts answering as soon as it holds the lock, even while its database is still loading, so a slow first download doesn't count as silence. After the time limit the call fails like any failed write ("Couldn't save your last change. It's still on screen."), or, while opening, the app falls back to limited storage. A call that timed out may still have been applied by the leader, so it isn't retried on its own.
 
+```mermaid
+sequenceDiagram
+  participant Tab
+  participant Leader as Leader tab
+  Tab->>Leader: a call
+  loop every half second while a call is open
+    Tab->>Leader: still there?
+    Leader-->>Tab: here
+  end
+  Leader-->>Tab: the result
+  Note over Leader: the browser freezes the tab, which keeps the lock
+  Tab->>Leader: a call
+  Tab-xLeader: still there? (no answer)
+  Note over Tab: after 10 seconds without any answer
+  Tab->>Tab: the call fails, and isn't retried, since the leader may have applied it
+```
+
 ## Hosting on GitHub Pages
 
 - The app is a static site on GitHub Pages, deployed by [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) (pnpm install, test, build, then the Pages actions) on every push to `main`. The repository's Pages source must be set to GitHub Actions. It is served from the project path (`/week-budget-planner/`), so set Vite's `base` to it and resolve every URL (the iconset, fonts, the service worker and its scope) against the base.
 - **Cross-origin isolation by service worker:** GitHub Pages can't send the COOP and COEP headers, so the app's own service worker ([`public/service-worker.js`](../../public/service-worker.js), served as `service-worker.js` at the base) adds them. On every fetch it handles, it returns the response with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` added (and `Cross-Origin-Resource-Policy: same-origin` on same-origin responses). This is the technique of [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker), written as part of our own worker rather than copied in, because a page has one service worker per scope and the later PWA step will extend this same worker.
 - **Startup:** a small inline script in [`index.html`](../../index.html) runs before the app. If `crossOriginIsolated` is false and service workers are available, it registers the worker and, once the worker controls the page, reloads once. A `sessionStorage` flag prevents a reload loop when isolation still fails. The app itself never waits on this: it starts with what it gets (see Progressive enhancement).
+
+  ```mermaid
+  sequenceDiagram
+    participant Page as index.html
+    participant Worker as service-worker.js
+    participant Pages as GitHub Pages
+    Page->>Page: crossOriginIsolated?
+    alt not isolated, and service workers available
+      Page->>Worker: register
+      Worker-->>Page: controls the page
+      Page->>Page: reload once (a sessionStorage flag stops a loop)
+      Page->>Worker: fetch the page and its files
+      Worker->>Pages: fetch
+      Pages-->>Worker: response
+      Worker-->>Page: the response with COOP and COEP added
+      Page->>Page: crossOriginIsolated is true: the full level can start
+    else isolated already, or no service worker
+      Page->>Page: start the app with what it has
+    end
+  ```
 - **No cross-origin files:** with `require-corp`, cross-origin files would need CORS or CORP. Self-host everything instead, including Google Sans Flex (SIL Open Font License) as `woff2` under `public/fonts/`, so isolation never breaks a font or an icon.
 
 ## Progressive enhancement
@@ -97,6 +203,22 @@ The app must still work, to a degree, where storage or isolation is restricted, 
 2. **Limited storage:** no isolation (no `SharedArrayBuffer`) or no OPFS, but `localStorage` works. The plan lives in memory and is saved after each change as JSON in `localStorage`, in the stored format of [`examples/example-week.json`](../../examples/example-week.json), sanitized on load. Other tabs pick up changes through the `storage` event (last write wins). Export and import use a `.json` file of the plan instead of `.db`. Status: "Saved in limited storage". Settings › Your data explains: "This browser blocked the full database here, for example in a private window. Your plan is kept in simpler storage that the browser may clear, for example when the window closes. Export to keep a copy."
 3. **No storage:** `localStorage` is missing or throws. The plan lives in memory only. Status: "Not saved", plus a one-time banner: "This browser doesn't allow saving here. Your changes are lost when you close this tab. Export to keep them." Export and import of `.json` still work.
 4. **No JavaScript:** a `<noscript>` message that the planner needs JavaScript.
+
+The app picks the level when it opens the store ([`src/storage/index.ts`](../../src/storage/index.ts)):
+
+```mermaid
+flowchart TD
+  start(["The app starts"]) --> usable{"Cross-origin isolated, with OPFS,<br/>Web Locks and BroadcastChannel?"}
+  usable -->|yes| open["Open the database"]
+  open -->|opens| full["Full: SQLite in OPFS"]
+  open -->|"saved by a newer version"| newer["Full page: Your plan was saved by a newer version"]
+  open -->|"fails, no database file"| writable
+  open -->|"fails, the file exists"| broken["The next level down, and Settings says<br/>the database couldn't be opened"]
+  broken --> writable
+  usable -->|no| writable{"Can localStorage be written?"}
+  writable -->|yes| limited["Limited: JSON in localStorage"]
+  writable -->|no| none["None: memory only"]
+```
 
 Moving up a level later (for example the same browser outside a private window) starts from that level's own storage. Importing a `.json` export into the full app works too, so a plan made in a private window can be carried over.
 

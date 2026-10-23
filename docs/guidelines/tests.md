@@ -16,7 +16,7 @@ What gets a test and how the tests run. It adds to [`docs/guidelines/principles.
 
 **Every path gets a keyboard test.** Everything a pointer can do needs a keyboard way too (WCAG 2.1.1), and a test that only presses keys (Tab, the arrow keys, Enter, Space, Escape) and checks where focus lands (`toBeFocused()`) finds what's missing or out of order. Keep pointer tests where the pointer path is a different path: dragging a block, resizing from either edge, placing by tap on touch. Testing only with the keyboard would leave those untested.
 
-**Browser tests** run with Playwright, in [`e2e/`](../../e2e/) (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan, and for the automatic accessibility checks below. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data.
+**Browser tests** run with Playwright, in [`e2e/`](../../e2e/) (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan, and for the automatic accessibility checks below. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data. Node loads the tests itself: `pnpm test:browser` and CI set `PW_DISABLE_TS_ESM=1`, which turns off Playwright's own TypeScript loader (see [`docs/guidelines/typescript.md`](typescript.md)).
 
 ## Automatic accessibility checks
 
