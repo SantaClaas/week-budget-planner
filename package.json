@@ -18,12 +18,14 @@
     "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
     "icons": "node scripts/build-iconset.ts",
+    "modules": "node scripts/build-module-graph.ts",
     "shapes": "node scripts/build-shapes.ts"
   },
   "dependencies": {
     "@formatjs/intl-durationformat": "0.11.1",
     "@solidjs/web": "2.0.0-rc.14",
     "core-js": "3.50.0",
+    "nanoid": "6.0.2",
     "solid-js": "2.0.0-rc.14",
     "temporal-polyfill": "1.0.6"
   },

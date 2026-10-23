@@ -79,7 +79,7 @@ For example, in Rust's axum every endpoint goes through a router, so the router 
 
 **The package test.** A module is split well when it, with all its submodules, could be shipped as its own package, or deleted, without touching much else. For example, `broadcast/` depends on nothing else in the app.
 
-**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. In this project the color scheme got its own module (`color-scheme`) when `database` and `storage` both needed its type, since `storage` already imports `database`.
+**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. [`docs/MODULES.md`](../MODULES.md) draws which module imports which, generated from the imports by `pnpm modules`, and a test fails when the graph has a cycle or the drawing is out of date. In this project the color scheme got its own module (`color-scheme`) when `database` and `storage` both needed its type, since `storage` already imports `database`.
 
 ### Code taken from elsewhere
 
@@ -117,5 +117,7 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 How tests are chosen is in [`docs/guidelines/tests.md`](tests.md).
 
 ## Docs
+
+**Draw diagrams in Mermaid**, in a `mermaid` code block in the Markdown. GitHub and most editors render it, and it stays text: it changes in the same diff as the prose around it, and a review sees what changed. Use a diagram where prose makes the reader build a picture in their head: how data structures relate, the steps between tabs or between the page and a worker, a decision with several outcomes, the states of a mode. Don't draw what a list already says plainly. Render a new diagram once before committing, since a syntax error only shows as an error box on GitHub.
 
 **Link the files the docs mention.** In Markdown, a file or folder named in the text is a relative link, with the path in code: [`docs/spec/glossary.md`](../spec/glossary.md), written `` [`docs/spec/glossary.md`](../spec/glossary.md) ``. The link works on GitHub and in editors, and a broken one shows that a file moved. Write the path from the repository root so it reads the same in every doc, and make the link relative to the doc it's in. Paths that are examples or patterns rather than real files (`broadcast/index.ts`, `*.test.ts`) stay plain code.
