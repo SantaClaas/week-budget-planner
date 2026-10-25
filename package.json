@@ -18,6 +18,7 @@
     "format:check": "oxfmt --check",
     "icons:fetch": "node scripts/build-iconset.ts --fetch",
     "icons": "node scripts/build-iconset.ts",
+    "colors": "node scripts/build-colors.ts",
     "modules": "node scripts/build-module-graph.ts",
     "shapes": "node scripts/build-shapes.ts"
   },
@@ -30,6 +31,7 @@
     "temporal-polyfill": "1.0.6"
   },
   "devDependencies": {
+    "@material/material-color-utilities": "0.3.0",
     "@oxlint/plugins": "1.88.0",
     "@solidjs/vite-plugin": "3.0.0-next.47",
     "@types/node": "26.6.5",

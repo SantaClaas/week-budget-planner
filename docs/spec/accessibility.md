@@ -53,7 +53,7 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 
 ## Settings
 
-- **Theme** is a `<fieldset>` named by its visible title (`aria-labelledby`) and described by the supporting text ("System is currently dark.") with `aria-describedby`.
+- **Theme, Contrast and Motion** are each a `<fieldset>` named by its visible title (`aria-labelledby`) and described by the supporting text ("System is currently dark.") with `aria-describedby`. Contrast stays at standard contrast in every mode, so it can always be read and changed back.
 - **The Your data buttons** (Export database, Import database, Delete all data, Keep my plan) are named by their title and described by their supporting text.
 
 ## Checking it

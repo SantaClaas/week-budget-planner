@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 
 // docs/design/m3-tokens.css repeats the light value of every light-dark() color in an
 // `@supports not (color: light-dark(...))` block for older browsers. This keeps the two the same.
+// The other contrast levels sit in `@supports (color: light-dark(...))` blocks, which those
+// browsers skip, so they need no fallback.
 const css = readFileSync(new URL("../docs/design/m3-tokens.css", import.meta.url), "utf8");
 const FALLBACK_START = "@supports not (color: light-dark(#000, #fff))";
+const LEVELS_START = "@supports (color: light-dark(#000, #fff))";
 
 /** The first argument of `light-dark(first, second)`, allowing nested parentheses. */
 function findLightValue(value: string): string {
@@ -33,27 +36,24 @@ function readDeclarations(text: string): Map<string, string> {
   return declarations;
 }
 
-/** Splits the CSS into the fallback blocks and everything else. */
-function splitFallbacks(text: string): { rest: string; fallbacks: string } {
+/** Splits the CSS into the blocks that start with `opening` and everything else. */
+function splitBlocks(text: string, opening: string): { rest: string; blocks: string } {
   let rest = "";
-  let fallbacks = "";
+  let blocks = "";
   let position = 0;
-  for (
-    let start = text.indexOf(FALLBACK_START);
-    start >= 0;
-    start = text.indexOf(FALLBACK_START, position)
-  ) {
+  for (let start = text.indexOf(opening); start >= 0; start = text.indexOf(opening, position)) {
     const end = text.indexOf("\n  }\n", start);
     rest += text.slice(position, start);
-    fallbacks += text.slice(start, end);
+    blocks += text.slice(start, end);
     position = end;
   }
-  return { rest: rest + text.slice(position), fallbacks };
+  return { rest: rest + text.slice(position), blocks };
 }
 
 describe("design tokens", () => {
   it("has a light fallback for every light-dark() color, and nothing else", () => {
-    const { rest, fallbacks } = splitFallbacks(css);
+    const { rest: withoutFallbacks, blocks: fallbacks } = splitBlocks(css, FALLBACK_START);
+    const { rest } = splitBlocks(withoutFallbacks, LEVELS_START);
     const expected = new Map(
       [...readDeclarations(rest)]
         .filter(([, value]) => value.startsWith("light-dark("))
@@ -81,19 +81,33 @@ function readColors(text: string): Map<string, ColorPair> {
   return colors;
 }
 
-/** The text of every rule for `selector`, each up to its closing brace. */
+/** The text of every rule for exactly `selector`, at any depth, each up to its closing brace. */
 function findRules(selector: string): string {
   let text = "";
-  for (
-    let start = css.indexOf(`  ${selector} {\n`);
-    start >= 0;
-    start = css.indexOf(`  ${selector} {\n`, start + 1)
-  ) {
-    text += css.slice(start, css.indexOf("\n  }\n", start));
+  for (const match of css.matchAll(/^( *)(.+) \{\n/gmu)) {
+    const [opening = "", indent = "", found = ""] = match;
+    if (found !== selector) continue;
+    const start = match.index + opening.length;
+    text += css.slice(start, css.indexOf(`\n${indent}}\n`, start));
   }
   if (text === "") throw new Error(`No rule for ${selector}`);
   return text;
 }
+
+/** A level's colors: the standard ones, with the level's own rules for `selector` on top. */
+function readLevel(selector: string, level: Level): Map<string, ColorPair> {
+  const colors = readColors(findRules(selector));
+  if (level === "standard") return colors;
+  const root = `:root[data-contrast="${level}"]`;
+  const own = selector === ":root" ? root : `${root} ${selector}`;
+  return new Map([...colors, ...readColors(findRules(own))]);
+}
+
+/** The contrast levels that must meet WCAG AA. Less is below it on purpose, as an alternate
+ * version the user opts into (see Contrast in docs/spec/design.md), and scripts/build-colors.test.ts
+ * checks that it's Google's own level -1. */
+type Level = "standard" | "more";
+const AA_LEVELS: Level[] = ["standard", "more"];
 
 /** One scheme's value of a color token, failing the test when the token is missing. */
 function pickColor(colors: Map<string, ColorPair>, name: string, scheme: keyof ColorPair): string {
@@ -124,8 +138,8 @@ function measureContrast(first: string, second: string): number {
 const TEXT = 4.5;
 const GRAPHIC = 3;
 
-describe("color contrast", () => {
-  const theme = readColors(findRules(":root"));
+describe.each(AA_LEVELS)("color contrast, %s", (level) => {
+  const theme = readLevel(":root", level);
   // The card isn't a light-dark() pair of its own: it's the lowest container in light and the
   // high one in dark (see Color in docs/spec/design.md).
   const lowest = theme.get("--surface-container-lowest");
@@ -178,7 +192,7 @@ describe("color contrast", () => {
   it.each(hues.flatMap((hue) => (["light", "dark"] as const).map((scheme) => ({ hue, scheme }))))(
     "activity color $hue ($scheme): block text and swatch",
     ({ hue, scheme }) => {
-      const activity = readColors(findRules(`.color-${hue}`));
+      const activity = readLevel(`.color-${hue}`, level);
       const container = pickColor(activity, "--activity-container", scheme);
       const text = pickColor(activity, "--on-activity-container", scheme);
       const solid = pickColor(activity, "--activity-color", scheme);
@@ -189,10 +203,10 @@ describe("color contrast", () => {
       expect(measureContrast(solid, card)).toBeGreaterThanOrEqual(GRAPHIC);
     },
   );
+});
 
-  it("measures contrast as WCAG does", () => {
-    expect(measureContrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
-    expect(measureContrast("#777777", "#ffffff")).toBeCloseTo(4.48, 2);
-    expect(measureContrast("#ffffff", "#ffffff")).toBe(1);
-  });
+it("measures contrast as WCAG does", () => {
+  expect(measureContrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
+  expect(measureContrast("#777777", "#ffffff")).toBeCloseTo(4.48, 2);
+  expect(measureContrast("#ffffff", "#ffffff")).toBe(1);
 });
