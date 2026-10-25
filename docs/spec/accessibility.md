@@ -10,7 +10,7 @@ What assistive technology reads and how the keyboard moves, screen by screen. Ev
 
 ## Names and descriptions
 
-- **A name says what a control is; a description adds the rest.** Supporting text under a button or a group ("Saves week-budget-planner-2026-10-09.db", "System is currently dark.") is linked with `aria-describedby`, not packed into the name, so "Export database" stays short and reads the same in a screen reader's list of buttons.
+- **A name says what a control is; a description adds the rest.** Supporting text ("Saves week-budget-planner-2026-10-09.db", "System is currently dark.") is linked with `aria-describedby`, not packed into the name, so "Export database" stays short and reads the same in a screen reader's list of buttons. Link it to the control the text is about, not to a group around it: screen readers read a focused control's description, but not all of them read a group's when focus enters it (Orca doesn't).
 - **The visible label is the name** wherever there is one: a group's visible title is its `<legend>`, or, where the layout puts the title outside the group (as Settings does), it names the group through `aria-labelledby`. Never a second, hidden legend next to a visible title.
 - **Spoken times and lengths are spelled out.** Visible text on blocks and day totals is compact ("1h30", "3h placed", "Mon"), which screen readers read letter by letter. Names and visually hidden text use the long styles: `Intl.DurationFormat` with `style: "long"` ("1 hour, 30 minutes") and the long weekday ("Monday"). The compact visible text is then `aria-hidden`, so nothing is read twice. Everywhere else the short copy ("1 h 30 min left to place") stays as it is.
 - **Titles and their text read as separate sentences.** A title and the text under it (a card's title, an alert's first line) are separate block elements, a heading or a `<p>` each, never two inline spans, which run together ("couldn't be openedSo your plan").
@@ -53,7 +53,7 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 
 ## Settings
 
-- **Theme, Contrast and Motion** are each a `<fieldset>` named by its visible title (`aria-labelledby`) and described by the supporting text ("System is currently dark.") with `aria-describedby`. Contrast stays at standard contrast in every mode, so it can always be read and changed back.
+- **Theme, Contrast and Motion** are each a `<fieldset>` named by its visible title (`aria-labelledby`). The supporting text ("System is currently dark.") says what System resolves to, so it describes the System option's radio input (`aria-describedby`): "System, selected radio button, System is currently dark." Contrast stays at standard contrast in every mode, so it can always be read and changed back.
 - **The Your data buttons** (Export database, Import database, Delete all data, Keep my plan) are named by their title and described by their supporting text.
 
 ## Checking it
