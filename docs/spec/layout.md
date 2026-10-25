@@ -29,7 +29,11 @@
 
 ## Settings page
 
-- **Appearance:** Theme, as a connected button group: System, Light, Dark. Supporting text under it says what System currently resolves to: "System is currently dark." It updates when the system setting changes.
+- **Appearance:**
+  - Theme, as a connected button group: System, Light, Dark. Supporting text under it says what System currently resolves to: "System is currently dark." It updates when the system setting changes.
+  - Contrast, as a connected button group: System, Less, Standard, More. Supporting text: "System is currently standard." (or "more", "less"). The group stays at standard contrast whichever is chosen (see Contrast in [Design](design.md)).
+  - Motion, as a connected button group: System, Reduced, Full. Supporting text: "System is currently full." (or "reduced").
+  - Each mirrors a browser setting, so the user can try every level without changing their system, and set this app apart from others. System follows the browser and is the default.
 - **Week** (phones only): Day hours, Clear week.
 - **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
 - **Storage:** number of activities, number of blocks, database size.
