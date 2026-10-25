@@ -7,6 +7,7 @@
   },
   "icons": [
     { "name": "add" },
+    { "name": "animation" },
     { "name": "arrow_back" },
     { "name": "auto_awesome" },
     { "name": "calendar_add_on" },
@@ -19,6 +20,7 @@
     { "name": "cloud_done" },
     { "name": "cloud_off" },
     { "name": "contrast" },
+    { "name": "dark_mode" },
     { "name": "database" },
     { "name": "delete" },
     { "name": "delete_forever" },
