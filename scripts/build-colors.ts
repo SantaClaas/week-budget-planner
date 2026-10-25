@@ -155,14 +155,18 @@ function readSchemeColors(contrastLevel: number): Colors {
   ];
 }
 
-/** One activity color's tokens at one contrast level. */
+/** One activity color's tokens at one contrast level. The activity color itself (the swatch, the
+ * progress bar) stays at its standard tone at every level: the library darkens or lightens it so far
+ * at more contrast that the eight colors become hard to tell apart, and the standard tones already
+ * reach 3:1 on the card at every level (an approved deviation, see Deviations in
+ * docs/spec/design.md). */
 function readActivityColors(contrastLevel: number, hue: number): Colors {
-  const read = (role: DynamicColor): Pair =>
-    readPair(contrastLevel, (scheme) => role.getArgb(withPrimaryHue(scheme, hue)));
+  const read = (role: DynamicColor, level = contrastLevel): Pair =>
+    readPair(level, (scheme) => role.getArgb(withPrimaryHue(scheme, hue)));
   return [
     ["activity-container", read(Roles.primaryContainer)],
     ["on-activity-container", read(onActivityContainer)],
-    ["activity-color", read(Roles.primary)],
+    ["activity-color", read(Roles.primary, STANDARD)],
   ];
 }
 
@@ -187,14 +191,20 @@ function writeRule(
 
 const aliasColors: Colors = ALIASES.map(([token, light, dark]) => [token, { light, dark }]);
 
-/** Each contrast level, for the system setting and for the Contrast setting. */
+/** Each contrast level, for the system setting and for the Contrast setting, with only the tokens
+ * whose values differ from the standard ones. */
 function writeLevels(
   selectorFor: (root: string) => string,
   readColors: (level: number) => Colors,
 ): string[] {
+  const standard = new Map(
+    readColors(STANDARD).map(([token, { light, dark }]) => [token, `${light} ${dark}`]),
+  );
   const lines: string[] = [];
   for (const { name, contrastLevel } of LEVELS) {
-    const colors = readColors(contrastLevel);
+    const colors = readColors(contrastLevel).filter(
+      ([token, { light, dark }]) => standard.get(token) !== `${light} ${dark}`,
+    );
     lines.push(
       `    @media (prefers-contrast: ${name}) {`,
       ...writeRule(selectorFor(":root:not([data-contrast])"), colors, "      ", "light-dark"),

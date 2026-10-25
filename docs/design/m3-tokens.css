@@ -218,7 +218,6 @@
         --on-error: light-dark(#ffffff, #000000);
         --error-container: light-dark(#98000a, #ffaea4);
         --on-error-container: light-dark(#ffffff, #220001);
-        --surface: light-dark(#fbf8ff, #121318);
         --on-surface: light-dark(#000000, #ffffff);
         --on-surface-variant: light-dark(#000000, #ffffff);
         --surface-container-lowest: light-dark(#ffffff, #000000);
@@ -228,7 +227,6 @@
         --surface-container-highest: light-dark(#c7c5cd, #46464c);
         --outline: light-dark(#2b2c34, #f0effa);
         --outline-variant: light-dark(#484951, #c2c2cc);
-        --inverse-surface: light-dark(#2f3036, #e3e1e9);
         --inverse-on-surface: light-dark(#ffffff, #000000);
         --inverse-primary: light-dark(#b8c4ff, #38457a);
         --success: light-dark(#003414, #c1ffc7);
@@ -250,7 +248,6 @@
       --on-error: light-dark(#ffffff, #000000);
       --error-container: light-dark(#98000a, #ffaea4);
       --on-error-container: light-dark(#ffffff, #220001);
-      --surface: light-dark(#fbf8ff, #121318);
       --on-surface: light-dark(#000000, #ffffff);
       --on-surface-variant: light-dark(#000000, #ffffff);
       --surface-container-lowest: light-dark(#ffffff, #000000);
@@ -260,7 +257,6 @@
       --surface-container-highest: light-dark(#c7c5cd, #46464c);
       --outline: light-dark(#2b2c34, #f0effa);
       --outline-variant: light-dark(#484951, #c2c2cc);
-      --inverse-surface: light-dark(#2f3036, #e3e1e9);
       --inverse-on-surface: light-dark(#ffffff, #000000);
       --inverse-primary: light-dark(#b8c4ff, #38457a);
       --success: light-dark(#003414, #c1ffc7);
@@ -282,17 +278,10 @@
         --on-error: light-dark(#fffbff, #5c0003);
         --error-container: light-dark(#ffcdc7, #7b0007);
         --on-error-container: light-dark(#e23a32, #f0443b);
-        --surface: light-dark(#fbf8ff, #121318);
         --on-surface: light-dark(#5f5e65, #a3a2a9);
         --on-surface-variant: light-dark(#7a7a83, #82828c);
-        --surface-container-lowest: light-dark(#ffffff, #0d0e13);
-        --surface-container-low: light-dark(#f5f2fa, #1b1b21);
-        --surface-container: light-dark(#efedf4, #1f1f25);
-        --surface-container-high: light-dark(#e9e7ef, #292a2f);
-        --surface-container-highest: light-dark(#e3e1e9, #34343a);
         --outline: light-dark(#b1b1bb, #53535c);
         --outline-variant: light-dark(#d9d8e2, #393a42);
-        --inverse-surface: light-dark(#2f3036, #e3e1e9);
         --inverse-on-surface: light-dark(#98979e, #64646a);
         --inverse-primary: light-dark(#6a77b0, #717db7);
         --success: light-dark(#308448, #4fa162);
@@ -314,17 +303,10 @@
       --on-error: light-dark(#fffbff, #5c0003);
       --error-container: light-dark(#ffcdc7, #7b0007);
       --on-error-container: light-dark(#e23a32, #f0443b);
-      --surface: light-dark(#fbf8ff, #121318);
       --on-surface: light-dark(#5f5e65, #a3a2a9);
       --on-surface-variant: light-dark(#7a7a83, #82828c);
-      --surface-container-lowest: light-dark(#ffffff, #0d0e13);
-      --surface-container-low: light-dark(#f5f2fa, #1b1b21);
-      --surface-container: light-dark(#efedf4, #1f1f25);
-      --surface-container-high: light-dark(#e9e7ef, #292a2f);
-      --surface-container-highest: light-dark(#e3e1e9, #34343a);
       --outline: light-dark(#b1b1bb, #53535c);
       --outline-variant: light-dark(#d9d8e2, #393a42);
-      --inverse-surface: light-dark(#2f3036, #e3e1e9);
       --inverse-on-surface: light-dark(#98979e, #64646a);
       --inverse-primary: light-dark(#6a77b0, #717db7);
       --success: light-dark(#308448, #4fa162);
@@ -540,6 +522,10 @@
   /* connected button group: inner corners 8, selected item goes fully round. For one choice out of
      several it's a <fieldset> of radio inputs, each in its <label> (see "Radio inputs that look like
      something else" below); toggle buttons with aria-pressed work the same. */
+  /* connected button group: unselected segments use Google's outlined button style, selected ones
+     the filled style. Google asks for 3:1 between each button of a cluster and its background
+     (button and segmented button accessibility), which a filled container can't reach on the card
+     at any contrast level, while the outline does. */
   .connected-button-group {
     display: flex;
     gap: 0.125rem;
@@ -552,8 +538,8 @@
       gap: 0.375rem;
       min-height: 2.5rem;
       padding: 0 0.875rem;
-      border: 0;
-      background: var(--surface-container-highest);
+      border: 1px solid var(--outline);
+      background: transparent;
       color: var(--on-surface-variant);
       font-size: 0.875rem;
       font-weight: 500;
@@ -561,7 +547,7 @@
       border-radius: var(--corner-small);
       cursor: pointer;
       @media (forced-colors: active) {
-        border: 1px solid ButtonBorder;
+        border-color: ButtonBorder;
       }
     }
     & > :is(label, button):first-of-type {
@@ -575,6 +561,7 @@
     & > label:has(:checked),
     & > [aria-pressed="true"] {
       background: var(--primary);
+      border-color: var(--primary);
       color: var(--on-primary);
       border-radius: var(--corner-full);
       @media (forced-colors: active) {
@@ -1578,193 +1565,161 @@
       :root:not([data-contrast]) .color-blue {
         --activity-container: light-dark(#004b83, #99c6ff);
         --on-activity-container: light-dark(#ffffff, #000c1c);
-        --activity-color: light-dark(#002d52, #e9f0ff);
       }
     }
     :root[data-contrast="more"] .color-blue {
       --activity-container: light-dark(#004b83, #99c6ff);
       --on-activity-container: light-dark(#ffffff, #000c1c);
-      --activity-color: light-dark(#002d52, #e9f0ff);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-blue {
         --activity-container: light-dark(#c1dbff, #003c6a);
         --on-activity-container: light-dark(#397dc2, #4587cd);
-        --activity-color: light-dark(#3277bc, #5394da);
       }
     }
     :root[data-contrast="less"] .color-blue {
       --activity-container: light-dark(#c1dbff, #003c6a);
       --on-activity-container: light-dark(#397dc2, #4587cd);
-      --activity-color: light-dark(#3277bc, #5394da);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-red {
         --activity-container: light-dark(#802e22, #ffaea1);
         --on-activity-container: light-dark(#ffffff, #210000);
-        --activity-color: light-dark(#591108, #ffece9);
       }
     }
     :root[data-contrast="more"] .color-red {
       --activity-container: light-dark(#802e22, #ffaea1);
       --on-activity-container: light-dark(#ffffff, #210000);
-      --activity-color: light-dark(#591108, #ffece9);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-red {
         --activity-container: light-dark(#ffcdc5, #6c1f14);
         --on-activity-container: light-dark(#bf5d4d, #cc6756);
-        --activity-color: light-dark(#b85848, #db7362);
       }
     }
     :root[data-contrast="less"] .color-red {
       --activity-container: light-dark(#ffcdc5, #6c1f14);
       --on-activity-container: light-dark(#bf5d4d, #cc6756);
-      --activity-color: light-dark(#b85848, #db7362);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-green {
         --activity-container: light-dark(#005525, #81d590);
         --on-activity-container: light-dark(#ffffff, #000f03);
-        --activity-color: light-dark(#003414, #c1ffc7);
       }
     }
     :root[data-contrast="more"] .color-green {
       --activity-container: light-dark(#005525, #81d590);
       --on-activity-container: light-dark(#ffffff, #000f03);
-      --activity-color: light-dark(#003414, #c1ffc7);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-green {
         --activity-container: light-dark(#96eca5, #00441c);
         --on-activity-container: light-dark(#368a4d, #419456);
-        --activity-color: light-dark(#308448, #4fa162);
       }
     }
     :root[data-contrast="less"] .color-green {
       --activity-container: light-dark(#96eca5, #00441c);
       --on-activity-container: light-dark(#368a4d, #419456);
-      --activity-color: light-dark(#308448, #4fa162);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-amber {
         --activity-container: light-dark(#634300, #f8b746);
         --on-activity-container: light-dark(#ffffff, #130900);
-        --activity-color: light-dark(#3e2800, #ffedd8);
       }
     }
     :root[data-contrast="more"] .color-amber {
       --activity-container: light-dark(#634300, #f8b746);
       --on-activity-container: light-dark(#ffffff, #130900);
-      --activity-color: light-dark(#3e2800, #ffedd8);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-amber {
         --activity-container: light-dark(#ffd28d, #503500);
         --on-activity-container: light-dark(#a37000, #b07900);
-        --activity-color: light-dark(#9c6b00, #bf8613);
       }
     }
     :root[data-contrast="less"] .color-amber {
       --activity-container: light-dark(#ffd28d, #503500);
       --on-activity-container: light-dark(#a37000, #b07900);
-      --activity-color: light-dark(#9c6b00, #bf8613);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-violet {
         --activity-container: light-dark(#583789, #d3b5ff);
         --on-activity-container: light-dark(#ffffff, #13002f);
-        --activity-color: light-dark(#3a166a, #f7ecff);
       }
     }
     :root[data-contrast="more"] .color-violet {
       --activity-container: light-dark(#583789, #d3b5ff);
       --on-activity-container: light-dark(#ffffff, #13002f);
-      --activity-color: light-dark(#3a166a, #f7ecff);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-violet {
         --activity-container: light-dark(#e5d1ff, #482779);
         --on-activity-container: light-dark(#8b69bf, #9574ca);
-        --activity-color: light-dark(#8564b9, #a280d8);
       }
     }
     :root[data-contrast="less"] .color-violet {
       --activity-container: light-dark(#e5d1ff, #482779);
       --on-activity-container: light-dark(#8b69bf, #9574ca);
-      --activity-color: light-dark(#8564b9, #a280d8);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-teal {
         --activity-container: light-dark(#005253, #47d6d8);
         --on-activity-container: light-dark(#ffffff, #000e0e);
-        --activity-color: light-dark(#003233, #acfeff);
       }
     }
     :root[data-contrast="more"] .color-teal {
       --activity-container: light-dark(#005253, #47d6d8);
       --on-activity-container: light-dark(#ffffff, #000e0e);
-      --activity-color: light-dark(#003233, #acfeff);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-teal {
         --activity-container: light-dark(#63edee, #004142);
         --on-activity-container: light-dark(#008889, #009395);
-        --activity-color: light-dark(#008283, #00a1a3);
       }
     }
     :root[data-contrast="less"] .color-teal {
       --activity-container: light-dark(#63edee, #004142);
       --on-activity-container: light-dark(#008889, #009395);
-      --activity-color: light-dark(#008283, #00a1a3);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-pink {
         --activity-container: light-dark(#7a2c5a, #ffa9d4);
         --on-activity-container: light-dark(#ffffff, #1f0013);
-        --activity-color: light-dark(#560b3b, #ffebf2);
       }
     }
     :root[data-contrast="more"] .color-pink {
       --activity-container: light-dark(#7a2c5a, #ffa9d4);
       --on-activity-container: light-dark(#ffffff, #1f0013);
-      --activity-color: light-dark(#560b3b, #ffebf2);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-pink {
         --activity-container: light-dark(#ffcae2, #671c4a);
         --on-activity-container: light-dark(#b55c8c, #c16697);
-        --activity-color: light-dark(#ae5787, #cf72a4);
       }
     }
     :root[data-contrast="less"] .color-pink {
       --activity-container: light-dark(#ffcae2, #671c4a);
       --on-activity-container: light-dark(#b55c8c, #c16697);
-      --activity-color: light-dark(#ae5787, #cf72a4);
     }
     @media (prefers-contrast: more) {
       :root:not([data-contrast]) .color-lime {
         --activity-container: light-dark(#454e00, #bdcb5c);
         --on-activity-container: light-dark(#ffffff, #0a0c00);
-        --activity-color: light-dark(#292f00, #eaf984);
       }
     }
     :root[data-contrast="more"] .color-lime {
       --activity-container: light-dark(#454e00, #bdcb5c);
       --on-activity-container: light-dark(#ffffff, #0a0c00);
-      --activity-color: light-dark(#292f00, #eaf984);
     }
     @media (prefers-contrast: less) {
       :root:not([data-contrast]) .color-lime {
         --activity-container: light-dark(#d3e270, #373e00);
         --on-activity-container: light-dark(#748117, #7e8b22);
-        --activity-color: light-dark(#6f7b10, #8b982f);
       }
     }
     :root[data-contrast="less"] .color-lime {
       --activity-container: light-dark(#d3e270, #373e00);
       --on-activity-container: light-dark(#748117, #7e8b22);
-      --activity-color: light-dark(#6f7b10, #8b982f);
     }
   }
   /* Light colors where light-dark() is missing, as for the scheme. */
