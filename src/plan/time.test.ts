@@ -21,7 +21,8 @@ describe("strict parsers", () => {
   it("reject what is out of range instead of clamping it", () => {
     expect(parseBudgetMinutes(97, "week")).toBe(90);
     expect(parseBudgetMinutes(0, "week")).toBe("too-small");
-    expect(parseBudgetMinutes(Number.NaN, "day")).toBe("too-small");
+    expect(parseBudgetMinutes(-15, "week")).toBe("too-small");
+    expect(parseBudgetMinutes(Number.NaN, "day")).toBe("unreadable");
     expect(parseBudgetMinutes(1441, "day")).toBe("too-large");
     expect(parseBudgetMinutes(1441, "week")).toBe(1440);
     expect(parseDayCount(7)).toBe(7);

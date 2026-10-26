@@ -43,9 +43,14 @@ export function parseDecimal(text: string, locale?: string): number {
 export function readActivityForm(input: ActivityFormInput, locale?: string): ActivityFormResult {
   const name = input.name.trim();
   if (!name) return { ok: false, field: "name", message: "Give the activity a name." };
-  const budgetMinutes = parseBudgetMinutes(parseDecimal(input.hours, locale) * 60, input.mode);
-  if (budgetMinutes === "too-small") {
+  // An empty field and text that isn't a number both parse to NaN, but get different messages.
+  const hours = input.hours.trim();
+  const budgetMinutes = parseBudgetMinutes(parseDecimal(hours, locale) * 60, input.mode);
+  if (hours === "" || budgetMinutes === "too-small") {
     return { ok: false, field: "hours", message: "Enter the hours it needs, for example 1.5." };
+  }
+  if (budgetMinutes === "unreadable") {
+    return { ok: false, field: "hours", message: "Enter the hours as a number, for example 1.5." };
   }
   if (budgetMinutes === "too-large") {
     const message =

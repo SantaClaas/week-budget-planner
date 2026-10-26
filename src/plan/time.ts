@@ -98,14 +98,16 @@ export const sanitizeDayEnd = (value: number, fallback = 22): Hour =>
 // clamping it, so the form can say what's wrong (see Activities in docs/spec/interactions.md).
 
 /**
- * The budget for minutes the user entered, rounded to the slot. "too-small" when there's nothing
- * to count, "too-large" for more than a day (per day) or a week (per week).
+ * The budget for minutes the user entered, rounded to the slot. "unreadable" when the hours
+ * weren't a number (NaN, from `parseDecimal`), "too-small" for zero or less, "too-large" for more
+ * than a day (per day) or a week (per week).
  */
 export function parseBudgetMinutes(
   minutes: number,
   mode: "week" | "day",
-): BudgetMinutes | "too-small" | "too-large" {
-  if (!(minutes > 0)) return "too-small";
+): BudgetMinutes | "unreadable" | "too-small" | "too-large" {
+  if (Number.isNaN(minutes)) return "unreadable";
+  if (minutes <= 0) return "too-small";
   if (minutes > (mode === "day" ? DAY : WEEK)) return "too-large";
   return brand<BudgetMinutes>(Math.max(SLOT, snap(minutes)));
 }

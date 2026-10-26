@@ -21,6 +21,12 @@ describe("activity form", () => {
     expect(readActivityForm({ ...base, hours: "0" })).toMatchObject({
       message: "Enter the hours it needs, for example 1.5.",
     });
+    expect(readActivityForm({ ...base, hours: " " })).toMatchObject({
+      message: "Enter the hours it needs, for example 1.5.",
+    });
+    expect(readActivityForm({ ...base, hours: "1.5h" })).toMatchObject({
+      message: "Enter the hours as a number, for example 1.5.",
+    });
     expect(readActivityForm({ ...base, mode: "day", hours: "25" })).toMatchObject({
       message: "A day has 24 hours. Enter 24 or less.",
     });
@@ -31,7 +37,6 @@ describe("activity form", () => {
     expect(readActivityForm({ ...base, mode: "day", days: "2.5" })).toMatchObject({
       field: "days",
     });
-    expect(readActivityForm({ ...base, hours: "1.5h" })).toMatchObject({ field: "hours" });
   });
 
   it("reads hours with the language's decimal separator, strictly", () => {
