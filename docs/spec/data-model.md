@@ -83,7 +83,7 @@ flowchart LR
   loaded["A number that was loaded or computed:<br/>storage, an import, arithmetic"] --> sanitizer["sanitizeLength()"] --> length["Length"]
   typed["What the user types"] --> parser["parseBudgetMinutes()"]
   parser -->|valid| budget["BudgetMinutes"]
-  parser -->|"too-small or too-large"| form["The form says what's wrong"]
+  parser -->|"unreadable, too-small or too-large"| form["The form says what's wrong"]
 ```
 
 The database checks the same rules again with `CHECK` constraints on its columns (see Suggested tables in [Persistence](persistence.md)), so nothing that skipped the types can be stored.

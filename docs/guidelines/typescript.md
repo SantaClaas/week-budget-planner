@@ -48,7 +48,7 @@ How to use them:
 
 - **Only the module that defines a brand creates one**, through its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those. Inside the module, one private `brand()` helper holds the only type assertion, with a comment saying why (see Type assertions below).
 - **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
-- **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
+- **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"unreadable"`, `"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
 - **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.
 - **A fixed set of values is a literal union**, not a brand: `Hue` and `Shape` come from the palette and the shape library.
 - At the edges, the database checks the same rules again with `CHECK` constraints.
