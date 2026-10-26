@@ -2,13 +2,20 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-// docs/design/m3-tokens.css repeats the light value of every light-dark() color in an
-// `@supports not (color: light-dark(...))` block for older browsers. This keeps the two the same.
-// The other contrast levels sit in `@supports (color: light-dark(...))` blocks, which those
-// browsers skip, so they need no fallback.
-const css = readFileSync(new URL("../docs/design/m3-tokens.css", import.meta.url), "utf8");
+// docs/design/m3-tokens.css sets every color as a variable per contrast level and points each token
+// at one of them: the standard level on :root and on each activity color's class, and the other
+// levels in `@supports (color: light-dark(...))` blocks, for the system setting and for
+// data-contrast. Older browsers skip those blocks and read an `@supports not (...)` block with the
+// light values instead. The tests resolve the variables the way the browser does.
+const css = readFileSync(
+  new URL("../docs/design/m3-tokens.css", import.meta.url),
+  "utf8",
+).replaceAll(/\/\*[\s\S]*?\*\//gu, "");
 const FALLBACK_START = "@supports not (color: light-dark(#000, #fff))";
 const LEVELS_START = "@supports (color: light-dark(#000, #fff))";
+const HUES = ["blue", "red", "green", "amber", "violet", "teal", "pink", "lime"];
+/** The rule that points every activity color's tokens at a level. */
+const EVERY_COLOR = `:is(${HUES.map((hue) => `.color-${hue}`).join(", ")})`;
 
 /** The first argument of `light-dark(first, second)`, allowing nested parentheses. */
 function findLightValue(value: string): string {
@@ -21,19 +28,6 @@ function findLightValue(value: string): string {
     else if (character === "," && depth === 0) return inner.slice(0, index).trim();
   }
   throw new Error(`Not a light-dark() value: ${value}`);
-}
-
-/** Every `--name: value;` declaration in `text`, keyed by its selector and name. */
-function readDeclarations(text: string): Map<string, string> {
-  const declarations = new Map<string, string>();
-  for (const [, selector = "", body = ""] of text.matchAll(
-    /([.:][\w-]+(?:\[[^\]]*\])?)\s*\{([^{}]*)\}/gu,
-  )) {
-    for (const [, name = "", value = ""] of body.matchAll(/(--[\w-]+):\s*([^;]+);/gu)) {
-      declarations.set(`${selector} ${name}`, value.trim());
-    }
-  }
-  return declarations;
 }
 
 /** Splits the CSS into the blocks that start with `opening` and everything else. */
@@ -50,17 +44,120 @@ function splitBlocks(text: string, opening: string): { rest: string; blocks: str
   return { rest: rest + text.slice(position), blocks };
 }
 
+/** Every rule's `--name: value;` declarations, keyed by its selector with the whitespace collapsed.
+ * Later declarations win, as in the cascade. */
+function readRules(text: string): Map<string, Map<string, string>> {
+  const rules = new Map<string, Map<string, string>>();
+  for (const [, selector = "", body = ""] of text.matchAll(/([^{};]+)\{([^{}]*)\}/gu)) {
+    const key = selector
+      .replaceAll(/\s+/gu, " ")
+      .replaceAll("( ", "(")
+      .replaceAll(" )", ")")
+      .trim();
+    const declarations = rules.get(key) ?? new Map<string, string>();
+    for (const [, name = "", value = ""] of body.matchAll(/(--[\w-]+):\s*([^;]+);/gu)) {
+      declarations.set(name, value.trim());
+    }
+    rules.set(key, declarations);
+  }
+  return rules;
+}
+
+const { rest: withoutFallbacks, blocks: fallbackText } = splitBlocks(css, FALLBACK_START);
+const { rest: baseText, blocks: levelText } = splitBlocks(withoutFallbacks, LEVELS_START);
+const base = readRules(baseText);
+// The two media queries have the same selector inside, so their rules are keyed by the query too.
+const levelRules = readRules(
+  levelText.replaceAll(/@media \(prefers-contrast: (\w+)\) \{/gu, "@media $1 {\n@media-$1 "),
+);
+
+/** The rules that set `selector`'s colors outside the levels: its own, and for an activity color
+ * the rule shared by all of them. */
+function readBase(selector: string): Map<string, string> {
+  const keys = selector === ":root" ? [":root"] : [selector, EVERY_COLOR];
+  const declarations = new Map<string, string>();
+  for (const key of keys) {
+    const rule = base.get(key);
+    if (!rule) throw new Error(`No rule for ${key}`);
+    for (const [name, value] of rule) declarations.set(name, value);
+  }
+  return declarations;
+}
+
+/** Replaces every `var(--name)` with that variable's value, as the browser substitutes it. */
+function resolve(declarations: Map<string, string>): Map<string, string> {
+  const substitute = (value: string, depth: number): string =>
+    depth > 10
+      ? value
+      : value.replaceAll(/var\((--[\w-]+)\)/gu, (match: string, name: string) => {
+          const found = declarations.get(name);
+          return found === undefined ? match : substitute(found, depth + 1);
+        });
+  return new Map([...declarations].map(([name, value]) => [name, substitute(value, 0)]));
+}
+
+/** What the fallback block must hold: the light value of every token that light-dark() sets,
+ * outside the levels, keyed by selector and name. */
+function findExpectedFallbacks(): Map<string, string> {
+  const expected = new Map<string, string>();
+  for (const selector of [":root", ...HUES.map((hue) => `.color-${hue}`)]) {
+    const declarations = readBase(selector);
+    for (const [name, declared] of declarations) {
+      // the level variables themselves are only read through the tokens
+      if (name.endsWith("-contrast")) continue;
+      // a token that points at its standard level takes that level's value
+      const pointedAt = /^var\((--[\w-]+-standard-contrast)\)$/u.exec(declared)?.[1];
+      const value = pointedAt === undefined ? declared : (declarations.get(pointedAt) ?? declared);
+      if (value.startsWith("light-dark(")) {
+        expected.set(`${selector} ${name}`, findLightValue(value));
+      }
+    }
+  }
+  return expected;
+}
+
+/** A level's rules, for the Contrast setting and for the system setting, on :root and on the
+ * activity colors. */
+function findLevelRules(level: string): Map<string, string>[] {
+  const roots = [`:root[data-contrast="${level}"]`, `@media-${level} :root:not([data-contrast])`];
+  return roots.flatMap((root) =>
+    [root, `${root} ${EVERY_COLOR}`].map((key) => {
+      const rule = levelRules.get(key);
+      if (!rule) throw new Error(`No rule for ${key}`);
+      return rule;
+    }),
+  );
+}
+
+/** How many of a level's values on :root differ from the standard ones. A token that changes only
+ * at the other level keeps its standard value at this one. */
+function countOwnValues(level: string): number {
+  const values = readBase(":root");
+  return [...values.keys()].filter(
+    (name) =>
+      name.endsWith(`-${level}-contrast`) &&
+      values.get(name) !== values.get(name.replace(`-${level}-`, "-standard-")),
+  ).length;
+}
+
 describe("design tokens", () => {
   it("has a light fallback for every light-dark() color, and nothing else", () => {
-    const { rest: withoutFallbacks, blocks: fallbacks } = splitBlocks(css, FALLBACK_START);
-    const { rest } = splitBlocks(withoutFallbacks, LEVELS_START);
-    const expected = new Map(
-      [...readDeclarations(rest)]
-        .filter(([, value]) => value.startsWith("light-dark("))
-        .map(([key, value]) => [key, findLightValue(value)]),
+    const expected = findExpectedFallbacks();
+    const fallbacks = new Map(
+      [...readRules(fallbackText)].flatMap(([selector, declarations]) =>
+        [...declarations].map(([name, value]): [string, string] => [`${selector} ${name}`, value]),
+      ),
     );
-    expect(expected.size).toBeGreaterThan(30);
-    expect(readDeclarations(fallbacks)).toEqual(expected);
+    expect(expected.size).toBeGreaterThan(50);
+    expect(fallbacks).toEqual(expected);
+  });
+
+  it.each(["more", "less"])("points every token at its %s value in that level's rules", (level) => {
+    for (const rule of findLevelRules(level)) {
+      expect(rule.size).toBeGreaterThan(0);
+      for (const [name, value] of rule) expect(value).toBe(`var(${name}-${level}-contrast)`);
+    }
+    expect(countOwnValues(level)).toBeGreaterThan(20);
   });
 });
 
@@ -70,44 +167,30 @@ interface ColorPair {
   dark: string;
 }
 
-/** Every `--name: light-dark(#light, #dark);` declaration in `text`. */
-function readColors(text: string): Map<string, ColorPair> {
-  const colors = new Map<string, ColorPair>();
-  for (const [, name = "", light = "", dark = ""] of text.matchAll(
-    /(--[\w-]+):\s*light-dark\((#[\da-f]{6}),\s*(#[\da-f]{6})\);/gu,
-  )) {
-    colors.set(name, { light, dark });
-  }
-  return colors;
-}
-
-/** The text of every rule for exactly `selector`, at any depth, each up to its closing brace. */
-function findRules(selector: string): string {
-  let text = "";
-  for (const match of css.matchAll(/^( *)(.+) \{\n/gmu)) {
-    const [opening = "", indent = "", found = ""] = match;
-    if (found !== selector) continue;
-    const start = match.index + opening.length;
-    text += css.slice(start, css.indexOf(`\n${indent}}\n`, start));
-  }
-  if (text === "") throw new Error(`No rule for ${selector}`);
-  return text;
-}
-
-/** A level's colors: the standard ones, with the level's own rules for `selector` on top. */
-function readLevel(selector: string, level: Level): Map<string, ColorPair> {
-  const colors = readColors(findRules(selector));
-  if (level === "standard") return colors;
-  const root = `:root[data-contrast="${level}"]`;
-  const own = selector === ":root" ? root : `${root} ${selector}`;
-  return new Map([...colors, ...readColors(findRules(own))]);
-}
-
 /** The contrast levels that must meet WCAG AA. Less is below it on purpose, as an alternate
  * version the user opts into (see Contrast in docs/spec/design.md), and scripts/build-colors.test.ts
  * checks that it's Google's own level -1. */
 type Level = "standard" | "more";
 const AA_LEVELS: Level[] = ["standard", "more"];
+
+/** The colors `selector` resolves to at a level: its rules, with the level's rules on top, and
+ * every variable substituted. */
+function readLevel(selector: string, level: Level): Map<string, ColorPair> {
+  const declarations = readBase(selector);
+  if (level !== "standard") {
+    const root = `:root[data-contrast="${level}"]`;
+    const key = selector === ":root" ? root : `${root} ${EVERY_COLOR}`;
+    const rule = levelRules.get(key);
+    if (!rule) throw new Error(`No rule for ${key}`);
+    for (const [name, value] of rule) declarations.set(name, value);
+  }
+  const colors = new Map<string, ColorPair>();
+  for (const [name, value] of resolve(declarations)) {
+    const [, light, dark] = /^light-dark\((#[\da-f]{6}),\s*(#[\da-f]{6})\)$/u.exec(value) ?? [];
+    if (light !== undefined && dark !== undefined) colors.set(name, { light, dark });
+  }
+  return colors;
+}
 
 /** One scheme's value of a color token, failing the test when the token is missing. */
 function pickColor(colors: Map<string, ColorPair>, name: string, scheme: keyof ColorPair): string {
@@ -188,8 +271,7 @@ describe.each(AA_LEVELS)("color contrast, %s", (level) => {
     },
   );
 
-  const hues = ["blue", "red", "green", "amber", "violet", "teal", "pink", "lime"];
-  it.each(hues.flatMap((hue) => (["light", "dark"] as const).map((scheme) => ({ hue, scheme }))))(
+  it.each(HUES.flatMap((hue) => (["light", "dark"] as const).map((scheme) => ({ hue, scheme }))))(
     "activity color $hue ($scheme): block text and swatch",
     ({ hue, scheme }) => {
       const activity = readLevel(`.color-${hue}`, level);

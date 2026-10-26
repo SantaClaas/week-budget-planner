@@ -170,18 +170,15 @@ function readActivityColors(contrastLevel: number, hue: number): Colors {
   ];
 }
 
-/** A rule with `light-dark()` declarations, or with the light values only. */
-function writeRule(
-  selector: string,
-  colors: Colors,
-  indent: string,
-  values: "light-dark" | "light",
-): string[] {
-  const declarations = colors.map(([token, { light, dark }]) =>
-    values === "light" || light === dark
-      ? `--${token}: ${light};`
-      : `--${token}: light-dark(${light}, ${dark});`,
-  );
+/** A color as a CSS value: `light-dark()`, or one value when light and dark are the same. */
+const writeValue = ({ light, dark }: Pair): string =>
+  light === dark ? light : `light-dark(${light}, ${dark})`;
+
+/** The variable that holds a token's value at one contrast level. */
+const levelToken = (token: string, level: string): string => `--${token}-${level}-contrast`;
+
+/** A rule with the given declarations. */
+function writeRule(selector: string, declarations: string[], indent: string): string[] {
   return [
     `${indent}${selector} {`,
     ...declarations.map((line) => `${indent}  ${line}`),
@@ -191,78 +188,150 @@ function writeRule(
 
 const aliasColors: Colors = ALIASES.map(([token, light, dark]) => [token, { light, dark }]);
 
-/** Each contrast level, for the system setting and for the Contrast setting, with only the tokens
- * whose values differ from the standard ones. */
-function writeLevels(
-  selectorFor: (root: string) => string,
-  readColors: (level: number) => Colors,
+/** One set of colors (the scheme's, or one activity color's) at every level. */
+type Levels = { standard: Colors; levels: { name: string; colors: Colors }[] };
+
+function readLevels(readColors: (level: number) => Colors): Levels {
+  return {
+    standard: readColors(STANDARD),
+    levels: LEVELS.map(({ name, contrastLevel }) => ({ name, colors: readColors(contrastLevel) })),
+  };
+}
+
+/** The tokens whose value changes at some level, in the order they're listed. */
+function findChangingTokens(sets: Levels[]): string[] {
+  const changing = new Set<string>();
+  for (const { standard, levels } of sets) {
+    const standardValues = new Map(standard.map(([token, pair]) => [token, writeValue(pair)]));
+    for (const { colors } of levels) {
+      for (const [token, pair] of colors) {
+        if (standardValues.get(token) !== writeValue(pair)) changing.add(token);
+      }
+    }
+  }
+  return sets[0]?.standard.map(([token]) => token).filter((token) => changing.has(token)) ?? [];
+}
+
+/** The values: a variable per level for each token that changes, the value itself for the rest. */
+function writeValues({ standard, levels }: Levels, changing: string[]): string[] {
+  return standard.flatMap(([token, pair]) => {
+    if (!changing.includes(token)) return [`--${token}: ${writeValue(pair)};`];
+    const atLevels = levels.map(({ name, colors }) => {
+      const value = colors.find(([other]) => other === token)?.[1] ?? pair;
+      return `${levelToken(token, name)}: ${writeValue(value)};`;
+    });
+    return [`${levelToken(token, "standard")}: ${writeValue(pair)};`, ...atLevels];
+  });
+}
+
+/** Points each changing token at its value for one level. */
+const pointAt = (changing: string[], level: string): string[] =>
+  changing.map((token) => `--${token}: var(${levelToken(token, level)});`);
+
+/** The rules that switch to each level: under the media query for the system setting, and for
+ * `data-contrast` from the Contrast setting. `selectorFor` gets the root's selector and the rule's
+ * indent. */
+function writeLevelRules(
+  selectorFor: (root: string, indent: string) => string,
+  changing: string[],
 ): string[] {
-  const standard = new Map(
-    readColors(STANDARD).map(([token, { light, dark }]) => [token, `${light} ${dark}`]),
-  );
   const lines: string[] = [];
-  for (const { name, contrastLevel } of LEVELS) {
-    const colors = readColors(contrastLevel).filter(
-      ([token, { light, dark }]) => standard.get(token) !== `${light} ${dark}`,
-    );
+  for (const { name } of LEVELS) {
     lines.push(
       `    @media (prefers-contrast: ${name}) {`,
-      ...writeRule(selectorFor(":root:not([data-contrast])"), colors, "      ", "light-dark"),
+      ...writeRule(
+        selectorFor(":root:not([data-contrast])", "      "),
+        pointAt(changing, name),
+        "      ",
+      ),
       "    }",
-      ...writeRule(selectorFor(`:root[data-contrast="${name}"]`), colors, "    ", "light-dark"),
+      ...writeRule(
+        selectorFor(`:root[data-contrast="${name}"]`, "    "),
+        pointAt(changing, name),
+        "    ",
+      ),
     );
   }
   return lines;
 }
 
-/** The scheme's colors: standard on :root, the other levels, and the light fallback. */
-export function writeSchemeColors(): string {
-  const standard = readSchemeColors(STANDARD);
+/** `:is()` over the activity color classes, one per line, as oxfmt lays out a long selector list
+ * (so the formatter leaves the generated file as it is). */
+function writeEveryColor(selectors: string[], indent: string): string {
   return [
-    ...writeRule(":root", [...standard, ...aliasColors], "  ", "light-dark"),
+    `:is(`,
+    ...selectors.map(
+      (selector, index) => `${indent}  ${selector}${index < selectors.length - 1 ? "," : ""}`,
+    ),
+    `${indent})`,
+  ].join("\n");
+}
+
+/** The light value of every token that light-dark() sets, for browsers without it. */
+const writeLightValues = (colors: Colors): string[] =>
+  colors
+    .filter(([, { light, dark }]) => light !== dark)
+    .map(([token, { light }]) => `--${token}: ${light};`);
+
+/** The scheme's colors: each value once on :root, the rules that pick a level, and the light
+ * fallback. */
+export function writeSchemeColors(): string {
+  const scheme = readLevels(readSchemeColors);
+  const changing = findChangingTokens([scheme]);
+  const aliases = aliasColors.map(([token, pair]) => `--${token}: ${writeValue(pair)};`);
+  return [
+    ...writeRule(
+      ":root",
+      [...writeValues(scheme, changing), ...pointAt(changing, "standard"), ...aliases],
+      "  ",
+    ),
     "  @supports (color: light-dark(#000, #fff)) {",
-    ...writeLevels((root) => root, readSchemeColors),
+    ...writeLevelRules((root) => root, changing),
     "    /* The standard colors again, for what must stay readable at every level: the Contrast",
-    "       setting itself (see Contrast in docs/spec/design.md). */",
-    ...writeRule(".standard-contrast", [...standard, ...aliasColors], "    ", "light-dark"),
+    "       setting itself (see Contrast in docs/spec/design.md). The aliases are set again too,",
+    "       since a var() resolves where it's declared. */",
+    ...writeRule(".standard-contrast", [...pointAt(changing, "standard"), ...aliases], "    "),
     "  }",
     "  /* Without light-dark() (Chrome 123, Firefox 120, Safari 17.5), every color above would be",
     "     invalid, so these browsers get the standard light colors. */",
     "  @supports not (color: light-dark(#000, #fff)) {",
-    "    :root {",
-    "      /* Light only, so native controls match the colors. */",
-    "      color-scheme: light;",
-    // Only what light-dark() sets: an alias that's the same in both is valid without it.
     ...writeRule(
       ":root",
-      [...standard, ...aliasColors].filter(([, { light, dark }]) => light !== dark),
+      [
+        "/* Light only, so native controls match the colors. */",
+        "color-scheme: light;",
+        ...writeLightValues([...scheme.standard, ...aliasColors]),
+      ],
       "    ",
-      "light",
-    ).slice(1, -1),
-    "    }",
+    ),
     "  }",
   ].join("\n");
 }
 
-/** The activity colors: standard on each `.color-…` class, the other levels, and the fallback. */
+/** The activity colors: each color's values once on its `.color-…` class, one set of rules for
+ * all of them that picks the level, and the light fallback. */
 export function writeActivityColors(): string {
-  const palette = PALETTE.map(({ key, hue }) => ({ selector: `.color-${key}`, hue }));
+  const palette = PALETTE.map(({ key, hue }) => ({
+    selector: `.color-${key}`,
+    colors: readLevels((level) => readActivityColors(level, hue)),
+  }));
+  const changing = findChangingTokens(palette.map(({ colors }) => colors));
+  const selectors = palette.map(({ selector }) => selector);
   return [
-    ...palette.flatMap(({ selector, hue }) =>
-      writeRule(selector, readActivityColors(STANDARD, hue), "  ", "light-dark"),
+    ...palette.flatMap(({ selector, colors }) =>
+      writeRule(selector, writeValues(colors, changing), "  "),
     ),
+    ...writeRule(writeEveryColor(selectors, "  "), pointAt(changing, "standard"), "  "),
     "  @supports (color: light-dark(#000, #fff)) {",
-    ...palette.flatMap(({ selector, hue }) =>
-      writeLevels(
-        (root) => `${root} ${selector}`,
-        (level) => readActivityColors(level, hue),
-      ),
+    ...writeLevelRules(
+      (root, indent) => `${root}\n${indent}  ${writeEveryColor(selectors, `${indent}  `)}`,
+      changing,
     ),
     "  }",
     "  /* Light colors where light-dark() is missing, as for the scheme. */",
     "  @supports not (color: light-dark(#000, #fff)) {",
-    ...palette.flatMap(({ selector, hue }) =>
-      writeRule(selector, readActivityColors(STANDARD, hue), "    ", "light"),
+    ...palette.flatMap(({ selector, colors }) =>
+      writeRule(selector, writeLightValues(colors.standard), "    "),
     ),
     "  }",
   ].join("\n");
