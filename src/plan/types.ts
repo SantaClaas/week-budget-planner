@@ -1,3 +1,4 @@
+import type { ActivityName } from "./activity-name.ts";
 import type { ActivityId, BlockId } from "./id.ts";
 import {
   sanitizeDayEnd,
@@ -14,8 +15,7 @@ export type Mode = "week" | "day";
 
 export type Activity = {
   id: ActivityId;
-  /** At most 60 characters. */
-  name: string;
+  name: ActivityName;
   /** One of the palette hues, see {@link PALETTE}. */
   hue: Hue;
   /** One of the Material shape names, see {@link SHAPES}. */
