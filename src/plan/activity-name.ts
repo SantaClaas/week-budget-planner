@@ -8,7 +8,7 @@ import type { Result } from "../result.ts";
 export type ActivityName = Brand<string, "ActivityName">;
 
 /** The most characters (code points) a name can have. The database checks the same limit. */
-const MAX_NAME_CHARACTERS = 60;
+export const MAX_NAME_CHARACTERS = 60;
 
 /**
  * Splits text into graphemes, what a person sees as one character. Without `Intl.Segmenter`

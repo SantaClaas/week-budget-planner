@@ -8,6 +8,7 @@ import {
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
+import { MAX_NAME_CHARACTERS, type ActivityName } from "../plan/activity-name.ts";
 import type { ActivityId, BlockId } from "../plan/id.ts";
 import {
   DAY,
@@ -43,7 +44,7 @@ export const activities = sqliteTable(
   "activities",
   {
     id: text().$type<ActivityId>().primaryKey(),
-    name: text().notNull(),
+    name: text().$type<ActivityName>().notNull(),
     hue: integer().$type<Hue>().notNull(),
     shape: text().$type<Shape>().notNull(),
     mode: text({ enum: ["week", "day"] }).notNull(),
@@ -54,7 +55,10 @@ export const activities = sqliteTable(
   },
   (table) => [
     check("activities_id", isIdLength(table.id)),
-    check("activities_name", sql`length(${table.name}) BETWEEN 1 AND 60`),
+    check(
+      "activities_name",
+      sql`length(${table.name}) BETWEEN 1 AND ${literal(MAX_NAME_CHARACTERS)}`,
+    ),
     check("activities_hue", sql`${table.hue} IN (${list(PALETTE.map((color) => color.hue))})`),
     check("activities_shape", sql`${table.shape} IN (${list(SHAPES)})`),
     check("activities_mode", sql`${table.mode} IN ('week', 'day')`),
