@@ -1,3 +1,4 @@
+import { sanitizeActivityName } from "./activity-name.ts";
 import { sanitizeActivityId, sanitizeBlockId, type ActivityId, type BlockId } from "./id.ts";
 import {
   sanitizeBudgetMinutes,
@@ -34,13 +35,14 @@ export const activity = ({
   mode = "week",
   budgetMinutes = 720,
   days = 5,
+  name = "Work",
   ...rest
 }: ActivityValues = {}): Activity => ({
-  name: "Work",
   hue: 78,
   shape: "square",
   ...rest,
   id: activityId(id),
+  name: sanitizeActivityName(name),
   mode,
   budgetMinutes: sanitizeBudgetMinutes(budgetMinutes, mode),
   days: sanitizeDayCount(days),

@@ -14,7 +14,7 @@ type Plan = {
 
 type Activity = {
   id: string;
-  name: string;           // at most 60 characters
+  name: string;           // 1 to 60 characters (code points), trimmed; "Untitled" when empty
   hue: number;            // one of the 8 palette hues, see design.md
   shape: string;          // one of the 35 Material shape names, for example "heart", see design.md
   mode: "week" | "day";   // how the budget is counted
@@ -44,7 +44,7 @@ classDiagram
   }
   class Activity {
     id: ActivityId
-    name: string
+    name: ActivityName
     hue: Hue
     shape: Shape
     mode: week or day

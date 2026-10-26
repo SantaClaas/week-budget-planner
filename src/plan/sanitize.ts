@@ -1,3 +1,4 @@
+import { sanitizeActivityName } from "./activity-name.ts";
 import { pickDefaultLook } from "./defaults.ts";
 import {
   createActivityId,
@@ -76,7 +77,7 @@ export function sanitizePlan(input: unknown): Plan {
     const shape = readString(raw["shape"]);
     const activity: Activity = {
       id,
-      name: readString(raw["name"]).trim().slice(0, 60) || "Untitled",
+      name: sanitizeActivityName(readString(raw["name"])),
       hue: isHue(hue) ? hue : look.hue,
       shape: isShape(shape) ? shape : look.shape,
       mode,

@@ -1,3 +1,4 @@
+import { parseActivityName, type ActivityName } from "./activity-name.ts";
 import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "./time.ts";
 import type { Mode } from "./types.ts";
 
@@ -11,7 +12,10 @@ export type ActivityFormInput = {
 };
 
 export type ActivityFormResult =
-  | { ok: true; value: { name: string; budgetMinutes: BudgetMinutes; mode: Mode; days: DayCount } }
+  | {
+      ok: true;
+      value: { name: ActivityName; budgetMinutes: BudgetMinutes; mode: Mode; days: DayCount };
+    }
   | { ok: false; field: "name" | "hours" | "days"; message: string };
 
 const decimalSeparators = new Map<string, string>();
@@ -41,8 +45,8 @@ export function parseDecimal(text: string, locale?: string): number {
 
 /** Validates the activity form with the prototype's messages. Hours round to the slot. */
 export function readActivityForm(input: ActivityFormInput, locale?: string): ActivityFormResult {
-  const name = input.name.trim();
-  if (!name) return { ok: false, field: "name", message: "Give the activity a name." };
+  const name = parseActivityName(input.name);
+  if (name === "empty") return { ok: false, field: "name", message: "Give the activity a name." };
   // An empty field and text that isn't a number both parse to NaN, but get different messages.
   const hours = input.hours.trim();
   const budgetMinutes = parseBudgetMinutes(parseDecimal(hours, locale) * 60, input.mode);
@@ -64,5 +68,5 @@ export function readActivityForm(input: ActivityFormInput, locale?: string): Act
   if (days === undefined) {
     return { ok: false, field: "days", message: "Enter how many days per week, from 1 to 7." };
   }
-  return { ok: true, value: { name: name.slice(0, 60), budgetMinutes, mode: input.mode, days } };
+  return { ok: true, value: { name, budgetMinutes, mode: input.mode, days } };
 }
