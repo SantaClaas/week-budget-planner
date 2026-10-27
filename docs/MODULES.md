@@ -14,8 +14,10 @@ flowchart LR
   module_index["index"]
   module_plan["plan"]
   module_polyfills["polyfills"]
+  module_result["result"]
   module_index --> module_App
   module_index --> module_font
   module_index --> module_polyfills
   module_plan --> module_brand
+  module_plan --> module_result
 ```

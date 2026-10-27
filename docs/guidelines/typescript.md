@@ -48,10 +48,22 @@ How to use them:
 
 - **Only the module that defines a brand creates one**, through its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those. Inside the module, one private `brand()` helper holds the only type assertion, with a comment saying why (see Type assertions below).
 - **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
-- **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns the value or what's wrong with it (`"unreadable"`, `"too-small"`, `"too-large"`, or `undefined`). Use it for what users type, so the form can tell them.
+- **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns a `Result`: the value or what's wrong with it (`"unreadable"`, `"too-small"`, `"too-large"`). Use it for what users type, so the form can tell them (see Results below).
 - **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.
 - **A fixed set of values is a literal union**, not a brand: `Hue` and `Shape` come from the palette and the shape library.
 - At the edges, the database checks the same rules again with `CHECK` constraints.
+
+## Results
+
+**What can fail returns a `Result`.** [`src/result.ts`](../../src/result.ts) defines `Result<Value, Problem>`: the value, or what went wrong, as a string literal (`"too-small"`, `"out-of-range"`) or an object that says so (`{ ok: false, field, message }`). The strict parsers and the activity form return one. It's a plain union, so the caller tells the cases apart with a comparison and TypeScript narrows the rest. Prefer it to throwing when the caller can do something about the problem, such as telling the user what to fix; throw when it can't.
+
+**A `Result` must be used**, as in Rust, where `Result` is `#[must_use]`. A call whose `Result` is thrown away is a mistake: the value is lost, and so is the problem, which nobody hears about. `pnpm typecheck` runs [`scripts/check-must-use.ts`](../../scripts/check-must-use.ts) after `tsc`, and it fails on a call that's a statement of its own and gives back a `Result`, awaited or not. Where throwing it away is right, `void` in front of the call says so: `void parseDayCount(value)`.
+
+**`@mustUse` marks a function whose value matters** although it isn't a `Result`, like Rust's `#[must_use]` on a function: a function that gives back the way to stop or undo what it started, such as an unsubscribe function. Put the tag in the JSDoc of the function, or of the method in its type. The same check fails where its value is thrown away.
+
+**Promises are the lint's job.** `typescript/no-floating-promises` fails on a promise that's neither awaited, handled with `.catch` or a rejection handler, nor marked with `void`, and `no-misused-promises` on an `async` function passed where nothing waits for it. `void` on a promise doesn't handle its errors: use it only on a promise that can't fail, or that handles its own failure, and say which in a comment.
+
+Everything else may be thrown away without `void`: `array.push()`, `map.set()` and Solid's setters give back a value nobody needs. TypeScript has no plugins and no rule for this, so the check asks its type checker through the API TypeScript 7 ships as `typescript/unstable/sync`. Only our build depends on it, and its test pins down what it relies on, so a TypeScript update that changes the API fails there first.
 
 ## Iterators
 

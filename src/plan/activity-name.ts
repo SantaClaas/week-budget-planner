@@ -1,4 +1,5 @@
 import type { Brand } from "../brand.ts";
+import type { Result } from "../result.ts";
 
 /**
  * An activity's name: trimmed, and 1 to 60 characters. Characters are counted as code points, the
@@ -40,7 +41,7 @@ function cut(text: string): string {
 export const sanitizeActivityName = (text: string): ActivityName => brand(cut(text) || "Untitled");
 
 /** A name as typed: cut to the limit, or `"empty"` when there is nothing but spaces. */
-export function parseActivityName(text: string): ActivityName | "empty" {
+export function parseActivityName(text: string): Result<ActivityName, "empty"> {
   const name = cut(text);
   return name === "" ? "empty" : brand(name);
 }
