@@ -61,7 +61,9 @@ Why it's worth it:
 - **It can be understood on its own.** Everything that affects it is in its signature, so a reader, a reviewer or TypeScript sees it all. A bug in it can't depend on what ran before or in another tab.
 - **It can run anywhere**: in a tab, in a worker, in a test, or twice, for an undo or a preview, without harm.
 
-**When the core needs something impure, pass it in.** A function that needs the current time or a new id takes it as an argument (the value, or the function that makes one), and the edge supplies `Temporal.Now` or `createActivityId`. A test then passes a fixed value.
+**When the core needs something impure, pass it in.** A function that needs the current time takes it as an argument, and one that makes new ids takes an `IdGenerator`. The edge supplies `Temporal.Now.instant()` and `randomIds`. A test passes a fixed time and ids it can predict, so it can check the exact result.
+
+**One action, one `now`.** Read the clock once, where an action starts (a user's click, an import, a message from another tab), and pass that instant down to everything the action records. Then everything written for one action carries the same time and reads as one moment: the example week's `exampleLoadedAt` and the `createdAt` of the rows saved with it, or every row one save writes. Read deeper down, each record gets a time a few milliseconds apart, which is noise at best and breaks comparisons at worst. Pass it only where something records or compares a time; a function that doesn't need one doesn't take one. Measuring how long something takes is different: a timeout or a heartbeat reads `performance.now()` at the edge where it waits.
 
 **Purity is seen from the outside.** Inside, a function may build a `Map`, `push` into a new array or loop with a counter: nobody else can see it, so it's still pure to its callers. What it must not do is change what it was given or anything that outlives the call.
 

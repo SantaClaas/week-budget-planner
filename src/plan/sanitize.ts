@@ -1,12 +1,11 @@
 import { sanitizeActivityName } from "./activity-name.ts";
 import { pickDefaultLook } from "./defaults.ts";
 import {
-  createActivityId,
-  createBlockId,
   sanitizeActivityId,
   sanitizeBlockId,
   type ActivityId,
   type BlockId,
+  type IdGenerator,
 } from "./id.ts";
 import {
   sanitizeBudgetMinutes,
@@ -56,7 +55,10 @@ const readString = (value: unknown): string => (typeof value === "string" ? valu
  * The activities, and the id each one was stored with mapped to the id it has now, which the
  * blocks find their activity by. An activity with an invalid or repeated id gets a new one.
  */
-function sanitizeActivities(input: unknown): {
+function sanitizeActivities(
+  input: unknown,
+  ids: IdGenerator,
+): {
   activities: Activity[];
   idsByStoredId: Map<string, ActivityId>;
 } {
@@ -69,7 +71,7 @@ function sanitizeActivities(input: unknown): {
     const storedId = readString(raw["id"]);
     const kept = sanitizeActivityId(storedId);
     const isFirst = kept !== undefined && !idsByStoredId.has(storedId);
-    const id = isFirst ? kept : createActivityId();
+    const id = isFirst ? kept : ids.createActivityId();
     if (isFirst) idsByStoredId.set(storedId, id);
     const mode = raw["mode"] === "day" ? "day" : "week";
     const look = pickDefaultLook(id, activities);
@@ -92,18 +94,19 @@ function sanitizeActivities(input: unknown): {
 function sanitizeBlocks(
   input: unknown,
   activityIdsByStoredId: ReadonlyMap<string, ActivityId>,
+  ids: IdGenerator,
 ): Block[] {
   if (!Array.isArray(input)) return [];
 
   const blocks: Block[] = [];
-  const ids = new Set<BlockId>();
+  const taken = new Set<BlockId>();
   for (const raw of input) {
     if (!isRecord(raw)) continue;
     const activityId = activityIdsByStoredId.get(readString(raw["activityId"]));
     if (!activityId) continue;
-    const kept = sanitizeBlockId(readString(raw["id"]));
-    const id = kept && !ids.has(kept) ? kept : createBlockId();
-    ids.add(id);
+    const storedId = sanitizeBlockId(readString(raw["id"]));
+    const id = storedId && !taken.has(storedId) ? storedId : ids.createBlockId();
+    taken.add(id);
     blocks.push({
       id,
       activityId,
@@ -118,17 +121,17 @@ function sanitizeBlocks(
 /**
  * Turns anything loaded (storage, an import, another tab) into a valid plan: clamps numbers, snaps
  * times to the slot, gives activities with a missing or unknown color or shape their default (in
- * list order), gives invalid or repeated ids new ones, and drops blocks whose activity doesn't
- * exist.
+ * list order), gives invalid or repeated ids new ones from `ids`, and drops blocks whose activity
+ * doesn't exist.
  */
-export function sanitizePlan(input: unknown): Plan {
+export function sanitizePlan(input: unknown, ids: IdGenerator): Plan {
   if (!isRecord(input)) return createEmptyPlan();
 
-  const { activities, idsByStoredId } = sanitizeActivities(input["activities"]);
+  const { activities, idsByStoredId } = sanitizeActivities(input["activities"], ids);
   return {
     version: 1,
     activities,
-    blocks: sanitizeBlocks(input["blocks"], idsByStoredId),
+    blocks: sanitizeBlocks(input["blocks"], idsByStoredId, ids),
     dayStart: sanitizeDayStart(readNumber(input["dayStart"])),
     dayEnd: sanitizeDayEnd(readNumber(input["dayEnd"])),
     exampleLoadedAt: readTime(input["exampleLoadedAt"]),

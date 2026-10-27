@@ -26,9 +26,21 @@ function brand<Value extends Brand<string, string>>(value: string): Value {
   return value as Value;
 }
 
-/** A new 12-character id. */
-export const createActivityId = (): ActivityId => brand<ActivityId>(createId());
-export const createBlockId = (): BlockId => brand<BlockId>(createId());
+/**
+ * Makes new ids. Code that needs one takes an `IdGenerator` as an argument, so it stays pure: the
+ * app passes {@link randomIds}, and a test passes ids it can predict (see "A pure core, with side
+ * effects at the edges" in docs/guidelines/principles.md).
+ */
+export type IdGenerator = {
+  readonly createActivityId: () => ActivityId;
+  readonly createBlockId: () => BlockId;
+};
+
+/** New random 12-character ids. */
+export const randomIds: IdGenerator = {
+  createActivityId: () => brand<ActivityId>(createId()),
+  createBlockId: () => brand<BlockId>(createId()),
+};
 
 /** The id as it is, or undefined when it isn't a valid id, so the caller gives it a new one. */
 export const sanitizeActivityId = (value: string): ActivityId | undefined =>
