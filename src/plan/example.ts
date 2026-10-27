@@ -1,8 +1,9 @@
 import exampleWeek from "../../examples/example-week.json";
+import type { IdGenerator } from "./id.ts";
 import { sanitizePlan } from "./sanitize.ts";
 import type { Plan } from "./types.ts";
 
 /** The example week from examples/example-week.json, marked as loaded at `now`. */
-export function createExampleWeek(now = Temporal.Now.instant()): Plan {
-  return { ...sanitizePlan(exampleWeek), exampleLoadedAt: now.toString() };
+export function createExampleWeek(now: Temporal.Instant, ids: IdGenerator): Plan {
+  return { ...sanitizePlan(exampleWeek, ids), exampleLoadedAt: now.toString() };
 }

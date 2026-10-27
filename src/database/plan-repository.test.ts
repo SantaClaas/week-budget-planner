@@ -14,7 +14,10 @@ import { createLocalQueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
 import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migrations.ts";
 import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository.ts";
-import { blocks as blocksTable } from "./schema.ts";
+import { activities as activitiesTable, blocks as blocksTable } from "./schema.ts";
+import { createPredictableIds } from "../plan/test-data.ts";
+
+const NOW = Temporal.Instant.from("2026-10-15T08:00:00Z");
 
 /** A migrated in-memory database behind the same proxy path the app uses. */
 async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {
@@ -31,7 +34,7 @@ function required<Value>(value: Value | undefined, what: string): Value {
   return value;
 }
 
-const example = (): Plan => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
+const example = (): Plan => createExampleWeek(NOW, createPredictableIds());
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
@@ -74,7 +77,7 @@ describe("migrations", () => {
 describe("plan repository", () => {
   it("reports a fresh database as not stored", async () => {
     const { database } = await openTestDatabase();
-    const { plan, isStored } = await loadPlan(database);
+    const { plan, isStored } = await loadPlan(database, createPredictableIds());
     expect(isStored).toBe(false);
     expect(plan.activities).toEqual([]);
     expect(plan.dayStart).toBe(7);
@@ -82,36 +85,45 @@ describe("plan repository", () => {
 
   it("round-trips a plan", async () => {
     const { database } = await openTestDatabase();
-    await savePlan(database, undefined, example());
-    const { plan, isStored } = await loadPlan(database);
+    await savePlan(database, undefined, example(), NOW);
+    const { plan, isStored } = await loadPlan(database, createPredictableIds());
     expect(isStored).toBe(true);
     expect(plan).toEqual(example());
+  });
+
+  it("creates every row of one action at the action's time", async () => {
+    const { database } = await openTestDatabase();
+    await savePlan(database, undefined, example(), NOW);
+    const rows = await database
+      .select({ createdAt: activitiesTable.createdAt })
+      .from(activitiesTable);
+    expect(new Set(rows.map((row) => row.createdAt))).toEqual(new Set([NOW.toString()]));
   });
 
   it("writes only what changed", async () => {
     const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(database, undefined, before);
+    await savePlan(database, undefined, before, NOW);
     const [first, ...rest] = before.blocks;
     const moved = { ...required(first, "first block"), start: sanitizeDayMinute(660) };
     const after: Plan = { ...before, blocks: [moved, ...rest] };
-    expect(buildPlanStatements(database, before, after)).toHaveLength(1);
-    expect(buildPlanStatements(database, before, before)).toHaveLength(0);
-    await savePlan(database, before, after);
-    expect((await loadPlan(database)).plan).toEqual(after);
+    expect(buildPlanStatements(database, before, after, NOW)).toHaveLength(1);
+    expect(buildPlanStatements(database, before, before, NOW)).toHaveLength(0);
+    await savePlan(database, before, after, NOW);
+    expect((await loadPlan(database, createPredictableIds())).plan).toEqual(after);
   });
 
   it("deletes an activity together with its blocks", async () => {
     const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(database, undefined, before);
+    await savePlan(database, undefined, before, NOW);
     const after: Plan = {
       ...before,
       activities: before.activities.filter((activity) => activity.id !== "gym"),
       blocks: before.blocks.filter((block) => block.activityId !== "gym"),
     };
-    await savePlan(database, before, after);
-    const { plan } = await loadPlan(database);
+    await savePlan(database, before, after, NOW);
+    const { plan } = await loadPlan(database, createPredictableIds());
     expect(plan.activities.map((activity) => activity.id)).not.toContain("gym");
     expect(plan.blocks.some((block) => block.activityId === "gym")).toBe(false);
   });
@@ -119,20 +131,22 @@ describe("plan repository", () => {
   it("keeps the list order when activities move", async () => {
     const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(database, undefined, before);
+    await savePlan(database, undefined, before, NOW);
     const after: Plan = { ...before, activities: before.activities.toReversed() };
-    await savePlan(database, before, after);
-    expect((await loadPlan(database)).plan.activities.map((activity) => activity.id)).toEqual(
-      after.activities.map((activity) => activity.id),
-    );
+    await savePlan(database, before, after, NOW);
+    expect(
+      (await loadPlan(database, createPredictableIds())).plan.activities.map(
+        (activity) => activity.id,
+      ),
+    ).toEqual(after.activities.map((activity) => activity.id));
   });
 
   it("rolls the whole action back when one statement fails", async () => {
     const { database } = await openTestDatabase();
     const before = example();
-    await savePlan(database, undefined, before);
+    await savePlan(database, undefined, before, NOW);
     const after: Plan = { ...before, dayStart: sanitizeDayStart(6) };
-    const [settingsUpdate] = buildPlanStatements(database, before, after);
+    const [settingsUpdate] = buildPlanStatements(database, before, after, NOW);
     // A duplicate primary key makes the second statement fail after the first one ran.
     const duplicate = database.insert(blocksTable).values({
       id: required(sanitizeBlockId("block-1"), "block id"),
@@ -144,12 +158,12 @@ describe("plan repository", () => {
     await expect(
       database.batch([required(settingsUpdate, "settings update"), duplicate]),
     ).rejects.toThrow(/UNIQUE|constraint/iu);
-    expect((await loadPlan(database)).plan.dayStart).toBe(7);
+    expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(7);
   });
 
   it("refuses values that break the rules, even past the types", async () => {
     const { database, connection } = await openTestDatabase();
-    await savePlan(database, undefined, example());
+    await savePlan(database, undefined, example(), NOW);
     const insert = (values: string) =>
       connection.exec(
         `INSERT INTO blocks (id, activity_id, day, start, length) VALUES (${values})`,

@@ -1,7 +1,8 @@
 /* oxlint-disable require-await, typescript/require-await -- PlanStore's methods are async so that a
    throw (localStorage full or blocked, for example) arrives as a rejection, like the database's. */
 import * as planFile from "../plan/file.ts";
-import type { Plan } from "../plan/types.ts";
+import { randomIds } from "../plan/id.ts";
+import { createEmptyPlan, type Plan } from "../plan/types.ts";
 import * as jsonFile from "./json-file.ts";
 import type { PlanStore } from "./plan-store.ts";
 
@@ -21,8 +22,8 @@ export function create(
     level: "limited",
     async load() {
       const text = storage.getItem(PLAN_KEY);
-      current = text === null ? undefined : planFile.parse(text);
-      return { plan: current ?? planFile.parse("null"), isStored: text !== null };
+      current = text === null ? undefined : planFile.parse(text, randomIds);
+      return { plan: current ?? createEmptyPlan(), isStored: text !== null };
     },
     async save(_before, after) {
       storage.setItem(PLAN_KEY, planFile.serialize(after));
@@ -31,7 +32,7 @@ export function create(
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
       return jsonFile.create(
-        text === null ? (current ?? planFile.parse("null")) : planFile.parse(text),
+        text === null ? (current ?? createEmptyPlan()) : planFile.parse(text, randomIds),
       );
     },
     async importFile(file) {

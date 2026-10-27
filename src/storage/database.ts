@@ -2,6 +2,7 @@ import { databaseService, getDatabase } from "../database/client.ts";
 
 export { hasDatabaseFile, removeBrokenDatabase } from "../database/client.ts";
 import { loadPlan, savePlan } from "../database/plan-repository.ts";
+import { randomIds } from "../plan/id.ts";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
 import * as jsonFile from "./json-file.ts";
 import { InvalidFileError, NewerVersionError, type PlanStore } from "./plan-store.ts";
@@ -11,9 +12,9 @@ export function create(): PlanStore {
   const database = getDatabase();
   return {
     level: "full",
-    load: () => loadPlan(database),
-    async save(before, after) {
-      await savePlan(database, before, after);
+    load: () => loadPlan(database, randomIds),
+    async save(before, after, now) {
+      await savePlan(database, before, after, now);
       broadcastMessage({ type: "Plan changed" });
     },
     async exportFile() {
@@ -26,9 +27,10 @@ export function create(): PlanStore {
     async importFile(file) {
       if (jsonFile.isJson(file)) {
         // A plan exported at a limited level: replace the stored plan with it.
+        const now = Temporal.Now.instant();
         const imported = await jsonFile.read(file);
-        const { plan: current } = await loadPlan(database);
-        await savePlan(database, current, imported);
+        const { plan: current } = await loadPlan(database, randomIds);
+        await savePlan(database, current, imported, now);
         broadcastMessage({ type: "Plan changed" });
         return;
       }

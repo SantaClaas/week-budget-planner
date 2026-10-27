@@ -1,3 +1,4 @@
+import { randomIds } from "../plan/id.ts";
 import * as planFile from "../plan/file.ts";
 import type { Plan } from "../plan/types.ts";
 import { InvalidFileError, NewerVersionError, type ExportedFile } from "./plan-store.ts";
@@ -21,7 +22,7 @@ export async function read(file: File): Promise<Plan> {
       "Only a .json plan file can be imported here, because this browser can't open the database.",
     );
   }
-  const plan = planFile.read(await file.text());
+  const plan = planFile.read(await file.text(), randomIds);
   if (plan === "not-a-plan")
     throw new InvalidFileError(
       "This file isn't a Week Budget Planner plan, so nothing was changed.",

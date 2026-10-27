@@ -4,6 +4,9 @@ import { createExampleWeek } from "../plan/example.ts";
 import * as local from "./local.ts";
 import { PLAN_KEY } from "./local.ts";
 import { InvalidFileError, NewerVersionError } from "./plan-store.ts";
+import { createPredictableIds } from "../plan/test-data.ts";
+
+const NOW = Temporal.Instant.from("2026-10-15T08:00:00Z");
 
 class MemoryStorage implements Storage {
   #items = new Map<string, string>();
@@ -37,7 +40,7 @@ const events = () => {
   });
 };
 
-const example = () => createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"));
+const example = () => createExampleWeek(NOW, createPredictableIds());
 const file = (text: string, name: string) =>
   new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
@@ -46,7 +49,7 @@ describe("localStorage store", () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
     expect(await store.load()).toMatchObject({ isStored: false });
-    await store.save(undefined, example());
+    await store.save(undefined, example(), NOW);
     expect(await local.create(storage, events()).load()).toEqual({
       plan: example(),
       isStored: true,
@@ -56,7 +59,7 @@ describe("localStorage store", () => {
   it("exports and imports .json and refuses .db files", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    await store.save(undefined, example());
+    await store.save(undefined, example(), NOW);
     const exported = await store.exportFile();
     expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
     await store.wipe();
@@ -69,7 +72,7 @@ describe("localStorage store", () => {
   it("refuses a .json file that isn't a plan and keeps the stored plan", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    await store.save(undefined, example());
+    await store.save(undefined, example(), NOW);
     await expect(store.importFile(file('{"name": "notes"}', "notes.json"))).rejects.toThrow(
       InvalidFileError,
     );

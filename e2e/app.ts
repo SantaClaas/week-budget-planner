@@ -35,7 +35,7 @@ export async function removeFirstBlock(page: Page): Promise<void> {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
     const { plan } = await store.load();
-    await store.save(plan, { ...plan, blocks: plan.blocks.slice(1) });
+    await store.save(plan, { ...plan, blocks: plan.blocks.slice(1) }, Temporal.Now.instant());
   });
 }
 

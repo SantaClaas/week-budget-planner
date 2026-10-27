@@ -1,6 +1,7 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { asc, eq, inArray } from "drizzle-orm";
 
+import type { IdGenerator } from "../plan/id.ts";
 import { sanitizePlan } from "../plan/sanitize.ts";
 import type { Activity, Block, Plan } from "../plan/types.ts";
 import type { Database } from "./drizzle.ts";
@@ -10,22 +11,29 @@ const SETTINGS_ID = 1;
 
 /**
  * Reads the plan. `isStored` is false when the database has never held a plan (first run), so the
- * caller can load the example week.
+ * caller can load the example week. The database's constraints keep the ids valid, but anything
+ * read is sanitized all the same, so `ids` gives the new ones it would need.
  */
-export async function loadPlan(database: Database): Promise<{ plan: Plan; isStored: boolean }> {
+export async function loadPlan(
+  database: Database,
+  ids: IdGenerator,
+): Promise<{ plan: Plan; isStored: boolean }> {
   const [row, activityRows, blockRows] = await Promise.all([
     database.select().from(settings).where(eq(settings.id, SETTINGS_ID)).get(),
     database.select().from(activities).orderBy(asc(activities.position)),
     database.select().from(blocks),
   ]);
-  const plan = sanitizePlan({
-    version: 1,
-    activities: activityRows,
-    blocks: blockRows,
-    dayStart: row?.dayStart,
-    dayEnd: row?.dayEnd,
-    exampleLoadedAt: row?.exampleLoadedAt,
-  });
+  const plan = sanitizePlan(
+    {
+      version: 1,
+      activities: activityRows,
+      blocks: blockRows,
+      dayStart: row?.dayStart,
+      dayEnd: row?.dayEnd,
+      exampleLoadedAt: row?.exampleLoadedAt,
+    },
+    ids,
+  );
   return { plan, isStored: row !== undefined };
 }
 
@@ -51,15 +59,17 @@ const isSameBlock = (previous: Block, next: Block): boolean =>
 
 /**
  * The statements that turn the stored `before` into `after`: deletes first (a deleted activity's
- * blocks before the activity), then upserts. Only what changed is written.
+ * blocks before the activity), then upserts. Only what changed is written, and rows it creates
+ * are created at `now`.
  */
 export function buildPlanStatements(
   database: Database,
   before: Plan | undefined,
   after: Plan,
+  now: Temporal.Instant,
 ): BatchItem<"sqlite">[] {
   const statements: BatchItem<"sqlite">[] = [];
-  const now = Temporal.Now.instant().toString();
+  const createdAt = now.toString();
 
   const beforeActivities = new Map(
     before?.activities.map((activity, index) => [activity.id, { activity, index }]),
@@ -95,7 +105,7 @@ export function buildPlanStatements(
     statements.push(
       database
         .insert(activities)
-        .values({ id: activity.id, createdAt: now, ...values })
+        .values({ id: activity.id, createdAt, ...values })
         .onConflictDoUpdate({ target: activities.id, set: values }),
     );
   });
@@ -140,13 +150,14 @@ export function buildPlanStatements(
 
 /**
  * Writes one user action: everything that differs between `before` (what is stored) and `after`,
- * in one transaction. Undo uses the same path, with the restored plan as `after`.
+ * in one transaction, at `now`. Undo uses the same path, with the restored plan as `after`.
  */
 export async function savePlan(
   database: Database,
   before: Plan | undefined,
   after: Plan,
+  now: Temporal.Instant,
 ): Promise<void> {
-  const [first, ...rest] = buildPlanStatements(database, before, after);
+  const [first, ...rest] = buildPlanStatements(database, before, after, now);
   if (first) await database.batch([first, ...rest]);
 }
