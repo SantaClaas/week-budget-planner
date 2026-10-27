@@ -1,7 +1,7 @@
 import { RuleTester } from "oxlint/plugins-dev";
 import { describe, it } from "vitest";
 
-import plugin from "./require-reason.ts";
+import rule from "./require-reason.ts";
 
 // RuleTester names and runs its own tests, and makes the assertions in them. Handing it Vitest's
 // describe and it lets Vitest report them.
@@ -13,9 +13,6 @@ RuleTester.it = (text, run) => {
   // oxlint-disable-next-line vitest/valid-title, vitest/expect-expect -- RuleTester passes its own title through and asserts inside run.
   it(text, run);
 };
-
-const rule = plugin.rules["require-reason"];
-if (rule === undefined) throw new Error("The plugin has no require-reason rule.");
 
 new RuleTester().run("require-reason", rule, {
   valid: [

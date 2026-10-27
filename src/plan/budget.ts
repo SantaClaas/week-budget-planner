@@ -34,8 +34,8 @@ export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
     const done = placed.get(activity.id) ?? 0;
     summary.budget += budget;
     summary.placed += done;
-    if (done < budget) summary.leftToPlace += budget - done;
-    else summary.overBudget += done - budget;
+    summary.leftToPlace += Math.max(0, budget - done);
+    summary.overBudget += Math.max(0, done - budget);
   }
   return summary;
 }

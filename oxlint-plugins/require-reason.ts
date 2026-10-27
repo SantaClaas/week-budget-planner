@@ -1,4 +1,4 @@
-import { definePlugin, defineRule } from "@oxlint/plugins";
+import { defineRule } from "@oxlint/plugins";
 
 /**
  * Every comment that turns a lint rule off has to say why, after `--`:
@@ -18,7 +18,7 @@ const DISABLE_DIRECTIVE = /^\s*(?:oxlint|eslint)-disable(?:-next-line|-line)?(?:
 /** ESLint's separator for a directive's description: two or more dashes after whitespace. */
 const REASON_SEPARATOR = /\s-{2,}\s*/u;
 
-const requireReason = defineRule({
+export default defineRule({
   meta: {
     type: "problem",
     docs: { description: "Requires a reason on every comment that disables a lint rule." },
@@ -38,9 +38,4 @@ const requireReason = defineRule({
       },
     };
   },
-});
-
-export default definePlugin({
-  meta: { name: "week-budget-planner" },
-  rules: { "require-reason": requireReason },
 });

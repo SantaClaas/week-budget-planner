@@ -23,9 +23,9 @@ function findLightValue(value: string): string {
   let depth = 0;
   for (let index = 0; index < inner.length; index++) {
     const character = inner[index];
+    if (character === "," && depth === 0) return inner.slice(0, index).trim();
     if (character === "(") depth++;
-    else if (character === ")") depth--;
-    else if (character === "," && depth === 0) return inner.slice(0, index).trim();
+    if (character === ")") depth--;
   }
   throw new Error(`Not a light-dark() value: ${value}`);
 }
