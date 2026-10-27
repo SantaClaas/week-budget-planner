@@ -63,16 +63,17 @@ export function findTemplates(code: string): string[] {
     CallExpression(node) {
       if (node.callee.type !== "Identifier" || node.callee.name !== templateName) return;
       const html = node.arguments[0];
-      if (html?.type === "TemplateLiteral" && html.expressions.length === 0) {
-        const cooked = html.quasis[0]?.value.cooked;
-        if (typeof cooked === "string") templates.push(cooked);
-      } else if (html?.type === "Literal" && typeof html.value === "string") {
+      if (html?.type === "Literal" && typeof html.value === "string") {
         templates.push(html.value);
-      } else {
+        return;
+      }
+      if (html?.type !== "TemplateLiteral" || html.expressions.length > 0) {
         throw new Error(
           "A Solid template() call without a static string can't be put on the Trusted Types allowlist.",
         );
       }
+      const cooked = html.quasis[0]?.value.cooked;
+      if (typeof cooked === "string") templates.push(cooked);
     },
   }).visit(program);
   return templates;

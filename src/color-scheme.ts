@@ -41,17 +41,25 @@ function apply(colorScheme: ColorScheme, meta = findMeta()): void {
 }
 
 /**
- * Stores the choice and applies it. "light dark" removes the stored entry instead of storing it, so
- * the page keeps following the system setting. Applies even when storage is blocked.
+ * "light dark" removes the stored entry instead of storing it, so the page keeps following the
+ * system setting.
  */
+function store(colorScheme: ColorScheme, storage: ColorSchemeStorage | undefined): void {
+  if (colorScheme === "light dark") {
+    storage?.removeItem(STORAGE_KEY);
+    return;
+  }
+  storage?.setItem(STORAGE_KEY, colorScheme);
+}
+
+/** Stores the choice and applies it. Applies even when storage is blocked. */
 export function save(
   colorScheme: ColorScheme,
   storage: ColorSchemeStorage | undefined = findStorage(),
   meta = findMeta(),
 ): void {
   try {
-    if (colorScheme === "light dark") storage?.removeItem(STORAGE_KEY);
-    else storage?.setItem(STORAGE_KEY, colorScheme);
+    store(colorScheme, storage);
   } catch {
     // Blocked storage: the choice lasts until the tab closes.
   }
