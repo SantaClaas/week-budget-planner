@@ -78,7 +78,9 @@ export function findCycles(graph: Graph): string[][] {
       if (!order.has(next)) {
         visit(next);
         lowest.set(module, Math.min(lowest.get(module) ?? 0, lowest.get(next) ?? 0));
-      } else if (stack.includes(next)) {
+        continue;
+      }
+      if (stack.includes(next)) {
         lowest.set(module, Math.min(lowest.get(module) ?? 0, order.get(next) ?? 0));
       }
     }

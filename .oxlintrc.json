@@ -7,7 +7,7 @@
   // handlers next to click handlers): the earliest stage that catches those mistakes (see "Where
   // rules are enforced" in docs/guidelines/principles.md).
   "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest", "jsx-a11y"],
-  "jsPlugins": ["./oxlint-plugins/require-reason.ts"],
+  "jsPlugins": ["./oxlint-plugins/index.ts"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -20,6 +20,8 @@
   },
   "rules": {
     "week-budget-planner/require-reason": "error",
+    // Return early instead (see Functions in docs/guidelines/principles.md).
+    "week-budget-planner/no-else": "error",
     // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
     // sanitizer or a type guard instead. `as const` is still allowed.
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],

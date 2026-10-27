@@ -47,6 +47,32 @@ In a web app that order is HTML, then CSS, then JavaScript:
 
 Functions and booleans have naming rules of their own in [`docs/guidelines/typescript.md`](typescript.md).
 
+## Functions
+
+### A pure core, with side effects at the edges
+
+**Write the planner's logic as pure functions.** A pure function gets everything it needs as its arguments and gives everything it does back as its return value. The same input always gives the same output, and nothing outside the function changes: no clock, no randomness, no storage, no DOM, no network, no changes to its arguments. `summarize`, `findFirstFreeSlot`, `layoutLanes`, `readActivityForm` and the sanitizers and parsers work this way. What can fail returns a `Result` instead of throwing (see Results in [`docs/guidelines/typescript.md`](typescript.md)).
+
+**Side effects live at the edges, and only where they can't be avoided:** the database and storage, broadcasting between tabs, the DOM, the clock, new ids. The code at an edge gathers the input, calls the pure core, and applies what comes back, and it stays thin so there's little in it to go wrong. This is the same edge as the funnels in "Vertical first" above. Gary Bernhardt calls the shape "functional core, imperative shell" ([Boundaries](https://www.destroyallsoftware.com/talks/boundaries)).
+
+Why it's worth it:
+
+- **A pure function is tested with input and expected output**, with no setup, no mocks and no browser. That's why the plan's rules can be checked at test time (see "Where rules are enforced" below), and why most of the tests are fast unit tests.
+- **It can be understood on its own.** Everything that affects it is in its signature, so a reader, a reviewer or TypeScript sees it all. A bug in it can't depend on what ran before or in another tab.
+- **It can run anywhere**: in a tab, in a worker, in a test, or twice, for an undo or a preview, without harm.
+
+**When the core needs something impure, pass it in.** A function that needs the current time or a new id takes it as an argument (the value, or the function that makes one), and the edge supplies `Temporal.Now` or `createActivityId`. A test then passes a fixed value.
+
+**Purity is seen from the outside.** Inside, a function may build a `Map`, `push` into a new array or loop with a counter: nobody else can see it, so it's still pure to its callers. What it must not do is change what it was given or anything that outlives the call.
+
+### Return early instead of `else`
+
+**Handle the special cases first and return**, or `continue` in a loop, so the main path runs down the left edge without nesting. An `else` usually means a function does two things in two branches. Then give the branch a function of its own that returns early, and call it. `sanitizePlan` used to loop over `[]` when the stored value wasn't a list; now `sanitizeActivities` and `sanitizeBlocks` each start with `if (!Array.isArray(input)) return []`.
+
+**Choosing between two values is a ternary**, not an `if` with an `else`: `const mode = raw["mode"] === "day" ? "day" : "week"`.
+
+The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails on every `else`. Where one really is the clearest way to write it, disable the rule on that line and say why.
+
 ## Modules
 
 **Name a module for what it is.** There are no catch-all folders such as `lib`, `utils`, `shared`, `common` or `helpers`. All code is shared and all of it is useful, so those names say nothing.
