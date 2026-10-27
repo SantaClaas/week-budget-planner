@@ -11,7 +11,7 @@
     "build": "tsc -b && vite build --configLoader native",
     "preview": "vite preview --configLoader native",
     "test": "vitest run --configLoader native",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && node scripts/check-must-use.ts",
     "lint": "oxlint",
     "knip": "knip",
     "format": "oxfmt",

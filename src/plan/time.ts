@@ -1,4 +1,5 @@
 import type { Brand } from "../brand.ts";
+import type { Result } from "../result.ts";
 
 /** Minutes per slot. Every start and length snaps to it. */
 export const SLOT = 15;
@@ -105,21 +106,24 @@ export const sanitizeDayEnd = (value: number, fallback = 22): Hour =>
 export function parseBudgetMinutes(
   minutes: number,
   mode: "week" | "day",
-): BudgetMinutes | "unreadable" | "too-small" | "too-large" {
+): Result<BudgetMinutes, "unreadable" | "too-small" | "too-large"> {
   if (Number.isNaN(minutes)) return "unreadable";
   if (minutes <= 0) return "too-small";
   if (minutes > (mode === "day" ? DAY : WEEK)) return "too-large";
   return brand<BudgetMinutes>(Math.max(SLOT, snap(minutes)));
 }
 
-/** A whole number of days from 1 to 7, or undefined. */
-export const parseDayCount = (value: number): DayCount | undefined =>
-  Number.isInteger(value) && value >= 1 && value <= 7 ? brand<DayCount>(value) : undefined;
+const isWholeBetween = (value: number, low: number, high: number): boolean =>
+  Number.isInteger(value) && value >= low && value <= high;
 
-/** A whole hour from 0 to 12, or undefined. */
-export const parseDayStart = (value: number): Hour | undefined =>
-  Number.isInteger(value) && value >= 0 && value <= 12 ? brand<Hour>(value) : undefined;
+/** A whole number of days from 1 to 7. */
+export const parseDayCount = (value: number): Result<DayCount, "out-of-range"> =>
+  isWholeBetween(value, 1, 7) ? brand<DayCount>(value) : "out-of-range";
 
-/** A whole hour from 13 to 24, or undefined. */
-export const parseDayEnd = (value: number): Hour | undefined =>
-  Number.isInteger(value) && value >= 13 && value <= 24 ? brand<Hour>(value) : undefined;
+/** A whole hour from 0 to 12. */
+export const parseDayStart = (value: number): Result<Hour, "out-of-range"> =>
+  isWholeBetween(value, 0, 12) ? brand<Hour>(value) : "out-of-range";
+
+/** A whole hour from 13 to 24. */
+export const parseDayEnd = (value: number): Result<Hour, "out-of-range"> =>
+  isWholeBetween(value, 13, 24) ? brand<Hour>(value) : "out-of-range";

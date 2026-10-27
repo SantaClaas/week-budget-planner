@@ -1,6 +1,7 @@
 import { parseActivityName, type ActivityName } from "./activity-name.ts";
 import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "./time.ts";
 import type { Mode } from "./types.ts";
+import type { Result } from "../result.ts";
 
 export type ActivityFormInput = {
   name: string;
@@ -11,12 +12,13 @@ export type ActivityFormInput = {
   days: string;
 };
 
-export type ActivityFormResult =
-  | {
-      ok: true;
-      value: { name: ActivityName; budgetMinutes: BudgetMinutes; mode: Mode; days: DayCount };
-    }
-  | { ok: false; field: "name" | "hours" | "days"; message: string };
+export type ActivityFormResult = Result<
+  {
+    ok: true;
+    value: { name: ActivityName; budgetMinutes: BudgetMinutes; mode: Mode; days: DayCount };
+  },
+  { ok: false; field: "name" | "hours" | "days"; message: string }
+>;
 
 const decimalSeparators = new Map<string, string>();
 
@@ -65,7 +67,7 @@ export function readActivityForm(input: ActivityFormInput, locale?: string): Act
   }
   // Per week, the days aren't asked for and keep their default.
   const days = parseDayCount(input.mode === "day" ? Number(input.days.trim() || NaN) : 5);
-  if (days === undefined) {
+  if (days === "out-of-range") {
     return { ok: false, field: "days", message: "Enter how many days per week, from 1 to 7." };
   }
   return { ok: true, value: { name, budgetMinutes, mode: input.mode, days } };

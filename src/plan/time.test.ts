@@ -26,11 +26,11 @@ describe("strict parsers", () => {
     expect(parseBudgetMinutes(1441, "day")).toBe("too-large");
     expect(parseBudgetMinutes(1441, "week")).toBe(1440);
     expect(parseDayCount(7)).toBe(7);
-    expect(parseDayCount(0)).toBeUndefined();
-    expect(parseDayCount(2.5)).toBeUndefined();
+    expect(parseDayCount(0)).toBe("out-of-range");
+    expect(parseDayCount(2.5)).toBe("out-of-range");
     expect(parseDayStart(12)).toBe(12);
-    expect(parseDayStart(13)).toBeUndefined();
+    expect(parseDayStart(13)).toBe("out-of-range");
     expect(parseDayEnd(24)).toBe(24);
-    expect(parseDayEnd(12)).toBeUndefined();
+    expect(parseDayEnd(12)).toBe("out-of-range");
   });
 });
