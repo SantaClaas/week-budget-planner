@@ -1,5 +1,11 @@
 import { sanitizeActivityName } from "./activity-name.ts";
-import { sanitizeActivityId, sanitizeBlockId, type ActivityId, type BlockId } from "./id.ts";
+import {
+  sanitizeActivityId,
+  sanitizeBlockId,
+  type ActivityId,
+  type BlockId,
+  type IdGenerator,
+} from "./id.ts";
 import {
   sanitizeBudgetMinutes,
   sanitizeDayCount,
@@ -20,6 +26,15 @@ function required<Value>(value: Value | undefined, what: string): Value {
 export const activityId = (id: string): ActivityId =>
   required(sanitizeActivityId(id), "activity id");
 export const blockId = (id: string): BlockId => required(sanitizeBlockId(id), "block id");
+
+/** New ids a test can predict: "new-activity-1", "new-block-1", "new-activity-2" and so on. */
+export function createPredictableIds(): IdGenerator {
+  let count = 0;
+  return {
+    createActivityId: () => activityId(`new-activity-${String((count += 1))}`),
+    createBlockId: () => blockId(`new-block-${String((count += 1))}`),
+  };
+}
 
 type ActivityValues = {
   id?: string;
