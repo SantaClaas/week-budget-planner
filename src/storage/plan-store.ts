@@ -29,8 +29,11 @@ export interface PlanStore {
   readonly fallbackReason?: "database-broken";
   /** `isStored` is false when nothing was ever saved here (first run). */
   load(): Promise<{ plan: Plan; isStored: boolean }>;
-  /** Saves one user action, `before` being what is stored now. */
-  save(before: Plan | undefined, after: Plan): Promise<void>;
+  /**
+   * Saves one user action, `before` being what is stored now, and `now` when the action happened
+   * (see "One action, one `now`" in docs/guidelines/principles.md).
+   */
+  save(before: Plan | undefined, after: Plan, now: Temporal.Instant): Promise<void>;
   /** The `.db` file at the full level, the `.json` plan file otherwise. */
   exportFile(): Promise<ExportedFile>;
   /**

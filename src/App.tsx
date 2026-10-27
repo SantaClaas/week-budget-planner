@@ -3,6 +3,7 @@ import { createSignal, onSettled, Show } from "solid-js";
 import version from "virtual:app-version";
 
 import { createExampleWeek } from "./plan/example.ts";
+import { randomIds } from "./plan/id.ts";
 import type { Plan } from "./plan/types.ts";
 import { open as openStorage } from "./storage/index.ts";
 import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
@@ -31,8 +32,10 @@ export function App(): JSX.Element {
         return;
       }
       const stored = await opened.load();
-      const loaded = stored.isStored ? stored.plan : createExampleWeek();
-      if (!stored.isStored) await opened.save(undefined, loaded);
+      // The example week is marked as loaded at the same moment its rows are saved.
+      const now = Temporal.Now.instant();
+      const loaded = stored.isStored ? stored.plan : createExampleWeek(now, randomIds);
+      if (!stored.isStored) await opened.save(undefined, loaded, now);
       if (isDisposed) return;
       setStore(opened);
       setPlan(loaded);

@@ -1,4 +1,5 @@
 import type { Result } from "../result.ts";
+import type { IdGenerator } from "./id.ts";
 import { sanitizePlan } from "./sanitize.ts";
 import { createEmptyPlan, type Plan } from "./types.ts";
 
@@ -35,9 +36,9 @@ export function serialize(plan: Plan): string {
 /**
  * Reads an imported plan file strictly, so an import never replaces the plan with an empty one:
  * "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, "newer-version"
- * when a newer version of the app wrote it (a `version` above 1).
+ * when a newer version of the app wrote it (a `version` above 1). Invalid ids get new ones from `ids`.
  */
-export function read(text: string): Result<Plan, "not-a-plan" | "newer-version"> {
+export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" | "newer-version"> {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -53,13 +54,16 @@ export function read(text: string): Result<Plan, "not-a-plan" | "newer-version">
     return "not-a-plan";
   }
   if (data.version > 1) return "newer-version";
-  return data.version === 1 ? sanitizePlan(data) : "not-a-plan";
+  return data.version === 1 ? sanitizePlan(data, ids) : "not-a-plan";
 }
 
-/** Parses a plan file or stored JSON. Anything malformed becomes a valid (possibly empty) plan. */
-export function parse(text: string): Plan {
+/**
+ * Parses a plan file or stored JSON. Anything malformed becomes a valid (possibly empty) plan, and
+ * invalid ids get new ones from `ids`.
+ */
+export function parse(text: string, ids: IdGenerator): Plan {
   try {
-    return sanitizePlan(JSON.parse(text));
+    return sanitizePlan(JSON.parse(text), ids);
   } catch {
     return createEmptyPlan();
   }

@@ -7,6 +7,7 @@ import { createLocalQueryService, type QueryService, type TursoConnection } from
 import { createDatabase, type Database } from "./drizzle.ts";
 import { NewerDatabaseError, runMigrations } from "./migrations.ts";
 import { loadPlan } from "./plan-repository.ts";
+import { randomIds } from "../plan/id.ts";
 import type { Result } from "../result.ts";
 
 const DATABASE_FILE = "week-budget-planner.db";
@@ -156,7 +157,10 @@ async function checkImport(
     connection = await connectFile(name);
     await runMigrations(connection);
     const opened = connection;
-    await loadPlan(createDatabase(createLocalQueryService(() => Promise.resolve(opened))));
+    await loadPlan(
+      createDatabase(createLocalQueryService(() => Promise.resolve(opened))),
+      randomIds,
+    );
     return "importable";
   } catch (error) {
     if (error instanceof NewerDatabaseError) return "newer-version";
