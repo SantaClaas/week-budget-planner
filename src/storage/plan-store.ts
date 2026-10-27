@@ -41,6 +41,9 @@ export interface PlanStore {
   importFile(file: File): Promise<void>;
   /** Deletes everything this level stored. */
   wipe(): Promise<void>;
-  /** Calls back when another tab changed the plan. Returns an unsubscribe function. */
+  /**
+   * Calls back when another tab changed the plan.
+   * @mustUse Gives back the function that stops it, which the caller calls when it's done.
+   */
   onExternalChange(callback: () => void): () => void;
 }

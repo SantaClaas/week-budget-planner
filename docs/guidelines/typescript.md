@@ -55,7 +55,7 @@ How to use them:
 
 ## Results
 
-**What can fail returns a `Result`.** [`src/result.ts`](../../src/result.ts) defines `Result<Value, Problem>`: the value, or what went wrong, as a string literal (`"too-small"`, `"out-of-range"`) or an object that says so (`{ ok: false, field, message }`). The strict parsers and the activity form return one. It's a plain union, so the caller tells the cases apart with a comparison and TypeScript narrows the rest. Prefer it to throwing when the caller can do something about the problem, such as telling the user what to fix; throw when it can't.
+**What can fail returns a `Result`.** [`src/result.ts`](../../src/result.ts) defines `Result<Value, Problem>`: the value, or what went wrong, as a string literal (`"too-small"`, `"out-of-range"`) or an object that says so (`{ ok: false, field, message }`). The strict parsers, the activity form, reading a plan file and the database import return one. It's a plain union, so the caller tells the cases apart with a comparison and TypeScript narrows the rest. Prefer it to throwing when the caller can do something about the problem, such as telling the user what to fix; throw when it can't.
 
 **A `Result` must be used**, as in Rust, where `Result` is `#[must_use]`. A call whose `Result` is thrown away is a mistake: the value is lost, and so is the problem, which nobody hears about. `pnpm typecheck` runs [`scripts/check-must-use.ts`](../../scripts/check-must-use.ts) after `tsc`, and it fails on a call that's a statement of its own and gives back a `Result`, awaited or not. Where throwing it away is right, `void` in front of the call says so: `void parseDayCount(value)`.
 

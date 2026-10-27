@@ -15,6 +15,13 @@ flowchart LR
   module_plan["plan"]
   module_polyfills["polyfills"]
   module_result["result"]
+  module_storage["storage"]
+  module_trusted_html["trusted-html"]
+  module_App --> module_plan
+  module_App --> module_storage
+  module_database --> module_broadcast
+  module_database --> module_plan
+  module_database --> module_result
   module_index --> module_App
   module_index --> module_font
   module_index --> module_polyfills

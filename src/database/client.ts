@@ -7,6 +7,7 @@ import { createLocalQueryService, type QueryService, type TursoConnection } from
 import { createDatabase, type Database } from "./drizzle.ts";
 import { NewerDatabaseError, runMigrations } from "./migrations.ts";
 import { loadPlan } from "./plan-repository.ts";
+import type { Result } from "../result.ts";
 
 const DATABASE_FILE = "week-budget-planner.db";
 /**
@@ -35,7 +36,7 @@ type DatabaseService = QueryService & {
    * and returns "invalid-file" when the file isn't a database this app can open, or
    * "newer-version" when a newer version of the app made it.
    */
-  importFile(bytes: Uint8Array<ArrayBuffer>): Promise<ImportCheck | "imported">;
+  importFile(bytes: Uint8Array<ArrayBuffer>): Promise<Result<"imported", ImportProblem>>;
   /** Deletes the database files entirely and reloads every tab. Destructive. */
   wipe(): Promise<void>;
 };
@@ -136,13 +137,16 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
   bytes.length >= SQLITE_HEADER.length &&
   SQLITE_HEADER.every((byte, index) => bytes[index] === byte);
 
-type ImportCheck = "importable" | "invalid-file" | "newer-version";
+/** Why a file can't be imported. */
+type ImportProblem = "invalid-file" | "newer-version";
 
 /**
  * Whether the file is a database this app can open: it has the SQLite header, and a copy of it
  * opens, migrates and holds a readable plan. The copy is deleted again either way.
  */
-async function checkImport(bytes: Uint8Array<ArrayBuffer>): Promise<ImportCheck> {
+async function checkImport(
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<Result<"importable", ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
   const root = await navigator.storage.getDirectory();
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;

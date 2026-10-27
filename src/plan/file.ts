@@ -1,3 +1,4 @@
+import type { Result } from "../result.ts";
 import { sanitizePlan } from "./sanitize.ts";
 import { createEmptyPlan, type Plan } from "./types.ts";
 
@@ -36,7 +37,7 @@ export function serialize(plan: Plan): string {
  * "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, "newer-version"
  * when a newer version of the app wrote it (a `version` above 1).
  */
-export function read(text: string): Plan | "not-a-plan" | "newer-version" {
+export function read(text: string): Result<Plan, "not-a-plan" | "newer-version"> {
   let data: unknown;
   try {
     data = JSON.parse(text);
