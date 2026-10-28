@@ -10,7 +10,15 @@ export type ActivityName = Brand<string, "ActivityName">;
 /** The most characters (code points) a name can have. The database checks the same limit. */
 const MAX_NAME_CHARACTERS = 60;
 
-const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+/**
+ * Splits text into graphemes, what a person sees as one character. Without `Intl.Segmenter`
+ * (Firefox before 125) it splits into code points, so a cut may split an emoji made of several (see
+ * docs/spec/browser-support.md).
+ */
+const segmenter =
+  "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : undefined;
+const splitGraphemes = (text: string): Iterable<string> =>
+  segmenter ? Iterator.from(segmenter.segment(text)).map(({ segment }) => segment) : text;
 
 /**
  * Gives a checked name its brand. Only the sanitizer and parser below call it, so this is the one
@@ -28,7 +36,7 @@ function brand(value: string): ActivityName {
 function cut(text: string): string {
   let name = "";
   let characters = 0;
-  for (const { segment } of graphemes.segment(text.trim())) {
+  for (const segment of splitGraphemes(text.trim())) {
     // oxlint-disable-next-line typescript/no-misused-spread -- code points are what is counted here, the way the database's length() counts them; the graphemes come from the Segmenter.
     characters += [...segment].length;
     if (characters > MAX_NAME_CHARACTERS) break;
