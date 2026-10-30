@@ -46,7 +46,7 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 How to use them:
 
-- **Only the module that defines a brand creates one**, through its sanitizer, parser or constructor (such as `createActivityId()`). Everywhere else, a value gets its brand by going through one of those. Inside the module, one private `brand()` helper holds the only type assertion, with a comment saying why (see Type assertions below).
+- **Only the module that defines a brand creates one**, through its sanitizer, parser or constructor (such as `randomIds.createActivityId()`). Everywhere else, a value gets its brand by going through one of those. Inside the module, one private `brand()` helper holds the only type assertion, with a comment saying why (see Type assertions below).
 - **A sanitizer never fails:** `sanitizeLength(value: number): Length` turns any number into the nearest valid value. Use it for data that was loaded and for results of arithmetic, which gives back a plain `number`.
 - **A strict parser rejects instead:** `parseBudgetMinutes(minutes, mode)` returns a `Result`: the value or what's wrong with it (`"unreadable"`, `"too-small"`, `"too-large"`). Use it for what users type, so the form can tell them (see Results below).
 - **Name the brand for what the value means**, not for its unit alone: `DayMinute` and `WeekMinute` are both minutes, and keeping them apart is the point. Say in the type's comment where it starts and ends and what it's a multiple of.

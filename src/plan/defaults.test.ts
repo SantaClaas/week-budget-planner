@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import exampleWeek from "../../examples/example-week.json";
 import { pickDefaultLength, pickDefaultLook, fitToDayHours, hashFnv1a32 } from "./defaults.ts";
-import { sanitizeLength as length } from "./time.ts";
+import { sanitizeLength } from "./time.ts";
 import { DEFAULT_SHAPES, SHAPES, type Hue, type Shape } from "./types.ts";
-import { activity, block, hours } from "./test-data.ts";
+import { createActivity, createBlock, createDayHours } from "./test-data.ts";
 
 describe("defaults", () => {
   it("hashes with 32-bit FNV-1a", () => {
@@ -38,18 +38,24 @@ describe("defaults", () => {
   });
 
   it("picks the default length", () => {
-    expect(pickDefaultLength(activity(), [])).toBe(90);
-    expect(pickDefaultLength(activity({ mode: "day", budgetMinutes: 60, days: 3 }), [])).toBe(60);
-    expect(pickDefaultLength(activity({ budgetMinutes: 45 }), [])).toBe(45);
-    expect(pickDefaultLength(activity({ budgetMinutes: 120 }), [block({ length: 105 })])).toBe(15);
+    expect(pickDefaultLength(createActivity(), [])).toBe(90);
+    expect(pickDefaultLength(createActivity({ mode: "day", budgetMinutes: 60, days: 3 }), [])).toBe(
+      60,
+    );
+    expect(pickDefaultLength(createActivity({ budgetMinutes: 45 }), [])).toBe(45);
+    expect(
+      pickDefaultLength(createActivity({ budgetMinutes: 120 }), [createBlock({ length: 105 })]),
+    ).toBe(15);
     // Over budget, the usual length applies.
-    expect(pickDefaultLength(activity({ budgetMinutes: 60 }), [block({ length: 90 })])).toBe(90);
+    expect(
+      pickDefaultLength(createActivity({ budgetMinutes: 60 }), [createBlock({ length: 90 })]),
+    ).toBe(90);
   });
 
   it("caps new blocks at the end of the day hours when they start inside them", () => {
-    const dayHours = hours(7, 22);
-    expect(fitToDayHours(1260, length(90), dayHours)).toBe(60);
-    expect(fitToDayHours(1320, length(240), dayHours)).toBe(240);
-    expect(fitToDayHours(600, length(90), dayHours)).toBe(90);
+    const dayHours = createDayHours(7, 22);
+    expect(fitToDayHours(1260, sanitizeLength(90), dayHours)).toBe(60);
+    expect(fitToDayHours(1320, sanitizeLength(240), dayHours)).toBe(240);
+    expect(fitToDayHours(600, sanitizeLength(90), dayHours)).toBe(90);
   });
 });

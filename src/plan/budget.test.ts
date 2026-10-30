@@ -1,22 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget.ts";
-import { activityId, activity, block } from "./test-data.ts";
+import { createActivityId, createActivity, createBlock } from "./test-data.ts";
 
 describe("budget", () => {
   it("counts per-day budgets times their days", () => {
-    expect(calculateWeeklyBudget(activity({ mode: "day", budgetMinutes: 90, days: 3 }))).toBe(270);
-    expect(calculateWeeklyBudget(activity({ mode: "week", budgetMinutes: 720 }))).toBe(720);
+    expect(calculateWeeklyBudget(createActivity({ mode: "day", budgetMinutes: 90, days: 3 }))).toBe(
+      270,
+    );
+    expect(calculateWeeklyBudget(createActivity({ mode: "week", budgetMinutes: 720 }))).toBe(720);
   });
 
   it("sums placed time and over budget", () => {
-    const work = activity();
-    const gym = activity({ id: "g", mode: "day", budgetMinutes: 90, days: 3 });
+    const work = createActivity();
+    const gym = createActivity({ id: "g", mode: "day", budgetMinutes: 90, days: 3 });
     const blocks = [
-      block({ id: "1", length: 750 }),
-      block({ id: "2", activityId: "g", length: 90 }),
+      createBlock({ id: "1", length: 750 }),
+      createBlock({ id: "2", activityId: "g", length: 90 }),
     ];
-    expect(sumPlacedByActivity(blocks).get(activityId("a"))).toBe(750);
+    expect(sumPlacedByActivity(blocks).get(createActivityId("a"))).toBe(750);
     expect(summarize({ activities: [work, gym], blocks })).toEqual({
       budget: 990,
       placed: 840,
