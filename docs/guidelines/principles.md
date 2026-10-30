@@ -105,6 +105,8 @@ The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block
 - **When the same kind of resource is used in many places**, a small wrapper can make it disposable once, for example a `Proxy` that adds `[Symbol.dispose]` to a library's object and passes everything else through. Write one when a resource keeps coming back, not before (see "Compress when it starts to repeat" below).
 - A cleanup that only runs on failure, like rolling back or reopening the database after a failed import, stays a `catch` that cleans up and rethrows.
 
+The lint rule `week-budget-planner/prefer-using` fails on every `finally`. Where one really is the clearest way to write it, disable the rule on that line and say why.
+
 ## Modules
 
 **Name a module for what it is.** There are no catch-all folders such as `lib`, `utils`, `shared`, `common` or `helpers`. All code is shared and all of it is useful, so those names say nothing.
