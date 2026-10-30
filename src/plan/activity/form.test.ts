@@ -7,11 +7,11 @@ describe("activity form", () => {
 
   it("accepts valid input and rounds hours to the slot", () => {
     expect(readActivityForm({ ...base, hours: "1,6" })).toEqual({
-      type: "valid",
+      isOk: true,
       value: { name: "Gym", budgetMinutes: 90, mode: "week", days: 5 },
     });
     expect(readActivityForm({ ...base, mode: "day" })).toMatchObject({
-      type: "valid",
+      isOk: true,
       value: { days: 3 },
     });
   });
