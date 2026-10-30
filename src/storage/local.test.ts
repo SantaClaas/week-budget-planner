@@ -85,6 +85,27 @@ describe("localStorage store", () => {
     expect((await store.load()).plan).toEqual(example());
   });
 
+  it("leaves a plan saved by a newer version alone", async () => {
+    const storage = new MemoryStorage();
+    const newer = JSON.stringify({ version: 2, activities: [{ id: "a", name: "Unknown to us" }] });
+    storage.setItem(PLAN_KEY, newer);
+    const store = local.create(storage, events());
+    await expect(store.load()).rejects.toBeInstanceOf(NewerVersionError);
+    await expect(store.save(undefined, example(), NOW)).rejects.toBeInstanceOf(NewerVersionError);
+    await expect(store.exportFile()).rejects.toBeInstanceOf(NewerVersionError);
+    expect(storage.getItem(PLAN_KEY)).toBe(newer);
+  });
+
+  it("stops saving once another tab saved with a newer version", async () => {
+    const storage = new MemoryStorage();
+    const store = local.create(storage, events());
+    await store.save(undefined, example(), NOW);
+    const newer = JSON.stringify({ version: 2 });
+    storage.setItem(PLAN_KEY, newer);
+    await expect(store.save(example(), example(), NOW)).rejects.toBeInstanceOf(NewerVersionError);
+    expect(storage.getItem(PLAN_KEY)).toBe(newer);
+  });
+
   it("reports changes from other tabs", () => {
     const target = events();
     const store = local.create(new MemoryStorage(), target);

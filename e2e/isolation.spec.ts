@@ -24,6 +24,23 @@ test("keeps the plan in limited storage when service workers are blocked", async
   await context.close();
 });
 
+test("leaves a plan in limited storage alone when a newer version saved it", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ serviceWorkers: "block" });
+  const page = await context.newPage();
+  const newer = JSON.stringify({ version: 2, activities: [{ id: "a", name: "From the future" }] });
+  await page.goto(PAGES_URL);
+  await expectStatus(page, "limited");
+  await page.evaluate((text) => {
+    localStorage.setItem("week-budget-planner.plan", text);
+  }, newer);
+  await page.reload();
+  await expect(page.getByTestId("newer-version")).toContainText("saved by a newer version");
+  expect(await page.evaluate(() => localStorage.getItem("week-budget-planner.plan"))).toBe(newer);
+  await context.close();
+});
+
 test("still runs without any storage", async ({ browser }) => {
   const context = await browser.newContext({ serviceWorkers: "block" });
   await context.addInitScript(() => {

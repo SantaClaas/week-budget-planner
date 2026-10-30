@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import * as planFile from "./file.ts";
 import { createExampleWeek } from "./example.ts";
+import { createEmptyPlan } from "./index.ts";
 import { createPredictableIds } from "./test-data.ts";
 
 const example = () =>
@@ -15,7 +16,7 @@ describe("plan file", () => {
   });
 
   it("turns malformed text into an empty plan", () => {
-    expect(planFile.parse("{not json", createPredictableIds()).activities).toEqual([]);
+    expect(planFile.parse("{not json", createPredictableIds())).toEqual(createEmptyPlan());
   });
 
   it("reads only real plan files on import", () => {
@@ -27,8 +28,11 @@ describe("plan file", () => {
   });
 
   it("recognizes a plan file from a newer version", () => {
-    expect(planFile.read('{"version": 2, "activities": []}', createPredictableIds())).toBe(
-      "newer-version",
-    );
+    const newer = '{"version": 2, "activities": []}';
+    expect(planFile.read(newer, createPredictableIds())).toBe("newer-version");
+    expect(planFile.parse(newer, createPredictableIds())).toBe("newer-version");
+    expect(planFile.isWrittenByNewerVersion(newer)).toBe(true);
+    expect(planFile.isWrittenByNewerVersion(planFile.serialize(example()))).toBe(false);
+    expect(planFile.isWrittenByNewerVersion("{not json")).toBe(false);
   });
 });
