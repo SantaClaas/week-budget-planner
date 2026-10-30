@@ -211,8 +211,8 @@ async function download(url: string, target: URL, mode: "text" | "binary" = "tex
 async function exists(url: URL): Promise<boolean> {
   try {
     await access(url);
-    return true;
   } catch {
     return false;
   }
+  return true;
 }

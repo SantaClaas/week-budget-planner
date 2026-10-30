@@ -80,7 +80,7 @@ The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint
 **A `try` wraps the one operation that can fail, and its `catch` handles that failure.** A `catch` can't tell the error it was written for from any other: around more code, it also catches a programming mistake, such as a typo or a wrong assumption, and handles it like the expected failure of the API being called. The mistake then never shows up where it happened, and sometimes never at all, like a parse error that quietly becomes an empty plan. Kept to one operation, everything else throws where it went wrong, which is what we want to see.
 
 - **What isn't an exception isn't thrown.** A missing method or an invalid value is checked and returned early, or comes back as a `Result`, instead of being thrown only to reach the `catch`.
-- **Code that continues after the `try` reads its value from a `let` outside it.** The `catch` returns or rethrows, so after the `try` the variable always has a value, and the rest of the function runs without nesting:
+- **Code that continues after the `try` reads its value from a `let` outside it.** The `catch` returns, rethrows or assigns a fallback to the same variable, so after the `try` it always has a value, and the rest of the function runs without nesting. TypeScript checks that: declared without `undefined` in its type, a `let` that a path leaves unassigned is a compile error where it's read.
 
   ```ts
   let data: unknown;
@@ -93,7 +93,9 @@ The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint
   ```
 
 - **Two operations that fail differently get a `try` each**, usually in functions of their own, as in the broadcast service's `answer()`: one `try` for the call, one for posting its result.
-- A `try` works like an `if`: a branch, and nesting when it grows. So the same rules apply as for `else` above. A good exception exists now and then, such as a transaction's statements, which commit or roll back together; say why in a comment.
+- A `try` works like an `if`: a branch, and nesting when it grows. So the same rules apply as for `else` above.
+
+The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block with more than one statement, or with one that branches or loops. Two statements can still be one operation, such as a transaction's statements and its commit, which succeed or roll back together, or writing a file and closing it, which commits the write: there, disable the rule on that line and say why.
 
 ### Clean up with `using`
 

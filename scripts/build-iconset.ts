@@ -158,8 +158,8 @@ function widenViewBox(viewBox: string, padding: number): string {
 async function exists(url: URL): Promise<boolean> {
   try {
     await access(url);
-    return true;
   } catch {
     return false;
   }
+  return true;
 }

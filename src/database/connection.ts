@@ -80,7 +80,7 @@ export function createLocalQueryService(
     async batch(statements) {
       const connection = await getConnection();
       await connection.exec("BEGIN");
-      // The statements and the commit are one operation: whichever of them fails, it all rolls back.
+      // oxlint-disable-next-line week-budget-planner/one-operation-per-try -- the statements and the commit are one operation: whichever of them fails, it all rolls back.
       try {
         const results: QueryResult[] = [];
         for (const { sql, params: parameters, method } of statements) {
