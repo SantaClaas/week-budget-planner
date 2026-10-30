@@ -71,6 +71,8 @@ Why it's worth it:
 
 **Handle the special cases first and return**, or `continue` in a loop, so the main path runs down the left edge without nesting. An `else` usually means a function does two things in two branches. Then give the branch a function of its own that returns early, and call it. `sanitizePlan` used to loop over `[]` when the stored value wasn't a list; now `sanitizeActivities` and `sanitizeBlocks` each start with `if (!Array.isArray(input)) return []`.
 
+**Put the shorter branch in the `if`.** When a function ends in two branches, the short one goes inside the `if` and returns, and the long one follows unindented. Turn the condition around if that's what it takes: the broadcast service's silence check asks whether the provider is still within the limit, queries and returns, and only then handles the silence.
+
 **Choosing between two values is a ternary**, not an `if` with an `else`: `const mode = raw["mode"] === "day" ? "day" : "week"`.
 
 The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails on every `else`. Where one really is the clearest way to write it, disable the rule on that line and say why.
