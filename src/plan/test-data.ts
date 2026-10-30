@@ -10,10 +10,10 @@ import {
   sanitizeBudgetMinutes,
   sanitizeDayCount,
   sanitizeDayEnd,
-  sanitizeDayIndex as dayIndex,
+  sanitizeDayIndex,
   sanitizeDayMinute,
   sanitizeDayStart,
-  sanitizeLength as length,
+  sanitizeLength,
 } from "./time.ts";
 import { type Activity, type Block, type Hue, type Plan, type Shape } from "./types.ts";
 
@@ -23,16 +23,16 @@ function required<Value>(value: Value | undefined, what: string): Value {
   if (value === undefined) throw new Error(`The test data has an invalid ${what}.`);
   return value;
 }
-export const activityId = (id: string): ActivityId =>
+export const createActivityId = (id: string): ActivityId =>
   required(sanitizeActivityId(id), "activity id");
-export const blockId = (id: string): BlockId => required(sanitizeBlockId(id), "block id");
+export const createBlockId = (id: string): BlockId => required(sanitizeBlockId(id), "block id");
 
 /** New ids a test can predict: "new-activity-1", "new-block-1", "new-activity-2" and so on. */
 export function createPredictableIds(): IdGenerator {
   let count = 0;
   return {
-    createActivityId: () => activityId(`new-activity-${String((count += 1))}`),
-    createBlockId: () => blockId(`new-block-${String((count += 1))}`),
+    createActivityId: () => createActivityId(`new-activity-${String((count += 1))}`),
+    createBlockId: () => createBlockId(`new-block-${String((count += 1))}`),
   };
 }
 
@@ -45,7 +45,7 @@ type ActivityValues = {
   budgetMinutes?: number;
   days?: number;
 };
-export const activity = ({
+export const createActivity = ({
   id = "a",
   mode = "week",
   budgetMinutes = 720,
@@ -56,7 +56,7 @@ export const activity = ({
   hue: 78,
   shape: "square",
   ...rest,
-  id: activityId(id),
+  id: createActivityId(id),
   name: sanitizeActivityName(name),
   mode,
   budgetMinutes: sanitizeBudgetMinutes(budgetMinutes, mode),
@@ -70,15 +70,18 @@ type BlockValues = {
   start?: number;
   length?: number;
 };
-export const block = (values: BlockValues = {}): Block => ({
-  id: blockId(values.id ?? "b"),
-  activityId: activityId(values.activityId ?? "a"),
-  day: dayIndex(values.day ?? 0),
+export const createBlock = (values: BlockValues = {}): Block => ({
+  id: createBlockId(values.id ?? "b"),
+  activityId: createActivityId(values.activityId ?? "a"),
+  day: sanitizeDayIndex(values.day ?? 0),
   start: sanitizeDayMinute(values.start ?? 600),
-  length: length(values.length ?? 90),
+  length: sanitizeLength(values.length ?? 90),
 });
 
-export const hours = (dayStart: number, dayEnd: number): Pick<Plan, "dayStart" | "dayEnd"> => ({
+export const createDayHours = (
+  dayStart: number,
+  dayEnd: number,
+): Pick<Plan, "dayStart" | "dayEnd"> => ({
   dayStart: sanitizeDayStart(dayStart),
   dayEnd: sanitizeDayEnd(dayEnd),
 });
