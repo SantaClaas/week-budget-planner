@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { API, type Checker, type Type } from "typescript/unstable/sync";
+import { API, SymbolFlags, type Checker, type Type } from "typescript/unstable/sync";
 import type { Expression, Node, SourceFile } from "typescript/unstable/ast";
 import {
   isAwaitExpression,
@@ -63,8 +63,11 @@ function isMarkedMustUse(checker: Checker, call: Expression): boolean {
   const callee = isPropertyAccessExpression(call.expression)
     ? call.expression.name
     : call.expression;
-  const symbol = checker.getSymbolAtLocation(callee);
-  return symbol?.getJsDocTags(checker).some((tag) => tag.name === "mustUse") ?? false;
+  const found = checker.getSymbolAtLocation(callee);
+  if (found === undefined) return false;
+  // An imported function's symbol is the import, which has no JSDoc: follow it to the declaration.
+  const symbol = (found.flags & SymbolFlags.Alias) === 0 ? found : checker.getAliasedSymbol(found);
+  return symbol.getJsDocTags(checker).some((tag) => tag.name === "mustUse");
 }
 
 function findLineAndColumn(file: SourceFile, position: number): { line: number; column: number } {

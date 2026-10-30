@@ -1,20 +1,44 @@
-import { databaseService, getDatabase } from "../database/client.ts";
+import { databaseService, getDatabase, onNewerVersion } from "../database/client.ts";
 
 export { hasDatabaseFile, removeBrokenDatabase } from "../database/client.ts";
 import { loadPlan, savePlan } from "../database/plan-repository.ts";
 import { randomIds } from "../plan/id.ts";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
 import * as jsonFile from "./json-file.ts";
-import { InvalidFileError, NewerVersionError, type PlanStore } from "./plan-store.ts";
+import {
+  InvalidFileError,
+  isFromNewerVersion,
+  NewerVersionError,
+  type PlanStore,
+} from "./plan-store.ts";
+
+/** The database's own error for a newer version, as the error the app shows for it. */
+function translateNewerVersion(error: unknown): unknown {
+  if (!isFromNewerVersion(error)) return error;
+  return new NewerVersionError(
+    "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.",
+    { cause: error },
+  );
+}
 
 /** The full level: the SQLite database in OPFS, shared by every tab through the leader. */
 export function create(): PlanStore {
   const database = getDatabase();
   return {
     level: "full",
-    load: () => loadPlan(database, randomIds),
+    async load() {
+      try {
+        return await loadPlan(database, randomIds);
+      } catch (error) {
+        throw translateNewerVersion(error);
+      }
+    },
     async save(before, after, now) {
-      await savePlan(database, before, after, now);
+      try {
+        await savePlan(database, before, after, now);
+      } catch (error) {
+        throw translateNewerVersion(error);
+      }
       broadcastMessage({ type: "plan-changed" });
     },
     async exportFile() {
@@ -49,9 +73,15 @@ export function create(): PlanStore {
     },
     wipe: () => databaseService.wipe(),
     onExternalChange(callback) {
-      return listenForBroadcasts(() => {
+      const stopListening = listenForBroadcasts(() => {
         callback();
       });
+      // Stepping down for a newer version changes what this tab can load, so it counts too.
+      const stopWatchingVersions = onNewerVersion(callback);
+      return () => {
+        stopListening();
+        stopWatchingVersions();
+      };
     },
   };
 }

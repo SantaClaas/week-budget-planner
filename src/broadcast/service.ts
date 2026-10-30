@@ -41,6 +41,17 @@ class CallLostError extends Error {}
 /** No provider answered within the time limit. The call was never sent. */
 export class ProviderMissingError extends Error {}
 
+/**
+ * Another tab runs a newer version of the protocol, so this tab is outdated: its open calls are
+ * refused, since the provider they'd need can't be trusted to read them.
+ */
+export class NewerProtocolError extends Error {}
+
+/** What a side does once it hears from a tab on a newer version of the protocol. */
+type Options = { readonly onNewerVersion?: () => void };
+
+const doNothing = (): void => {};
+
 /** A call that reached the provider but failed there. `cause` holds the provider-side error. */
 export class RemoteCallError extends Error {}
 
@@ -50,8 +61,16 @@ function readRemoteError(error: unknown, name: string | undefined): RemoteCallEr
   return new RemoteCallError("The leader tab failed to execute the call.", { cause: error });
 }
 
-/** Serve `target`'s methods to all consumer tabs on the channel. */
-export function provide(channel: BroadcastChannel, scope: string, target: AsyncApi): void {
+/**
+ * Serve `target`'s methods to all consumer tabs on the channel.
+ * @mustUse Gives back the function that stops serving, for when this tab steps down.
+ */
+export function provide(
+  channel: BroadcastChannel,
+  scope: string,
+  target: AsyncApi,
+  { onNewerVersion = doNothing }: Options = {},
+): () => void {
   const providerId = crypto.randomUUID();
   const ready: ServiceMessage = {
     protocolVersion: PROTOCOL_VERSION,
@@ -60,9 +79,19 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
     providerId,
   };
 
-  channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
+  const listener = (event: MessageEvent<ServiceMessage>): void => {
     const message = event.data;
-    if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== scope) return;
+    if (message.scope !== scope) return;
+    // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
+    if (message.protocolVersion > PROTOCOL_VERSION) {
+      onNewerVersion();
+      return;
+    }
+    if (message.protocolVersion < PROTOCOL_VERSION) {
+      // An older tab can't read anything else from this one, but this version tells it it's outdated.
+      channel.postMessage(ready);
+      return;
+    }
     switch (message.type) {
       case "provider-query":
         channel.postMessage(ready);
@@ -80,7 +109,8 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
         // Every tab's owner handles it (see src/database/client.ts).
         break;
     }
-  });
+  };
+  channel.addEventListener("message", listener);
 
   /** Runs the call and posts its result or its error to the consumer that's waiting. */
   async function answer(call: { id: string; property: string; parameters: unknown[] }) {
@@ -134,6 +164,9 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
   }
 
   channel.postMessage(ready);
+  return () => {
+    channel.removeEventListener("message", listener);
+  };
 }
 
 export interface Consumer<T> {
@@ -161,7 +194,11 @@ const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
 const SILENCE_LIMIT_MILLISECONDS = 10_000;
 
 /** A proxy whose method calls are served by whichever tab currently provides `scope`. */
-export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: string): Consumer<T> {
+export function consume<T extends AsyncApi>(
+  channel: BroadcastChannel,
+  scope: string,
+  { onNewerVersion = doNothing }: Options = {},
+): Consumer<T> {
   const sent = new Map<string, PendingCall>();
   let providerId: string | undefined;
   let readyWaiters: PendingCall[] = [];
@@ -216,7 +253,13 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
 
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
-    if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== scope) return;
+    if (message.scope !== scope) return;
+    // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
+    if (message.protocolVersion > PROTOCOL_VERSION) {
+      giveWayToNewerVersion();
+      return;
+    }
+    if (message.protocolVersion < PROTOCOL_VERSION) return;
     switch (message.type) {
       case "provider-ready":
         acceptProvider(message.providerId);
@@ -236,6 +279,18 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
         break;
     }
   });
+
+  /** Refuses every open call, since a tab on a newer protocol runs, and says so. */
+  function giveWayToNewerVersion() {
+    const error = new NewerProtocolError("A newer version of the app runs in another tab.");
+    providerId = undefined;
+    settleWaiters((waiter) => {
+      waiter.reject(error);
+    });
+    failSent(error);
+    stopQueryingWhenIdle();
+    onNewerVersion();
+  }
 
   /** Follows the provider that announced itself; calls sent to a different one are lost. */
   function acceptProvider(announcedId: string) {

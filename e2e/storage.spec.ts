@@ -109,6 +109,41 @@ test.describe("a newer version of the app", () => {
     await expect(other.getByTestId("newer-version")).toContainText("saved by a newer version");
     expect(await readDatabaseFileSize(page)).toBe(newerDatabase.length);
   });
+
+  test("steps down for a tab on a newer protocol version, in every tab", async ({
+    page,
+    context,
+  }) => {
+    await page.goto(ISOLATED_URL);
+    await expectStatus(page, "full");
+    const other = await context.newPage();
+    await other.goto(ISOLATED_URL);
+    await expectStatus(other, "full");
+    // A newer tab's first message, as it asks who serves the database.
+    await page.evaluate(() => {
+      const channel = new BroadcastChannel("week-budget-planner-database");
+      channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
+      channel.close();
+    });
+    for (const tab of [page, other]) {
+      await expect(tab.getByTestId("newer-version")).toContainText("saved by a newer version");
+    }
+    // The leader let go of the lock and the other tab left the queue, so only the newer tab can
+    // take it, open the database and migrate it.
+    await expect
+      .poll(() =>
+        page.evaluate(async () => {
+          const { held = [], pending = [] } = await navigator.locks.query();
+          return [...held, ...pending].map((lock) => lock.name);
+        }),
+      )
+      .not.toContain("week-budget-planner-database-leader");
+    // A tab opened now stands in for the newer one: it takes the lock and opens the database the
+    // old leader closed.
+    const newer = await context.newPage();
+    await newer.goto(ISOLATED_URL);
+    await expectStatus(newer, "full");
+  });
 });
 
 test("reports a database that won't open, and deleting it starts over", async ({ page }) => {

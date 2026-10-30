@@ -20,6 +20,17 @@ export class InvalidFileError extends Error {}
  */
 export class NewerVersionError extends Error {}
 
+/**
+ * Whether a newer version of the app made the database or runs in another tab, somewhere in the
+ * chain of causes. Read by name, since the database's errors cross from the leader tab.
+ */
+export function isFromNewerVersion(error: unknown): boolean {
+  for (let cause = error; cause instanceof Error; cause = cause.cause) {
+    if (cause.name === "NewerDatabaseError") return true;
+  }
+  return false;
+}
+
 export interface PlanStore {
   readonly level: StorageLevel;
   /**

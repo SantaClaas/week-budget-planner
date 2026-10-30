@@ -178,7 +178,29 @@ After an update, a tab that was already open keeps running the old version while
 
 **The protocol version is bumped by hand**, like an IndexedDB version, for a change an older tab can't read, and not with every release, since most releases don't change the messages. Each released version's messages are frozen in a file of their own ([`src/broadcast/protocol/version-1.ts`](../../src/broadcast/protocol/version-1.ts)), which never changes again. A test compares the current messages with the frozen ones of the version they claim to be, in the spirit of Rust's cargo-semver-checks: each side has to be able to read what the other sends, so an added optional field passes, while a renamed or retyped field, a removed message or a new message an older tab can't read fails `pnpm typecheck`. A breaking change then means bumping the version and freezing its messages next to the old ones, which the same test asks for.
 
-Still to come: an outdated leader steps down so the newer tab can migrate the database, an outdated tab that isn't in use reloads by itself, and one in use shows a prompt to reload that doesn't interrupt what the user is doing.
+**Every version keeps `protocolVersion` and `scope` in the envelope**, so any tab can read them in a message of any version, and that's how an outdated tab finds out:
+
+- **A tab that receives a message of a newer protocol version is outdated.** It steps down: as the leader it stops serving, folds the WAL into the database file, closes it and releases the Web Lock; still waiting for the lock, it leaves the queue. From then on it refuses every call, and the app shows "Your plan was saved by a newer version". So only the newer tab can become the leader, open the database and run its migrations, and no older tab takes over after it.
+- **A leader that receives a message of an older protocol version** answers with its own announcement. The older tab can't read anything else from it, but the version in the envelope tells it that it's outdated, so it steps down in turn, instead of waiting for a leader that never answers.
+- **A tab that was waiting for the old leader** has its open calls refused right away, instead of after the 10 seconds of silence.
+
+```mermaid
+sequenceDiagram
+  participant Old as Old leader (version 1)
+  participant Follower as Other old tab (version 1)
+  participant New as New tab (version 2)
+  New->>Old: who serves the database? (version 2)
+  New->>Follower: the same message
+  Note over Old: a newer version runs
+  Old->>Old: stop serving, close the database
+  Old-->>New: releases the Web Lock
+  Note over Follower: a newer version runs
+  Follower->>Follower: leave the lock queue, refuse calls
+  New->>New: takes the lock, opens and migrates the database
+  Note over Old,Follower: both show the newer version page
+```
+
+Still to come: an outdated tab that isn't in use reloads by itself, and one in use shows a prompt to reload that doesn't interrupt what the user is doing, instead of the full-page state.
 
 ## Hosting on GitHub Pages
 

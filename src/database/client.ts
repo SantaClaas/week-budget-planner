@@ -5,6 +5,7 @@ import { connect } from "@tursodatabase/database-wasm/vite";
 import { PROTOCOL_VERSION } from "../broadcast/protocol/index.ts";
 import {
   consume,
+  NewerProtocolError,
   provide,
   ProviderChangedError,
   type Consumer,
@@ -56,6 +57,16 @@ let localDatabase: Promise<TursoConnection> | undefined;
 let isElectionStarted = false;
 
 /**
+ * Set once another tab runs a newer version of the app. This tab then takes no part in the
+ * election and refuses every call, so only the newer tab opens and migrates the database (see
+ * "Tabs on different versions" in docs/spec/persistence.md).
+ */
+let isOutdated = false;
+/** Aborted when this tab steps down: it leaves the lock queue, or ends its leadership. */
+const election = new AbortController();
+const newerVersionListeners = new Set<() => void>();
+
+/**
  * Set when a broken database should be deleted. The engine keeps a file it failed to open locked
  * until the page reloads, so the deletion happens at the next start, before anything opens it.
  */
@@ -87,6 +98,57 @@ function getLocalConnection(): Promise<TursoConnection> {
  * instead of reopening the file, until every tab reloads.
  */
 const waitForReload = new Promise<never>(() => {});
+
+/** Closes the database for the newer tab to open. Later calls are refused (see callService). */
+async function closeForNewerVersion(): Promise<void> {
+  const opening = localDatabase;
+  localDatabase = waitForReload;
+  if (opening === undefined) return;
+  let database: TursoConnection;
+  try {
+    database = await opening;
+  } catch {
+    // It never opened, so there's nothing to close.
+    return;
+  }
+  // Folds the WAL into the file, so the newer tab reads everything this one wrote.
+  await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  await database.close();
+}
+
+/** Steps down for a tab on a newer version, once, and tells whoever listens. */
+function giveWayToNewerVersion(): void {
+  if (isOutdated) return;
+  isOutdated = true;
+  console.info("[database] a newer version of the app runs in another tab, so this one steps down");
+  election.abort();
+  for (const listener of newerVersionListeners) listener();
+}
+
+/** Resolves when the signal aborts, at once if it already has. */
+const waitForAbort = (signal: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    if (signal.aborted) resolve();
+    signal.addEventListener(
+      "abort",
+      () => {
+        resolve();
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * Calls back once this tab learns that another runs a newer version of the app, and has stepped
+ * down for it.
+ * @mustUse Gives back the function that stops listening.
+ */
+export function onNewerVersion(listener: () => void): () => void {
+  newerVersionListeners.add(listener);
+  return () => {
+    newerVersionListeners.delete(listener);
+  };
+}
 
 /** Closes the database so its files can be replaced. Later calls wait for the reload. */
 async function closeForReload(): Promise<void> {
@@ -284,7 +346,7 @@ export function removeBrokenDatabase(): void {
 function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseService> } {
   if (!channel || !consumer) {
     channel = new BroadcastChannel(CHANNEL_NAME);
-    consumer = consume<DatabaseService>(channel, SCOPE);
+    consumer = consume<DatabaseService>(channel, SCOPE, { onNewerVersion: giveWayToNewerVersion });
     channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
       const message = event.data;
       if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== SCOPE) return;
@@ -298,22 +360,34 @@ function startElection(): void {
   if (isElectionStarted) return;
   isElectionStarted = true;
   const connected = setUp();
-  void navigator.locks.request(LOCK_NAME, async () => {
-    isLeader = true;
-    connected.consumer.handlePromotion();
-    // Serve right away: calls wait for the database inside the service, and the other tabs see this
-    // tab answering while the engine loads (see "Calls between tabs" in docs/spec/persistence.md).
-    provide(connected.channel, SCOPE, localService);
-    console.debug("[database] acquired leader lock, serving the database");
-    // A failure to open shows up again on every call, so here it only must not end the lock.
-    await getLocalConnection().catch(() => {});
-    // Hold the lock, and with it leadership, until this tab dies.
-    await new Promise<never>(() => {});
-  });
+  navigator.locks
+    .request(LOCK_NAME, { signal: election.signal }, async () => {
+      isLeader = true;
+      connected.consumer.handlePromotion();
+      // Serve right away: calls wait for the database inside the service, and the other tabs see
+      // this tab answering while the engine loads (see "Calls between tabs" in
+      // docs/spec/persistence.md).
+      const stopServing = provide(connected.channel, SCOPE, localService, {
+        onNewerVersion: giveWayToNewerVersion,
+      });
+      console.debug("[database] acquired leader lock, serving the database");
+      // A failure to open shows up again on every call, so here it only must not end the lock.
+      await getLocalConnection().catch(() => {});
+      // Hold the lock, and with it leadership, until this tab dies or steps down for a newer one.
+      await waitForAbort(election.signal);
+      stopServing();
+      await closeForNewerVersion();
+    })
+    .catch((error: unknown) => {
+      // Stepping down while still waiting for the lock leaves the queue, which rejects the request.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      console.error("[database] the leader election failed", error);
+    });
 }
 
 /** Runs `operation` locally when leader, otherwise through the leader tab. */
 async function callService<T>(operation: (service: DatabaseService) => Promise<T>): Promise<T> {
+  if (isOutdated) throw new NewerDatabaseError("A newer version of the app runs in another tab.");
   startElection();
   const leader = setUp().consumer;
   while (true) {
@@ -324,6 +398,11 @@ async function callService<T>(operation: (service: DatabaseService) => Promise<T
     } catch (error) {
       // Promoted mid-wait: the call was never sent, safe to redispatch locally.
       if (error instanceof ProviderChangedError) continue;
+      if (error instanceof NewerProtocolError) {
+        throw new NewerDatabaseError("A newer version of the app runs in another tab.", {
+          cause: error,
+        });
+      }
       throw error;
     }
   }
