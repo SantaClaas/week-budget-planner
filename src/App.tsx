@@ -10,6 +10,12 @@ import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
 
 // Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
 // shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.
+/** Opens the best storage and loads the plan, which may turn out to be from a newer version. */
+async function openAndLoad() {
+  const opened = await openStorage();
+  return { store: opened, stored: await opened.load() };
+}
+
 export function App(): JSX.Element {
   const [store, setStore] = createSignal<PlanStore>();
   const [plan, setPlan] = createSignal<Plan>();
@@ -23,31 +29,35 @@ export function App(): JSX.Element {
     let latestReload = 0;
 
     async function start(): Promise<void> {
-      let opened: PlanStore;
+      let opened: Awaited<ReturnType<typeof openAndLoad>>;
       try {
-        opened = await openStorage();
+        opened = await openAndLoad();
       } catch (error) {
         if (!(error instanceof NewerVersionError)) throw error;
         setProblem("newer-version");
         return;
       }
-      const stored = await opened.load();
+      const { store: openedStore, stored } = opened;
       // The example week is marked as loaded at the same moment its rows are saved.
       const now = Temporal.Now.instant();
       const loaded = stored.isStored ? stored.plan : createExampleWeek(now, randomIds);
-      if (!stored.isStored) await opened.save(undefined, loaded, now);
+      if (!stored.isStored) await openedStore.save(undefined, loaded, now);
       if (isDisposed) return;
-      setStore(opened);
+      setStore(openedStore);
       setPlan(loaded);
-      Object.assign(window, { weekBudgetPlanner: { store: opened } });
-      stopWatching = opened.onExternalChange(() => {
+      Object.assign(window, { weekBudgetPlanner: { store: openedStore } });
+      stopWatching = openedStore.onExternalChange(() => {
         latestReload += 1;
         const reload = latestReload;
         const showLatest = async (): Promise<void> => {
-          const { plan: changed } = await opened.load();
+          const { plan: changed } = await openedStore.load();
           if (reload === latestReload) setPlan(changed);
         };
         showLatest().catch((error: unknown) => {
+          if (error instanceof NewerVersionError) {
+            setProblem("newer-version");
+            return;
+          }
           // The plan on screen stays as it was; the next change in another tab tries again.
           console.error("[app] couldn't reload the plan another tab changed", error);
         });

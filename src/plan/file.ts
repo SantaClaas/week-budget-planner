@@ -45,28 +45,46 @@ export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" 
   } catch {
     return "not-a-plan";
   }
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !("version" in data) ||
-    typeof data.version !== "number"
-  ) {
-    return "not-a-plan";
+  if (isFromNewerVersion(data)) return "newer-version";
+  const isVersionOne =
+    typeof data === "object" && data !== null && "version" in data && data.version === 1;
+  return isVersionOne ? sanitizePlan(data, ids) : "not-a-plan";
+}
+
+/** Whether a newer version of the app wrote the data: a `version` above 1. */
+const isFromNewerVersion = (data: unknown): boolean =>
+  typeof data === "object" &&
+  data !== null &&
+  "version" in data &&
+  typeof data.version === "number" &&
+  data.version > 1;
+
+/**
+ * Whether the stored text is a plan from a newer version of the app, which this version must
+ * neither read as its own nor write over. Text that isn't JSON isn't from a newer version.
+ */
+export function isWrittenByNewerVersion(text: string): boolean {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return false;
   }
-  if (data.version > 1) return "newer-version";
-  return data.version === 1 ? sanitizePlan(data, ids) : "not-a-plan";
+  return isFromNewerVersion(data);
 }
 
 /**
- * Parses a plan file or stored JSON. Anything malformed becomes a valid (possibly empty) plan, and
- * invalid ids get new ones from `ids`.
+ * Parses stored JSON leniently: anything malformed becomes a valid (possibly empty) plan, and
+ * invalid ids get new ones from `ids`. Only a plan from a newer version is refused, with
+ * "newer-version", since sanitizing it would drop whatever this version doesn't know.
  */
-export function parse(text: string, ids: IdGenerator): Plan {
+export function parse(text: string, ids: IdGenerator): Result<Plan, "newer-version"> {
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
     return createEmptyPlan();
   }
+  if (isFromNewerVersion(data)) return "newer-version";
   return sanitizePlan(data, ids);
 }
