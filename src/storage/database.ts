@@ -15,7 +15,7 @@ export function create(): PlanStore {
     load: () => loadPlan(database, randomIds),
     async save(before, after, now) {
       await savePlan(database, before, after, now);
-      broadcastMessage({ type: "Plan changed" });
+      broadcastMessage({ type: "plan-changed" });
     },
     async exportFile() {
       const bytes = await databaseService.exportFile();
@@ -31,7 +31,7 @@ export function create(): PlanStore {
         const imported = await jsonFile.read(file);
         const { plan: current } = await loadPlan(database, randomIds);
         await savePlan(database, current, imported, now);
-        broadcastMessage({ type: "Plan changed" });
+        broadcastMessage({ type: "plan-changed" });
         return;
       }
       // The leader checks the file, writes it to OPFS and reloads every tab, including this one.

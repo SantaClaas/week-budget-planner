@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PROTOCOL_VERSION } from "./protocol/index.ts";
 import { consume, ProviderMissingError, provide, RemoteCallError } from "./service.ts";
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
@@ -49,6 +50,23 @@ describe("broadcast service", () => {
     expect(error).toBeInstanceOf(RemoteCallError);
     expect(error).toHaveProperty("cause.name", "NamedError");
     expect(error).toHaveProperty("cause.message", "on purpose");
+  });
+
+  it("doesn't take a provider of another protocol version for one", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "performance"] });
+    const other = openChannel();
+    other.addEventListener("message", () => {
+      other.postMessage({
+        protocolVersion: PROTOCOL_VERSION + 1,
+        scope: "test",
+        type: "provider-ready",
+        providerId: "newer",
+      });
+    });
+    const { proxy } = consume<Calculator>(openChannel(), "test");
+    const outcome = proxy.add(1, 1).catch((reason: unknown) => reason);
+    await vi.advanceTimersByTimeAsync(10_500);
+    expect(await outcome).toBeInstanceOf(ProviderMissingError);
   });
 
   it("gives up with ProviderMissingError when no provider answers for 10 seconds", async () => {
