@@ -161,17 +161,17 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
     lastHeardAt = performance.now();
     query();
     queryTimer = setInterval(() => {
-      if (performance.now() - lastHeardAt > SILENCE_LIMIT_MILLISECONDS) {
-        // Forget the silent provider, so the next call looks for one again.
-        providerId = undefined;
-        settleWaiters((waiter) => {
-          waiter.reject(new ProviderMissingError("No database leader tab answered."));
-        });
-        failSent(new CallLostError("The database leader tab stopped answering."));
-        stopQueryingWhenIdle();
+      if (performance.now() - lastHeardAt <= SILENCE_LIMIT_MILLISECONDS) {
+        query();
         return;
       }
-      query();
+      // Forget the silent provider, so the next call looks for one again.
+      providerId = undefined;
+      settleWaiters((waiter) => {
+        waiter.reject(new ProviderMissingError("No database leader tab answered."));
+      });
+      failSent(new CallLostError("The database leader tab stopped answering."));
+      stopQueryingWhenIdle();
     }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
   }
 
