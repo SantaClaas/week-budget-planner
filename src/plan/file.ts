@@ -62,9 +62,11 @@ export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" 
  * invalid ids get new ones from `ids`.
  */
 export function parse(text: string, ids: IdGenerator): Plan {
+  let data: unknown;
   try {
-    return sanitizePlan(JSON.parse(text), ids);
+    data = JSON.parse(text);
   } catch {
     return createEmptyPlan();
   }
+  return sanitizePlan(data, ids);
 }

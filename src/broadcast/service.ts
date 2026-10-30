@@ -51,41 +51,52 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       return;
     }
     if (message.kind !== "call") return;
-    void (async () => {
-      try {
-        const method = target[message.property];
-        if (typeof method !== "function") {
-          throw new TypeError(`Unknown service method: ${message.property}`);
-        }
-        const result: unknown = await Reflect.apply(method, target, message.parameters);
-        channel.postMessage({
-          scope,
-          kind: "result",
-          id: message.id,
-          result,
-        } satisfies ServiceMessage);
-      } catch (error) {
-        try {
-          // Structured cloning turns custom errors into a plain Error, so the name travels apart.
-          channel.postMessage({
-            scope,
-            kind: "error",
-            id: message.id,
-            error,
-            ...(error instanceof Error && { name: error.name }),
-          } satisfies ServiceMessage);
-        } catch {
-          // The error wasn't structured-cloneable; send its string form.
-          channel.postMessage({
-            scope,
-            kind: "error",
-            id: message.id,
-            error: String(error),
-          } satisfies ServiceMessage);
-        }
-      }
-    })();
+    // answer posts every outcome itself, failures included, so nothing is left to handle here.
+    void answer(message);
   });
+
+  /** Runs the call and posts its result or its error to the consumer that's waiting. */
+  async function answer(call: { id: string; property: string; parameters: unknown[] }) {
+    const method = target[call.property];
+    if (typeof method !== "function") {
+      postError(call.id, new TypeError(`Unknown service method: ${call.property}`));
+      return;
+    }
+    let result: unknown;
+    try {
+      result = await Reflect.apply(method, target, call.parameters);
+    } catch (error) {
+      postError(call.id, error);
+      return;
+    }
+    try {
+      channel.postMessage({ scope, kind: "result", id: call.id, result } satisfies ServiceMessage);
+    } catch (error) {
+      // The result isn't structured-cloneable, so the consumer hears that instead.
+      postError(call.id, error);
+    }
+  }
+
+  function postError(id: string, error: unknown): void {
+    try {
+      // Structured cloning turns custom errors into a plain Error, so the name travels apart.
+      channel.postMessage({
+        scope,
+        kind: "error",
+        id,
+        error,
+        ...(error instanceof Error && { name: error.name }),
+      } satisfies ServiceMessage);
+    } catch {
+      // The error isn't structured-cloneable; send its string form.
+      channel.postMessage({
+        scope,
+        kind: "error",
+        id,
+        error: String(error),
+      } satisfies ServiceMessage);
+    }
+  }
 
   channel.postMessage(ready);
 }

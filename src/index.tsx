@@ -7,7 +7,7 @@ import { render } from "@solidjs/web";
 
 import { App } from "./App.tsx";
 import { loadOpticalSizes } from "./font/index.ts";
-import { loadPolyfills } from "./polyfills.ts";
+import { loadPolyfills } from "./polyfills/index.ts";
 
 await loadPolyfills();
 // Straight into the body, with no wrapper element (see Shape in docs/guidelines/solid.md). Solid

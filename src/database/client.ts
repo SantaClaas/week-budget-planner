@@ -107,6 +107,7 @@ async function writeFile(
 ): Promise<void> {
   const handle = await root.getFileHandle(name, { create: true });
   const writable = await handle.createWritable();
+  // The write and the close are one operation, since closing is what commits the file.
   try {
     await writable.write(bytes);
     await writable.close();
@@ -149,27 +150,27 @@ async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
 ): Promise<Result<"importable", ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
-  const root = await navigator.storage.getDirectory();
+  await using cleanup = new AsyncDisposableStack();
+  cleanup.defer(removeImportLeftovers);
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
-  await writeFile(root, name, bytes);
-  let connection: TursoConnection | undefined;
+  await writeFile(await navigator.storage.getDirectory(), name, bytes);
   try {
-    connection = await connectFile(name);
-    await runMigrations(connection);
-    const opened = connection;
-    await loadPlan(
-      createDatabase(createLocalQueryService(() => Promise.resolve(opened))),
-      randomIds,
-    );
-    return "importable";
+    await readCopy(name);
   } catch (error) {
     if (error instanceof NewerDatabaseError) return "newer-version";
     console.warn("[database] the imported file can't be opened", error);
     return "invalid-file";
-  } finally {
-    await connection?.close();
-    await removeImportLeftovers();
   }
+  return "importable";
+}
+
+/** Opens the copy of an imported database, migrates it and reads its plan. Throws when it can't. */
+async function readCopy(name: string): Promise<void> {
+  await using resources = new AsyncDisposableStack();
+  const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
+  await runMigrations(connection);
+  const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
+  await loadPlan(database, randomIds);
 }
 
 function broadcastReload(): void {
@@ -201,10 +202,7 @@ const localService: DatabaseService = {
     if (check !== "importable") return check;
     await closeForReload();
     try {
-      const root = await navigator.storage.getDirectory();
-      // Drop the WAL so it cannot be replayed over the imported file.
-      await removeFile(root, `${DATABASE_FILE}-wal`);
-      await writeFile(root, DATABASE_FILE, bytes);
+      await replaceDatabaseFile(bytes);
     } catch (error) {
       localDatabase = open();
       throw error;
@@ -224,6 +222,13 @@ const localService: DatabaseService = {
     broadcastReload();
   },
 };
+
+async function replaceDatabaseFile(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  // Drop the WAL so it cannot be replayed over the imported file.
+  await removeFile(root, `${DATABASE_FILE}-wal`);
+  await writeFile(root, DATABASE_FILE, bytes);
+}
 
 async function removeDatabaseFiles(): Promise<void> {
   const root = await navigator.storage.getDirectory();

@@ -108,25 +108,24 @@ function checkFile(checker: Checker, file: SourceFile, folder: string): Finding[
 /** Checks every file of the folder's projects, each file once, outside node_modules. */
 export function check(folder = root): Finding[] {
   const configs = readConfigs(folder);
-  const api = new API({ cwd: folder });
-  try {
-    const snapshot = api.updateSnapshot({ openProjects: configs });
-    const findings: Finding[] = [];
-    const checked = new Set<string>();
-    for (const config of configs) {
-      const project = snapshot.getProject(config);
-      if (!project) throw new Error(`TypeScript couldn't open ${relative(folder, config)}.`);
-      for (const name of project.program.getSourceFileNames()) {
-        if (name.includes("/node_modules/") || checked.has(name)) continue;
-        checked.add(name);
-        const file = project.program.getSourceFile(name);
-        if (file) findings.push(...checkFile(project.checker, file, folder));
-      }
+  using resources = new DisposableStack();
+  const api = resources.adopt(new API({ cwd: folder }), (opened) => {
+    opened.close();
+  });
+  const snapshot = api.updateSnapshot({ openProjects: configs });
+  const findings: Finding[] = [];
+  const checked = new Set<string>();
+  for (const config of configs) {
+    const project = snapshot.getProject(config);
+    if (!project) throw new Error(`TypeScript couldn't open ${relative(folder, config)}.`);
+    for (const name of project.program.getSourceFileNames()) {
+      if (name.includes("/node_modules/") || checked.has(name)) continue;
+      checked.add(name);
+      const file = project.program.getSourceFile(name);
+      if (file) findings.push(...checkFile(project.checker, file, folder));
     }
-    return findings;
-  } finally {
-    api.close();
   }
+  return findings;
 }
 
 if (import.meta.main) {

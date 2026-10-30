@@ -39,16 +39,18 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
   }
   const relative = normalize(path.slice(BASE.length) || "index.html").replace(/^(\.\.[/\\])+/u, "");
   const file = join(root, relative.endsWith("/") ? `${relative}index.html` : relative);
+  let body: Buffer;
   try {
-    const body = await readFile(file);
-    response.writeHead(200, {
-      "Content-Type": CONTENT_TYPES.get(extname(file)) ?? "application/octet-stream",
-      ...(values.isolated && isolation),
-    });
-    response.end(body);
+    body = await readFile(file);
   } catch {
     response.writeHead(404).end();
+    return;
   }
+  response.writeHead(200, {
+    "Content-Type": CONTENT_TYPES.get(extname(file)) ?? "application/octet-stream",
+    ...(values.isolated && isolation),
+  });
+  response.end(body);
 }
 
 createServer((request, response) => {

@@ -6,5 +6,9 @@ declare module "virtual:app-version" {
   export default version;
 }
 
-/** core-js ships no types. Its iterator entry only installs the helpers (see src/polyfills.ts). */
+/** core-js ships no types. These entries only install globals (see src/polyfills/index.ts). */
 declare module "core-js/es/iterator/index.js";
+declare module "core-js/es/symbol/dispose.js";
+declare module "core-js/es/symbol/async-dispose.js";
+declare module "core-js/es/disposable-stack/index.js";
+declare module "core-js/es/async-disposable-stack/index.js";

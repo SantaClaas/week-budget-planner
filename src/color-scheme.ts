@@ -27,12 +27,13 @@ const findMeta = (): ColorSchemeMeta | null =>
 
 /** The stored choice. "light dark" (follow the system) when nothing valid is stored, or storage is blocked. */
 export function read(storage: ColorSchemeStorage | undefined = findStorage()): ColorScheme {
+  let stored: string | null | undefined;
   try {
-    const stored = storage?.getItem(STORAGE_KEY);
-    return stored === "light" || stored === "dark" ? stored : "light dark";
+    stored = storage?.getItem(STORAGE_KEY);
   } catch {
     return "light dark";
   }
+  return stored === "light" || stored === "dark" ? stored : "light dark";
 }
 
 /** Points the color-scheme meta at the choice. */

@@ -37,31 +37,47 @@ function isFromNewerVersion(error: unknown): boolean {
  */
 export async function open(): Promise<PlanStore> {
   if (!isDatabaseUsable()) return openFallback();
-  let database: typeof import("./database.ts") | undefined;
+  let database: DatabaseModule;
   try {
     database = await import("./database.ts");
-    const store = database.create();
-    await store.load();
-    return store;
   } catch (error) {
-    if (isFromNewerVersion(error)) {
-      throw new NewerVersionError(
-        "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.",
-        { cause: error },
-      );
-    }
-    console.warn("[storage] the database couldn't be opened, using limited storage", error);
-    const fallback = openFallback();
-    // No file means the browser refused the database, as in a private window: nothing to report.
-    if (!database || !(await database.hasDatabaseFile())) return fallback;
-    const { removeBrokenDatabase } = database;
-    return {
-      ...fallback,
-      fallbackReason: "database-broken",
-      async wipe() {
-        await fallback.wipe();
-        removeBrokenDatabase();
-      },
-    };
+    // Without its chunk the database never opened, so there's no broken file to report.
+    console.warn("[storage] the database code didn't load, using limited storage", error);
+    return openFallback();
   }
+  const store = database.create();
+  try {
+    await store.load();
+  } catch (error) {
+    return openFallbackAfter(error, database);
+  }
+  return store;
+}
+
+type DatabaseModule = typeof import("./database.ts");
+
+/**
+ * The next level down after the database failed to open, saying so when its file exists. Throws
+ * {@link NewerVersionError} instead when a newer version of the app saved it.
+ */
+async function openFallbackAfter(error: unknown, database: DatabaseModule): Promise<PlanStore> {
+  if (isFromNewerVersion(error)) {
+    throw new NewerVersionError(
+      "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.",
+      { cause: error },
+    );
+  }
+  console.warn("[storage] the database couldn't be opened, using limited storage", error);
+  const fallback = openFallback();
+  // No file means the browser refused the database, as in a private window: nothing to report.
+  if (!(await database.hasDatabaseFile())) return fallback;
+  const { removeBrokenDatabase } = database;
+  return {
+    ...fallback,
+    fallbackReason: "database-broken",
+    async wipe() {
+      await fallback.wipe();
+      removeBrokenDatabase();
+    },
+  };
 }
