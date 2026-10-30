@@ -176,7 +176,7 @@ async function readCopy(name: string): Promise<void> {
 function broadcastReload(): void {
   // Every tab must restart on the new data; the poster doesn't receive its own broadcast, so the
   // leader reloads itself explicitly.
-  channel?.postMessage({ scope: SCOPE, kind: "reload" });
+  channel?.postMessage({ scope: SCOPE, type: "reload" });
   location.reload();
 }
 
@@ -276,8 +276,8 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
     consumer = consume<DatabaseService>(channel, SCOPE);
     channel.addEventListener(
       "message",
-      (event: MessageEvent<{ scope?: string; kind?: string }>) => {
-        if (event.data?.scope === SCOPE && event.data.kind === "reload") location.reload();
+      (event: MessageEvent<{ scope?: string; type?: string }>) => {
+        if (event.data?.scope === SCOPE && event.data.type === "reload") location.reload();
       },
     );
   }
