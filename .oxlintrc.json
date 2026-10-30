@@ -22,6 +22,9 @@
     "week-budget-planner/require-reason": "error",
     // Return early instead (see Functions in docs/guidelines/principles.md).
     "week-budget-planner/no-else": "error",
+    // A catch handles one operation's failure, never a mistake around it (see Functions in
+    // docs/guidelines/principles.md).
+    "week-budget-planner/one-operation-per-try": "error",
     // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
     // sanitizer or a type guard instead. `as const` is still allowed.
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],

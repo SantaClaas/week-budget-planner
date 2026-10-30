@@ -107,7 +107,7 @@ async function writeFile(
 ): Promise<void> {
   const handle = await root.getFileHandle(name, { create: true });
   const writable = await handle.createWritable();
-  // The write and the close are one operation, since closing is what commits the file.
+  // oxlint-disable-next-line week-budget-planner/one-operation-per-try -- the write and the close are one operation, since closing is what commits the file.
   try {
     await writable.write(bytes);
     await writable.close();
@@ -238,13 +238,19 @@ async function removeDatabaseFiles(): Promise<void> {
 
 /** Whether this browser has a database file, so a failure to open it means it's broken. */
 export async function hasDatabaseFile(): Promise<boolean> {
+  let root: FileSystemDirectoryHandle;
   try {
-    const root = await navigator.storage.getDirectory();
+    root = await navigator.storage.getDirectory();
+  } catch {
+    // The browser refused OPFS, as in some private windows, so there's no file either.
+    return false;
+  }
+  try {
     await root.getFileHandle(DATABASE_FILE);
-    return true;
   } catch {
     return false;
   }
+  return true;
 }
 
 function readRemovalRequest(): boolean {

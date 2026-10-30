@@ -31,10 +31,11 @@ function attemptForbidden(): Promise<Record<string, string>> {
       for (const [name, attempt] of Object.entries(attempts)) {
         try {
           attempt();
-          outcomes[name] = "allowed";
         } catch (error) {
           outcomes[name] = error instanceof Error ? error.name : "thrown";
+          continue;
         }
+        outcomes[name] = "allowed";
       }
       resolve(outcomes);
     });

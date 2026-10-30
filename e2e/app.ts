@@ -57,10 +57,10 @@ export async function importFile(
         if (store === undefined) throw new Error("The app hasn't opened its storage.");
         try {
           await store.importFile(new File([new Uint8Array(content)], fileName, { type: fileType }));
-          return "imported";
         } catch (error) {
           return error instanceof Error ? error.message : String(error);
         }
+        return "imported";
       },
       { name, bytes: [...bytes], type },
     )
@@ -89,10 +89,10 @@ export function tryLoading(page: Page): Promise<"answered" | "gave up"> {
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
     try {
       await store.load();
-      return "answered";
     } catch {
       return "gave up";
     }
+    return "answered";
   });
 }
 
