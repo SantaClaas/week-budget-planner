@@ -168,6 +168,18 @@ sequenceDiagram
   Tab->>Tab: the call fails, and isn't retried, since the leader may have applied it
 ```
 
+## Tabs on different versions
+
+After an update, a tab that was already open keeps running the old version while a new tab runs the new one, and both share the plan. Each thing they share carries a version of its own, so a tab can tell when the other side is newer than it:
+
+- **The database** has Drizzle's list of applied migrations: a tab that finds one it doesn't know shows "Your plan was saved by a newer version" (see Export, import and reset).
+- **The plan in `localStorage`** has its `version`: a tab never reads a newer plan as its own and never writes over it.
+- **The messages between tabs** carry `protocolVersion` ([`src/broadcast/protocol/index.ts`](../../src/broadcast/protocol/index.ts)), next to `scope` and `type`. A tab never interprets a message of another protocol version: it ignores it, so it can't misread a shape it doesn't know.
+
+**The protocol version is bumped by hand**, like an IndexedDB version, for a change an older tab can't read, and not with every release, since most releases don't change the messages. Each released version's messages are frozen in a file of their own ([`src/broadcast/protocol/version-1.ts`](../../src/broadcast/protocol/version-1.ts)), which never changes again. A test compares the current messages with the frozen ones of the version they claim to be, in the spirit of Rust's cargo-semver-checks: each side has to be able to read what the other sends, so an added optional field passes, while a renamed or retyped field, a removed message or a new message an older tab can't read fails `pnpm typecheck`. A breaking change then means bumping the version and freezing its messages next to the old ones, which the same test asks for.
+
+Still to come: an outdated leader steps down so the newer tab can migrate the database, an outdated tab that isn't in use reloads by itself, and one in use shows a prompt to reload that doesn't interrupt what the user is doing.
+
 ## Hosting on GitHub Pages
 
 - The app is a static site on GitHub Pages, deployed by [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) (pnpm install, test, build, then the Pages actions) on every push to `main`. The repository's Pages source must be set to GitHub Actions. It is served from the project path (`/week-budget-planner/`), so set Vite's `base` to it and resolve every URL (the iconset, fonts, the service worker and its scope) against the base.

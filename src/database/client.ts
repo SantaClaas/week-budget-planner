@@ -2,7 +2,14 @@
 // BroadcastChannel RPC, serving Drizzle's sqlite-proxy calls instead of plain row objects.
 import { connect } from "@tursodatabase/database-wasm/vite";
 
-import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service.ts";
+import { PROTOCOL_VERSION } from "../broadcast/protocol/index.ts";
+import {
+  consume,
+  provide,
+  ProviderChangedError,
+  type Consumer,
+  type ServiceMessage,
+} from "../broadcast/service.ts";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
 import { NewerDatabaseError, runMigrations } from "./migration.ts";
@@ -176,7 +183,11 @@ async function readCopy(name: string): Promise<void> {
 function broadcastReload(): void {
   // Every tab must restart on the new data; the poster doesn't receive its own broadcast, so the
   // leader reloads itself explicitly.
-  channel?.postMessage({ scope: SCOPE, type: "reload" });
+  channel?.postMessage({
+    protocolVersion: PROTOCOL_VERSION,
+    scope: SCOPE,
+    type: "reload",
+  } satisfies ServiceMessage);
   location.reload();
 }
 
@@ -274,12 +285,11 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
   if (!channel || !consumer) {
     channel = new BroadcastChannel(CHANNEL_NAME);
     consumer = consume<DatabaseService>(channel, SCOPE);
-    channel.addEventListener(
-      "message",
-      (event: MessageEvent<{ scope?: string; type?: string }>) => {
-        if (event.data?.scope === SCOPE && event.data.type === "reload") location.reload();
-      },
-    );
+    channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
+      const message = event.data;
+      if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== SCOPE) return;
+      if (message.type === "reload") location.reload();
+    });
   }
   return { channel, consumer };
 }

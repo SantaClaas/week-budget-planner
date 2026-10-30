@@ -10,15 +10,21 @@
  * tell a leadership change apart from a plain "still here" reply.
  */
 
+import { PROTOCOL_VERSION } from "./protocol/index.ts";
+
 /** Every exposed method must be async — the channel makes everything async anyway. */
 type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
 
-type ServiceMessage =
-  | { scope: string; type: "call"; id: string; property: string; parameters: unknown[] }
-  | { scope: string; type: "result"; id: string; result: unknown }
-  | { scope: string; type: "error"; id: string; error: unknown; name?: string }
-  | { scope: string; type: "provider-ready"; providerId: string }
-  | { scope: string; type: "provider-query" };
+/** Every message on the channel. Changing it can break older tabs (see ./protocol/index.ts). */
+export type ServiceMessage = { protocolVersion: number; scope: string } & (
+  | { type: "call"; id: string; property: string; parameters: unknown[] }
+  | { type: "result"; id: string; result: unknown }
+  | { type: "error"; id: string; error: unknown; name?: string }
+  | { type: "provider-ready"; providerId: string }
+  | { type: "provider-query" }
+  // Every tab reloads, after the database file was replaced or deleted.
+  | { type: "reload" }
+);
 
 /**
  * The call had not been sent yet when this tab was promoted to provider — it was never delivered
@@ -47,11 +53,16 @@ function readRemoteError(error: unknown, name: string | undefined): RemoteCallEr
 /** Serve `target`'s methods to all consumer tabs on the channel. */
 export function provide(channel: BroadcastChannel, scope: string, target: AsyncApi): void {
   const providerId = crypto.randomUUID();
-  const ready: ServiceMessage = { scope, type: "provider-ready", providerId };
+  const ready: ServiceMessage = {
+    protocolVersion: PROTOCOL_VERSION,
+    scope,
+    type: "provider-ready",
+    providerId,
+  };
 
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
-    if (message.scope !== scope) return;
+    if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== scope) return;
     switch (message.type) {
       case "provider-query":
         channel.postMessage(ready);
@@ -64,6 +75,9 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       case "result":
       case "error":
         // Messages for consumers.
+        break;
+      case "reload":
+        // Every tab's owner handles it (see src/database/client.ts).
         break;
     }
   });
@@ -83,7 +97,13 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       return;
     }
     try {
-      channel.postMessage({ scope, type: "result", id: call.id, result } satisfies ServiceMessage);
+      channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
+        scope,
+        type: "result",
+        id: call.id,
+        result,
+      } satisfies ServiceMessage);
     } catch (error) {
       // The result isn't structured-cloneable, so the consumer hears that instead.
       postError(call.id, error);
@@ -94,6 +114,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
     try {
       // Structured cloning turns custom errors into a plain Error, so the name travels apart.
       channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
         scope,
         type: "error",
         id,
@@ -103,6 +124,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
     } catch {
       // The error isn't structured-cloneable; send its string form.
       channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
         scope,
         type: "error",
         id,
@@ -147,7 +169,11 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   let lastHeardAt = 0;
 
   const query = (): void => {
-    channel.postMessage({ scope, type: "provider-query" } satisfies ServiceMessage);
+    channel.postMessage({
+      protocolVersion: PROTOCOL_VERSION,
+      scope,
+      type: "provider-query",
+    } satisfies ServiceMessage);
   };
 
   function failSent(reason: Error) {
@@ -190,7 +216,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
 
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
-    if (message.scope !== scope) return;
+    if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== scope) return;
     switch (message.type) {
       case "provider-ready":
         acceptProvider(message.providerId);
@@ -204,6 +230,9 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
       case "call":
       case "provider-query":
         // Messages for the provider.
+        break;
+      case "reload":
+        // Every tab's owner handles it (see src/database/client.ts).
         break;
     }
   });
@@ -260,6 +289,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
         });
         startQuerying();
         channel.postMessage({
+          protocolVersion: PROTOCOL_VERSION,
           scope,
           type: "call",
           id,
