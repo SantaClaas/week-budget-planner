@@ -14,10 +14,10 @@ export type ActivityFormInput = {
 
 export type ActivityFormResult = Result<
   {
-    ok: true;
+    type: "valid";
     value: { name: ActivityName; budgetMinutes: BudgetMinutes; mode: Mode; days: DayCount };
   },
-  { ok: false; field: "name" | "hours" | "days"; message: string }
+  { type: "invalid"; field: "name" | "hours" | "days"; message: string }
 >;
 
 const decimalSeparators = new Map<string, string>();
@@ -48,27 +48,40 @@ export function parseDecimal(text: string, locale?: string): number {
 /** Validates the activity form with the prototype's messages. Hours round to the slot. */
 export function readActivityForm(input: ActivityFormInput, locale?: string): ActivityFormResult {
   const name = parseActivityName(input.name);
-  if (name === "empty") return { ok: false, field: "name", message: "Give the activity a name." };
+  if (name === "empty")
+    return { type: "invalid", field: "name", message: "Give the activity a name." };
   // An empty field and text that isn't a number both parse to NaN, but get different messages.
   const hours = input.hours.trim();
   const budgetMinutes = parseBudgetMinutes(parseDecimal(hours, locale) * 60, input.mode);
   if (hours === "" || budgetMinutes === "too-small") {
-    return { ok: false, field: "hours", message: "Enter the hours it needs, for example 1.5." };
+    return {
+      type: "invalid",
+      field: "hours",
+      message: "Enter the hours it needs, for example 1.5.",
+    };
   }
   if (budgetMinutes === "unreadable") {
-    return { ok: false, field: "hours", message: "Enter the hours as a number, for example 1.5." };
+    return {
+      type: "invalid",
+      field: "hours",
+      message: "Enter the hours as a number, for example 1.5.",
+    };
   }
   if (budgetMinutes === "too-large") {
     const message =
       input.mode === "day"
         ? "A day has 24 hours. Enter 24 or less."
         : "A week has 168 hours. Enter 168 or less.";
-    return { ok: false, field: "hours", message };
+    return { type: "invalid", field: "hours", message };
   }
   // Per week, the days aren't asked for and keep their default.
   const days = parseDayCount(input.mode === "day" ? Number(input.days.trim() || NaN) : 5);
   if (days === "out-of-range") {
-    return { ok: false, field: "days", message: "Enter how many days per week, from 1 to 7." };
+    return {
+      type: "invalid",
+      field: "days",
+      message: "Enter how many days per week, from 1 to 7.",
+    };
   }
-  return { ok: true, value: { name, budgetMinutes, mode: input.mode, days } };
+  return { type: "valid", value: { name, budgetMinutes, mode: input.mode, days } };
 }
