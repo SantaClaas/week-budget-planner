@@ -1,4 +1,4 @@
-import type { Plan } from "../plan/types.ts";
+import type { Plan } from "../plan/index.ts";
 
 /**
  * How much the browser lets the app save (see "Progressive enhancement" in

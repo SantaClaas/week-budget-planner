@@ -3,7 +3,9 @@ import { asc, eq, inArray } from "drizzle-orm";
 
 import type { IdGenerator } from "../plan/id.ts";
 import { sanitizePlan } from "../plan/sanitize.ts";
-import type { Activity, Block, Plan } from "../plan/types.ts";
+import type { Activity } from "../plan/activity/index.ts";
+import type { Block } from "../plan/block/index.ts";
+import type { Plan } from "../plan/index.ts";
 import type { Database } from "./drizzle.ts";
 import { activities, blocks, settings } from "./schema.ts";
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slots.ts";
+import { findFirstFreeSlot, isFree, findOpeningMinute } from "./slot.ts";
 import { sanitizeDayIndex, sanitizeDayMinute, sanitizeDayStart, sanitizeLength } from "./time.ts";
-import { type Block } from "./types.ts";
+import { type Block } from "./block/index.ts";
 import { createActivity, createBlock, createDayHours } from "./test-data.ts";
 
 describe("slots", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseActivityName, sanitizeActivityName } from "./activity-name.ts";
+import { parseActivityName, sanitizeActivityName } from "./name.ts";
 
 describe("parseActivityName", () => {
   it("trims the name", () => {

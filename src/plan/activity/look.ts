@@ -1,56 +1,4 @@
-import type { ActivityName } from "./activity-name.ts";
-import type { ActivityId, BlockId } from "./id.ts";
-import {
-  sanitizeDayEnd,
-  sanitizeDayStart,
-  type BudgetMinutes,
-  type DayCount,
-  type DayIndex,
-  type DayMinute,
-  type Hour,
-  type Length,
-} from "./time.ts";
-
-export type Mode = "week" | "day";
-
-export type Activity = {
-  id: ActivityId;
-  name: ActivityName;
-  /** One of the palette hues, see {@link PALETTE}. */
-  hue: Hue;
-  /** One of the Material shape names, see {@link SHAPES}. */
-  shape: Shape;
-  /** How the budget is counted. */
-  mode: Mode;
-  /** Budget in minutes, per week or per day. */
-  budgetMinutes: BudgetMinutes;
-  /** Days per week. Used only when `mode` is "day". */
-  days: DayCount;
-};
-
-export type Block = {
-  id: BlockId;
-  activityId: ActivityId;
-  day: DayIndex;
-  start: DayMinute;
-  /** `start + length` may pass midnight (an overnight block). */
-  length: Length;
-};
-
-export type Plan = {
-  version: 1;
-  activities: Activity[];
-  blocks: Block[];
-  /** First of the day hours, 0 to 12. */
-  dayStart: Hour;
-  /** End of the day hours, 13 to 24. */
-  dayEnd: Hour;
-  /**
-   * When the example week was loaded, as an ISO 8601 time in UTC. Null when there is no example
-   * week: it was never loaded, or it was kept or replaced.
-   */
-  exampleLoadedAt: string | null;
-};
+// An activity's look: its color and its shape, and the default a new activity gets.
 
 /** The eight activity colors, keyed by the stored hue value. */
 export const PALETTE = [
@@ -143,13 +91,49 @@ export const DEFAULT_SHAPES = [
 export type Hue = (typeof PALETTE)[number]["hue"];
 export type Shape = (typeof SHAPES)[number];
 
-export function createEmptyPlan(): Plan {
-  return {
-    version: 1,
-    activities: [],
-    blocks: [],
-    dayStart: sanitizeDayStart(7),
-    dayEnd: sanitizeDayEnd(22),
-    exampleLoadedAt: null,
-  };
+/** The palette's hues, in its order. */
+const HUES: readonly Hue[] = PALETTE.map((color) => color.hue);
+
+/** 32-bit FNV-1a over the UTF-8 bytes of `text`. */
+export function hashFnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(text)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+/** The first item from `start` (wrapping) that isn't in `used`, or the one at `start` if all are. */
+function findFirstUnused<T>(items: readonly T[], start: number, used: ReadonlySet<T>): T {
+  for (let step = 0; step < items.length; step++) {
+    const item = items[(start + step) % items.length];
+    if (item !== undefined && !used.has(item)) return item;
+  }
+  const fallback = items[start];
+  if (fallback === undefined)
+    throw new RangeError(`No item at ${start.toString()} to fall back to.`);
+  return fallback;
+}
+
+/**
+ * The default color and shape for an activity, ideally ones no other activity uses yet. Derived
+ * from the id, so the same id and the same other activities always give the same result.
+ */
+export function pickDefaultLook(
+  id: string,
+  others: readonly { readonly hue: Hue; readonly shape: Shape }[],
+): { hue: Hue; shape: Shape } {
+  const hash = hashFnv1a32(id);
+  const hue = findFirstUnused(
+    HUES,
+    hash % HUES.length,
+    new Set(others.values().map((other) => other.hue)),
+  );
+  const shape = findFirstUnused<Shape>(
+    DEFAULT_SHAPES,
+    (hash >>> 8) % DEFAULT_SHAPES.length,
+    new Set(others.values().map((other) => other.shape)),
+  );
+  return { hue, shape };
 }

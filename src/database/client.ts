@@ -5,7 +5,7 @@ import { connect } from "@tursodatabase/database-wasm/vite";
 import { consume, provide, ProviderChangedError, type Consumer } from "../broadcast/service.ts";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
-import { NewerDatabaseError, runMigrations } from "./migrations.ts";
+import { NewerDatabaseError, runMigrations } from "./migration.ts";
 import { loadPlan } from "./plan-repository.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Result } from "../result.ts";

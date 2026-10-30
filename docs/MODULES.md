@@ -13,7 +13,7 @@ flowchart LR
   module_font["font"]
   module_index["index"]
   module_plan["plan"]
-  module_polyfills["polyfills"]
+  module_polyfill["polyfill"]
   module_result["result"]
   module_storage["storage"]
   module_trusted_html["trusted-html"]
@@ -24,7 +24,8 @@ flowchart LR
   module_database --> module_result
   module_index --> module_App
   module_index --> module_font
-  module_index --> module_polyfills
+  module_index --> module_polyfill
+  module_index --> module_trusted_html
   module_plan --> module_brand
   module_plan --> module_result
 ```

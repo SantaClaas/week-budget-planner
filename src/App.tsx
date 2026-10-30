@@ -4,7 +4,7 @@ import version from "virtual:app-version";
 
 import { createExampleWeek } from "./plan/example.ts";
 import { randomIds } from "./plan/id.ts";
-import type { Plan } from "./plan/types.ts";
+import type { Plan } from "./plan/index.ts";
 import { open as openStorage } from "./storage/index.ts";
 import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
 

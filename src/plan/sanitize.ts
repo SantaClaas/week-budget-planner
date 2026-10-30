@@ -1,5 +1,5 @@
-import { sanitizeActivityName } from "./activity-name.ts";
-import { pickDefaultLook } from "./defaults.ts";
+import { sanitizeActivityName } from "./activity/name.ts";
+import { pickDefaultLook } from "./activity/look.ts";
 import {
   sanitizeActivityId,
   sanitizeBlockId,
@@ -16,16 +16,10 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "./time.ts";
-import {
-  PALETTE,
-  SHAPES,
-  createEmptyPlan,
-  type Activity,
-  type Block,
-  type Hue,
-  type Plan,
-  type Shape,
-} from "./types.ts";
+import { PALETTE, SHAPES, type Hue, type Shape } from "./activity/look.ts";
+import { createEmptyPlan, type Plan } from "./index.ts";
+import { type Activity } from "./activity/index.ts";
+import { type Block } from "./block/index.ts";
 
 const PALETTE_HUES = new Set<number>(PALETTE.map((color) => color.hue));
 const SHAPE_NAMES = new Set<string>(SHAPES);

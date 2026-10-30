@@ -9,10 +9,10 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "../plan/time.ts";
-import type { Plan } from "../plan/types.ts";
+import type { Plan } from "../plan/index.ts";
 import { createLocalQueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
-import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migrations.ts";
+import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migration.ts";
 import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository.ts";
 import { activities as activitiesTable, blocks as blocksTable } from "./schema.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
