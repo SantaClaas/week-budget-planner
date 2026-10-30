@@ -28,6 +28,9 @@
     // A cleanup that runs however a scope ends is a using declaration (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/prefer-using": "error",
+    // The shorter of two branches goes inside the if (see Functions in
+    // docs/guidelines/principles.md).
+    "week-budget-planner/shorter-branch-first": "error",
     // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
     // sanitizer or a type guard instead. `as const` is still allowed.
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
