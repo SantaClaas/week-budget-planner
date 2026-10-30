@@ -8,7 +8,9 @@ import { check } from "./check-must-use.ts";
 
 // A small project of its own, so each case sits on a known line. The check asks TypeScript's
 // unstable API, so these cases are also what has to keep working when TypeScript is updated.
-const CODE = `type Result<Value, Problem> = Value | Problem;
+const CODE = `import * as other from "./other.ts";
+import { start } from "./other.ts";
+type Result<Value, Problem> = Value | Problem;
 const parse = (text: string): Result<number, "empty"> => (text ? 1 : "empty");
 const load = async (): Promise<Result<number, "gone">> => await Promise.resolve(1);
 /** @mustUse */
@@ -24,6 +26,8 @@ export async function run(store: Store, optional?: Store): Promise<number> {
   subscribe();
   store.watch(() => {});
   optional?.watch(() => {});
+  start();
+  other.start();
   void parse("c");
   void (await load());
   [1].push(2);
@@ -39,9 +43,23 @@ writeFileSync(
 );
 writeFileSync(
   join(folder, "code.json"),
-  JSON.stringify({ compilerOptions: { strict: true, noEmit: true }, files: ["code.ts"] }),
+  JSON.stringify({
+    compilerOptions: {
+      strict: true,
+      noEmit: true,
+      module: "esnext",
+      moduleResolution: "bundler",
+      allowImportingTsExtensions: true,
+    },
+    files: ["code.ts", "other.ts"],
+  }),
 );
 writeFileSync(join(folder, "code.ts"), CODE);
+// A function marked in another file, reached through an import.
+writeFileSync(
+  join(folder, "other.ts"),
+  "/** @mustUse Gives back the function that stops it. */\nexport const start = (): (() => void) => () => {};\n",
+);
 afterAll(() => {
   rmSync(folder, { recursive: true, force: true });
 });
@@ -49,14 +67,17 @@ afterAll(() => {
 describe("the must-use check", () => {
   const findings = check(folder);
 
-  it("finds every thrown-away Result and @mustUse value, awaited or not", () => {
+  it("finds every thrown-away Result and @mustUse value, awaited, imported or not", () => {
     expect(findings.map(({ file, line, column }) => `${file}:${line}:${column}`)).toEqual([
-      "code.ts:11:3",
-      "code.ts:12:3",
       "code.ts:13:3",
       "code.ts:14:3",
       "code.ts:15:3",
       "code.ts:16:3",
+      "code.ts:17:3",
+      "code.ts:18:3",
+      // Imported by name and through a namespace.
+      "code.ts:19:3",
+      "code.ts:20:3",
     ]);
   });
 

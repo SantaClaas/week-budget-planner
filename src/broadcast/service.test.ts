@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PROTOCOL_VERSION } from "./protocol/index.ts";
-import { consume, ProviderMissingError, provide, RemoteCallError } from "./service.ts";
+import {
+  consume,
+  NewerProtocolError,
+  ProviderMissingError,
+  provide,
+  RemoteCallError,
+} from "./service.ts";
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
 // their class when they're cloned, and a missing provider shows only as silence. These tests pin
@@ -23,6 +29,8 @@ function openChannel(): BroadcastChannel {
   return channel;
 }
 
+// Each test's providers serve until afterEach closes its channels, so their stop functions are
+// thrown away on purpose.
 afterEach(() => {
   vi.useRealTimers();
   for (const channel of channels.splice(0)) channel.close();
@@ -30,7 +38,7 @@ afterEach(() => {
 
 describe("broadcast service", () => {
   it("runs a call on the providing side and returns its result", async () => {
-    provide(openChannel(), "test", {
+    void provide(openChannel(), "test", {
       add: (first: number, second: number) => Promise.resolve(first + second),
     });
     const { proxy } = consume<Calculator>(openChannel(), "test");
@@ -44,7 +52,9 @@ describe("broadcast service", () => {
   });
 
   it("keeps an error's name across tabs, which cloning alone drops", async () => {
-    provide(openChannel(), "test", { fail: () => Promise.reject(new NamedError("on purpose")) });
+    void provide(openChannel(), "test", {
+      fail: () => Promise.reject(new NamedError("on purpose")),
+    });
     const { proxy } = consume<Calculator>(openChannel(), "test");
     const error: unknown = await proxy.fail().catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(RemoteCallError);
@@ -52,8 +62,7 @@ describe("broadcast service", () => {
     expect(error).toHaveProperty("cause.message", "on purpose");
   });
 
-  it("doesn't take a provider of another protocol version for one", async () => {
-    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "performance"] });
+  it("refuses its open calls at once when a tab on a newer protocol version answers", async () => {
     const other = openChannel();
     other.addEventListener("message", () => {
       other.postMessage({
@@ -63,10 +72,56 @@ describe("broadcast service", () => {
         providerId: "newer",
       });
     });
+    let newerVersions = 0;
+    const { proxy } = consume<Calculator>(openChannel(), "test", {
+      onNewerVersion: () => {
+        newerVersions++;
+      },
+    });
+    await expect(proxy.add(1, 1)).rejects.toBeInstanceOf(NewerProtocolError);
+    expect(newerVersions).toBeGreaterThan(0);
+  });
+
+  it("hands over to a newer protocol version, and stops serving when told", async () => {
+    let newerVersions = 0;
+    const stopServing = provide(
+      openChannel(),
+      "test",
+      { add: (first: number, second: number) => Promise.resolve(first + second) },
+      {
+        onNewerVersion: () => {
+          newerVersions++;
+        },
+      },
+    );
+    const newer = openChannel();
+    newer.postMessage({
+      protocolVersion: PROTOCOL_VERSION + 1,
+      scope: "test",
+      type: "provider-query",
+    });
+    await expect.poll(() => newerVersions).toBe(1);
+    stopServing();
     const { proxy } = consume<Calculator>(openChannel(), "test");
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "performance"] });
     const outcome = proxy.add(1, 1).catch((reason: unknown) => reason);
     await vi.advanceTimersByTimeAsync(10_500);
     expect(await outcome).toBeInstanceOf(ProviderMissingError);
+  });
+
+  it("tells a tab on an older protocol version that it's outdated", async () => {
+    void provide(openChannel(), "test", { add: () => Promise.resolve(0) });
+    const older = openChannel();
+    const versions: unknown[] = [];
+    older.addEventListener("message", (event: MessageEvent<{ protocolVersion: unknown }>) => {
+      versions.push(event.data.protocolVersion);
+    });
+    older.postMessage({
+      protocolVersion: PROTOCOL_VERSION - 1,
+      scope: "test",
+      type: "provider-query",
+    });
+    await expect.poll(() => versions).toContain(PROTOCOL_VERSION);
   });
 
   it("gives up with ProviderMissingError when no provider answers for 10 seconds", async () => {

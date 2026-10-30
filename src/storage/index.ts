@@ -1,6 +1,6 @@
 import * as local from "./local.ts";
 import * as memory from "./memory.ts";
-import { NewerVersionError, type PlanStore } from "./plan-store.ts";
+import { isFromNewerVersion, NewerVersionError, type PlanStore } from "./plan-store.ts";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
 function isDatabaseUsable(): boolean {
@@ -17,14 +17,6 @@ function isDatabaseUsable(): boolean {
 function openFallback(): PlanStore {
   const storage = local.findWritableStorage();
   return storage ? local.create(storage, window) : memory.create();
-}
-
-/** Whether a newer version of the app made the database, somewhere in the chain of causes. */
-function isFromNewerVersion(error: unknown): boolean {
-  for (let cause = error; cause instanceof Error; cause = cause.cause) {
-    if (cause.name === "NewerDatabaseError") return true;
-  }
-  return false;
 }
 
 /**
