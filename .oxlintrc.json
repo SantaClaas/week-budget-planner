@@ -25,6 +25,9 @@
     // A catch handles one operation's failure, never a mistake around it (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/one-operation-per-try": "error",
+    // A cleanup that runs however a scope ends is a using declaration (see Functions in
+    // docs/guidelines/principles.md).
+    "week-budget-planner/prefer-using": "error",
     // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
     // sanitizer or a type guard instead. `as const` is still allowed.
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
