@@ -73,6 +73,8 @@ Why it's worth it:
 
 **Put the shorter branch in the `if`.** When a function ends in two branches, the short one goes inside the `if` and returns, and the long one follows unindented. Turn the condition around if that's what it takes: the broadcast service's silence check asks whether the provider is still within the limit, queries and returns, and only then handles the silence.
 
+The lint rule `week-budget-planner/shorter-branch-first` fails on an `if` whose block ends the scope (with `return`, `throw`, `continue` or `break`) and holds more lines of code than the statements after it. It counts lines, not statements, since one statement can span many and the cost is the indented code a reader has to scan; oxfmt decides every line break, so the same code always counts the same. Comments and the statement that ends the block don't count, so a guard whose only statement is a long `throw` passes.
+
 **Choosing between two values is a ternary**, not an `if` with an `else`: `const mode = raw["mode"] === "day" ? "day" : "week"`.
 
 The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails on every `else`. Where one really is the clearest way to write it, disable the rule on that line and say why.
