@@ -14,11 +14,11 @@
 type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
 
 type ServiceMessage =
-  | { scope: string; kind: "call"; id: string; property: string; parameters: unknown[] }
-  | { scope: string; kind: "result"; id: string; result: unknown }
-  | { scope: string; kind: "error"; id: string; error: unknown; name?: string }
-  | { scope: string; kind: "provider-ready"; providerId: string }
-  | { scope: string; kind: "provider-query" };
+  | { scope: string; type: "call"; id: string; property: string; parameters: unknown[] }
+  | { scope: string; type: "result"; id: string; result: unknown }
+  | { scope: string; type: "error"; id: string; error: unknown; name?: string }
+  | { scope: string; type: "provider-ready"; providerId: string }
+  | { scope: string; type: "provider-query" };
 
 /**
  * The call had not been sent yet when this tab was promoted to provider — it was never delivered
@@ -38,21 +38,34 @@ export class ProviderMissingError extends Error {}
 /** A call that reached the provider but failed there. `cause` holds the provider-side error. */
 export class RemoteCallError extends Error {}
 
+/** The provider's error as a RemoteCallError, with the name that structured cloning dropped. */
+function readRemoteError(error: unknown, name: string | undefined): RemoteCallError {
+  if (error instanceof Error && name !== undefined) error.name = name;
+  return new RemoteCallError("The leader tab failed to execute the call.", { cause: error });
+}
+
 /** Serve `target`'s methods to all consumer tabs on the channel. */
 export function provide(channel: BroadcastChannel, scope: string, target: AsyncApi): void {
   const providerId = crypto.randomUUID();
-  const ready: ServiceMessage = { scope, kind: "provider-ready", providerId };
+  const ready: ServiceMessage = { scope, type: "provider-ready", providerId };
 
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
     if (message.scope !== scope) return;
-    if (message.kind === "provider-query") {
-      channel.postMessage(ready);
-      return;
+    switch (message.type) {
+      case "provider-query":
+        channel.postMessage(ready);
+        break;
+      case "call":
+        // answer posts every outcome itself, failures included, so nothing is left to handle here.
+        void answer(message);
+        break;
+      case "provider-ready":
+      case "result":
+      case "error":
+        // Messages for consumers.
+        break;
     }
-    if (message.kind !== "call") return;
-    // answer posts every outcome itself, failures included, so nothing is left to handle here.
-    void answer(message);
   });
 
   /** Runs the call and posts its result or its error to the consumer that's waiting. */
@@ -70,7 +83,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       return;
     }
     try {
-      channel.postMessage({ scope, kind: "result", id: call.id, result } satisfies ServiceMessage);
+      channel.postMessage({ scope, type: "result", id: call.id, result } satisfies ServiceMessage);
     } catch (error) {
       // The result isn't structured-cloneable, so the consumer hears that instead.
       postError(call.id, error);
@@ -82,7 +95,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       // Structured cloning turns custom errors into a plain Error, so the name travels apart.
       channel.postMessage({
         scope,
-        kind: "error",
+        type: "error",
         id,
         error,
         ...(error instanceof Error && { name: error.name }),
@@ -91,7 +104,7 @@ export function provide(channel: BroadcastChannel, scope: string, target: AsyncA
       // The error isn't structured-cloneable; send its string form.
       channel.postMessage({
         scope,
-        kind: "error",
+        type: "error",
         id,
         error: String(error),
       } satisfies ServiceMessage);
@@ -134,7 +147,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   let lastHeardAt = 0;
 
   const query = (): void => {
-    channel.postMessage({ scope, kind: "provider-query" } satisfies ServiceMessage);
+    channel.postMessage({ scope, type: "provider-query" } satisfies ServiceMessage);
   };
 
   function failSent(reason: Error) {
@@ -178,34 +191,45 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
     if (message.scope !== scope) return;
-    if (message.kind === "provider-ready") {
-      if (providerId !== undefined && providerId !== message.providerId) {
-        failSent(new CallLostError("The database leader changed while a call was in flight."));
-      }
-      providerId = message.providerId;
-      lastHeardAt = performance.now();
-      settleWaiters((waiter) => {
-        waiter.resolve();
-      });
-      stopQueryingWhenIdle();
-      return;
+    switch (message.type) {
+      case "provider-ready":
+        acceptProvider(message.providerId);
+        break;
+      case "result":
+        takeCall(message.id)?.resolve(message.result);
+        break;
+      case "error":
+        takeCall(message.id)?.reject(readRemoteError(message.error, message.name));
+        break;
+      case "call":
+      case "provider-query":
+        // Messages for the provider.
+        break;
     }
-    if (message.kind !== "result" && message.kind !== "error") return;
-    const call = sent.get(message.id);
-    if (!call) return;
-    lastHeardAt = performance.now();
-    sent.delete(message.id);
-    stopQueryingWhenIdle();
-    if (message.kind === "result") {
-      call.resolve(message.result);
-      return;
-    }
-    if (message.error instanceof Error && message.name !== undefined)
-      message.error.name = message.name;
-    call.reject(
-      new RemoteCallError("The leader tab failed to execute the call.", { cause: message.error }),
-    );
   });
+
+  /** Follows the provider that announced itself; calls sent to a different one are lost. */
+  function acceptProvider(announcedId: string) {
+    if (providerId !== undefined && providerId !== announcedId) {
+      failSent(new CallLostError("The database leader changed while a call was in flight."));
+    }
+    providerId = announcedId;
+    lastHeardAt = performance.now();
+    settleWaiters((waiter) => {
+      waiter.resolve();
+    });
+    stopQueryingWhenIdle();
+  }
+
+  /** The call this answer is for, no longer open, or undefined when it's another tab's. */
+  function takeCall(id: string): PendingCall | undefined {
+    const call = sent.get(id);
+    if (!call) return undefined;
+    lastHeardAt = performance.now();
+    sent.delete(id);
+    stopQueryingWhenIdle();
+    return call;
+  }
 
   function waitForProvider(): Promise<void> {
     if (providerId !== undefined) return Promise.resolve();
@@ -237,7 +261,7 @@ export function consume<T extends AsyncApi>(channel: BroadcastChannel, scope: st
         startQuerying();
         channel.postMessage({
           scope,
-          kind: "call",
+          type: "call",
           id,
           property,
           parameters,
