@@ -1,6 +1,6 @@
 import { randomIds } from "../plan/id.ts";
 import * as planFile from "../plan/file.ts";
-import type { Plan } from "../plan/types.ts";
+import type { Plan } from "../plan/index.ts";
 import { InvalidFileError, NewerVersionError, type ExportedFile } from "./plan-store.ts";
 
 /** The plan as a `.json` file, the export below the full level. */

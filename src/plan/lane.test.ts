@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { layoutLanes } from "./lanes.ts";
+import { layoutLanes } from "./lane.ts";
 import { sanitizeDayIndex } from "./time.ts";
 import { findPartsOnDay } from "./week.ts";
 import { createBlockId, createBlock } from "./test-data.ts";

@@ -1,7 +1,7 @@
 import type { Result } from "../result.ts";
 import type { IdGenerator } from "./id.ts";
 import { sanitizePlan } from "./sanitize.ts";
-import { createEmptyPlan, type Plan } from "./types.ts";
+import { createEmptyPlan, type Plan } from "./index.ts";
 
 /** The stored format, as in examples/example-week.json, with keys in a stable order. */
 export function serialize(plan: Plan): string {

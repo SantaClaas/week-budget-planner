@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDecimal, readActivityForm } from "./activity-form.ts";
+import { parseDecimal, readActivityForm } from "./form.ts";
 
 describe("activity form", () => {
   const base = { name: "Gym", hours: "1.5", mode: "week" as const, days: "3" };

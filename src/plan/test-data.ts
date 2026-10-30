@@ -1,4 +1,4 @@
-import { sanitizeActivityName } from "./activity-name.ts";
+import { sanitizeActivityName } from "./activity/name.ts";
 import {
   sanitizeActivityId,
   sanitizeBlockId,
@@ -15,7 +15,10 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "./time.ts";
-import { type Activity, type Block, type Hue, type Plan, type Shape } from "./types.ts";
+import { type Activity } from "./activity/index.ts";
+import { type Block } from "./block/index.ts";
+import { type Hue, type Shape } from "./activity/look.ts";
+import { type Plan } from "./index.ts";
 
 // Tests write plain numbers and strings. These turn them into checked values through the same
 // sanitizers the app uses, which also keeps the test data valid.

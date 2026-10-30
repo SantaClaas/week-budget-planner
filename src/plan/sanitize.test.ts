@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "./sanitize.ts";
 import { createPredictableIds } from "./test-data.ts";
-import { SHAPES } from "./types.ts";
+import { SHAPES } from "./activity/look.ts";
 
 describe("sanitize", () => {
   it("keeps the example week as it is", () => {

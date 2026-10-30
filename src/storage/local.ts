@@ -2,7 +2,7 @@
    throw (localStorage full or blocked, for example) arrives as a rejection, like the database's. */
 import * as planFile from "../plan/file.ts";
 import { randomIds } from "../plan/id.ts";
-import { createEmptyPlan, type Plan } from "../plan/types.ts";
+import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import * as jsonFile from "./json-file.ts";
 import type { PlanStore } from "./plan-store.ts";
 

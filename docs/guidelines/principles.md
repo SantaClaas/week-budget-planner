@@ -99,7 +99,7 @@ The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block
 
 ### Clean up with `using`
 
-**A `try`/`finally` that releases a resource is a `using` declaration**, or `await using` when the cleanup is async. The resource is released when the scope ends, however it ends, in the reverse order of declaration, without a `try` around the code that uses it. TypeScript and the build lower the syntax for older browsers, and [`src/polyfills/disposal.ts`](../../src/polyfills/disposal.ts) adds the symbols and stacks where they're missing (see [`docs/spec/browser-support.md`](../spec/browser-support.md)).
+**A `try`/`finally` that releases a resource is a `using` declaration**, or `await using` when the cleanup is async. The resource is released when the scope ends, however it ends, in the reverse order of declaration, without a `try` around the code that uses it. TypeScript and the build lower the syntax for older browsers, and [`src/polyfill/disposal.ts`](../../src/polyfill/disposal.ts) adds the symbols and stacks where they're missing (see [`docs/spec/browser-support.md`](../spec/browser-support.md)).
 
 - **Most APIs don't support it yet**, since it's new (2025). `DisposableStack` and `AsyncDisposableStack` bridge them: `adopt()` takes a resource and its cleanup function, and `defer()` takes a cleanup on its own. `checkImport` in [`src/database/client.ts`](../../src/database/client.ts) defers deleting the import copy, and `readCopy` adopts the database connection.
 - **When the same kind of resource is used in many places**, a small wrapper can make it disposable once, for example a `Proxy` that adds `[Symbol.dispose]` to a library's object and passes everything else through. Write one when a resource keeps coming back, not before (see "Compress when it starts to repeat" below).
@@ -110,6 +110,10 @@ The lint rule `week-budget-planner/prefer-using` fails on every `finally`. Where
 ## Modules
 
 **Name a module for what it is.** There are no catch-all folders such as `lib`, `utils`, `shared`, `common` or `helpers`. All code is shared and all of it is useful, so those names say nothing.
+
+**A module belongs to one noun.** Names like `types`, `defaults`, `constants` or `helpers` group code by what kind of code it is, across every noun, which is a horizontal layer in small (see "Vertical first" below). A default only ever applies to one noun, and so does a type: each lives with the noun it's about. The `Activity` type is in [`src/plan/activity/index.ts`](../../src/plan/activity/index.ts), an activity's default color and shape in [`src/plan/activity/look.ts`](../../src/plan/activity/look.ts), and a new block's default length in [`src/plan/block/length.ts`](../../src/plan/block/length.ts).
+
+**Name a module in the singular**: `slot`, `lane`, `migration`, `polyfill`. A module is one concept, and its functions drop its noun, so a namespace import reads as that concept: `slot.findFirstFree()` is the slot module's function, where `slots.findFirstFree()` reads like a list of slots. Plural names stay only where they belong to a convention at the edge: the repository's folders that people and tools expect (`docs/`, `scripts/`, `examples/`, `e2e/`), the plugin folders named after their tools (`vite-plugins/`, `oxlint-plugins/`), and folders that hold assets rather than code, such as `src/icons/`.
 
 **Split by meaning when a file grows.** A file becomes a folder of the same name, with an `index.ts` and submodules beside it: `broadcast.ts` becomes `broadcast/index.ts` and `broadcast/service.ts`. If `broadcast/logger.ts` grows too, it becomes `broadcast/logger/index.ts` with its own submodules. `broadcast.ts` and `broadcast/index.ts` mean the same module.
 

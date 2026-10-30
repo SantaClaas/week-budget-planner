@@ -1,5 +1,5 @@
-import type { Brand } from "../brand.ts";
-import type { Result } from "../result.ts";
+import type { Brand } from "../../brand.ts";
+import type { Result } from "../../result.ts";
 
 /**
  * An activity's name: trimmed, and 1 to 60 characters. Characters are counted as code points, the

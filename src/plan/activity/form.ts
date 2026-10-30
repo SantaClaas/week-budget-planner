@@ -1,7 +1,7 @@
-import { parseActivityName, type ActivityName } from "./activity-name.ts";
-import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "./time.ts";
-import type { Mode } from "./types.ts";
-import type { Result } from "../result.ts";
+import { parseActivityName, type ActivityName } from "./name.ts";
+import { parseBudgetMinutes, parseDayCount, type BudgetMinutes, type DayCount } from "../time.ts";
+import type { Mode } from "./index.ts";
+import type { Result } from "../../result.ts";
 
 export type ActivityFormInput = {
   name: string;

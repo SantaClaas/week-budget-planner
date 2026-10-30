@@ -24,7 +24,7 @@ import {
   hexFromArgb,
 } from "@material/material-color-utilities";
 
-import { PALETTE } from "../src/plan/types.ts";
+import { PALETTE } from "../src/plan/activity/look.ts";
 
 const tokensFile = new URL("../docs/design/m3-tokens.css", import.meta.url);
 

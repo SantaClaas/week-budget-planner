@@ -20,7 +20,7 @@ import {
   type DayMinute,
   type WeekMinute,
 } from "./time.ts";
-import type { Block } from "./types.ts";
+import type { Block } from "./block/index.ts";
 
 /**
  * Where a block shows on one day. An overnight block has two parts: the end of its own day and the
