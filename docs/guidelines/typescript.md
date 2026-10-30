@@ -81,7 +81,7 @@ const taken = new Set(plan.blocks.values().filter((block) => block.activityId ==
 
 **Keep the array methods where the result has to be an array anyway.** A single `array.map(f)` allocates the one array it returns, the same as `values().map(f).toArray()`, so it stays as it is. Arrays are also right when the result is used more than once, indexed or measured (an iterator can be walked only once), when it's sorted (`toSorted()`), and where an API or the framework takes an array, such as Solid's `<For each>` or `JSON.stringify`.
 
-The types come from the `ES2025.Iterator` lib in the app's TypeScript config (the configs for code only Node runs, the build scripts and the tests, take all of `ESNext`, since Node is the one runtime there). Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from [`src/polyfills.ts`](../../src/polyfills.ts) (see [`docs/spec/browser-support.md`](../spec/browser-support.md)), so code can use them anywhere.
+The types come from the `ES2025.Iterator` lib in the app's TypeScript config (the configs for code only Node runs, the build scripts and the tests, take all of `ESNext`, since Node is the one runtime there). Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from [`src/polyfills/index.ts`](../../src/polyfills/index.ts) (see [`docs/spec/browser-support.md`](../spec/browser-support.md)), so code can use them anywhere.
 
 ## Formatting and linting
 

@@ -4,7 +4,7 @@ How code in this project is named, split, styled and checked. The guidelines liv
 
 | File | Applies to | What's in it |
 | --- | --- | --- |
-| [`principles.md`](guidelines/principles.md) | all code, always | the consumer's needs first, the rule of least power, names, pure functions and early returns, modules and coupling, refactoring, where rules are enforced, linking files and drawing diagrams in the docs |
+| [`principles.md`](guidelines/principles.md) | all code, always | the consumer's needs first, the rule of least power, names, pure functions, early returns, one operation per `try` and cleanup with `using`, modules and coupling, refactoring, where rules are enforced, linking files and drawing diagrams in the docs |
 | [`html.md`](guidelines/html.md) | `.tsx`, `.html` | HTML for the document and CSS for the look, the CSS-off test, the first rule of ARIA, no elements for styling, radio groups that look like buttons, short names with descriptions, classes for what, `data-` attributes for how and native or ARIA attributes for state, boolean attributes, `display: contents` |
 | [`typescript.md`](guidelines/typescript.md) | `.ts`, `.tsx`, `.js` | function and boolean names, branded types, iterator helpers instead of array chains, formatting and linting, no type assertions, explained exceptions |
 | [`css.md`](guidelines/css.md) | `.css`, and styles set from TypeScript | cascade layers, selectors, rem instead of px, intrinsic sizing, logical properties, forced colors, nesting |
