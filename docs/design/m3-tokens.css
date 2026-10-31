@@ -1250,7 +1250,7 @@
 
   /* blocks: the <li> draws the block, and a <button> laid over it is what gets focus, is pressed while
      selected and is named for screen readers. The drawn text is aria-hidden, so it isn't read twice.
-     <li class="block" data-color="blue"><button class="block-button" aria-pressed="false" aria-describedby="block-keys">
+     <li class="block" data-color="blue" style="--activity-shape: var(--shape-arch)"><button class="block-button" aria-pressed="false" aria-describedby="block-keys">
      <span class="visually-hidden">Gym, Monday 18:00 to 19:30, 1 hour, 30 minutes</span></button>
      <span class="name" aria-hidden="true">Gym</span><span class="time" aria-hidden="true">18:00–19:30 · 1h30</span></li> */
   /* Placed from custom properties the week sets: --start and --length in minutes, and --lane of
@@ -1297,17 +1297,44 @@
       line-height: calc(14 / 11);
       opacity: 0.85;
     }
-    /* the shape on a block: top-right corner, out of the name's way */
-    & .swatch.corner {
+    /* The activity's shape, drawn by the block itself, since it says nothing the block's name doesn't
+       (see "Activity shape on blocks" in docs/spec/grid-geometry.md): 12dp in the top-right corner,
+       out of the name's way; 10dp at the start of a short block's one line; none on a tiny one. */
+    &::before {
+      content: "";
       position: absolute;
       inset-block-start: 0.25rem;
       inset-inline-end: 0.25rem;
       z-index: 1;
+      width: 0.75rem;
+      height: 0.75rem;
+      background: var(--activity-color);
+      clip-path: var(--activity-shape, var(--shape-circle));
+      @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
+        clip-path: none;
+        border-radius: 50%;
+      }
+      @media (forced-colors: active) {
+        forced-color-adjust: none;
+      }
     }
-    &:has(.swatch.corner) .name {
+    & .name {
       padding-inline-end: 0.875rem;
     }
-    &[data-length="short"] {
+    &[data-length="short"]::before {
+      position: static;
+      width: 0.625rem;
+      height: 0.625rem;
+    }
+    &[data-length="tiny"]::before {
+      content: none;
+    }
+    &:is([data-length="short"], [data-length="tiny"]) .name {
+      padding-inline-end: 0;
+    }
+    /* 30 minutes or less: one line, the name and then the length; a short block starts the line
+       with its shape. */
+    &:is([data-length="short"], [data-length="tiny"]) {
       grid-template-rows: none;
       grid-auto-flow: column;
       grid-template-columns: minmax(0, auto) auto;
@@ -1315,6 +1342,9 @@
       align-items: center;
       gap: 0.25rem;
       padding: 0 0.5rem;
+    }
+    &[data-length="short"] {
+      grid-template-columns: auto minmax(0, auto) auto;
       border-radius: 0.375rem;
     }
     &[data-length="tiny"] {
