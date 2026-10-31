@@ -1,15 +1,19 @@
 import { createSignal } from "solid-js";
 
+import { createExampleWeek } from "../plan/example.ts";
+import { randomIds } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
+import type { Result } from "../result.ts";
 import * as snackbar from "../snackbar/index.ts";
-import type { PlanStore } from "../storage/plan-store.ts";
+import { open as openStorage } from "../storage/index.ts";
+import { NewerVersionError, type PlanStore } from "../storage/plan-store.ts";
 import * as saveStatus from "./save-status.ts";
 import * as undo from "./undo.ts";
 
 /**
- * The plan on screen, its undo steps and its saving: the edge between the pure plan logic and
- * the store (see Writes and undo in docs/spec/persistence.md). Every change goes through
- * `change`, which records an undo step and saves it as one action.
+ * The plan on screen, its undo steps, its saving and the changes other tabs save: the edge
+ * between the pure plan logic and the store (see Writes and undo in docs/spec/persistence.md).
+ * Every change goes through `change`, which records an undo step and saves it as one action.
  */
 export type Planner = {
   plan(): Plan;
@@ -24,17 +28,47 @@ export type Planner = {
   change(update: (before: Plan, now: Temporal.Instant) => Plan): void;
   /** Goes back one step and saves that, as its own action. */
   undo(): void;
-  /**
-   * Shows the plan another tab saved. The undo steps go, since applying one would write back an
-   * older plan over the other tab's change.
-   */
-  showSaved(changed: Plan): void;
-  /** Stops every change, once a tab on a newer version took over the storage. */
-  stopForNewerVersion(): void;
+  /** Stops following the changes other tabs save, when the app goes. */
+  stop(): void;
 };
 
+/**
+ * What the app does once a tab on a newer version took over: this planner has already stopped
+ * every change (see "Tabs on different versions" in docs/spec/persistence.md).
+ */
+type Options = { onNewerVersion(): void };
+
+/**
+ * Opens the best storage and its plan, saving the example week on first run, and gives back the
+ * planner for it with the store it saves to. "newer-version" when a newer version of the app saved
+ * the plan, which this one can't read.
+ */
+export async function open(
+  options: Options,
+): Promise<Result<{ store: PlanStore; planner: Planner }, "newer-version">> {
+  let store: PlanStore;
+  let stored: Awaited<ReturnType<PlanStore["load"]>>;
+  try {
+    ({ store, stored } = await openAndLoad());
+  } catch (error) {
+    if (error instanceof NewerVersionError) return "newer-version";
+    throw error;
+  }
+  if (stored.isStored) return { store, planner: create(store, stored.plan, options) };
+  // The example week is marked as loaded at the same moment its rows are saved.
+  const now = Temporal.Now.instant();
+  const example = createExampleWeek(now, randomIds);
+  await store.save(undefined, example, now);
+  return { store, planner: create(store, example, options) };
+}
+
+async function openAndLoad() {
+  const store = await openStorage();
+  return { store, stored: await store.load() };
+}
+
 /** The planner for the plan `stored`, which the store already holds. */
-export function create(store: PlanStore, stored: Plan): Planner {
+export function create(store: PlanStore, stored: Plan, options: Options): Planner {
   // Solid shows a write only after it flushes, so two changes in one event would read the same
   // plan from the signals. The plan and the steps live here, and the signals follow them.
   let current = stored;
@@ -100,6 +134,42 @@ export function create(store: PlanStore, stored: Plan): Planner {
     });
   }
 
+  /**
+   * Shows the plan another tab saved. The undo steps go, since applying one would write back an
+   * older plan over the other tab's change.
+   */
+  function showSaved(changed: Plan): void {
+    saved = changed;
+    showChange(changed, []);
+  }
+
+  /** Stops every change, once a tab on a newer version took over the storage. */
+  function stopForNewerVersion(): void {
+    isStopped = true;
+    setIsOutdated(true);
+    options.onNewerVersion();
+  }
+
+  // Only the latest load is shown, so two quick changes in another tab can't leave the older plan
+  // on screen when their loads finish out of order.
+  let latestLoad = 0;
+  async function showLatest(): Promise<void> {
+    latestLoad += 1;
+    const load = latestLoad;
+    const { plan: changed } = await store.load();
+    if (load === latestLoad) showSaved(changed);
+  }
+  const stopWatching = store.onExternalChange(() => {
+    showLatest().catch((error: unknown) => {
+      if (error instanceof NewerVersionError) {
+        stopForNewerVersion();
+        return;
+      }
+      // The plan on screen stays as it was; the next change in another tab tries again.
+      console.error("[planner] couldn't load the plan another tab changed", error);
+    });
+  });
+
   return {
     plan,
     isOutdated,
@@ -120,13 +190,6 @@ export function create(store: PlanStore, stored: Plan): Planner {
       showChange(previous, steps.slice(0, -1));
       save(previous, Temporal.Now.instant());
     },
-    showSaved(changed: Plan): void {
-      saved = changed;
-      showChange(changed, []);
-    },
-    stopForNewerVersion(): void {
-      isStopped = true;
-      setIsOutdated(true);
-    },
+    stop: stopWatching,
   };
 }

@@ -7,23 +7,14 @@ import { NavigationBar } from "./navigation/NavigationBar.tsx";
 import { NavigationRail } from "./navigation/NavigationRail.tsx";
 import { follow } from "./page/history.ts";
 import { createTitle, NAMES, type Page } from "./page/index.ts";
-import { createExampleWeek } from "./plan/example.ts";
-import { randomIds } from "./plan/id.ts";
 import * as planner from "./planner/index.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
-import { open as openStorage } from "./storage/index.ts";
-import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
+import type { PlanStore } from "./storage/plan-store.ts";
 import { TopAppBar } from "./top-app-bar/TopAppBar.tsx";
 
 /** The path the app is served from, `/week-budget-planner/` (see vite.config.ts). */
 const BASE = import.meta.env.BASE_URL;
-
-/** Opens the best storage and loads the plan, which may turn out to be from a newer version. */
-async function openAndLoad() {
-  const opened = await openStorage();
-  return { store: opened, stored: await opened.load() };
-}
 
 /** A tab no one can see loses nothing by reloading into the new version. */
 function reloadWhenHidden(): void {
@@ -36,15 +27,15 @@ const isInField = (target: EventTarget | null): boolean =>
   (target.isContentEditable || target.matches("input, select, textarea"));
 
 /**
- * A tab on a newer version took over while this one ran: reloads now when hidden, else keeps the
- * plan on screen read-only, asks to reload, and reloads once the tab is hidden.
+ * A tab on a newer version took over while this one ran, and the planner stopped every change:
+ * reloads now when hidden, else asks to reload with the plan on screen read-only, and reloads once
+ * the tab is hidden.
  */
-function leaveForNewerVersion(opened: planner.Planner): void {
+function leaveForNewerVersion(): void {
   if (document.visibilityState === "hidden") {
     location.reload();
     return;
   }
-  opened.stopForNewerVersion();
   snackbar.show({
     message:
       "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
@@ -93,62 +84,43 @@ export function App(): JSX.Element {
     current()?.undo();
   };
 
+  onSettled(() => follow(BASE, showPage));
+
   onSettled(() => {
-    let stopWatching: (() => void) | undefined;
+    document.addEventListener("keydown", undoOnShortcut);
+    return () => {
+      document.removeEventListener("keydown", undoOnShortcut);
+    };
+  });
+
+  onSettled(() => {
+    let opened: planner.Planner | undefined;
     let isDisposed = false;
-    // Only the latest reload is shown, so two quick changes in another tab can't leave the older
-    // plan on screen when their loads finish out of order.
-    let latestReload = 0;
 
     async function start(): Promise<void> {
-      let opened: Awaited<ReturnType<typeof openAndLoad>>;
-      try {
-        opened = await openAndLoad();
-      } catch (error) {
-        if (!(error instanceof NewerVersionError)) throw error;
+      const result = await planner.open({ onNewerVersion: leaveForNewerVersion });
+      if (result === "newer-version") {
         setIsFromNewerVersion(true);
         return;
       }
-      const { store: openedStore, stored } = opened;
-      // The example week is marked as loaded at the same moment its rows are saved.
-      const now = Temporal.Now.instant();
-      const loaded = stored.isStored ? stored.plan : createExampleWeek(now, randomIds);
-      if (!stored.isStored) await openedStore.save(undefined, loaded, now);
-      if (isDisposed) return;
-      const created = planner.create(openedStore, loaded);
-      setStore(openedStore);
-      setCurrent(created);
+      if (isDisposed) {
+        result.planner.stop();
+        return;
+      }
+      opened = result.planner;
+      setStore(result.store);
+      setCurrent(result.planner);
       // A hook for the browser tests, which still drive the store directly in places.
-      Object.assign(window, { weekBudgetPlanner: { store: openedStore } });
-      stopWatching = openedStore.onExternalChange(() => {
-        latestReload += 1;
-        const reload = latestReload;
-        const showLatest = async (): Promise<void> => {
-          const { plan: changed } = await openedStore.load();
-          if (reload === latestReload) created.showSaved(changed);
-        };
-        showLatest().catch((error: unknown) => {
-          if (error instanceof NewerVersionError) {
-            leaveForNewerVersion(created);
-            return;
-          }
-          // The plan on screen stays as it was; the next change in another tab tries again.
-          console.error("[app] couldn't reload the plan another tab changed", error);
-        });
-      });
+      Object.assign(window, { weekBudgetPlanner: { store: result.store } });
     }
 
-    const stopFollowing = follow(BASE, showPage);
-    document.addEventListener("keydown", undoOnShortcut);
     // Opening falls back to a lower storage level by itself, so an error here is a bug.
     start().catch((error: unknown) => {
       console.error("[app] couldn't open the plan", error);
     });
     return () => {
       isDisposed = true;
-      stopWatching?.();
-      stopFollowing();
-      document.removeEventListener("keydown", undoOnShortcut);
+      opened?.stop();
       document.removeEventListener("visibilitychange", reloadWhenHidden);
     };
   });
