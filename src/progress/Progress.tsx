@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 
 import { splitProgress } from "../plan/budget.ts";
 
@@ -9,11 +9,14 @@ import { splitProgress } from "../plan/budget.ts";
  * beside it already says, so it's hidden from screen readers.
  */
 export function Progress(props: { budget: number; placed: number }): JSX.Element {
-  const split = () => splitProgress(props.budget, props.placed);
-  const state = () => {
-    if (split().overBudget > 0) return "over-budget";
-    return split().withinBudget >= 1 ? "full" : "partial";
-  };
+  // Worked out once per change of the budget or what's placed, however often it's read below.
+  const split = createMemo(() => splitProgress(props.budget, props.placed));
+  // A word, so the attribute and the over-budget part only update when it changes.
+  const state = createMemo(() => {
+    const { withinBudget, overBudget } = split();
+    if (overBudget > 0) return "over-budget";
+    return withinBudget >= 1 ? "full" : "partial";
+  });
   return (
     <div class="progress" data-state={state()} aria-hidden="true">
       <span
