@@ -18,6 +18,7 @@ import {
   wrapWeekMinute,
   type DayIndex,
   type DayMinute,
+  type Length,
   type WeekMinute,
 } from "./time.ts";
 import type { Block } from "./block/index.ts";
@@ -29,8 +30,11 @@ import type { Block } from "./block/index.ts";
 export type BlockPart = {
   block: Block;
   day: DayIndex;
-  /** Minutes from that day's midnight, 0 to 1440. */
-  start: number;
+  /** Minutes from that day's midnight where the part starts. */
+  start: DayMinute;
+  /** How long the part is on that day: all of a one-day block, or its share of an overnight one. */
+  length: Length;
+  /** Minutes from that day's midnight where the part ends, up to 1440. */
   end: number;
   /** "only", or which half of an overnight block this is. */
   kind: "only" | "first" | "second";
@@ -45,10 +49,27 @@ const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
 
 export function splitIntoParts(block: Block): BlockPart[] {
   const end = block.start + block.length;
-  if (end <= DAY) return [{ block, day: block.day, start: block.start, end, kind: "only" }];
+  if (end <= DAY) {
+    return [{ block, day: block.day, start: block.start, length: block.length, end, kind: "only" }];
+  }
   return [
-    { block, day: block.day, start: block.start, end: DAY, kind: "first" },
-    { block, day: wrapDayIndex(block.day + 1), start: 0, end: end - DAY, kind: "second" },
+    {
+      block,
+      day: block.day,
+      start: block.start,
+      // An overnight block starts at least a slot before midnight, so each part has a slot or more.
+      length: sanitizeLength(DAY - block.start),
+      end: DAY,
+      kind: "first",
+    },
+    {
+      block,
+      day: wrapDayIndex(block.day + 1),
+      start: sanitizeDayMinute(0),
+      length: sanitizeLength(end - DAY),
+      end: end - DAY,
+      kind: "second",
+    },
   ];
 }
 

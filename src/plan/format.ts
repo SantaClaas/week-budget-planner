@@ -3,6 +3,19 @@
  * language and conventions (see docs/spec/dates-and-language.md).
  */
 
+import type { Brand } from "../brand.ts";
+
+/**
+ * A value for HTML's `datetime` attribute, as `formatClockDatetime` and `formatLengthDatetime`
+ * write it: "10:30" or "PT1H30M". Its own type, so the text people read can't end up where machines
+ * read the value.
+ */
+export type Datetime = Brand<string, "Datetime">;
+
+/** Only the two formatters below write a `Datetime`, each from Temporal's own `toString()`. */
+// oxlint-disable-next-line typescript/consistent-type-assertions -- the one place a written value becomes a Datetime (see Branded types in docs/guidelines/typescript.md).
+const brandDatetime = (value: string): Datetime => value as Datetime;
+
 /** How things are written. Empty means the browser's language and its conventions. */
 export type Format = {
   /** A BCP 47 language tag, such as "en-GB". */
@@ -110,17 +123,19 @@ export function formatClockRangeToParts(
 }
 
 /** A minute of the day as HTML's `datetime` value for a time: "10:30". Minutes past midnight wrap. */
-export const formatClockDatetime = (minutes: number): string =>
-  toPlainTime(minutes).toString({ smallestUnit: "minute" });
+export const formatClockDatetime = (minutes: number): Datetime =>
+  brandDatetime(toPlainTime(minutes).toString({ smallestUnit: "minute" }));
 
 /**
  * A length as HTML's `datetime` value for a duration, in hours and minutes: "PT1H30M", and a day
  * stays "PT24H", since HTML durations have no days.
  */
-export const formatLengthDatetime = (minutes: number): string =>
-  Temporal.Duration.from({ minutes: Math.round(Math.abs(minutes)) })
-    .round({ largestUnit: "hour" })
-    .toString();
+export const formatLengthDatetime = (minutes: number): Datetime =>
+  brandDatetime(
+    Temporal.Duration.from({ minutes: Math.round(Math.abs(minutes)) })
+      .round({ largestUnit: "hour" })
+      .toString(),
+  );
 
 /** A day of the week, 0 for Monday: "Mon" or "Monday". */
 export function formatWeekday(

@@ -12,15 +12,25 @@ import {
   formatLength,
   formatLengthDatetime,
   formatWeekday,
+  type Datetime,
   type Format,
 } from "../plan/format.ts";
+import type { BlockId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
-import { layoutLanes } from "../plan/lane.ts";
-import { DAY, wrapDayIndex, type DayIndex } from "../plan/time.ts";
+import { layoutLanes, type Lane } from "../plan/lane.ts";
+import {
+  DAY,
+  sanitizeHour,
+  wrapDayIndex,
+  type DayIndex,
+  type DayMinute,
+  type Hour,
+  type Length,
+} from "../plan/time.ts";
 import { findPartsOnDay, sumDayTotals, type BlockPart } from "../plan/week.ts";
 
 /** A piece of visible text, in a `<time>` element when it has a `datetime` value. */
-export type TimeText = { text: string; datetime?: string };
+export type TimeText = { text: string; datetime?: Datetime };
 
 /**
  * How much room a block has: "regular" shows the name above the time, "short" (30 minutes or less)
@@ -31,14 +41,14 @@ type BlockSize = "regular" | "short" | "tiny";
 /** One block, or one part of an overnight block, as a day draws it. */
 export type DrawnBlock = {
   /** Unique within the week: an overnight block has a part on each of its two days. */
-  key: string;
+  key: `${BlockId}-${BlockPart["kind"]}`;
   activity: Activity;
   part: BlockPart["kind"];
-  /** Minutes from the day's midnight where this part starts, and how long it is on this day. */
-  start: number;
-  length: number;
-  lane: number;
-  lanes: number;
+  /** Where this part starts on its day, and how long it is on this day. */
+  start: DayMinute;
+  length: Length;
+  /** Which of its overlapping neighbours' lanes it takes. */
+  lane: Lane;
   size: BlockSize;
   /** How many lines of the name fit above the time. */
   nameLines: number;
@@ -62,7 +72,7 @@ export type DrawnDay = {
 };
 
 /** An hour line's label in the gutter. */
-export type HourLabel = { hour: number; text: string; datetime: string };
+export type HourLabel = { hour: Hour; text: string; datetime: Datetime };
 
 /** Minutes per line of a block's name, and the room the padding and the time take (in minutes). */
 const MINUTES_PER_NAME_LINE = 20;
@@ -72,10 +82,10 @@ const MINUTES_FOR_PADDING_AND_TIME = 30;
  * How many lines of the name fit above the time. The grid is 3rem per hour, so a name line (1rem)
  * is 20 minutes, and the padding (0.5rem), the 2px gap and the time's line (0.875rem) take 30.
  */
-const countNameLines = (length: number): number =>
+const countNameLines = (length: Length): number =>
   Math.max(1, Math.floor((length - MINUTES_FOR_PADDING_AND_TIME) / MINUTES_PER_NAME_LINE));
 
-function sizeOf(length: number): BlockSize {
+function sizeOf(length: Length): BlockSize {
   if (length <= 15) return "tiny";
   return length <= 30 ? "short" : "regular";
 }
@@ -132,13 +142,8 @@ function speak(part: BlockPart, activity: Activity, format: Format): string {
   return `${activity.name}, ${range}, ${formatLength(block.length, "long", format)}`;
 }
 
-function drawBlock(
-  part: BlockPart,
-  activity: Activity,
-  lane: { lane: number; lanes: number },
-  format: Format,
-): DrawnBlock {
-  const length = part.end - part.start;
+function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Format): DrawnBlock {
+  const { length } = part;
   const size = sizeOf(length);
   const lengthText = createLengthText(part.block.length, format);
   return {
@@ -147,8 +152,7 @@ function drawBlock(
     part: part.kind,
     start: part.start,
     length,
-    lane: lane.lane,
-    lanes: lane.lanes,
+    lane,
     size,
     nameLines: countNameLines(length),
     time:
@@ -207,7 +211,7 @@ export function listHours(format: Format = {}): HourLabel[] {
   return Array.from({ length: 23 }, (_, index) => {
     const minutes = (index + 1) * 60;
     return {
-      hour: index + 1,
+      hour: sanitizeHour(index + 1),
       text: formatClock(minutes, format),
       datetime: formatClockDatetime(minutes),
     };
@@ -219,7 +223,7 @@ export function listHours(format: Format = {}): HourLabel[] {
  * start in the week, rounded down to the full hour. The second part of an overnight block always
  * starts at midnight, so only starts on a block's own day count (see docs/spec/grid-geometry.md).
  */
-export function findOpeningHour(plan: Pick<Plan, "blocks" | "dayStart">): number {
+export function findOpeningHour(plan: Pick<Plan, "blocks" | "dayStart">): Hour {
   const earliest = plan.blocks.values().reduce((first, block) => Math.min(first, block.start), DAY);
-  return Math.min(plan.dayStart, Math.floor(earliest / 60));
+  return sanitizeHour(Math.min(plan.dayStart, Math.floor(earliest / 60)));
 }

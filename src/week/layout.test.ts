@@ -133,7 +133,7 @@ describe("the week's layout", () => {
       ),
       0,
     );
-    expect(monday.blocks.map(({ lane, lanes }) => [lane, lanes])).toEqual([
+    expect(monday.blocks.map(({ lane }) => [lane.lane, lane.lanes])).toEqual([
       [0, 2],
       [1, 2],
     ]);
