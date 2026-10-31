@@ -32,7 +32,6 @@ flowchart LR
   module_App --> module_announcement
   module_App --> module_navigation
   module_App --> module_page
-  module_App --> module_plan
   module_App --> module_planner
   module_App --> module_snackbar
   module_App --> module_storage
@@ -51,6 +50,7 @@ flowchart LR
   module_plan --> module_brand
   module_plan --> module_result
   module_planner --> module_plan
+  module_planner --> module_result
   module_planner --> module_snackbar
   module_planner --> module_storage
   module_snackbar --> module_announcement
