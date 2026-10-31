@@ -69,6 +69,9 @@ test("refuses files it can't import and keeps the plan", async ({ page }) => {
 });
 
 test.describe("a newer version of the app", () => {
+  /** The reload prompt in a tab that a tab on a newer version took over from. */
+  const OUTDATED_MESSAGE =
+    "Week Budget Planner was updated in another tab. This tab can't save until it reloads.";
   let newerDatabase: number[] = [];
 
   // oxlint-disable-next-line no-empty-pattern -- Playwright reads this pattern to know which fixtures to set up, and this hook needs none.
@@ -122,9 +125,9 @@ test.describe("a newer version of the app", () => {
     await expectStatus(other, "full");
     await postNewerTabQuery(page);
     for (const tab of [page, other]) {
-      await expect(tab.locator("#snackbar-message")).toHaveText(
-        "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
-      );
+      // What a screen reader announces, and the snackbar's action on screen.
+      await expect(tab.getByRole("status")).toHaveText(OUTDATED_MESSAGE);
+      await expect(tab.getByRole("button", { name: "Reload" })).toBeVisible();
     }
     // The leader let go of the lock and the other tab left the queue, so only the newer tab can
     // take it, open the database and migrate it.
@@ -157,10 +160,9 @@ test.describe("a newer version of the app", () => {
     await page.goto(ISOLATED_URL);
     await expectStatus(page, "full");
     await postNewerTabQuery(page);
-    await expect(page.locator("#snackbar-message")).toBeVisible();
-    expect(await readDescription(page, "Reload")).toBe(
-      "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
-    );
+    await expect(page.getByRole("status")).toHaveText(OUTDATED_MESSAGE);
+    await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
+    expect(await readDescription(page, "Reload")).toBe(OUTDATED_MESSAGE);
     const reloaded = page.waitForEvent("load");
     await hide(page);
     await reloaded;
