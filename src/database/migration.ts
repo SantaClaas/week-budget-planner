@@ -1,3 +1,4 @@
+import type { Result } from "../result.ts";
 import type { TursoConnection } from "./connection.ts";
 
 /** Drizzle's table of applied migrations. It holds one row per migration, by name. */
@@ -15,14 +16,6 @@ const loaders = import.meta.glob<string>("../../drizzle/*/migration.sql", {
 const readName = (path: string): string => path.split("/").at(-2) ?? path;
 
 const loaderByName = new Map(Object.entries(loaders).map(([path, load]) => [readName(path), load]));
-
-/**
- * The database has migrations this version of the app doesn't know: a newer version made or
- * upgraded it. Opening it could misread or damage it, so nothing is run.
- */
-export class NewerDatabaseError extends Error {
-  override name = "NewerDatabaseError";
-}
 
 /** Every migration this version of the app knows, oldest first. */
 export const MIGRATION_NAMES: readonly string[] = loaderByName.keys().toArray().toSorted();
@@ -49,19 +42,20 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
 /**
  * Applies pending migrations to a real database connection (the leader tab's, an imported copy, or
  * a test database). A database that is up to date costs one query: the migrator and the SQL are
- * only loaded for migrations it doesn't have yet. Safe to run on every open. Throws
- * {@link NewerDatabaseError} for a database from a newer version of the app.
+ * only loaded for migrations it doesn't have yet. Safe to run on every open. "newer-version" when
+ * the database has migrations this version of the app doesn't know: a newer version made or
+ * upgraded it, and opening it could misread or damage it, so nothing is run.
  */
-export async function runMigrations(connection: TursoConnection): Promise<void> {
+export async function runMigrations(
+  connection: TursoConnection,
+): Promise<Result<"migrated", "newer-version">> {
   const applied = await readAppliedNames(connection);
-  if (applied.values().some((name) => !loaderByName.has(name))) {
-    throw new NewerDatabaseError("The database was made by a newer version of the app.");
-  }
+  if (applied.values().some((name) => !loaderByName.has(name))) return "newer-version";
   const pending = loaderByName
     .entries()
     .filter(([name]) => !applied.has(name))
     .toArray();
-  if (pending.length === 0) return;
+  if (pending.length === 0) return "migrated";
 
   const [{ migrate }, driverCore, files] = await Promise.all([
     import("drizzle-orm/tursodatabase/wasm-migrator"),
@@ -79,4 +73,5 @@ export async function runMigrations(connection: TursoConnection): Promise<void> 
   const migrations = Object.fromEntries(files);
   const result = await migrate(driver.construct(connection), { migrations });
   if (result) throw new Error(`Database migration failed: ${JSON.stringify(result)}`);
+  return "migrated";
 }

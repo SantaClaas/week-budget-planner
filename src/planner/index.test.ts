@@ -5,36 +5,45 @@ import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import { createBlock } from "../plan/test-data.ts";
 import type { Snackbar } from "../snackbar/index.ts";
 import * as memory from "../storage/memory.ts";
-import { NewerVersionError, type PlanStore } from "../storage/plan-store.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import { create, type Planner } from "./index.ts";
 
 /**
- * A memory store that records each save, fails while `isFailing` is set, and lets the test play
- * another tab: `saveInOtherTab` stores a plan and says so, as another tab's save would.
+ * A memory store that records each save, fails while `isFailing` is set, answers "newer-version"
+ * while `isFromNewerVersion` is set, and lets the test play another tab: `saveInOtherTab` stores a
+ * plan and says so, as another tab's save would.
  */
-function createRecordingStore() {
+type Recording = {
+  saves: { before: Plan | undefined; after: Plan }[];
+  isFailing: boolean;
+  isFromNewerVersion: boolean;
+  saveInOtherTab(plan: Plan): Promise<void>;
+  store: PlanStore;
+};
+
+function createRecordingStore(): Recording {
   const store = memory.create();
   const saves: { before: Plan | undefined; after: Plan }[] = [];
   let onOtherTab: (() => void) | undefined;
-  const recording = {
+  const recording: Recording = {
     saves,
     isFailing: false,
     isFromNewerVersion: false,
     async saveInOtherTab(plan: Plan): Promise<void> {
-      await store.save(undefined, plan, Temporal.Now.instant());
+      expect(await store.save(undefined, plan, Temporal.Now.instant())).toBe("saved");
       onOtherTab?.();
     },
     store: {
       ...store,
       level: "full",
       load() {
-        if (!recording.isFromNewerVersion) return store.load();
-        return Promise.reject(new NewerVersionError("Saved by a newer version."));
+        return recording.isFromNewerVersion ? Promise.resolve("newer-version") : store.load();
       },
-      async save(before, after, now) {
-        if (recording.isFailing) throw new Error("The disk is full.");
+      save(before, after, now) {
+        if (recording.isFromNewerVersion) return Promise.resolve("newer-version");
+        if (recording.isFailing) return Promise.reject(new Error("The disk is full."));
         saves.push({ before, after });
-        await store.save(before, after, now);
+        return store.save(before, after, now);
       },
       onExternalChange(callback) {
         onOtherTab = callback;
@@ -146,6 +155,23 @@ describe("the planner", () => {
     await recording.saveInOtherTab(addBlock(addBlock(createEmptyPlan())));
     await settle();
     expect(planner.plan().blocks).toHaveLength(2);
+    expect(planner.canUndo()).toBe(false);
+  });
+
+  it("stops when a save finds that a newer version took over", async () => {
+    const recording = createRecordingStore();
+    let isTold = false;
+    using opened = openPlanner(recording.store, {
+      onNewerVersion: () => {
+        isTold = true;
+      },
+    });
+    const { planner } = opened;
+    recording.isFromNewerVersion = true;
+    planner.change(addBlock);
+    await settle();
+    expect(isTold).toBe(true);
+    expect(planner.saveStatus().text).toBe("Not saved");
     expect(planner.canUndo()).toBe(false);
   });
 

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { createExampleWeek } from "../plan/example.ts";
 import * as local from "./local.ts";
 import { PLAN_KEY } from "./local.ts";
-import { InvalidFileError, NewerVersionError } from "./plan-store.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
 
 const NOW = Temporal.Instant.from("2026-10-15T08:00:00Z");
@@ -41,6 +40,12 @@ const events = () => {
 };
 
 const example = () => createExampleWeek(NOW, createPredictableIds());
+/** The value of a Result the test expects to have one. */
+function readValue<Value>(result: Value | "newer-version"): Value {
+  if (result === "newer-version") throw new Error("The store answered newer-version.");
+  return result;
+}
+
 const file = (text: string, name: string) =>
   new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
@@ -49,7 +54,7 @@ describe("localStorage store", () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
     expect(await store.load()).toMatchObject({ isStored: false });
-    await store.save(undefined, example(), NOW);
+    expect(await store.save(undefined, example(), NOW)).toBe("saved");
     expect(await local.create(storage, events()).load()).toEqual({
       plan: example(),
       isStored: true,
@@ -59,30 +64,26 @@ describe("localStorage store", () => {
   it("exports and imports .json and refuses .db files", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    await store.save(undefined, example(), NOW);
-    const exported = await store.exportFile();
+    expect(await store.save(undefined, example(), NOW)).toBe("saved");
+    const exported = readValue(await store.exportFile());
     expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
-    await store.wipe();
+    expect(await store.wipe()).toBe("wiped");
     expect(storage.getItem(PLAN_KEY)).toBeNull();
-    await store.importFile(file(await exported.blob.text(), "backup.json"));
-    expect((await store.load()).plan).toEqual(example());
-    await expect(store.importFile(file("SQLite", "backup.db"))).rejects.toThrow(InvalidFileError);
+    expect(await store.importFile(file(await exported.blob.text(), "backup.json"))).toBe(
+      "imported",
+    );
+    expect(readValue(await store.load()).plan).toEqual(example());
+    expect(await store.importFile(file("SQLite", "backup.db"))).toBe("needs-database");
   });
 
   it("refuses a .json file that isn't a plan and keeps the stored plan", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    await store.save(undefined, example(), NOW);
-    await expect(store.importFile(file('{"name": "notes"}', "notes.json"))).rejects.toThrow(
-      InvalidFileError,
-    );
-    await expect(store.importFile(file("{broken", "broken.json"))).rejects.toThrow(
-      InvalidFileError,
-    );
-    await expect(store.importFile(file('{"version": 2}', "newer.json"))).rejects.toThrow(
-      NewerVersionError,
-    );
-    expect((await store.load()).plan).toEqual(example());
+    expect(await store.save(undefined, example(), NOW)).toBe("saved");
+    expect(await store.importFile(file('{"name": "notes"}', "notes.json"))).toBe("invalid-file");
+    expect(await store.importFile(file("{broken", "broken.json"))).toBe("invalid-file");
+    expect(await store.importFile(file('{"version": 2}', "newer.json"))).toBe("newer-version");
+    expect(readValue(await store.load()).plan).toEqual(example());
   });
 
   it("leaves a plan saved by a newer version alone", async () => {
@@ -90,19 +91,19 @@ describe("localStorage store", () => {
     const newer = JSON.stringify({ version: 2, activities: [{ id: "a", name: "Unknown to us" }] });
     storage.setItem(PLAN_KEY, newer);
     const store = local.create(storage, events());
-    await expect(store.load()).rejects.toBeInstanceOf(NewerVersionError);
-    await expect(store.save(undefined, example(), NOW)).rejects.toBeInstanceOf(NewerVersionError);
-    await expect(store.exportFile()).rejects.toBeInstanceOf(NewerVersionError);
+    expect(await store.load()).toBe("newer-version");
+    expect(await store.save(undefined, example(), NOW)).toBe("newer-version");
+    expect(await store.exportFile()).toBe("newer-version");
     expect(storage.getItem(PLAN_KEY)).toBe(newer);
   });
 
   it("stops saving once another tab saved with a newer version", async () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
-    await store.save(undefined, example(), NOW);
+    expect(await store.save(undefined, example(), NOW)).toBe("saved");
     const newer = JSON.stringify({ version: 2 });
     storage.setItem(PLAN_KEY, newer);
-    await expect(store.save(example(), example(), NOW)).rejects.toBeInstanceOf(NewerVersionError);
+    expect(await store.save(example(), example(), NOW)).toBe("newer-version");
     expect(storage.getItem(PLAN_KEY)).toBe(newer);
   });
 

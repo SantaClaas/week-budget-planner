@@ -34,14 +34,22 @@ export async function removeFirstBlock(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
-    const { plan } = await store.load();
-    await store.save(plan, { ...plan, blocks: plan.blocks.slice(1) }, Temporal.Now.instant());
+    const loaded = await store.load();
+    if (loaded === "newer-version") throw new Error("A newer version saved the plan.");
+    const { plan } = loaded;
+    const saved = await store.save(
+      plan,
+      { ...plan, blocks: plan.blocks.slice(1) },
+      Temporal.Now.instant(),
+    );
+    if (saved === "newer-version") throw new Error("A newer version saved the plan.");
   });
 }
 
 /**
- * Imports a file through the store. Resolves to the error's message when the import is refused, or
- * to "imported" once the page has reloaded with the imported plan.
+ * Imports a file through the store. Resolves to why the import was refused ("invalid-file",
+ * "needs-database", "newer-version"), or to "imported" once the page has reloaded with the
+ * imported plan.
  */
 export async function importFile(
   page: Page,
@@ -52,15 +60,10 @@ export async function importFile(
   const reloaded = page.waitForEvent("load");
   const result = await page
     .evaluate(
-      async ({ name: fileName, bytes: content, type: fileType }) => {
+      ({ name: fileName, bytes: content, type: fileType }) => {
         const store = window.weekBudgetPlanner?.store;
         if (store === undefined) throw new Error("The app hasn't opened its storage.");
-        try {
-          await store.importFile(new File([new Uint8Array(content)], fileName, { type: fileType }));
-        } catch (error) {
-          return error instanceof Error ? error.message : String(error);
-        }
-        return "imported";
+        return store.importFile(new File([new Uint8Array(content)], fileName, { type: fileType }));
       },
       { name, bytes: [...bytes], type },
     )
@@ -78,6 +81,7 @@ export function exportDatabase(page: Page): Promise<{ name: string; bytes: numbe
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
     const file = await store.exportFile();
+    if (file === "newer-version") throw new Error("A newer version saved the plan.");
     return { name: file.filename, bytes: [...new Uint8Array(await file.blob.arrayBuffer())] };
   });
 }
@@ -88,7 +92,8 @@ export function tryLoading(page: Page): Promise<"answered" | "gave up"> {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
     try {
-      await store.load();
+      // Whether the plan came back or a newer version has it, the call was answered.
+      void (await store.load());
     } catch {
       return "gave up";
     }

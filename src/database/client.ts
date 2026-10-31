@@ -5,7 +5,6 @@ import { connect } from "@tursodatabase/database-wasm/vite";
 import { PROTOCOL_VERSION } from "../broadcast/protocol/index.ts";
 import {
   consume,
-  NewerProtocolError,
   provide,
   ProviderChangedError,
   type Consumer,
@@ -13,7 +12,7 @@ import {
 } from "../broadcast/service.ts";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
-import { NewerDatabaseError, runMigrations } from "./migration.ts";
+import { runMigrations } from "./migration.ts";
 import { loadPlan } from "./plan-repository.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Result } from "../result.ts";
@@ -39,7 +38,7 @@ const SCOPE = "database";
  */
 type DatabaseService = QueryService & {
   /** Checkpoints the WAL, briefly closes the database, and returns the raw SQLite file bytes. */
-  exportFile(): Promise<Uint8Array<ArrayBuffer>>;
+  exportFile(): Promise<Result<Uint8Array<ArrayBuffer>, "newer-version">>;
   /**
    * Replaces the database file and reloads every tab. Destructive. Leaves the database as it was
    * and returns "invalid-file" when the file isn't a database this app can open, or
@@ -47,13 +46,19 @@ type DatabaseService = QueryService & {
    */
   importFile(bytes: Uint8Array<ArrayBuffer>): Promise<Result<"imported", ImportProblem>>;
   /** Deletes the database files entirely and reloads every tab. Destructive. */
-  wipe(): Promise<void>;
+  wipe(): Promise<Result<"wiped", "newer-version">>;
 };
+
+/**
+ * Every method gives back "newer-version" instead of running when a newer version of the app made
+ * the database or runs in another tab (see "Tabs on different versions" in
+ * docs/spec/persistence.md).
+ */
 
 let channel: BroadcastChannel | undefined;
 let consumer: Consumer<DatabaseService> | undefined;
 let isLeader = false;
-let localDatabase: Promise<TursoConnection> | undefined;
+let localDatabase: Promise<Result<TursoConnection, "newer-version">> | undefined;
 let isElectionStarted = false;
 
 /**
@@ -111,18 +116,23 @@ function readRemovalRequest(): boolean {
   }
 }
 
-async function open(): Promise<TursoConnection> {
+/**
+ * Opens the database file and migrates it, or gives back "newer-version" and closes it again when a
+ * newer version of the app made it.
+ */
+async function open(): Promise<Result<TursoConnection, "newer-version">> {
   if (readRemovalRequest()) {
     await removeDatabaseFiles();
     localStorage.removeItem(REMOVAL_KEY);
   }
   await removeImportLeftovers();
   const connection = await connectFile(DATABASE_FILE);
-  await runMigrations(connection);
-  return connection;
+  if ((await runMigrations(connection)) === "migrated") return connection;
+  await connection.close();
+  return "newer-version";
 }
 
-function getLocalConnection(): Promise<TursoConnection> {
+function getLocalConnection(): Promise<Result<TursoConnection, "newer-version">> {
   localDatabase ??= open();
   return localDatabase;
 }
@@ -138,13 +148,15 @@ async function closeForNewerVersion(): Promise<void> {
   const opening = localDatabase;
   localDatabase = waitForReload;
   if (opening === undefined) return;
-  let database: TursoConnection;
+  let database: Result<TursoConnection, "newer-version">;
   try {
     database = await opening;
   } catch {
     // It never opened, so there's nothing to close.
     return;
   }
+  // A database from a newer version was closed as soon as it opened.
+  if (database === "newer-version") return;
   // Folds the WAL into the file, so the newer tab reads everything this one wrote.
   await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   await database.close();
@@ -185,13 +197,18 @@ export function onNewerVersion(listener: () => void): () => void {
   };
 }
 
-/** Closes the database so its files can be replaced. Later calls wait for the reload. */
-async function closeForReload(): Promise<void> {
+/**
+ * Closes the database so its files can be replaced. Later calls wait for the reload. A database
+ * from a newer version isn't open, and stays as it is.
+ */
+async function closeForReload(): Promise<Result<"closed", "newer-version">> {
   const database = await getLocalConnection();
+  if (database === "newer-version") return database;
   localDatabase = waitForReload;
   // Folds the WAL into the file, so removing the WAL loses nothing if the action fails later.
   await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   await database.close();
+  return "closed";
 }
 
 /** A file being written: commit() keeps what was written, and disposing it uncommitted drops it. */
@@ -247,13 +264,17 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
 /** Why a file can't be imported. */
 type ImportProblem = "invalid-file" | "newer-version";
 
-/** Opens the copy of an imported database, migrates it and reads its plan. Throws when it can't. */
-async function readCopy(name: string): Promise<void> {
+/**
+ * Opens the copy of an imported database, migrates it and reads its plan. "newer-version" when a
+ * newer version of the app made it; throws when it isn't a database this app can read.
+ */
+async function readCopy(name: string): Promise<Result<"readable", "newer-version">> {
   await using resources = new AsyncDisposableStack();
   const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
-  await runMigrations(connection);
+  if ((await runMigrations(connection)) === "newer-version") return "newer-version";
   const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
   await loadPlan(database, randomIds);
+  return "readable";
 }
 
 /**
@@ -268,14 +289,14 @@ async function checkImport(
   cleanup.defer(removeImportLeftovers);
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   await writeFile(await navigator.storage.getDirectory(), name, bytes);
+  let copy: Result<"readable", "newer-version">;
   try {
-    await readCopy(name);
+    copy = await readCopy(name);
   } catch (error) {
-    if (error instanceof NewerDatabaseError) return "newer-version";
     console.warn("[database] the imported file can't be opened", error);
     return "invalid-file";
   }
-  return "importable";
+  return copy === "readable" ? "importable" : copy;
 }
 
 function broadcastReload(): void {
@@ -302,6 +323,7 @@ const localService: DatabaseService = {
 
   async exportFile() {
     const database = await getLocalConnection();
+    if (database === "newer-version") return database;
     await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     const bytesAfterClose = (async () => {
       await database.close();
@@ -316,7 +338,7 @@ const localService: DatabaseService = {
   async importFile(bytes) {
     const check = await checkImport(bytes);
     if (check !== "importable") return check;
-    await closeForReload();
+    if ((await closeForReload()) === "newer-version") return "newer-version";
     try {
       await replaceDatabaseFile(bytes);
     } catch (error) {
@@ -328,7 +350,7 @@ const localService: DatabaseService = {
   },
 
   async wipe() {
-    await closeForReload();
+    if ((await closeForReload()) === "newer-version") return "newer-version";
     try {
       await removeDatabaseFiles();
     } catch (error) {
@@ -336,6 +358,7 @@ const localService: DatabaseService = {
       throw error;
     }
     broadcastReload();
+    return "wiped";
   },
 };
 
@@ -407,9 +430,14 @@ function startElection(): void {
     });
 }
 
-/** Runs `operation` locally when leader, otherwise through the leader tab. */
-async function callService<T>(operation: (service: DatabaseService) => Promise<T>): Promise<T> {
-  if (isOutdated) throw new NewerDatabaseError("A newer version of the app runs in another tab.");
+/**
+ * Runs `operation` locally when leader, otherwise through the leader tab. "newer-version" once
+ * this tab stepped down for a newer one.
+ */
+async function callService<T>(
+  operation: (service: DatabaseService) => Promise<T>,
+): Promise<T | "newer-version"> {
+  if (isOutdated) return "newer-version";
   startElection();
   const leader = setUp().consumer;
   while (true) {
@@ -420,11 +448,6 @@ async function callService<T>(operation: (service: DatabaseService) => Promise<T
     } catch (error) {
       // Promoted mid-wait: the call was never sent, safe to redispatch locally.
       if (error instanceof ProviderChangedError) continue;
-      if (error instanceof NewerProtocolError) {
-        throw new NewerDatabaseError("A newer version of the app runs in another tab.", {
-          cause: error,
-        });
-      }
       throw error;
     }
   }

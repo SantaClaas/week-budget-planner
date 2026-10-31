@@ -6,7 +6,7 @@ import type { Plan } from "../plan/index.ts";
 import type { Result } from "../result.ts";
 import type { Snackbar } from "../snackbar/index.ts";
 import { open as openStorage } from "../storage/index.ts";
-import { NewerVersionError, type PlanStore } from "../storage/plan-store.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import * as saveStatus from "./save-status.ts";
 import * as undo from "./undo.ts";
 
@@ -40,11 +40,6 @@ export type Planner = {
  */
 type Options = { showSnackbar(snackbar: Snackbar): void; onNewerVersion(): void };
 
-async function openAndLoad() {
-  const store = await openStorage();
-  return { store, stored: await store.load() };
-}
-
 /** The planner for the plan `stored`, which the store already holds. */
 export function create(store: PlanStore, stored: Plan, options: Options): Planner {
   // Solid shows a write only after it flushes, so two changes in one event would read the same
@@ -72,6 +67,23 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
   }
 
   /**
+   * Shows the plan another tab saved. The undo steps go, since applying one would write back an
+   * older plan over the other tab's change.
+   */
+  function showSaved(changed: Plan): void {
+    saved = changed;
+    showChange(changed, []);
+  }
+
+  /** Stops every change, once a tab on a newer version took over the storage. */
+  function stopForNewerVersion(): void {
+    if (isStopped) return;
+    isStopped = true;
+    setIsOutdated(true);
+    options.onNewerVersion();
+  }
+
+  /**
    * Offers to save again, once per run of failed saves (see Writes and undo). The change stays on
    * screen, and `retry` saves it.
    */
@@ -94,8 +106,9 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
 
   /** Writes `after` over what the store holds, and offers `retry` when that fails. */
   async function saveNow(after: Plan, now: Temporal.Instant, retry: () => void): Promise<void> {
+    let result: Result<"saved", "newer-version">;
     try {
-      await store.save(saved, after, now);
+      result = await store.save(saved, after, now);
     } catch (error) {
       console.error("[planner] couldn't save the change", error);
       openSaves -= 1;
@@ -103,8 +116,12 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
       offerRetry(retry);
       return;
     }
-    saved = after;
     openSaves -= 1;
+    if (result === "newer-version") {
+      stopForNewerVersion();
+      return;
+    }
+    saved = after;
     isFailing = false;
     if (openSaves === 0) setSaveState("saved");
   }
@@ -122,37 +139,21 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     saving = saving.then(() => saveNow(after, now, retry));
   }
 
-  /**
-   * Shows the plan another tab saved. The undo steps go, since applying one would write back an
-   * older plan over the other tab's change.
-   */
-  function showSaved(changed: Plan): void {
-    saved = changed;
-    showChange(changed, []);
-  }
-
-  /** Stops every change, once a tab on a newer version took over the storage. */
-  function stopForNewerVersion(): void {
-    isStopped = true;
-    setIsOutdated(true);
-    options.onNewerVersion();
-  }
-
   // Only the latest load is shown, so two quick changes in another tab can't leave the older plan
   // on screen when their loads finish out of order.
   let latestLoad = 0;
   async function showLatest(): Promise<void> {
     latestLoad += 1;
     const load = latestLoad;
-    const { plan: changed } = await store.load();
-    if (load === latestLoad) showSaved(changed);
+    const loaded = await store.load();
+    if (loaded === "newer-version") {
+      stopForNewerVersion();
+      return;
+    }
+    if (load === latestLoad) showSaved(loaded.plan);
   }
   const stopWatching = store.onExternalChange(() => {
     showLatest().catch((error: unknown) => {
-      if (error instanceof NewerVersionError) {
-        stopForNewerVersion();
-        return;
-      }
       // The plan on screen stays as it was; the next change in another tab tries again.
       console.error("[planner] couldn't load the plan another tab changed", error);
     });
@@ -190,18 +191,14 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
 export async function open(
   options: Options,
 ): Promise<Result<{ store: PlanStore; planner: Planner }, "newer-version">> {
-  let store: PlanStore;
-  let stored: Awaited<ReturnType<PlanStore["load"]>>;
-  try {
-    ({ store, stored } = await openAndLoad());
-  } catch (error) {
-    if (error instanceof NewerVersionError) return "newer-version";
-    throw error;
-  }
+  const store = await openStorage();
+  if (store === "newer-version") return store;
+  const stored = await store.load();
+  if (stored === "newer-version") return stored;
   if (stored.isStored) return { store, planner: create(store, stored.plan, options) };
   // The example week is marked as loaded at the same moment its rows are saved.
   const now = Temporal.Now.instant();
   const example = createExampleWeek(now, randomIds);
-  await store.save(undefined, example, now);
+  if ((await store.save(undefined, example, now)) === "newer-version") return "newer-version";
   return { store, planner: create(store, example, options) };
 }

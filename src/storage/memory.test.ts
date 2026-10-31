@@ -13,9 +13,9 @@ describe("memory store", () => {
     const store = memory.create();
     expect(store.level).toBe("none");
     expect(await store.load()).toMatchObject({ isStored: false });
-    await store.save(undefined, example(), NOW);
-    expect((await store.load()).plan).toEqual(example());
-    await store.wipe();
+    expect(await store.save(undefined, example(), NOW)).toBe("saved");
+    expect(await store.load()).toEqual({ plan: example(), isStored: true });
+    expect(await store.wipe()).toBe("wiped");
     expect(await store.load()).toMatchObject({ isStored: false });
   });
 });

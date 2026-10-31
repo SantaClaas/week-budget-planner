@@ -1,12 +1,8 @@
 import { randomIds } from "../plan/id.ts";
 import * as planFile from "../plan/file.ts";
 import type { Plan } from "../plan/index.ts";
-import {
-  createExportName,
-  InvalidFileError,
-  NewerVersionError,
-  type ExportedFile,
-} from "./plan-store.ts";
+import type { Result } from "../result.ts";
+import { createExportName, type ExportedFile, type ImportProblem } from "./plan-store.ts";
 
 /** The plan as a `.json` file, the export below the full level. */
 
@@ -20,21 +16,9 @@ export function create(plan: Plan, today: Temporal.PlainDate): ExportedFile {
   };
 }
 
-/** Reads an imported `.json` plan file. Refuses anything else, such as a `.db` file. */
-export async function read(file: File): Promise<Plan> {
-  if (!isJson(file)) {
-    throw new InvalidFileError(
-      "Only a .json plan file can be imported here, because this browser can't open the database.",
-    );
-  }
+/** Reads an imported `.json` plan file, or says why it isn't one this app can import. */
+export async function read(file: File): Promise<Result<Plan, ImportProblem>> {
+  if (!isJson(file)) return "needs-database";
   const plan = planFile.read(await file.text(), randomIds);
-  if (plan === "not-a-plan")
-    throw new InvalidFileError(
-      "This file isn't a Week Budget Planner plan, so nothing was changed.",
-    );
-  if (plan === "newer-version")
-    throw new NewerVersionError(
-      "This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.",
-    );
-  return plan;
+  return plan === "not-a-plan" ? "invalid-file" : plan;
 }

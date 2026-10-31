@@ -1,4 +1,5 @@
 import type { Plan } from "../plan/index.ts";
+import type { Result } from "../result.ts";
 
 /**
  * How much the browser lets the app save (see "Progressive enhancement" in
@@ -19,26 +20,21 @@ export type ExportedFile = { blob: Blob; filename: string };
 export const createExportName = (today: Temporal.PlainDate, extension: "db" | "json"): string =>
   `week-budget-planner-${today.toString()}.${extension}`;
 
-/** An imported file that isn't a plan this level can read. Nothing was changed. */
-export class InvalidFileError extends Error {}
+/**
+ * Why an imported file wasn't imported, with nothing changed (see Export, import and reset in
+ * docs/spec/persistence.md):
+ * - "invalid-file": it isn't a plan, or a database this app can open.
+ * - "needs-database": a `.db` file, which only the full level can import.
+ * - "newer-version": a newer version of the app made it; reloading updates the app.
+ */
+export type ImportProblem = "invalid-file" | "needs-database" | "newer-version";
 
 /**
- * The plan, or an imported file, was saved by a newer version of the app. Reloading updates the
- * app (see Export, import and reset in docs/spec/persistence.md). Nothing was changed.
+ * Where the plan is kept. Every method gives back "newer-version" instead of doing anything once a
+ * newer version of the app saved the plan or runs in another tab (see "Tabs on different versions"
+ * in docs/spec/persistence.md). A failure the caller can only report, such as a full disk or a
+ * lost call to another tab, throws.
  */
-export class NewerVersionError extends Error {}
-
-/**
- * Whether a newer version of the app made the database or runs in another tab, somewhere in the
- * chain of causes. Read by name, since the database's errors cross from the leader tab.
- */
-export function isFromNewerVersion(error: unknown): boolean {
-  for (let cause = error; cause instanceof Error; cause = cause.cause) {
-    if (cause.name === "NewerDatabaseError") return true;
-  }
-  return false;
-}
-
 export interface PlanStore {
   readonly level: StorageLevel;
   /**
@@ -47,22 +43,25 @@ export interface PlanStore {
    */
   readonly fallbackReason?: "database-broken";
   /** `isStored` is false when nothing was ever saved here (first run). */
-  load(): Promise<{ plan: Plan; isStored: boolean }>;
+  load(): Promise<Result<{ plan: Plan; isStored: boolean }, "newer-version">>;
   /**
    * Saves one user action, `before` being what is stored now, and `now` when the action happened
    * (see "One action, one `now`" in docs/guidelines/principles.md).
    */
-  save(before: Plan | undefined, after: Plan, now: Temporal.Instant): Promise<void>;
+  save(
+    before: Plan | undefined,
+    after: Plan,
+    now: Temporal.Instant,
+  ): Promise<Result<"saved", "newer-version">>;
   /** The `.db` file at the full level, the `.json` plan file otherwise. */
-  exportFile(): Promise<ExportedFile>;
+  exportFile(): Promise<Result<ExportedFile, "newer-version">>;
   /**
-   * Replaces the stored plan with an imported `.db` (full level only) or `.json` file. Changes
-   * nothing and throws {@link InvalidFileError} when the file isn't a plan this level can read, or
-   * {@link NewerVersionError} when a newer version of the app made it.
+   * Replaces the stored plan with an imported `.db` (full level only) or `.json` file, or says why
+   * it changed nothing.
    */
-  importFile(file: File): Promise<void>;
+  importFile(file: File): Promise<Result<"imported", ImportProblem>>;
   /** Deletes everything this level stored. */
-  wipe(): Promise<void>;
+  wipe(): Promise<Result<"wiped", "newer-version">>;
   /**
    * Calls back when another tab changed the plan.
    * @mustUse Gives back the function that stops it, which the caller calls when it's done.

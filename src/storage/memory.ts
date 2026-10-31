@@ -14,15 +14,20 @@ export function create(): PlanStore {
     },
     async save(_before, after) {
       plan = after;
+      return "saved";
     },
     async exportFile() {
       return jsonFile.create(plan ?? createEmptyPlan(), Temporal.Now.plainDateISO());
     },
     async importFile(file) {
-      plan = await jsonFile.read(file);
+      const imported = await jsonFile.read(file);
+      if (typeof imported === "string") return imported;
+      plan = imported;
+      return "imported";
     },
     async wipe() {
       plan = undefined;
+      return "wiped";
     },
     onExternalChange() {
       // Nothing else can change a plan that only this tab holds.

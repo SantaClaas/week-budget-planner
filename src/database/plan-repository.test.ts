@@ -12,7 +12,7 @@ import {
 import type { Plan } from "../plan/index.ts";
 import { createLocalQueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
-import { MIGRATION_NAMES, NewerDatabaseError, runMigrations } from "./migration.ts";
+import { MIGRATION_NAMES, runMigrations } from "./migration.ts";
 import { loadPlan, buildPlanStatements, savePlan } from "./plan-repository.ts";
 import { activities as activitiesTable, blocks as blocksTable } from "./schema.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
@@ -22,7 +22,7 @@ const NOW = Temporal.Instant.from("2026-10-15T08:00:00Z");
 /** A migrated in-memory database behind the same proxy path the app uses. */
 async function openTestDatabase(): Promise<{ database: Database; connection: TursoConnection }> {
   const connection = await connect(":memory:");
-  await runMigrations(connection);
+  expect(await runMigrations(connection)).toBe("migrated");
   return {
     database: createDatabase(createLocalQueryService(() => Promise.resolve(connection))),
     connection,
@@ -46,7 +46,7 @@ describe("migrations", () => {
     // A migration drizzle-kit generates later, for example one that rebuilds a table to change it,
     // comes without STRICT. Add it to that migration's SQL by hand, as in the first one.
     const connection = await connect(":memory:");
-    await runMigrations(connection);
+    expect(await runMigrations(connection)).toBe("migrated");
     const statement = await connection.prepare(
       "SELECT name, strict FROM pragma_table_list WHERE schema = 'main' AND name NOT LIKE 'sqlite%' AND name <> '__drizzle_migrations' ORDER BY name",
     );
@@ -60,17 +60,17 @@ describe("migrations", () => {
 
   it("can run again on a migrated database", async () => {
     const connection = await connect(":memory:");
-    await runMigrations(connection);
-    await expect(runMigrations(connection)).resolves.toBeUndefined();
+    expect(await runMigrations(connection)).toBe("migrated");
+    expect(await runMigrations(connection)).toBe("migrated");
   });
 
   it("refuses a database from a newer version of the app", async () => {
     const connection = await connect(":memory:");
-    await runMigrations(connection);
+    expect(await runMigrations(connection)).toBe("migrated");
     await connection.exec(
       `INSERT INTO __drizzle_migrations (hash, created_at, name) VALUES ('', 0, '29991231000000_future')`,
     );
-    await expect(runMigrations(connection)).rejects.toThrow(NewerDatabaseError);
+    expect(await runMigrations(connection)).toBe("newer-version");
   });
 });
 
