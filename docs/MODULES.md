@@ -10,6 +10,10 @@ Dependencies go one way (see Coupling in [`docs/guidelines/principles.md`](guide
 flowchart LR
   module_App["App"]
   module_brand["brand"]
+  module_broadcast["broadcast"]
+  module_color_scheme["color-scheme"]
+  module_database["database"]
+  module_download["download"]
   module_font["font"]
   module_index["index"]
   module_plan["plan"]
@@ -28,4 +32,7 @@ flowchart LR
   module_index --> module_trusted_html
   module_plan --> module_brand
   module_plan --> module_result
+  module_storage --> module_broadcast
+  module_storage --> module_database
+  module_storage --> module_plan
 ```
