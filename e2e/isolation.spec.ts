@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { PAGES_URL, expectStatus } from "./app.ts";
+import { PAGES_URL, expectStatus, readDescription } from "./app.ts";
 
 // The storage levels (see Progressive enhancement in docs/spec/persistence.md). GitHub Pages can't
 // send the isolation headers, so the full level depends on the service worker adding them. Where
@@ -37,6 +37,12 @@ test("leaves a plan in limited storage alone when a newer version saved it", asy
   }, newer);
   await page.reload();
   await expect(page.getByTestId("newer-version")).toContainText("saved by a newer version");
+  await expect(
+    page.getByRole("heading", { name: "Your plan was saved by a newer version" }),
+  ).toBeVisible();
+  expect(await readDescription(page, "Reload")).toBe(
+    "Your plan was saved by a newer version Reload to update Week Budget Planner. Your plan is safe, and nothing was changed.",
+  );
   expect(await page.evaluate(() => localStorage.getItem("week-budget-planner.plan"))).toBe(newer);
   await context.close();
 });

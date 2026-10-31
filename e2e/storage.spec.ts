@@ -10,6 +10,7 @@ import {
   expectStatus,
   exportDatabase,
   importFile,
+  readDescription,
   removeFirstBlock,
   toBytes,
   tryLoading,
@@ -174,21 +175,6 @@ async function postNewerTabQuery(page: Page): Promise<void> {
     channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
     channel.close();
   });
-}
-
-/**
- * The description Chromium gives the button with this name, which is what screen readers hear.
- * Playwright's toHaveAccessibleDescription computes its own and finds none when the description
- * comes from an <output>, as the reload prompt's does, so this asks Chromium's accessibility tree.
- */
-async function readDescription(page: Page, buttonName: string): Promise<string | undefined> {
-  const session = await page.context().newCDPSession(page);
-  const { nodes } = await session.send("Accessibility.getFullAXTree");
-  const button = nodes.find(
-    (node) => node.role?.value === "button" && node.name?.value === buttonName,
-  );
-  const description: unknown = button?.description?.value;
-  return typeof description === "string" ? description : undefined;
 }
 
 /** Makes the page hidden, as when the user switches to another tab. */
