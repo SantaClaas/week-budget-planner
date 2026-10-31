@@ -2,13 +2,14 @@ import type { JSX } from "@solidjs/web";
 import { For } from "solid-js";
 
 import { Icon } from "../icons/Icon.tsx";
+import type { IconName } from "../icons/name.ts";
 import { createPath, NAMES, PAGES, type Page } from "../page/index.ts";
 
 const ICONS = {
   week: "calendar_view_week",
   activities: "checklist",
   settings: "settings",
-} as const satisfies Record<Page, string>;
+} as const satisfies Record<Page, IconName>;
 
 /** The links to the pages, the same in the rail and the bar; the one shown has the filled icon. */
 export function Destinations(props: { current: Page; base: string }): JSX.Element {
