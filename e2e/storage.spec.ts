@@ -119,14 +119,11 @@ test.describe("a newer version of the app", () => {
     const other = await context.newPage();
     await other.goto(ISOLATED_URL);
     await expectStatus(other, "full");
-    // A newer tab's first message, as it asks who serves the database.
-    await page.evaluate(() => {
-      const channel = new BroadcastChannel("week-budget-planner-database");
-      channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
-      channel.close();
-    });
+    await postNewerTabQuery(page);
     for (const tab of [page, other]) {
-      await expect(tab.getByTestId("newer-version")).toContainText("saved by a newer version");
+      await expect(tab.getByTestId("outdated")).toHaveText(
+        "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
+      );
     }
     // The leader let go of the lock and the other tab left the queue, so only the newer tab can
     // take it, open the database and migrate it.
@@ -144,7 +141,45 @@ test.describe("a newer version of the app", () => {
     await newer.goto(ISOLATED_URL);
     await expectStatus(newer, "full");
   });
+
+  test("reloads a hidden tab at once when a newer one takes over", async ({ page }) => {
+    await page.goto(ISOLATED_URL);
+    await expectStatus(page, "full");
+    await hide(page);
+    const reloaded = page.waitForEvent("load");
+    await postNewerTabQuery(page);
+    await reloaded;
+    await expectStatus(page, "full");
+  });
+
+  test("asks a visible tab to reload, and reloads it once it's hidden", async ({ page }) => {
+    await page.goto(ISOLATED_URL);
+    await expectStatus(page, "full");
+    await postNewerTabQuery(page);
+    await expect(page.getByTestId("outdated")).toBeVisible();
+    const reloaded = page.waitForEvent("load");
+    await hide(page);
+    await reloaded;
+    await expectStatus(page, "full");
+  });
 });
+
+/** Posts a newer tab's first message, as it asks who serves the database. */
+async function postNewerTabQuery(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const channel = new BroadcastChannel("week-budget-planner-database");
+    channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
+    channel.close();
+  });
+}
+
+/** Makes the page hidden, as when the user switches to another tab. */
+async function hide(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+}
 
 test("reports a database that won't open, and deleting it starts over", async ({ page }) => {
   await writeDatabaseFile(page, toBytes("garbage that is not a database"));
