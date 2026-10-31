@@ -308,11 +308,11 @@ export function writeSchemeColors(): string {
   ].join("\n");
 }
 
-/** The activity colors: each color's values once on its `.color-…` class, one set of rules for
- * all of them that picks the level, and the light fallback. */
+/** The activity colors: each color's values once on its `[data-color="…"]` rule, named by the
+ * palette's key, one set of rules for all of them that picks the level, and the light fallback. */
 export function writeActivityColors(): string {
   const palette = PALETTE.map(({ key, hue }) => ({
-    selector: `.color-${key}`,
+    selector: `[data-color="${key}"]`,
     colors: readLevels((level) => readActivityColors(level, hue)),
   }));
   const changing = findChangingTokens(palette.map(({ colors }) => colors));
