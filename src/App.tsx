@@ -98,7 +98,10 @@ export function App(): JSX.Element {
     let isDisposed = false;
 
     async function start(): Promise<void> {
-      const result = await planner.open({ onNewerVersion: leaveForNewerVersion });
+      const result = await planner.open({
+        showSnackbar: snackbar.show,
+        onNewerVersion: leaveForNewerVersion,
+      });
       if (result === "newer-version") {
         setIsFromNewerVersion(true);
         return;

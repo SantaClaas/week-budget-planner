@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import { createBlock } from "../plan/test-data.ts";
-import * as snackbar from "../snackbar/index.ts";
+import type { Snackbar } from "../snackbar/index.ts";
 import * as memory from "../storage/memory.ts";
 import { NewerVersionError, type PlanStore } from "../storage/plan-store.ts";
 import { create, type Planner } from "./index.ts";
@@ -47,13 +47,15 @@ function createRecordingStore() {
   return recording;
 }
 
+type Options = Parameters<typeof create>[2];
+
 /** A planner in a reactive root, as the app has one, which goes when the test's scope ends. */
 function openPlanner(
   store: PlanStore,
-  onNewerVersion = (): void => {},
+  { showSnackbar = (): void => {}, onNewerVersion = (): void => {} }: Partial<Options> = {},
 ): { planner: Planner } & Disposable {
   return createRoot((dispose) => {
-    const planner = create(store, createEmptyPlan(), { onNewerVersion });
+    const planner = create(store, createEmptyPlan(), { showSnackbar, onNewerVersion });
     return {
       planner,
       [Symbol.dispose]: () => {
@@ -115,14 +117,18 @@ describe("the planner", () => {
 
   it("keeps a change that failed to save on screen, and saves it on Retry", async () => {
     const recording = createRecordingStore();
-    using opened = openPlanner(recording.store);
+    let shown: Snackbar | undefined;
+    using opened = openPlanner(recording.store, {
+      showSnackbar: (snackbar) => {
+        shown = snackbar;
+      },
+    });
     const { planner } = opened;
     recording.isFailing = true;
     planner.change(addBlock);
     await settle();
     expect(planner.plan().blocks).toHaveLength(1);
     expect(planner.saveStatus().text).toBe("Not saved");
-    const shown = snackbar.current();
     expect(shown?.message).toBe("Couldn't save your last change. It's still on screen.");
     recording.isFailing = false;
     shown?.action?.run();
@@ -146,8 +152,10 @@ describe("the planner", () => {
   it("changes nothing once a tab on a newer version took over, and says so", async () => {
     const recording = createRecordingStore();
     let isTold = false;
-    using opened = openPlanner(recording.store, () => {
-      isTold = true;
+    using opened = openPlanner(recording.store, {
+      onNewerVersion: () => {
+        isTold = true;
+      },
     });
     const { planner } = opened;
     recording.isFromNewerVersion = true;

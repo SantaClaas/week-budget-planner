@@ -4,7 +4,7 @@ import { createExampleWeek } from "../plan/example.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import type { Result } from "../result.ts";
-import * as snackbar from "../snackbar/index.ts";
+import type { Snackbar } from "../snackbar/index.ts";
 import { open as openStorage } from "../storage/index.ts";
 import { NewerVersionError, type PlanStore } from "../storage/plan-store.ts";
 import * as saveStatus from "./save-status.ts";
@@ -33,10 +33,12 @@ export type Planner = {
 };
 
 /**
- * What the app does once a tab on a newer version took over: this planner has already stopped
- * every change (see "Tabs on different versions" in docs/spec/persistence.md).
+ * What the planner needs from the app:
+ * - `showSnackbar`: shows a snackbar, such as the one offering to save a failed change again.
+ * - `onNewerVersion`: what the app does once a tab on a newer version took over; the planner has
+ *   already stopped every change (see "Tabs on different versions" in docs/spec/persistence.md).
  */
-type Options = { onNewerVersion(): void };
+type Options = { showSnackbar(snackbar: Snackbar): void; onNewerVersion(): void };
 
 /**
  * Opens the best storage and its plan, saving the example week on first run, and gives back the
@@ -120,7 +122,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     setSaveState("failed");
     if (isFailing) return;
     isFailing = true;
-    snackbar.show({
+    options.showSnackbar({
       message: "Couldn't save your last change. It's still on screen.",
       urgency: "assertive",
       isLasting: true,
