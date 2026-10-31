@@ -176,15 +176,36 @@ async function writeFile(
   bytes: Uint8Array<ArrayBuffer>,
 ): Promise<void> {
   const handle = await root.getFileHandle(name, { create: true });
+  await using writing = await startWriting(handle);
+  await writing.write(bytes);
+  await writing.commit();
+}
+
+/** A file being written: commit() keeps what was written, and disposing it uncommitted drops it. */
+type Writing = AsyncDisposable & {
+  write(bytes: Uint8Array<ArrayBuffer>): Promise<void>;
+  commit(): Promise<void>;
+};
+
+/**
+ * Starts writing a file in OPFS. Declared with `await using`, the write is aborted however the
+ * scope ends, unless commit() ran first, so the file stays as it was.
+ */
+async function startWriting(handle: FileSystemFileHandle): Promise<Writing> {
   const writable = await handle.createWritable();
-  // oxlint-disable-next-line week-budget-planner/one-operation-per-try -- the write and the close are one operation, since closing is what commits the file.
-  try {
-    await writable.write(bytes);
-    await writable.close();
-  } catch (error) {
-    await writable.abort();
-    throw error;
-  }
+  let isCommitted = false;
+  return {
+    write: (bytes) => writable.write(bytes),
+    async commit() {
+      // Closing is what replaces the file with what was written.
+      await writable.close();
+      isCommitted = true;
+    },
+    async [Symbol.asyncDispose]() {
+      if (isCommitted) return;
+      await writable.abort();
+    },
+  };
 }
 
 /** Removes copies left from earlier imports. One still locked by this page waits for the next open. */

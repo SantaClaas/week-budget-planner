@@ -159,6 +159,9 @@ describe("plan repository", () => {
       database.batch([required(settingsUpdate, "settings update"), duplicate]),
     ).rejects.toThrow(/UNIQUE|constraint/iu);
     expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(7);
+    // The rollback ended the transaction, so the next action starts one of its own and is saved.
+    await savePlan(database, before, after, NOW);
+    expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(6);
   });
 
   it("refuses values that break the rules, even past the types", async () => {

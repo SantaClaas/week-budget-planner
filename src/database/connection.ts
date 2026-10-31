@@ -69,6 +69,28 @@ async function execute(
   return { rows: await statement.all(...parameters) };
 }
 
+/** A transaction: commit() keeps its statements, and disposing it uncommitted rolls them back. */
+type Transaction = AsyncDisposable & { commit(): Promise<void> };
+
+/**
+ * Starts a transaction on the connection. Declared with `await using`, everything since rolls back
+ * however the scope ends, a programming mistake included, unless commit() ran first.
+ */
+async function startTransaction(connection: TursoConnection): Promise<Transaction> {
+  await connection.exec("BEGIN");
+  let isCommitted = false;
+  return {
+    async commit() {
+      await connection.exec("COMMIT");
+      isCommitted = true;
+    },
+    async [Symbol.asyncDispose]() {
+      if (isCommitted) return;
+      await connection.exec("ROLLBACK");
+    },
+  };
+}
+
 /** The {@link QueryService} for a local connection: the leader tab's, or a test database. */
 export function createLocalQueryService(
   getConnection: () => Promise<TursoConnection>,
@@ -79,21 +101,15 @@ export function createLocalQueryService(
     },
     async batch(statements) {
       const connection = await getConnection();
-      await connection.exec("BEGIN");
-      // oxlint-disable-next-line week-budget-planner/one-operation-per-try -- the statements and the commit are one operation: whichever of them fails, it all rolls back.
-      try {
-        const results: QueryResult[] = [];
-        for (const { sql, params: parameters, method } of statements) {
-          // One after another, in order, inside the transaction.
-          // oxlint-disable-next-line no-await-in-loop -- a transaction runs its statements in order.
-          results.push(await execute(connection, sql, parameters, method));
-        }
-        await connection.exec("COMMIT");
-        return results;
-      } catch (error) {
-        await connection.exec("ROLLBACK");
-        throw error;
+      await using transaction = await startTransaction(connection);
+      const results: QueryResult[] = [];
+      for (const { sql, params: parameters, method } of statements) {
+        // One after another, in order, inside the transaction.
+        // oxlint-disable-next-line no-await-in-loop -- a transaction runs its statements in order.
+        results.push(await execute(connection, sql, parameters, method));
       }
+      await transaction.commit();
+      return results;
     },
   };
 }
