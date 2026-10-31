@@ -15,7 +15,7 @@ const FALLBACK_START = "@supports not (color: light-dark(#000, #fff))";
 const LEVELS_START = "@supports (color: light-dark(#000, #fff))";
 const HUES = ["blue", "red", "green", "amber", "violet", "teal", "pink", "lime"];
 /** The rule that points every activity color's tokens at a level. */
-const EVERY_COLOR = `:is(${HUES.map((hue) => `.color-${hue}`).join(", ")})`;
+const EVERY_COLOR = `:is(${HUES.map((hue) => `[data-color="${hue}"]`).join(", ")})`;
 
 /** The first argument of `light-dark(first, second)`, allowing nested parentheses. */
 function findLightValue(value: string): string {
@@ -100,7 +100,7 @@ function resolve(declarations: Map<string, string>): Map<string, string> {
  * outside the levels, keyed by selector and name. */
 function findExpectedFallbacks(): Map<string, string> {
   const expected = new Map<string, string>();
-  for (const selector of [":root", ...HUES.map((hue) => `.color-${hue}`)]) {
+  for (const selector of [":root", ...HUES.map((hue) => `[data-color="${hue}"]`)]) {
     const declarations = readBase(selector);
     for (const [name, declared] of declarations) {
       // the level variables themselves are only read through the tokens
@@ -274,7 +274,7 @@ describe.each(AA_LEVELS)("color contrast, %s", (level) => {
   it.each(HUES.flatMap((hue) => (["light", "dark"] as const).map((scheme) => ({ hue, scheme }))))(
     "activity color $hue ($scheme): block text and swatch",
     ({ hue, scheme }) => {
-      const activity = readLevel(`.color-${hue}`, level);
+      const activity = readLevel(`[data-color="${hue}"]`, level);
       const container = pickColor(activity, "--activity-container", scheme);
       const text = pickColor(activity, "--on-activity-container", scheme);
       const solid = pickColor(activity, "--activity-color", scheme);

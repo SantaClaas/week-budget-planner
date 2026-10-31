@@ -1,7 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import { createEffect, For, Show, untrack } from "solid-js";
 
-import { PALETTE } from "../plan/activity/look.ts";
+import { findColor } from "../plan/activity/look.ts";
 import type { Plan } from "../plan/index.ts";
 import type { DayIndex } from "../plan/time.ts";
 import {
@@ -12,9 +12,6 @@ import {
   type DrawnDay,
   type TimeText,
 } from "./layout.ts";
-
-/** Each palette hue's color class, as in `.color-blue` (see the activity colors in m3-tokens.css). */
-const COLOR_CLASSES = new Map(PALETTE.map(({ hue, key }) => [hue, `color-${key}`]));
 
 /** Text pieces, each one with a `datetime` value in a `<time>` element. */
 function Times(props: { pieces: TimeText[] }): JSX.Element {
@@ -36,7 +33,8 @@ function Times(props: { pieces: TimeText[] }): JSX.Element {
 function Block(props: { block: DrawnBlock }): JSX.Element {
   return (
     <li
-      class={["block", COLOR_CLASSES.get(props.block.activity.hue)]}
+      class="block"
+      data-color={findColor(props.block.activity.hue).key}
       data-length={props.block.size === "regular" ? undefined : props.block.size}
       data-part={props.block.part === "only" ? undefined : props.block.part}
       style={{

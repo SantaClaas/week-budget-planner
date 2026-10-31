@@ -91,6 +91,18 @@ export const DEFAULT_SHAPES = [
 export type Hue = (typeof PALETTE)[number]["hue"];
 export type Shape = (typeof SHAPES)[number];
 
+/** Each hue's palette color. */
+const COLORS_BY_HUE = new Map<Hue, (typeof PALETTE)[number]>(
+  PALETTE.map((color) => [color.hue, color]),
+);
+
+/**
+ * The palette color for a stored hue: its `key` names it in CSS (`data-color="blue"`, see the
+ * activity colors in m3-tokens.css), its `name` in the UI ("Blue").
+ */
+export const findColor = (hue: Hue): (typeof PALETTE)[number] =>
+  COLORS_BY_HUE.get(hue) ?? PALETTE[0];
+
 /** The palette's hues, in its order. */
 const HUES: readonly Hue[] = PALETTE.map((color) => color.hue);
 

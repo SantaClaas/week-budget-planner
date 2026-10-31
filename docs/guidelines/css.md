@@ -15,7 +15,7 @@ How the styles are written. It adds to [`docs/guidelines/principles.md`](princip
 - `base`: the document's own font, colors and links.
 - `theme`: the design tokens as custom properties (`m3-shapes.css` puts its shapes here itself).
 - `components`: Material's components and the app's own.
-- `utilities`: single-purpose classes that combine with anything: the type roles, `.muted`, the activity colors.
+- `utilities`: single-purpose rules that combine with anything: the type roles, `.muted`, and the activity colors, picked by `data-color` with the palette color's key (`data-color="blue"`).
 
 **Select variants by attribute, state by the platform's attributes.** A class names the component (`.button`), a `data-` attribute its variant or size (`&[data-variant="filled"]`, `&[data-size="extra-small"]`, a boolean as `&[data-icon-only]`), and state comes from native or ARIA attributes and pseudo-classes (`&[aria-pressed="true"]`, `&:disabled`, `&:has(> [aria-expanded="true"])`). An attribute selector weighs the same as a class. See [`docs/guidelines/html.md`](html.md) for why. Values (a block's number of name lines, an activity's shape) go through custom properties set in `style` until typed `attr()` is widely available (see [`docs/spec/browser-support.md`](../spec/browser-support.md)).
 
