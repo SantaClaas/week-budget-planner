@@ -142,6 +142,11 @@
       0 1px 0.125rem rgb(0 0 0 / 0.3), 0 0.125rem 0.375rem 0.125rem rgb(0 0 0 / 0.15);
     --elevation-level-3:
       0 1px 0.1875rem rgb(0 0 0 / 0.3), 0 0.25rem 0.5rem 0.1875rem rgb(0 0 0 / 0.15);
+    /* disabled controls: their text and icon, and a filled or tonal container, are on-surface at
+       these opacities (androidx FilledButtonTokens DisabledLabelTextOpacity, DisabledIconOpacity and
+       DisabledContainerOpacity; IconButtonTokens DisabledOpacity). As percentages, for color-mix(). */
+    --disabled-content-opacity: 38%;
+    --disabled-container-opacity: 10%;
     /* Spatial motion: 1 for full motion, 0 for reduced. Movement multiplies by it, as in
        transition-duration: calc(var(--duration) * var(--spatial-motion)), and script reads it with
        getComputedStyle(), so both follow prefers-reduced-motion, or the Motion setting through
@@ -574,13 +579,17 @@
     }
     /* Disabled: only buttons with a container get the disabled container. */
     &:disabled {
-      color: color-mix(in srgb, var(--on-surface) 38%, transparent);
+      color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
       @media (forced-colors: active) {
         border-color: GrayText;
       }
     }
     &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled {
-      background: color-mix(in srgb, var(--on-surface) 10%, transparent);
+      background: color-mix(
+        in srgb,
+        var(--on-surface) var(--disabled-container-opacity),
+        transparent
+      );
     }
   }
   .icon-button {
@@ -609,7 +618,7 @@
       border-radius: var(--corner-medium);
     }
     &:disabled {
-      color: color-mix(in srgb, var(--on-surface) 38%, transparent);
+      color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
       cursor: default;
       @media (forced-colors: active) {
         border-color: GrayText;
