@@ -15,6 +15,14 @@ What assistive technology reads and how the keyboard moves, screen by screen. Ev
 - **Spoken times and lengths are spelled out.** Visible text on blocks and day totals is compact ("1h30", "3h placed", "Mon"), which screen readers read letter by letter. Names and visually hidden text use the long styles: `Intl.DurationFormat` with `style: "long"` ("1 hour, 30 minutes") and the long weekday ("Monday"). The compact visible text is then `aria-hidden`, so nothing is read twice. Everywhere else the short copy ("1 h 30 min left to place") stays as it is.
 - **Titles and their text read as separate sentences.** A title and the text under it (a card's title, an alert's first line) are separate block elements, a heading or a `<p>` each, never two inline spans, which run together ("couldn't be openedSo your plan").
 
+## Pages and navigation
+
+- **Landmarks:** the navigation rail or the navigation bar is a `<nav>` named "Sections"; each page is the `<main>`, and its top app bar the page's `<header>` inside it. The page's name in the app bar is its `<h1>`. The live region for snackbars and the save status sits outside `<main>`, so it outlives a change of page.
+- **The destinations are links**, with `aria-current="page"` on the one shown: "Week, current page, link". The rail's menu button is a button with `aria-expanded`, named for what it does ("Expand navigation", "Collapse navigation").
+- **Moving to another page moves focus to its `<h1>`** (with `tabindex="-1"`, and no focus ring, since it isn't a control), so a screen reader reads the new page's name, and the next Tab starts at the top of the new page. The document's title changes with it (see Pages and URLs in [Layout](layout.md)). A first load and Back or Forward leave focus where the browser puts it.
+- **Undo** is an icon button named "Undo", disabled while there's nothing to undo. Ctrl/Cmd+Z works anywhere outside a form field, as the button does.
+- **The save status** is a link named by its text ("Saved in this browser"), described by "Your data in Settings". Changes of its text are announced through the shared live region, except "Saving…".
+
 ## The week
 
 The week is a list of seven days, and each day a list of its blocks, in start order:
