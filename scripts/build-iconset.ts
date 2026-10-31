@@ -10,6 +10,10 @@
 // so <svg class="icon" aria-hidden="true"><use href="#undo"/></svg> shows an icon in the text color
 // of the element around it. The sprite's root is hidden with display: none (the hidden attribute
 // doesn't hide an <svg>) and kept out of the accessibility tree.
+//
+// It also writes src/icons/name.ts, the type of every id in the sprite, so an icon that isn't in it
+// doesn't compile. Both come from the same run, so they always match each other, and a test fails
+// when either is older than the manifest (build-iconset.test.ts).
 
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
@@ -80,35 +84,47 @@ function readManifest(value: unknown): Manifest {
 }
 
 const root = new URL("../", import.meta.url);
-const manifest = readManifest(
-  JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8")),
-);
 const iconsDir = new URL("icons/", root);
-const output = new URL("src/icons/iconset.svg", root);
+/** Where the sprite and its type are written. The test compares them with what `build` makes. */
+export const OUTPUTS = {
+  iconset: new URL("src/icons/iconset.svg", root),
+  names: new URL("src/icons/name.ts", root),
+} as const;
 
-const { repository, commit, style } = manifest.source;
+type Variant = { id: string; file: string; url: string; padding: number };
 
 /** One entry per file: the outline, plus the filled variant when asked for, then the brand marks. */
-const variants = [
-  ...manifest.icons.flatMap(({ name, fill }) => {
-    const variant = (id: string, file: string) => ({
-      id,
-      file: `material-symbols/${file}`,
-      url: `https://raw.githubusercontent.com/${repository}/${commit}/symbols/web/${name}/${style}/${file}`,
-      padding: 0,
-    });
-    const outline = variant(name, `${name}_24px.svg`);
-    return fill ? [outline, variant(`${name}-fill`, `${name}_fill1_24px.svg`)] : [outline];
-  }),
-  ...manifest.brands.map((brand) => ({
-    id: brand.name,
-    file: `brands/${brand.name}.svg`,
-    url: `https://raw.githubusercontent.com/${brand.repository}/${brand.commit}/${brand.path}`,
-    padding: brand.padding,
-  })),
-];
+function listVariants(manifest: Manifest): Variant[] {
+  const { repository, commit, style } = manifest.source;
+  return [
+    ...manifest.icons.flatMap(({ name, fill }) => {
+      const variant = (id: string, file: string) => ({
+        id,
+        file: `material-symbols/${file}`,
+        url: `https://raw.githubusercontent.com/${repository}/${commit}/symbols/web/${name}/${style}/${file}`,
+        padding: 0,
+      });
+      const outline = variant(name, `${name}_24px.svg`);
+      return fill ? [outline, variant(`${name}-fill`, `${name}_fill1_24px.svg`)] : [outline];
+    }),
+    ...manifest.brands.map((brand) => ({
+      id: brand.name,
+      file: `brands/${brand.name}.svg`,
+      url: `https://raw.githubusercontent.com/${brand.repository}/${brand.commit}/${brand.path}`,
+      padding: brand.padding,
+    })),
+  ];
+}
 
-if (process.argv.includes("--fetch")) {
+async function readVariants(): Promise<Variant[]> {
+  const manifest = readManifest(
+    JSON.parse(await readFile(new URL("icons/icons.json", root), "utf8")),
+  );
+  return listVariants(manifest);
+}
+
+/** Downloads the SVGs that aren't in icons/ yet. */
+async function fetchMissing(variants: Variant[]): Promise<void> {
   for (const { file, url } of variants) {
     const target = new URL(file, iconsDir);
     if (await exists(target)) continue;
@@ -120,8 +136,8 @@ if (process.argv.includes("--fetch")) {
   }
 }
 
-const symbols: string[] = [];
-for (const { id, file, padding } of variants) {
+/** The icon's SVG file, optimized into a <symbol> filled with currentColor. */
+async function buildSymbol({ id, file, padding }: Variant): Promise<string> {
   const source = await readFile(new URL(file, iconsDir), "utf8").catch(() => {
     throw new Error(`Missing icons/${file}. Run \`pnpm icons:fetch\`.`);
   });
@@ -137,17 +153,30 @@ for (const { id, file, padding } of variants) {
   // The icons are single-color glyphs. Anything else would ignore currentColor.
   if (/fill=|style=|<(?!path)/u.test(body))
     throw new Error(`${file} has more than plain paths: ${body}`);
-
-  symbols.push(
-    `<symbol id="${id}" viewBox="${widenViewBox(viewBox, padding)}" fill="currentColor">${body}</symbol>`,
-  );
+  return `<symbol id="${id}" viewBox="${widenViewBox(viewBox, padding)}" fill="currentColor">${body}</symbol>`;
 }
 
-const iconset = `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: none">\n${symbols.join("\n")}\n</svg>\n`;
+/**
+ * The sprite and the type of its icon names, from the manifest and the SVGs in icons/, without
+ * writing anything.
+ */
+export async function build(): Promise<{ iconset: string; names: string }> {
+  const variants = await readVariants();
+  const symbols: string[] = [];
+  for (const variant of variants) symbols.push(await buildSymbol(variant));
+  const iconset = `<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: none">\n${symbols.join("\n")}\n</svg>\n`;
+  // One name per line, as the formatter writes a long union, so the generated file passes its check.
+  const names = `// Generated by scripts/build-iconset.ts (pnpm icons) from icons/icons.json. Don't edit by hand.
 
-await mkdir(new URL("src/icons/", root), { recursive: true });
-await writeFile(output, iconset);
-console.log(`wrote src/icons/iconset.svg with ${variants.length} icons (${iconset.length} bytes)`);
+/**
+ * The id of an icon in src/icons/iconset.svg: each icon in the manifest, and its filled variant as
+ * name-fill where the manifest asks for one.
+ */
+export type IconName =
+${variants.map(({ id }) => `  | "${id}"`).join("\n")};
+`;
+  return { iconset, names };
+}
 
 function widenViewBox(viewBox: string, padding: number): string {
   if (padding === 0) return viewBox;
@@ -162,4 +191,13 @@ async function exists(url: URL): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+if (import.meta.main) {
+  if (process.argv.includes("--fetch")) await fetchMissing(await readVariants());
+  const { iconset, names } = await build();
+  await mkdir(new URL("src/icons/", root), { recursive: true });
+  await writeFile(OUTPUTS.iconset, iconset);
+  await writeFile(OUTPUTS.names, names);
+  console.log(`wrote src/icons/iconset.svg (${iconset.length} bytes) and src/icons/name.ts`);
 }

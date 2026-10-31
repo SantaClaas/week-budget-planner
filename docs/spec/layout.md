@@ -40,6 +40,22 @@
 - **About**, the last section: one list item that starts with the GitHub mark (see Deviations in [Design](design.md)): "Version", with "2026-10-17 · 74ea982" (the date and the short commit hash) under it. The whole item is a link that opens the repository at that commit in a new tab, and it ends with the `open_in_new` icon instead of a chevron, so it reads as leaving the app. The icon's label says "Opens in a new tab". A build without git shows only the date, and the item opens the repository's main branch instead (see Version).
 - On wide screens it is a full page next to the navigation rail, with Settings active in the rail. The rail's Week leads back.
 
+## Pages and URLs
+
+Each destination is a page with its own path under the base (`/week-budget-planner/`), so a page can be bookmarked, reloaded and shared, and Back and Forward move between pages:
+
+| Page | Path | Title |
+| --- | --- | --- |
+| Week | `/week-budget-planner/` | Week · Week Budget Planner |
+| Activities | `/week-budget-planner/activities` | Activities · Week Budget Planner |
+| Settings | `/week-budget-planner/settings` | Settings · Week Budget Planner |
+
+- **Destinations are links** (`<a href>`) in the navigation rail and the navigation bar, with `aria-current="page"` on the one shown, so opening one in a new tab, copying its address and the browser's own link menu all work. The save status links to `settings#your-data`, the Your data section.
+- **Moving between pages doesn't reload.** A click on one of the app's own links (the primary button, no modifier keys, same origin, inside the base, no `target` or `download`) is turned into a History API `pushState`, and `popstate` shows the page for the new path. Everything else, such as a middle click or Ctrl+click, is left to the browser. The plan, the undo steps and the open database stay as they are.
+- **A path with no page** (an old link, a typo) shows Week and replaces the address with the base (`replaceState`), so it doesn't stay in the history.
+- **On wide screens, Activities is a page of its own; on phones it is too.** Week on wide screens also shows the Activities pane beside the grid, so both lead to the same list. Resizing the window across the breakpoint keeps the path.
+- A reload of a deep path works on GitHub Pages through `404.html` (see Hosting on GitHub Pages in [Persistence](persistence.md)).
+
 ## Version
 
 Releases are numbered by date, not with semantic versioning. A version number like semver's tells whatever depends on a package whether an update could break it, and nothing depends on this app's version. Where compatibility does matter, for the database and the exported files, the migrations track it, and the app refuses a database or a file from a newer version (see [Persistence](persistence.md)).

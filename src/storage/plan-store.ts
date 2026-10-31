@@ -7,7 +7,7 @@ import type { Plan } from "../plan/index.ts";
  * - "limited": JSON in localStorage, for example in a private window or without isolation.
  * - "none": memory only; nothing survives closing the tab.
  */
-type StorageLevel = "full" | "limited" | "none";
+export type StorageLevel = "full" | "limited" | "none";
 
 export type ExportedFile = { blob: Blob; filename: string };
 

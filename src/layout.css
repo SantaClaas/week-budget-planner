@@ -1,0 +1,61 @@
+/* The app's page layout: the navigation beside or under the page, and the parts of a page. The
+   components themselves are in docs/design/m3-tokens.css, which declares the layers. */
+
+@layer components {
+  /* Wide screens: the rail beside the page. Phones (under 52.5em, Material's 840dp): the page
+     over the navigation bar. Only one navigation shows at a time (see docs/spec/layout.md). */
+  body {
+    display: grid;
+    grid-template: "rail page" minmax(0, 1fr) / auto minmax(0, 1fr);
+    min-block-size: 100dvh;
+    & > .navigation-rail {
+      grid-area: rail;
+      position: sticky;
+      inset-block-start: 0;
+      align-self: start;
+      max-block-size: 100dvh;
+    }
+    & > main {
+      grid-area: page;
+      min-inline-size: 0;
+    }
+    & > .navigation-bar {
+      display: none;
+    }
+    @media (width < 52.5em) {
+      grid-template: "page" minmax(0, 1fr) "bar" auto / minmax(0, 1fr);
+      & > .navigation-rail {
+        display: none;
+      }
+      & > .navigation-bar {
+        display: grid;
+        grid-area: bar;
+        position: sticky;
+        inset-block-end: 0;
+      }
+    }
+  }
+
+  /* The heading takes focus when the user moves to its page, so it's read out. It isn't a control,
+     so it shows no focus ring. */
+  h1[tabindex="-1"]:focus {
+    outline: none;
+  }
+
+  .page-content {
+    padding-inline: 1rem;
+    padding-block-end: 1rem;
+  }
+
+  /* The full page for a plan saved by a newer version. */
+  .newer-version {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 1rem;
+    max-inline-size: 36rem;
+    margin-inline: auto;
+    padding: 1.5rem;
+    grid-column: 1 / -1;
+  }
+}

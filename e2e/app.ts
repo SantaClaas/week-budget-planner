@@ -106,8 +106,8 @@ export async function deleteAllData(page: Page): Promise<void> {
 
 /**
  * The description Chromium gives the button with this name, which is what screen readers hear.
- * Playwright's toHaveAccessibleDescription computes its own and finds none when the description
- * comes from an <output>, as the reload prompt's does, so this asks Chromium's accessibility tree.
+ * Playwright's toHaveAccessibleDescription computes its own, which found none when the reload
+ * prompt's description came from an <output>, so this asks Chromium's accessibility tree.
  */
 export async function readDescription(page: Page, buttonName: string): Promise<string | undefined> {
   const session = await page.context().newCDPSession(page);

@@ -9,30 +9,55 @@ Dependencies go one way (see Coupling in [`docs/guidelines/principles.md`](guide
 ```mermaid
 flowchart LR
   module_App["App"]
+  module_announcement["announcement"]
   module_brand["brand"]
   module_broadcast["broadcast"]
   module_color_scheme["color-scheme"]
   module_database["database"]
   module_download["download"]
   module_font["font"]
+  module_icons["icons"]
   module_index["index"]
+  module_layout["layout"]
+  module_navigation["navigation"]
+  module_page["page"]
   module_plan["plan"]
+  module_planner["planner"]
   module_polyfill["polyfill"]
   module_result["result"]
+  module_snackbar["snackbar"]
   module_storage["storage"]
+  module_top_app_bar["top-app-bar"]
   module_trusted_html["trusted-html"]
-  module_App --> module_plan
+  module_App --> module_announcement
+  module_App --> module_navigation
+  module_App --> module_page
+  module_App --> module_planner
+  module_App --> module_snackbar
   module_App --> module_storage
+  module_App --> module_top_app_bar
   module_database --> module_broadcast
   module_database --> module_plan
   module_database --> module_result
   module_index --> module_App
   module_index --> module_font
+  module_index --> module_icons
+  module_index --> module_layout
   module_index --> module_polyfill
   module_index --> module_trusted_html
+  module_navigation --> module_icons
+  module_navigation --> module_page
   module_plan --> module_brand
   module_plan --> module_result
+  module_planner --> module_plan
+  module_planner --> module_result
+  module_planner --> module_snackbar
+  module_planner --> module_storage
+  module_snackbar --> module_announcement
   module_storage --> module_broadcast
   module_storage --> module_database
   module_storage --> module_plan
+  module_top_app_bar --> module_icons
+  module_top_app_bar --> module_page
+  module_top_app_bar --> module_planner
 ```

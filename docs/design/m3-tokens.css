@@ -142,6 +142,11 @@
       0 1px 0.125rem rgb(0 0 0 / 0.3), 0 0.125rem 0.375rem 0.125rem rgb(0 0 0 / 0.15);
     --elevation-level-3:
       0 1px 0.1875rem rgb(0 0 0 / 0.3), 0 0.25rem 0.5rem 0.1875rem rgb(0 0 0 / 0.15);
+    /* disabled controls: their text and icon, and a filled or tonal container, are on-surface at
+       these opacities (androidx FilledButtonTokens DisabledLabelTextOpacity, DisabledIconOpacity and
+       DisabledContainerOpacity; IconButtonTokens DisabledOpacity). As percentages, for color-mix(). */
+    --disabled-content-opacity: 38%;
+    --disabled-container-opacity: 10%;
     /* Spatial motion: 1 for full motion, 0 for reduced. Movement multiplies by it, as in
        transition-duration: calc(var(--duration) * var(--spatial-motion)), and script reads it with
        getComputedStyle(), so both follow prefers-reduced-motion, or the Motion setting through
@@ -574,13 +579,17 @@
     }
     /* Disabled: only buttons with a container get the disabled container. */
     &:disabled {
-      color: color-mix(in srgb, var(--on-surface) 38%, transparent);
+      color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
       @media (forced-colors: active) {
         border-color: GrayText;
       }
     }
     &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled {
-      background: color-mix(in srgb, var(--on-surface) 10%, transparent);
+      background: color-mix(
+        in srgb,
+        var(--on-surface) var(--disabled-container-opacity),
+        transparent
+      );
     }
   }
   .icon-button {
@@ -607,6 +616,14 @@
     }
     &[data-shape="square"] {
       border-radius: var(--corner-medium);
+    }
+    &:disabled {
+      color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
+      cursor: default;
+      @media (forced-colors: active) {
+        border-color: GrayText;
+        color: GrayText;
+      }
     }
   }
 
@@ -809,21 +826,33 @@
         gap: 0.5rem;
         padding: 0 1rem;
       }
+      /* The label follows the indicator in the markup, as in the collapsed rail, so here the item
+         itself is drawn as the indicator, and the inner one only holds the icon. */
       & .navigation-item {
         flex-direction: row;
         justify-content: flex-start;
-        padding: 0;
+        gap: 0.5rem;
+        inline-size: fit-content;
+        min-block-size: 3.5rem;
+        padding: 0 1rem;
+        border-radius: var(--corner-full);
         font-size: 0.875rem;
         line-height: 1.25rem;
         letter-spacing: 0.00625rem;
       }
       & .navigation-item .active-indicator {
         width: auto;
-        height: 3.5rem;
-        padding: 0 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        height: auto;
+        background: none;
+      }
+      & .navigation-item[aria-current="page"] {
+        background: var(--secondary-container);
+        color: var(--on-secondary-container);
+        @media (forced-colors: active) {
+          forced-color-adjust: none;
+          background: Highlight;
+          color: HighlightText;
+        }
       }
     }
   }
@@ -1375,6 +1404,21 @@
   :is(.dialog, .bottom-sheet)::backdrop {
     background: rgb(0 0 0 / 0.32);
   }
+  /* snackbar: as a manual popover, it sits in the top layer, so the UA's popover box (centered,
+     bordered) is replaced by Material's place at the bottom center, above the navigation bar on
+     phones (4rem). At most 600dp wide (ContainerMaxWidth in androidx Snackbar.kt). */
+  .snackbar[popover] {
+    inset: auto 0 1rem;
+    margin-inline: auto;
+    max-inline-size: min(37.5rem, 100% - 2rem);
+    border: 0;
+    @media (width < 52.5em) {
+      inset-block-end: 5rem;
+    }
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
+  }
   .snackbar {
     display: flex;
     align-items: center;
@@ -1393,6 +1437,23 @@
       color: var(--inverse-primary);
       min-height: 2.25rem;
       padding: 0 0.75rem;
+    }
+  }
+
+  /* save status in the top app bar: a link to Settings › Your data that says where the last change
+     is saved. Plain text in on-surface-variant, the icon green when it's in the database, and the
+     error container when the plan isn't saved. */
+  .save-status {
+    color: var(--on-surface-variant);
+    font-weight: 400;
+    text-decoration: none;
+    margin-inline-end: 0.5rem;
+    &[data-variant="saved"] .icon {
+      color: var(--success);
+    }
+    &[data-variant="not-saved"] {
+      background: var(--error-container);
+      color: var(--on-error-container);
     }
   }
 

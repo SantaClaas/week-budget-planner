@@ -91,7 +91,7 @@ erDiagram
 ## Writes and undo
 
 - Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
-- Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
+- Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction. When another tab saves a change, this tab shows it and forgets its undo steps: each step is a whole earlier plan, and applying one would write it back over the other tab's change.
 - The status in the top app bar says whether and where the last change is saved: "Saved in this browser", "Saving…", "Saved in limited storage" (see Progressive enhancement, which includes a database that won't open), or "Not saved" (no storage, or a tab that another tab's update left unable to save, see Tabs on different versions). It is a link to Settings › Your data, so every question about the data ("saved how safely?") lands where the answers and actions are: keeping the plan, a broken database, export.
 - **The status never shows whether the browser keeps the plan** (see Keeping the data). That's about the future, not the last change, and most browsers don't grant persistent storage to a new site, so it would be a warning for nearly everyone nearly all the time, and "Not saved" would stop standing out. Storage problems that change what happens to a change (limited storage, no storage) do show there. On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
 
@@ -234,6 +234,7 @@ The full-page "Your plan was saved by a newer version" stays for a tab that find
       Page->>Page: start the app with what it has
     end
   ```
+- **Deep paths:** GitHub Pages has no rewrites, so a reload of `/week-budget-planner/activities` (see Pages and URLs in [Layout](layout.md)) would get its 404 page. The build copies `index.html` to `404.html`, which Pages serves for every path it doesn't have, so the app starts on any of its paths and shows the page for it. The response's status stays 404; browsers render it all the same, and the page doesn't need to be found by search engines. Every URL the page itself loads is absolute, from the base (the module script, the font preload, the service worker), never relative to the page's path, so it resolves the same on every path.
 - **No cross-origin files:** with `require-corp`, cross-origin files would need CORS or CORP. Self-host everything instead, including Google Sans Flex (SIL Open Font License) as `woff2` under `public/fonts/`, so isolation never breaks a font or an icon.
 
 ## Progressive enhancement
