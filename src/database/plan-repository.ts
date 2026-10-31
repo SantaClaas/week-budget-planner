@@ -80,8 +80,14 @@ export function buildPlanStatements(
   const beforeBlocks = new Map(before?.blocks.map((block) => [block.id, block]));
   const afterBlockIds = new Set(after.blocks.map((block) => block.id));
 
-  const removedActivities = [...beforeActivities.keys()].filter((id) => !afterActivityIds.has(id));
-  const removedBlocks = [...beforeBlocks.keys()].filter((id) => !afterBlockIds.has(id));
+  const removedActivities = beforeActivities
+    .keys()
+    .filter((id) => !afterActivityIds.has(id))
+    .toArray();
+  const removedBlocks = beforeBlocks
+    .keys()
+    .filter((id) => !afterBlockIds.has(id))
+    .toArray();
   if (removedBlocks.length > 0)
     statements.push(database.delete(blocks).where(inArray(blocks.id, removedBlocks)));
   if (removedActivities.length > 0) {

@@ -214,7 +214,7 @@ export function consume<T extends AsyncApi>(
   };
 
   function failSent(reason: Error) {
-    const calls = [...sent.values()];
+    const calls = sent.values().toArray();
     sent.clear();
     for (const call of calls) call.reject(reason);
   }
