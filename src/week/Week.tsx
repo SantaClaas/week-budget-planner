@@ -47,12 +47,6 @@ function Block(props: { block: DrawnBlock }): JSX.Element {
       }}
     >
       <span class="visually-hidden">{props.block.spoken}</span>
-      <Show when={props.block.size !== "tiny"}>
-        <span
-          class={["swatch", props.block.size === "short" ? "size-10" : "size-12 corner"]}
-          aria-hidden="true"
-        />
-      </Show>
       <span class="name" aria-hidden="true">
         {props.block.activity.name}
       </span>
