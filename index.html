@@ -6,9 +6,10 @@
     <meta name="text-scale" content="scale" />
     <meta name="color-scheme" content="light dark" />
     <script>
-      // Applies the stored color scheme (the Theme setting) before the first paint (see Theme in
-      // docs/spec/design.md). Kept tiny and blocking on purpose; src/color-scheme.ts handles
-      // changes later.
+      // Applies the stored Appearance settings before the first paint: the color scheme (Theme),
+      // the contrast and the motion (see Theme, Contrast and Motion in docs/spec/design.md). Kept
+      // tiny and blocking on purpose; src/color-scheme.ts handles changes later. Without a stored
+      // choice, the browser's setting applies.
       try {
         const colorScheme = localStorage.getItem("week-budget-planner.color-scheme");
         if (colorScheme === "light" || colorScheme === "dark") {
