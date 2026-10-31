@@ -6,6 +6,12 @@
 # transitive ones included, and pnpm checks the lockfile against it on every install, not only when
 # it picks a new version.
 minimumReleaseAge: 10080
+#
+# pnpm's own version, pinned with its hash in package.json's packageManager, isn't held to this:
+# the lockfile check passes a pnpm release of any age. The week applies to it by hand instead, and
+# an exception says so here. 12.16.1 was pinned on 2026-10-31 at four days old, because pnpm 12
+# refuses to run where the pin differs from the installed version, and local installs had moved
+# on to 12.16.1. It turns a week old on 2026-11-03.
 # Fails instead of falling back to a younger version when nothing in range is old enough.
 minimumReleaseAgeStrict: true
 # Fails on a package whose release date the registry doesn't report, instead of skipping the check.
