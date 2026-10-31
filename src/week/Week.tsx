@@ -42,8 +42,8 @@ function Block(props: { block: DrawnBlock }): JSX.Element {
       style={{
         "--start": props.block.start,
         "--length": props.block.length,
-        "--lane": props.block.lane,
-        "--lanes": props.block.lanes,
+        "--lane": props.block.lane.lane,
+        "--lanes": props.block.lane.lanes,
         "--name-lines": props.block.nameLines,
         "--activity-shape": `var(--shape-${props.block.activity.shape})`,
       }}

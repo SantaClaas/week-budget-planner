@@ -87,6 +87,10 @@ export const sanitizeBudgetMinutes = (
 export const sanitizeDayCount = (value: number, fallback = 5): DayCount =>
   brand<DayCount>(sanitizeInteger(value, 1, 7, fallback));
 
+/** A whole hour of the day, 0 to 24, such as an hour line on the week. */
+export const sanitizeHour = (value: number, fallback = 0): Hour =>
+  brand<Hour>(sanitizeInteger(value, 0, 24, fallback));
+
 /** The first of the day hours, 0 to 12. */
 export const sanitizeDayStart = (value: number, fallback = 7): Hour =>
   brand<Hour>(sanitizeInteger(value, 0, 12, fallback));
