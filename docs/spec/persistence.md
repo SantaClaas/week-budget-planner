@@ -91,7 +91,7 @@ erDiagram
 ## Writes and undo
 
 - Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
-- Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
+- Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction. When another tab saves a change, this tab shows it and forgets its undo steps: each step is a whole earlier plan, and applying one would write it back over the other tab's change.
 - The status in the top app bar says whether and where the last change is saved: "Saved in this browser", "Saving…", "Saved in limited storage" (see Progressive enhancement, which includes a database that won't open), or "Not saved" (no storage, or a tab that another tab's update left unable to save, see Tabs on different versions). It is a link to Settings › Your data, so every question about the data ("saved how safely?") lands where the answers and actions are: keeping the plan, a broken database, export.
 - **The status never shows whether the browser keeps the plan** (see Keeping the data). That's about the future, not the last change, and most browsers don't grant persistent storage to a new site, so it would be a warning for nearly everyone nearly all the time, and "Not saved" would stop standing out. Storage problems that change what happens to a change (limited storage, no storage) do show there. On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
 

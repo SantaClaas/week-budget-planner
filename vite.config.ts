@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 import packageJson from "./package.json" with { type: "json" };
 import { appVersion } from "./vite-plugins/app-version.ts";
 import { contentSecurityPolicy } from "./vite-plugins/content-security-policy.ts";
+import { notFoundPage } from "./vite-plugins/not-found-page.ts";
 
 // @tursodatabase/database-wasm needs SharedArrayBuffer, so the page must be cross-origin isolated
 // in dev and preview too. In production (GitHub Pages, which can't set headers) the service worker
@@ -20,6 +21,7 @@ export default defineConfig({
     solid(),
     appVersion(packageJson.repository.url),
     contentSecurityPolicy({ trustedHtmlFiles: ["src/icons/iconset.svg"] }),
+    notFoundPage(),
   ],
   server: { headers: crossOriginIsolation },
   preview: { headers: crossOriginIsolation },

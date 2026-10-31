@@ -122,7 +122,7 @@ test.describe("a newer version of the app", () => {
     await expectStatus(other, "full");
     await postNewerTabQuery(page);
     for (const tab of [page, other]) {
-      await expect(tab.getByTestId("outdated")).toHaveText(
+      await expect(tab.locator("#snackbar-message")).toHaveText(
         "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
       );
     }
@@ -157,7 +157,7 @@ test.describe("a newer version of the app", () => {
     await page.goto(ISOLATED_URL);
     await expectStatus(page, "full");
     await postNewerTabQuery(page);
-    await expect(page.getByTestId("outdated")).toBeVisible();
+    await expect(page.locator("#snackbar-message")).toBeVisible();
     expect(await readDescription(page, "Reload")).toBe(
       "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
     );

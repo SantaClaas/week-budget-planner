@@ -3,7 +3,8 @@
 //   node e2e/static-server.ts --port 4311 --isolated   with the cross-origin isolation headers
 //   node e2e/static-server.ts --port 4312              without them, like GitHub Pages
 //
-// Without the headers, the app's service worker has to add them, as it does in production.
+// Without the headers, the app's service worker has to add them, as it does in production. A path
+// with no file gets 404.html, as on GitHub Pages.
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
@@ -43,13 +44,26 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
   try {
     body = await readFile(file);
   } catch {
-    response.writeHead(404).end();
+    await serveNotFoundPage(response);
     return;
   }
   response.writeHead(200, {
     "Content-Type": CONTENT_TYPES.get(extname(file)) ?? "application/octet-stream",
     ...(values.isolated && isolation),
   });
+  response.end(body);
+}
+
+/** GitHub Pages' answer for a path it doesn't have: the app's 404.html, with the 404 status. */
+async function serveNotFoundPage(response: ServerResponse): Promise<void> {
+  let body: Buffer;
+  try {
+    body = await readFile(join(root, "404.html"));
+  } catch {
+    response.writeHead(404).end();
+    return;
+  }
+  response.writeHead(404, { "Content-Type": "text/html", ...(values.isolated && isolation) });
   response.end(body);
 }
 
