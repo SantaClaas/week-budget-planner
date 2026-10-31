@@ -11,6 +11,14 @@ type StorageLevel = "full" | "limited" | "none";
 
 export type ExportedFile = { blob: Blob; filename: string };
 
+/**
+ * The name an export is saved under, for example `week-budget-planner-2026-10-15.db` (see Export,
+ * import and reset in docs/spec/persistence.md). The date is the user's, taken by the store when
+ * the export starts.
+ */
+export const createExportName = (today: Temporal.PlainDate, extension: "db" | "json"): string =>
+  `week-budget-planner-${today.toString()}.${extension}`;
+
 /** An imported file that isn't a plan this level can read. Nothing was changed. */
 export class InvalidFileError extends Error {}
 

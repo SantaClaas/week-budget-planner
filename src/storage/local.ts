@@ -53,7 +53,8 @@ export function create(
     },
     async exportFile() {
       const text = storage.getItem(PLAN_KEY);
-      return jsonFile.create(text === null ? (current ?? createEmptyPlan()) : readStored(text));
+      const plan = text === null ? (current ?? createEmptyPlan()) : readStored(text);
+      return jsonFile.create(plan, Temporal.Now.plainDateISO());
     },
     async importFile(file) {
       const plan = await jsonFile.read(file);

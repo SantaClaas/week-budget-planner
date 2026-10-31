@@ -6,6 +6,7 @@ import { randomIds } from "../plan/id.ts";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
 import * as jsonFile from "./json-file.ts";
 import {
+  createExportName,
   InvalidFileError,
   isFromNewerVersion,
   NewerVersionError,
@@ -45,7 +46,7 @@ export function create(): PlanStore {
       const bytes = await databaseService.exportFile();
       return {
         blob: new Blob([bytes], { type: "application/vnd.sqlite3" }),
-        filename: `week-budget-planner-${Temporal.Now.plainDateISO().toString()}.db`,
+        filename: createExportName(Temporal.Now.plainDateISO(), "db"),
       };
     },
     async importFile(file) {

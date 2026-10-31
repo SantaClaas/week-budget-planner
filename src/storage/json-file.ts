@@ -1,17 +1,22 @@
 import { randomIds } from "../plan/id.ts";
 import * as planFile from "../plan/file.ts";
 import type { Plan } from "../plan/index.ts";
-import { InvalidFileError, NewerVersionError, type ExportedFile } from "./plan-store.ts";
+import {
+  createExportName,
+  InvalidFileError,
+  NewerVersionError,
+  type ExportedFile,
+} from "./plan-store.ts";
 
 /** The plan as a `.json` file, the export below the full level. */
 
 export const isJson = (file: File): boolean =>
   file.name.toLowerCase().endsWith(".json") || file.type === "application/json";
 
-export function create(plan: Plan): ExportedFile {
+export function create(plan: Plan, today: Temporal.PlainDate): ExportedFile {
   return {
     blob: new Blob([planFile.serialize(plan)], { type: "application/json" }),
-    filename: `week-budget-planner-${Temporal.Now.plainDateISO().toString()}.json`,
+    filename: createExportName(today, "json"),
   };
 }
 
