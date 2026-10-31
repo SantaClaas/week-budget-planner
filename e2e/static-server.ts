@@ -32,6 +32,19 @@ const isolation = {
   "Cross-Origin-Embedder-Policy": "require-corp",
 };
 
+/** GitHub Pages' answer for a path it doesn't have: the app's 404.html, with the 404 status. */
+async function serveNotFoundPage(response: ServerResponse): Promise<void> {
+  let body: Buffer;
+  try {
+    body = await readFile(join(root, "404.html"));
+  } catch {
+    response.writeHead(404).end();
+    return;
+  }
+  response.writeHead(404, { "Content-Type": "text/html", ...(values.isolated && isolation) });
+  response.end(body);
+}
+
 async function serve(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const path = decodeURIComponent((request.url ?? "/").split("?")[0] ?? "/");
   if (!path.startsWith(BASE)) {
@@ -51,19 +64,6 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
     "Content-Type": CONTENT_TYPES.get(extname(file)) ?? "application/octet-stream",
     ...(values.isolated && isolation),
   });
-  response.end(body);
-}
-
-/** GitHub Pages' answer for a path it doesn't have: the app's 404.html, with the 404 status. */
-async function serveNotFoundPage(response: ServerResponse): Promise<void> {
-  let body: Buffer;
-  try {
-    body = await readFile(join(root, "404.html"));
-  } catch {
-    response.writeHead(404).end();
-    return;
-  }
-  response.writeHead(404, { "Content-Type": "text/html", ...(values.isolated && isolation) });
   response.end(body);
 }
 

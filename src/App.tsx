@@ -50,6 +50,41 @@ function leaveForNewerVersion(): void {
   document.addEventListener("visibilitychange", reloadWhenHidden);
 }
 
+/** The full page when a newer version saved the plan: nothing else can be shown or changed. */
+function NewerVersionPage(): JSX.Element {
+  return (
+    <main class="newer-version" data-testid="newer-version">
+      <h1 id="newer-version-title" class="headline-small">
+        Your plan was saved by a newer version
+      </h1>
+      <p id="newer-version-text" class="body-large">
+        Reload to update Week Budget Planner. Your plan is safe, and nothing was changed.
+      </p>
+      <button
+        type="button"
+        class="button"
+        data-variant="filled"
+        aria-describedby="newer-version-title newer-version-text"
+        onClick={() => {
+          location.reload();
+        }}
+      >
+        Reload
+      </button>
+    </main>
+  );
+}
+
+/** The page for an address with no page: says so, and leads to the week. */
+function NotFound(): JSX.Element {
+  return (
+    <div class="page-content">
+      <p class="body-large">There's no page at this address.</p>
+      <a href={createPath("week", BASE)}>Go to the week</a>
+    </div>
+  );
+}
+
 /**
  * The app: the navigation, the page the address names, the live regions and the snackbar. It opens
  * storage, loads the example week on first run, and follows changes from other tabs.
@@ -175,40 +210,5 @@ export function App(): JSX.Element {
       <LiveRegion />
       <Snackbar />
     </Show>
-  );
-}
-
-/** The full page when a newer version saved the plan: nothing else can be shown or changed. */
-function NewerVersionPage(): JSX.Element {
-  return (
-    <main class="newer-version" data-testid="newer-version">
-      <h1 id="newer-version-title" class="headline-small">
-        Your plan was saved by a newer version
-      </h1>
-      <p id="newer-version-text" class="body-large">
-        Reload to update Week Budget Planner. Your plan is safe, and nothing was changed.
-      </p>
-      <button
-        type="button"
-        class="button"
-        data-variant="filled"
-        aria-describedby="newer-version-title newer-version-text"
-        onClick={() => {
-          location.reload();
-        }}
-      >
-        Reload
-      </button>
-    </main>
-  );
-}
-
-/** The page for an address with no page: says so, and leads to the week. */
-function NotFound(): JSX.Element {
-  return (
-    <div class="page-content">
-      <p class="body-large">There's no page at this address.</p>
-      <a href={createPath("week", BASE)}>Go to the week</a>
-    </div>
   );
 }

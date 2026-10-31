@@ -65,6 +65,20 @@ async function collectTabStops(page: Page): Promise<{ name: string; isRingVisibl
   return stops;
 }
 
+/** axe's WCAG 2.2 AA findings on the page as it is: each rule and the elements it flagged. */
+async function checkWithAxe(page: Page): Promise<string[]> {
+  // axe measures contrast against the backgrounds it finds in the styles, and takes white where
+  // there are none. The page's color comes from the color-scheme meta, which axe can't see, so this
+  // states what the browser paints. The app's own backgrounds sit on top of it.
+  await page.addStyleTag({ content: ":root { background: Canvas; }" });
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
+  // the page, the rule and the elements it flagged, so a failure says where to look
+  const path = new URL(page.url()).pathname;
+  return violations.map(
+    ({ id, nodes }) => `${path} ${id}: ${nodes.map(({ target }) => target.join(" ")).join(", ")}`,
+  );
+}
+
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} theme`, () => {
     test.use({ colorScheme });
@@ -89,20 +103,6 @@ for (const colorScheme of ["light", "dark"] as const) {
       expect(results.flat()).toEqual([]);
     });
   });
-}
-
-/** axe's WCAG 2.2 AA findings on the page as it is: each rule and the elements it flagged. */
-async function checkWithAxe(page: Page): Promise<string[]> {
-  // axe measures contrast against the backgrounds it finds in the styles, and takes white where
-  // there are none. The page's color comes from the color-scheme meta, which axe can't see, so this
-  // states what the browser paints. The app's own backgrounds sit on top of it.
-  await page.addStyleTag({ content: ":root { background: Canvas; }" });
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_AA).analyze();
-  // the page, the rule and the elements it flagged, so a failure says where to look
-  const path = new URL(page.url()).pathname;
-  return violations.map(
-    ({ id, nodes }) => `${path} ${id}: ${nodes.map(({ target }) => target.join(" ")).join(", ")}`,
-  );
 }
 
 test("reflows at 320 CSS px without scrolling sideways (WCAG 1.4.10)", async ({ page }) => {

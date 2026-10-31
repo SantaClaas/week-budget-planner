@@ -9,11 +9,6 @@
  * `src/index.tsx` imports this first, so the policy exists before anything else runs.
  */
 
-/** The part of the Trusted Types API this uses. TypeScript's DOM types don't have it yet. */
-declare global {
-  var trustedTypes: TrustedTypePolicyFactory | undefined;
-}
-
 type TrustedTypePolicyFactory = {
   createPolicy(
     name: string,
@@ -23,6 +18,11 @@ type TrustedTypePolicyFactory = {
     },
   ): unknown;
 };
+
+/** The part of the Trusted Types API this uses. TypeScript's DOM types don't have it yet. */
+declare global {
+  var trustedTypes: TrustedTypePolicyFactory | undefined;
+}
 
 const allowedHtml = new Set<string>();
 

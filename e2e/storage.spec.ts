@@ -19,6 +19,46 @@ import {
 // The paths where a failure costs the user their plan: storing it, sharing it between tabs,
 // exporting and importing it, and what happens to a database that can't be opened.
 
+/** Writes the database file before the app opens it, from a same-origin page that doesn't run the app. */
+async function writeDatabaseFile(page: Page, bytes: readonly number[]): Promise<void> {
+  await page.goto(`${ISOLATED_URL}service-worker.js`);
+  await page.evaluate(
+    async (content) => {
+      const root = await navigator.storage.getDirectory();
+      const handle = await root.getFileHandle("week-budget-planner.db", { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(new Uint8Array(content));
+      await writable.close();
+    },
+    [...bytes],
+  );
+}
+
+function readDatabaseFileSize(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory();
+    const file = await (await root.getFileHandle("week-budget-planner.db")).getFile();
+    return file.size;
+  });
+}
+
+/** Posts a newer tab's first message, as it asks who serves the database. */
+async function postNewerTabQuery(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const channel = new BroadcastChannel("week-budget-planner-database");
+    channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
+    channel.close();
+  });
+}
+
+/** Makes the page hidden, as when the user switches to another tab. */
+async function hide(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+}
+
 test("keeps the plan across a reload and shares changes between tabs", async ({
   page,
   context,
@@ -170,23 +210,6 @@ test.describe("a newer version of the app", () => {
   });
 });
 
-/** Posts a newer tab's first message, as it asks who serves the database. */
-async function postNewerTabQuery(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const channel = new BroadcastChannel("week-budget-planner-database");
-    channel.postMessage({ protocolVersion: 2, scope: "database", type: "provider-query" });
-    channel.close();
-  });
-}
-
-/** Makes the page hidden, as when the user switches to another tab. */
-async function hide(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-}
-
 test("reports a database that won't open, and deleting it starts over", async ({ page }) => {
   await writeDatabaseFile(page, toBytes("garbage that is not a database"));
   await page.goto(ISOLATED_URL);
@@ -216,26 +239,3 @@ test("gives up on a leader tab that stops answering", async ({ page, context }) 
   expect(outcome).toBe("gave up");
   expect(Date.now() - started).toBeLessThan(15_000);
 });
-
-/** Writes the database file before the app opens it, from a same-origin page that doesn't run the app. */
-async function writeDatabaseFile(page: Page, bytes: readonly number[]): Promise<void> {
-  await page.goto(`${ISOLATED_URL}service-worker.js`);
-  await page.evaluate(
-    async (content) => {
-      const root = await navigator.storage.getDirectory();
-      const handle = await root.getFileHandle("week-budget-planner.db", { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(new Uint8Array(content));
-      await writable.close();
-    },
-    [...bytes],
-  );
-}
-
-function readDatabaseFileSize(page: Page): Promise<number> {
-  return page.evaluate(async () => {
-    const root = await navigator.storage.getDirectory();
-    const file = await (await root.getFileHandle("week-budget-planner.db")).getFile();
-    return file.size;
-  });
-}

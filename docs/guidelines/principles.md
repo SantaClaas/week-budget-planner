@@ -79,6 +79,17 @@ The lint rule `week-budget-planner/shorter-branch-first` fails on an `if` whose 
 
 The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails on every `else`. Where one really is the clearest way to write it, disable the rule on that line and say why.
 
+### Declare before use
+
+**Everything is declared above its first use**, as in F#: types, constants, helpers, then the code that puts them together, with the module's exported entry point last. A file then reads bottom-up, from the small pieces to what they're for, the same direction as "A pure core, with side effects at the edges" above: by the time a reader reaches a function, everything it calls is already known. The planner's `create` comes before the `open` that calls it, and a component's parts (`Surface`, `NotFound`) come before the component that renders them.
+
+- **It holds inside functions too.** A helper a closure calls is declared above the closure, even when the closure only runs later: the broadcast service declares `answer` and `postError` before the listener that calls them.
+- **Type references count**, so a type is declared above the types and signatures that use it.
+- **Two functions that call each other** can't both come first. F# marks that with `rec … and`; here the later call disables the rule on its line and says why, as the planner's Retry does: saving calls `failSave` on a failure, and Retry in `failSave` saves again.
+- **The order of modules** is F#'s other half: there a file can only use the files listed above it. Here the module graph does that job: dependencies go one way, and a test fails on a cycle (see Coupling below).
+
+The lint rule `no-use-before-define` checks it, with functions, classes, variables and types all counted, type references included.
+
 ### One operation per `try`
 
 **A `try` wraps the one operation that can fail, and its `catch` handles that failure.** A `catch` can't tell the error it was written for from any other: around more code, it also catches a programming mistake, such as a typo or a wrong assumption, and handles it like the expected failure of the API being called. The mistake then never shows up where it happened, and sometimes never at all, like a parse error that quietly becomes an empty plan. Kept to one operation, everything else throws where it went wrong, which is what we want to see.

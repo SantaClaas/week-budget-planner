@@ -18,17 +18,20 @@
 import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { optimize } from "svgo";
 
+/**
+ * A brand mark from its owner's repository. `padding` widens its viewBox on every side, in its own
+ * units, for marks drawn edge to edge, so they match Material's 20 of 24 drawn area.
+ */
+type Brand = { name: string; repository: string; commit: string; path: string; padding: number };
+
 type Manifest = {
   source: { repository: string; commit: string; style: string };
   icons: { name: string; fill: boolean }[];
   brands: Brand[];
 };
 
-/**
- * A brand mark from its owner's repository. `padding` widens its viewBox on every side, in its own
- * units, for marks drawn edge to edge, so they match Material's 20 of 24 drawn area.
- */
-type Brand = { name: string; repository: string; commit: string; path: string; padding: number };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 function readBrand(brand: unknown): Brand {
   if (
@@ -50,9 +53,6 @@ function readBrand(brand: unknown): Brand {
     padding: typeof brand["padding"] === "number" ? brand["padding"] : 0,
   };
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 /** Checks the manifest's shape, since JSON.parse can't. */
 function readManifest(value: unknown): Manifest {
@@ -123,6 +123,15 @@ async function readVariants(): Promise<Variant[]> {
   return listVariants(manifest);
 }
 
+async function exists(url: URL): Promise<boolean> {
+  try {
+    await access(url);
+  } catch {
+    return false;
+  }
+  return true;
+}
+
 /** Downloads the SVGs that aren't in icons/ yet. */
 async function fetchMissing(variants: Variant[]): Promise<void> {
   for (const { file, url } of variants) {
@@ -134,6 +143,12 @@ async function fetchMissing(variants: Variant[]): Promise<void> {
     await writeFile(target, await response.text());
     console.log(`fetched ${file}`);
   }
+}
+
+function widenViewBox(viewBox: string, padding: number): string {
+  if (padding === 0) return viewBox;
+  const [x = 0, y = 0, width = 0, height = 0] = viewBox.split(/\s+/u).map(Number);
+  return [x - padding, y - padding, width + 2 * padding, height + 2 * padding].join(" ");
 }
 
 /** The icon's SVG file, optimized into a <symbol> filled with currentColor. */
@@ -176,21 +191,6 @@ export type IconName =
 ${variants.map(({ id }) => `  | "${id}"`).join("\n")};
 `;
   return { iconset, names };
-}
-
-function widenViewBox(viewBox: string, padding: number): string {
-  if (padding === 0) return viewBox;
-  const [x = 0, y = 0, width = 0, height = 0] = viewBox.split(/\s+/u).map(Number);
-  return [x - padding, y - padding, width + 2 * padding, height + 2 * padding].join(" ");
-}
-
-async function exists(url: URL): Promise<boolean> {
-  try {
-    await access(url);
-  } catch {
-    return false;
-  }
-  return true;
 }
 
 if (import.meta.main) {
