@@ -11,12 +11,12 @@ import { splitProgress } from "../plan/budget.ts";
 export function Progress(props: { budget: number; placed: number }): JSX.Element {
   // Worked out once per change of the budget or what's placed, however often it's read below.
   const split = createMemo(() => splitProgress(props.budget, props.placed));
-  // A word, so the attribute and the over-budget part only update when it changes.
-  const state = createMemo(() => {
+  // Two comparisons on the memo's numbers, too little to be worth a memo of its own.
+  const state = () => {
     const { withinBudget, overBudget } = split();
     if (overBudget > 0) return "over-budget";
     return withinBudget >= 1 ? "full" : "partial";
-  });
+  };
   return (
     <div class="progress" data-state={state()} aria-hidden="true">
       <span
