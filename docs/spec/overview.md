@@ -17,6 +17,6 @@ The visual design is the [design canvas](https://claude.ai/artifact/7WBfh6DXVehh
 - Importing other calendars as a read-only background layer
 - Fixed blocks such as lectures that are locked in place
 - A picture inside an activity's shape instead of a color
-- Sync across devices (for example Turso sync, since the database is already Turso). To look into: CRDTs, data types whose changes merge without a central server, as in [Rust and CRDTs](https://kerkour.com/rust-crdt-love) by Sylvain Kerkour. They might also let undo work across tabs, since a step would be a change that merges instead of a whole earlier plan (see Writes and undo in [Persistence](persistence.md)).
+- Sync across devices (for example Turso sync, since the database is already Turso). To look into: CRDTs, data types whose changes merge without a central server, see [this article on kerkour.com](https://kerkour.com/rust-crdt-love). They might also let undo work across tabs, since a step would be a change that merges instead of a whole earlier plan (see Writes and undo in [Persistence](persistence.md)).
 - Format settings and translations (see [Dates, times and language](dates-and-language.md))
 - Installing as a PWA, like flashcut (its Workbox config raises the precache size limit for the large WASM file)
