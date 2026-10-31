@@ -58,7 +58,7 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 
 ## A tab another tab's update left behind
 
-- **The reload snackbar** ("Week Budget Planner was updated in another tab. This tab can't save until it reloads.") is announced once through the shared polite live region, like every snackbar. It doesn't take focus, so a screen reader user isn't pulled away from where they are. Its Reload button is reachable by Tab, and Settings › Your data has a Reload button too (see Tabs on different versions in [Persistence](persistence.md)).
+- **The reload snackbar** ("Week Budget Planner was updated in another tab. This tab can't save until it reloads.") is announced once through the shared polite live region, like every snackbar. It doesn't take focus, so a screen reader user isn't pulled away from where they are. Its Reload button is reachable by Tab and described by the message (`aria-describedby`), so someone who missed the announcement, or reaches the button later, hears why it's there: "Reload, button. Week Budget Planner was updated in another tab. This tab can't save until it reloads." The Reload button in Settings › Your data is described by its notice's text the same way (see Tabs on different versions in [Persistence](persistence.md)).
 - **While the plan is read-only**, blocks, empty slots and activities keep their names and stay in Tab order, so the plan can still be read. Their actions are disabled with `aria-disabled="true"` rather than `disabled`, which would take them out of Tab order and hide them from some screen readers. A key or click that would change the plan does nothing.
 
 ## Checking it
