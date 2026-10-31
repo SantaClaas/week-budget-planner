@@ -43,10 +43,21 @@ test("moves between pages without a reload, and back with the browser", async ({
   expect(await page.evaluate(() => "isSamePage" in window)).toBe(true);
 });
 
-test("shows Week for a path with no page, and replaces the address", async ({ page }) => {
+test("says when a path has no page, and keeps the address", async ({ page }) => {
   await page.goto(`${ISOLATED_URL}no-such-page`);
-  await expect(page.getByRole("heading", heading("Week"))).toBeVisible();
-  await expect(page).toHaveURL(ISOLATED_URL);
+  await expect(page.getByRole("heading", heading("Page not found"))).toBeVisible();
+  await expect(page).toHaveTitle("Page not found · Week Budget Planner");
+  await expect(page).toHaveURL(`${ISOLATED_URL}no-such-page`);
+  // No destination is current, and the page leads back to the week.
+  await expect(page.locator('[aria-current="page"]')).toHaveCount(0);
+  await page.getByRole("link", { name: "Go to the week" }).click();
+  await expect(page.getByRole("heading", heading("Week"))).toBeFocused();
+});
+
+test("shows a page for another spelling of its path, and fixes the address", async ({ page }) => {
+  await page.goto(`${ISOLATED_URL}settings/`);
+  await expect(page.getByRole("heading", heading("Settings"))).toBeVisible();
+  await expect(page).toHaveURL(`${ISOLATED_URL}settings`);
 });
 
 test("reaches every page with the keyboard, and lands on its heading", async ({ page }) => {

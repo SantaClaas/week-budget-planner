@@ -1,4 +1,4 @@
-import { read, type Page } from "./index.ts";
+import { createPath, read, type Page } from "./index.ts";
 
 /** Where the change of page came from: a link in the app, or Back and Forward or the first load. */
 type Cause = "link" | "history";
@@ -20,15 +20,18 @@ function isLeftToBrowser(event: MouseEvent, link: HTMLAnchorElement): boolean {
 
 /**
  * Shows the page for the address now and after every change, turning clicks on the app's own links
- * into `pushState` instead of a load (see Pages and URLs in docs/spec/layout.md). A path with no
- * page shows Week, and the address is replaced with the base.
+ * into `pushState` instead of a load (see Pages and URLs in docs/spec/layout.md). Another spelling
+ * of a page's path is replaced with its own; a path with no page shows "not-found" and keeps the
+ * address, so the user sees what was wrong.
  * @mustUse Gives back the function that stops following the address.
  */
 export function follow(base: string, show: (page: Page, cause: Cause) => void): () => void {
   function showCurrent(cause: Cause): void {
-    const page = read(location.pathname, base);
-    if (page === undefined) history.replaceState(null, "", base);
-    show(page ?? "week", cause);
+    const page = read(location.pathname, base) ?? "not-found";
+    if (page !== "not-found" && location.pathname !== createPath(page, base)) {
+      history.replaceState(null, "", `${createPath(page, base)}${location.search}${location.hash}`);
+    }
+    show(page, cause);
   }
 
   const onClick = (event: MouseEvent): void => {

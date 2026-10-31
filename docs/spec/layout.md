@@ -52,7 +52,8 @@ Each destination is a page with its own path under the base (`/week-budget-plann
 
 - **Destinations are links** (`<a href>`) in the navigation rail and the navigation bar, with `aria-current="page"` on the one shown, so opening one in a new tab, copying its address and the browser's own link menu all work. The save status links to `settings#your-data`, the Your data section.
 - **Moving between pages doesn't reload.** A click on one of the app's own links (the primary button, no modifier keys, same origin, inside the base, no `target` or `download`) is turned into a History API `pushState`, and `popstate` shows the page for the new path. Everything else, such as a middle click or Ctrl+click, is left to the browser. The plan, the undo steps and the open database stay as they are.
-- **A path with no page** (an old link, a typo) shows Week and replaces the address with the base (`replaceState`), so it doesn't stay in the history.
+- **A path with no page** (an old link, a typo) shows "Page not found" in the usual frame, with no destination current in the navigation: "There's no page at this address." and a link, "Go to the week". The address stays as it was, so the user can see what was wrong. Its title is "Page not found · Week Budget Planner".
+- **Other spellings of a page's path** aren't mistakes worth a page: a trailing slash (`settings/`), `index.html`, and the base without its slash show their page, and the address is replaced with the page's own path (`replaceState`).
 - **On wide screens, Activities is a page of its own; on phones it is too.** Week on wide screens also shows the Activities pane beside the grid, so both lead to the same list. Resizing the window across the breakpoint keeps the path.
 - A reload of a deep path works on GitHub Pages through `404.html` (see Hosting on GitHub Pages in [Persistence](persistence.md)).
 

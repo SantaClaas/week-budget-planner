@@ -6,7 +6,7 @@ import { LiveRegion } from "./announcement/LiveRegion.tsx";
 import { NavigationBar } from "./navigation/NavigationBar.tsx";
 import { NavigationRail } from "./navigation/NavigationRail.tsx";
 import { follow } from "./page/history.ts";
-import { createTitle, NAMES, type Page } from "./page/index.ts";
+import { createPath, createTitle, NAMES, type Page } from "./page/index.ts";
 import * as planner from "./planner/index.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
@@ -140,32 +140,35 @@ export function App(): JSX.Element {
             heading = element;
           }}
         />
-        <Show when={store()} fallback={<p class="page-content">Opening your plan…</p>}>
-          {(opened) => (
-            <Switch>
-              <Match when={page() === "week"}>
-                {/* The week arrives in the next step of phase 4; until then, what was loaded. */}
-                <p class="page-content" data-testid="status">
-                  Storage: {opened().level} · {current()?.plan().activities.length ?? 0} activities
-                  · {current()?.plan().blocks.length ?? 0} blocks
-                </p>
-              </Match>
-              <Match when={page() === "activities"}>
-                <p class="page-content">The activities arrive in a later step of phase 4.</p>
-              </Match>
-              <Match when={page() === "settings"}>
-                <section class="page-content" aria-labelledby="about-title">
-                  <h2 id="about-title" class="title-medium emphasized">
-                    About
-                  </h2>
-                  <a href={version.url} target="_blank" rel="noopener">
-                    Version {version.date}
-                    {version.commit === undefined ? "" : ` · ${version.commit.slice(0, 7)}`}
-                  </a>
-                </section>
-              </Match>
-            </Switch>
-          )}
+        {/* An address with no page needs no plan, so it shows at once. */}
+        <Show when={page() !== "not-found"} fallback={<NotFound />}>
+          <Show when={store()} fallback={<p class="page-content">Opening your plan…</p>}>
+            {(opened) => (
+              <Switch>
+                <Match when={page() === "week"}>
+                  {/* The week arrives in the next step of phase 4; until then, what was loaded. */}
+                  <p class="page-content" data-testid="status">
+                    Storage: {opened().level} · {current()?.plan().activities.length ?? 0}{" "}
+                    activities · {current()?.plan().blocks.length ?? 0} blocks
+                  </p>
+                </Match>
+                <Match when={page() === "activities"}>
+                  <p class="page-content">The activities arrive in a later step of phase 4.</p>
+                </Match>
+                <Match when={page() === "settings"}>
+                  <section class="page-content" aria-labelledby="about-title">
+                    <h2 id="about-title" class="title-medium emphasized">
+                      About
+                    </h2>
+                    <a href={version.url} target="_blank" rel="noopener">
+                      Version {version.date}
+                      {version.commit === undefined ? "" : ` · ${version.commit.slice(0, 7)}`}
+                    </a>
+                  </section>
+                </Match>
+              </Switch>
+            )}
+          </Show>
         </Show>
       </main>
       <NavigationBar current={page()} base={BASE} />
@@ -197,5 +200,15 @@ function NewerVersionPage(): JSX.Element {
         Reload
       </button>
     </main>
+  );
+}
+
+/** The page for an address with no page: says so, and leads to the week. */
+function NotFound(): JSX.Element {
+  return (
+    <div class="page-content">
+      <p class="body-large">There's no page at this address.</p>
+      <a href={createPath("week", BASE)}>Go to the week</a>
+    </div>
   );
 }

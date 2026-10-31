@@ -83,6 +83,9 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.setViewportSize({ width: 390, height: 760 });
       await page.getByRole("link", { name: "Week" }).click();
       results.push(await checkWithAxe(page));
+      await page.goto(`${ISOLATED_URL}no-such-page`);
+      await page.getByRole("heading", { name: "Page not found" }).waitFor();
+      results.push(await checkWithAxe(page));
       expect(results.flat()).toEqual([]);
     });
   });
