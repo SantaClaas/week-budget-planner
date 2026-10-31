@@ -33,6 +33,14 @@ export function serialize(plan: Plan): string {
   );
 }
 
+/** Whether a newer version of the app wrote the data: a `version` above 1. */
+const isFromNewerVersion = (data: unknown): boolean =>
+  typeof data === "object" &&
+  data !== null &&
+  "version" in data &&
+  typeof data.version === "number" &&
+  data.version > 1;
+
 /**
  * Reads an imported plan file strictly, so an import never replaces the plan with an empty one:
  * "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, "newer-version"
@@ -50,14 +58,6 @@ export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" 
     typeof data === "object" && data !== null && "version" in data && data.version === 1;
   return isVersionOne ? sanitizePlan(data, ids) : "not-a-plan";
 }
-
-/** Whether a newer version of the app wrote the data: a `version` above 1. */
-const isFromNewerVersion = (data: unknown): boolean =>
-  typeof data === "object" &&
-  data !== null &&
-  "version" in data &&
-  typeof data.version === "number" &&
-  data.version > 1;
 
 /**
  * Whether the stored text is a plan from a newer version of the app, which this version must

@@ -40,30 +40,6 @@ export type Planner = {
  */
 type Options = { showSnackbar(snackbar: Snackbar): void; onNewerVersion(): void };
 
-/**
- * Opens the best storage and its plan, saving the example week on first run, and gives back the
- * planner for it with the store it saves to. "newer-version" when a newer version of the app saved
- * the plan, which this one can't read.
- */
-export async function open(
-  options: Options,
-): Promise<Result<{ store: PlanStore; planner: Planner }, "newer-version">> {
-  let store: PlanStore;
-  let stored: Awaited<ReturnType<PlanStore["load"]>>;
-  try {
-    ({ store, stored } = await openAndLoad());
-  } catch (error) {
-    if (error instanceof NewerVersionError) return "newer-version";
-    throw error;
-  }
-  if (stored.isStored) return { store, planner: create(store, stored.plan, options) };
-  // The example week is marked as loaded at the same moment its rows are saved.
-  const now = Temporal.Now.instant();
-  const example = createExampleWeek(now, randomIds);
-  await store.save(undefined, example, now);
-  return { store, planner: create(store, example, options) };
-}
-
 async function openAndLoad() {
   const store = await openStorage();
   return { store, stored: await store.load() };
@@ -95,11 +71,25 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     setStepCount(nextSteps.length);
   }
 
-  /** Saves `after` once the saves before it are done, and says how it went. */
-  function save(after: Plan, now: Temporal.Instant): void {
-    openSaves += 1;
-    setSaveState("saving");
-    saving = saving.then(() => saveNow(after, now));
+  /** Keeps the change on screen and offers to save it again (see Writes and undo). */
+  function failSave(error: unknown): void {
+    console.error("[planner] couldn't save the change", error);
+    setSaveState("failed");
+    if (isFailing) return;
+    isFailing = true;
+    options.showSnackbar({
+      message: "Couldn't save your last change. It's still on screen.",
+      urgency: "assertive",
+      isLasting: true,
+      action: {
+        label: "Retry",
+        run: () => {
+          isFailing = false;
+          // oxlint-disable-next-line no-use-before-define -- Retry saves again, and saving calls this on failure: the two call each other.
+          save(current, Temporal.Now.instant());
+        },
+      },
+    });
   }
 
   async function saveNow(after: Plan, now: Temporal.Instant): Promise<void> {
@@ -116,24 +106,11 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     if (openSaves === 0) setSaveState("saved");
   }
 
-  /** Keeps the change on screen and offers to save it again (see Writes and undo). */
-  function failSave(error: unknown): void {
-    console.error("[planner] couldn't save the change", error);
-    setSaveState("failed");
-    if (isFailing) return;
-    isFailing = true;
-    options.showSnackbar({
-      message: "Couldn't save your last change. It's still on screen.",
-      urgency: "assertive",
-      isLasting: true,
-      action: {
-        label: "Retry",
-        run: () => {
-          isFailing = false;
-          save(current, Temporal.Now.instant());
-        },
-      },
-    });
+  /** Saves `after` once the saves before it are done, and says how it went. */
+  function save(after: Plan, now: Temporal.Instant): void {
+    openSaves += 1;
+    setSaveState("saving");
+    saving = saving.then(() => saveNow(after, now));
   }
 
   /**
@@ -194,4 +171,28 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     },
     stop: stopWatching,
   };
+}
+
+/**
+ * Opens the best storage and its plan, saving the example week on first run, and gives back the
+ * planner for it with the store it saves to. "newer-version" when a newer version of the app saved
+ * the plan, which this one can't read.
+ */
+export async function open(
+  options: Options,
+): Promise<Result<{ store: PlanStore; planner: Planner }, "newer-version">> {
+  let store: PlanStore;
+  let stored: Awaited<ReturnType<PlanStore["load"]>>;
+  try {
+    ({ store, stored } = await openAndLoad());
+  } catch (error) {
+    if (error instanceof NewerVersionError) return "newer-version";
+    throw error;
+  }
+  if (stored.isStored) return { store, planner: create(store, stored.plan, options) };
+  // The example week is marked as loaded at the same moment its rows are saved.
+  const now = Temporal.Now.instant();
+  const example = createExampleWeek(now, randomIds);
+  await store.save(undefined, example, now);
+  return { store, planner: create(store, example, options) };
 }

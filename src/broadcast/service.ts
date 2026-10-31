@@ -79,6 +79,57 @@ export function provide(
     providerId,
   };
 
+  function postError(id: string, error: unknown): void {
+    try {
+      // Structured cloning turns custom errors into a plain Error, so the name travels apart.
+      channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
+        scope,
+        type: "error",
+        id,
+        error,
+        ...(error instanceof Error && { name: error.name }),
+      } satisfies ServiceMessage);
+    } catch {
+      // The error isn't structured-cloneable; send its string form.
+      channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
+        scope,
+        type: "error",
+        id,
+        error: String(error),
+      } satisfies ServiceMessage);
+    }
+  }
+
+  /** Runs the call and posts its result or its error to the consumer that's waiting. */
+  async function answer(call: { id: string; property: string; parameters: unknown[] }) {
+    const method = target[call.property];
+    if (typeof method !== "function") {
+      postError(call.id, new TypeError(`Unknown service method: ${call.property}`));
+      return;
+    }
+    let result: unknown;
+    try {
+      result = await Reflect.apply(method, target, call.parameters);
+    } catch (error) {
+      postError(call.id, error);
+      return;
+    }
+    try {
+      channel.postMessage({
+        protocolVersion: PROTOCOL_VERSION,
+        scope,
+        type: "result",
+        id: call.id,
+        result,
+      } satisfies ServiceMessage);
+    } catch (error) {
+      // The result isn't structured-cloneable, so the consumer hears that instead.
+      postError(call.id, error);
+    }
+  }
+
   const listener = (event: MessageEvent<ServiceMessage>): void => {
     const message = event.data;
     if (message.scope !== scope) return;
@@ -111,57 +162,6 @@ export function provide(
     }
   };
   channel.addEventListener("message", listener);
-
-  /** Runs the call and posts its result or its error to the consumer that's waiting. */
-  async function answer(call: { id: string; property: string; parameters: unknown[] }) {
-    const method = target[call.property];
-    if (typeof method !== "function") {
-      postError(call.id, new TypeError(`Unknown service method: ${call.property}`));
-      return;
-    }
-    let result: unknown;
-    try {
-      result = await Reflect.apply(method, target, call.parameters);
-    } catch (error) {
-      postError(call.id, error);
-      return;
-    }
-    try {
-      channel.postMessage({
-        protocolVersion: PROTOCOL_VERSION,
-        scope,
-        type: "result",
-        id: call.id,
-        result,
-      } satisfies ServiceMessage);
-    } catch (error) {
-      // The result isn't structured-cloneable, so the consumer hears that instead.
-      postError(call.id, error);
-    }
-  }
-
-  function postError(id: string, error: unknown): void {
-    try {
-      // Structured cloning turns custom errors into a plain Error, so the name travels apart.
-      channel.postMessage({
-        protocolVersion: PROTOCOL_VERSION,
-        scope,
-        type: "error",
-        id,
-        error,
-        ...(error instanceof Error && { name: error.name }),
-      } satisfies ServiceMessage);
-    } catch {
-      // The error isn't structured-cloneable; send its string form.
-      channel.postMessage({
-        protocolVersion: PROTOCOL_VERSION,
-        scope,
-        type: "error",
-        id,
-        error: String(error),
-      } satisfies ServiceMessage);
-    }
-  }
 
   channel.postMessage(ready);
   return () => {
@@ -251,35 +251,6 @@ export function consume<T extends AsyncApi>(
     }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
   }
 
-  channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
-    const message = event.data;
-    if (message.scope !== scope) return;
-    // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
-    if (message.protocolVersion > PROTOCOL_VERSION) {
-      giveWayToNewerVersion();
-      return;
-    }
-    if (message.protocolVersion < PROTOCOL_VERSION) return;
-    switch (message.type) {
-      case "provider-ready":
-        acceptProvider(message.providerId);
-        break;
-      case "result":
-        takeCall(message.id)?.resolve(message.result);
-        break;
-      case "error":
-        takeCall(message.id)?.reject(readRemoteError(message.error, message.name));
-        break;
-      case "call":
-      case "provider-query":
-        // Messages for the provider.
-        break;
-      case "reload":
-        // Every tab's owner handles it (see src/database/client.ts).
-        break;
-    }
-  });
-
   /** Refuses every open call, since a tab on a newer protocol runs, and says so. */
   function giveWayToNewerVersion() {
     const error = new NewerProtocolError("A newer version of the app runs in another tab.");
@@ -314,6 +285,35 @@ export function consume<T extends AsyncApi>(
     stopQueryingWhenIdle();
     return call;
   }
+
+  channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
+    const message = event.data;
+    if (message.scope !== scope) return;
+    // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
+    if (message.protocolVersion > PROTOCOL_VERSION) {
+      giveWayToNewerVersion();
+      return;
+    }
+    if (message.protocolVersion < PROTOCOL_VERSION) return;
+    switch (message.type) {
+      case "provider-ready":
+        acceptProvider(message.providerId);
+        break;
+      case "result":
+        takeCall(message.id)?.resolve(message.result);
+        break;
+      case "error":
+        takeCall(message.id)?.reject(readRemoteError(message.error, message.name));
+        break;
+      case "call":
+      case "provider-query":
+        // Messages for the provider.
+        break;
+      case "reload":
+        // Every tab's owner handles it (see src/database/client.ts).
+        break;
+    }
+  });
 
   function waitForProvider(): Promise<void> {
     if (providerId !== undefined) return Promise.resolve();

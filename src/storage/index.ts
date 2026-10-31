@@ -19,33 +19,6 @@ function openFallback(): PlanStore {
   return storage ? local.create(storage, window) : memory.create();
 }
 
-/**
- * Opens the best storage this browser allows, falling back a level when one can't be used or fails
- * to open (for example OPFS refusing access in a private window). Never blocks the UI for long: the
- * caller shows "Opening your plan…" until this resolves.
- *
- * Rejects with {@link NewerVersionError} when a newer version of the app saved the database. That
- * isn't a fallback case: the plan is fine, and only reloading to update the app can open it.
- */
-export async function open(): Promise<PlanStore> {
-  if (!isDatabaseUsable()) return openFallback();
-  let database: DatabaseModule;
-  try {
-    database = await import("./database.ts");
-  } catch (error) {
-    // Without its chunk the database never opened, so there's no broken file to report.
-    console.warn("[storage] the database code didn't load, using limited storage", error);
-    return openFallback();
-  }
-  const store = database.create();
-  try {
-    await store.load();
-  } catch (error) {
-    return openFallbackAfter(error, database);
-  }
-  return store;
-}
-
 type DatabaseModule = typeof import("./database.ts");
 
 /**
@@ -72,4 +45,31 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
       removeBrokenDatabase();
     },
   };
+}
+
+/**
+ * Opens the best storage this browser allows, falling back a level when one can't be used or fails
+ * to open (for example OPFS refusing access in a private window). Never blocks the UI for long: the
+ * caller shows "Opening your plan…" until this resolves.
+ *
+ * Rejects with {@link NewerVersionError} when a newer version of the app saved the database. That
+ * isn't a fallback case: the plan is fine, and only reloading to update the app can open it.
+ */
+export async function open(): Promise<PlanStore> {
+  if (!isDatabaseUsable()) return openFallback();
+  let database: DatabaseModule;
+  try {
+    database = await import("./database.ts");
+  } catch (error) {
+    // Without its chunk the database never opened, so there's no broken file to report.
+    console.warn("[storage] the database code didn't load, using limited storage", error);
+    return openFallback();
+  }
+  const store = database.create();
+  try {
+    await store.load();
+  } catch (error) {
+    return openFallbackAfter(error, database);
+  }
+  return store;
 }

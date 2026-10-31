@@ -77,6 +77,40 @@ function connectFile(path: string): Promise<TursoConnection> {
   return connect(path);
 }
 
+/** Deletes a file in OPFS. A file that doesn't exist is fine; any other error is thrown. */
+async function removeFile(root: FileSystemDirectoryHandle, name: string): Promise<void> {
+  try {
+    await root.removeEntry(name);
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+  }
+}
+
+/** Removes copies left from earlier imports. One still locked by this page waits for the next open. */
+async function removeImportLeftovers(): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  for await (const name of root.keys()) {
+    if (!name.startsWith(IMPORT_FILE_PREFIX)) continue;
+    await root.removeEntry(name).catch((error: unknown) => {
+      console.debug("[database] kept a locked import copy", name, error);
+    });
+  }
+}
+
+async function removeDatabaseFiles(): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  await removeFile(root, `${DATABASE_FILE}-wal`);
+  await removeFile(root, DATABASE_FILE);
+}
+
+function readRemovalRequest(): boolean {
+  try {
+    return localStorage.getItem(REMOVAL_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 async function open(): Promise<TursoConnection> {
   if (readRemovalRequest()) {
     await removeDatabaseFiles();
@@ -160,27 +194,6 @@ async function closeForReload(): Promise<void> {
   await database.close();
 }
 
-/** Deletes a file in OPFS. A file that doesn't exist is fine; any other error is thrown. */
-async function removeFile(root: FileSystemDirectoryHandle, name: string): Promise<void> {
-  try {
-    await root.removeEntry(name);
-  } catch (error) {
-    if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
-  }
-}
-
-/** Writes a whole file in OPFS. The file only changes when the write completes. */
-async function writeFile(
-  root: FileSystemDirectoryHandle,
-  name: string,
-  bytes: Uint8Array<ArrayBuffer>,
-): Promise<void> {
-  const handle = await root.getFileHandle(name, { create: true });
-  await using writing = await startWriting(handle);
-  await writing.write(bytes);
-  await writing.commit();
-}
-
 /** A file being written: commit() keeps what was written, and disposing it uncommitted drops it. */
 type Writing = AsyncDisposable & {
   write(bytes: Uint8Array<ArrayBuffer>): Promise<void>;
@@ -208,15 +221,16 @@ async function startWriting(handle: FileSystemFileHandle): Promise<Writing> {
   };
 }
 
-/** Removes copies left from earlier imports. One still locked by this page waits for the next open. */
-async function removeImportLeftovers(): Promise<void> {
-  const root = await navigator.storage.getDirectory();
-  for await (const name of root.keys()) {
-    if (!name.startsWith(IMPORT_FILE_PREFIX)) continue;
-    await root.removeEntry(name).catch((error: unknown) => {
-      console.debug("[database] kept a locked import copy", name, error);
-    });
-  }
+/** Writes a whole file in OPFS. The file only changes when the write completes. */
+async function writeFile(
+  root: FileSystemDirectoryHandle,
+  name: string,
+  bytes: Uint8Array<ArrayBuffer>,
+): Promise<void> {
+  const handle = await root.getFileHandle(name, { create: true });
+  await using writing = await startWriting(handle);
+  await writing.write(bytes);
+  await writing.commit();
 }
 
 async function readFileBytes(): Promise<Uint8Array<ArrayBuffer>> {
@@ -232,6 +246,15 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
 
 /** Why a file can't be imported. */
 type ImportProblem = "invalid-file" | "newer-version";
+
+/** Opens the copy of an imported database, migrates it and reads its plan. Throws when it can't. */
+async function readCopy(name: string): Promise<void> {
+  await using resources = new AsyncDisposableStack();
+  const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
+  await runMigrations(connection);
+  const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
+  await loadPlan(database, randomIds);
+}
 
 /**
  * Whether the file is a database this app can open: it has the SQLite header, and a copy of it
@@ -255,15 +278,6 @@ async function checkImport(
   return "importable";
 }
 
-/** Opens the copy of an imported database, migrates it and reads its plan. Throws when it can't. */
-async function readCopy(name: string): Promise<void> {
-  await using resources = new AsyncDisposableStack();
-  const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
-  await runMigrations(connection);
-  const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
-  await loadPlan(database, randomIds);
-}
-
 function broadcastReload(): void {
   // Every tab must restart on the new data; the poster doesn't receive its own broadcast, so the
   // leader reloads itself explicitly.
@@ -273,6 +287,13 @@ function broadcastReload(): void {
     type: "reload",
   } satisfies ServiceMessage);
   location.reload();
+}
+
+async function replaceDatabaseFile(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
+  const root = await navigator.storage.getDirectory();
+  // Drop the WAL so it cannot be replayed over the imported file.
+  await removeFile(root, `${DATABASE_FILE}-wal`);
+  await writeFile(root, DATABASE_FILE, bytes);
 }
 
 /** The leader-side implementation working on the locally opened database. */
@@ -318,19 +339,6 @@ const localService: DatabaseService = {
   },
 };
 
-async function replaceDatabaseFile(bytes: Uint8Array<ArrayBuffer>): Promise<void> {
-  const root = await navigator.storage.getDirectory();
-  // Drop the WAL so it cannot be replayed over the imported file.
-  await removeFile(root, `${DATABASE_FILE}-wal`);
-  await writeFile(root, DATABASE_FILE, bytes);
-}
-
-async function removeDatabaseFiles(): Promise<void> {
-  const root = await navigator.storage.getDirectory();
-  await removeFile(root, `${DATABASE_FILE}-wal`);
-  await removeFile(root, DATABASE_FILE);
-}
-
 /** Whether this browser has a database file, so a failure to open it means it's broken. */
 export async function hasDatabaseFile(): Promise<boolean> {
   let root: FileSystemDirectoryHandle;
@@ -346,14 +354,6 @@ export async function hasDatabaseFile(): Promise<boolean> {
     return false;
   }
   return true;
-}
-
-function readRemovalRequest(): boolean {
-  try {
-    return localStorage.getItem(REMOVAL_KEY) !== null;
-  } catch {
-    return false;
-  }
 }
 
 /**

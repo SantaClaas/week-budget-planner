@@ -8,14 +8,14 @@ export const isSqlValue = (value: unknown): value is SqlValue =>
   typeof value === "bigint" ||
   value instanceof Uint8Array;
 
+/** Drizzle's sqlite-proxy execute methods. */
+type QueryMethod = "run" | "all" | "get" | "values";
+
 /**
  * One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. `params` is
  * Drizzle's name, so it stays abbreviated here.
  */
 type BatchStatement = { sql: string; params: SqlValue[]; method: QueryMethod };
-
-/** Drizzle's sqlite-proxy execute methods. */
-type QueryMethod = "run" | "all" | "get" | "values";
 
 /**
  * What Drizzle's sqlite-proxy expects back: rows as arrays of column values in column order. For

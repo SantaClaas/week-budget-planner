@@ -78,6 +78,13 @@ export function create(
   };
 }
 
+/** Writes and removes a key, which throws when the storage is full or blocked. */
+function writeProbe(storage: Storage): void {
+  const probe = `${PLAN_KEY}.probe`;
+  storage.setItem(probe, "1");
+  storage.removeItem(probe);
+}
+
 /** Whether localStorage can actually be written (it can be missing, or throw, when blocked). */
 export function findWritableStorage(): Storage | undefined {
   let storage: Storage;
@@ -92,11 +99,4 @@ export function findWritableStorage(): Storage | undefined {
     return undefined;
   }
   return storage;
-}
-
-/** Writes and removes a key, which throws when the storage is full or blocked. */
-function writeProbe(storage: Storage): void {
-  const probe = `${PLAN_KEY}.probe`;
-  storage.setItem(probe, "1");
-  storage.removeItem(probe);
 }

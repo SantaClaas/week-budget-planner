@@ -31,6 +31,21 @@
     // The shorter of two branches goes inside the if (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/shorter-branch-first": "error",
+    // Everything is declared above its first use, as in F#, so a file reads bottom-up: types and
+    // helpers first, the module's entry point last (see Functions in
+    // docs/guidelines/principles.md). Type references count too.
+    "no-use-before-define": [
+      "error",
+      {
+        "functions": true,
+        "classes": true,
+        "variables": true,
+        "typedefs": true,
+        "enums": true,
+        "ignoreTypeReferences": false,
+        "allowNamedExports": false
+      }
+    ],
     // No type assertions: `as` and `<T>` are errors, and `!` too. A checked value comes from a
     // sanitizer or a type guard instead. `as const` is still allowed.
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
