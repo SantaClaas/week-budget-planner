@@ -25,7 +25,7 @@ export class NewerDatabaseError extends Error {
 }
 
 /** Every migration this version of the app knows, oldest first. */
-export const MIGRATION_NAMES: readonly string[] = [...loaderByName.keys()].toSorted();
+export const MIGRATION_NAMES: readonly string[] = loaderByName.keys().toArray().toSorted();
 
 async function readAppliedNames(connection: TursoConnection): Promise<Set<string>> {
   const tables = await (
@@ -54,10 +54,13 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
  */
 export async function runMigrations(connection: TursoConnection): Promise<void> {
   const applied = await readAppliedNames(connection);
-  if ([...applied].some((name) => !loaderByName.has(name))) {
+  if (applied.values().some((name) => !loaderByName.has(name))) {
     throw new NewerDatabaseError("The database was made by a newer version of the app.");
   }
-  const pending = [...loaderByName].filter(([name]) => !applied.has(name));
+  const pending = loaderByName
+    .entries()
+    .filter(([name]) => !applied.has(name))
+    .toArray();
   if (pending.length === 0) return;
 
   const [{ migrate }, driverCore, files] = await Promise.all([
