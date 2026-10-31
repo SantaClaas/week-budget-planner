@@ -11,6 +11,8 @@ export async function loadPolyfills(): Promise<void> {
   // the iterator helpers (Chrome 122, Firefox 131, Safari 18.4), which the plan logic chains
   if (!("Iterator" in globalThis && "toArray" in Iterator.prototype))
     loading.push(import("core-js/es/iterator/index.js"));
+  // Promise.withResolvers (Chrome 119, Firefox 121, Safari 17.4), which the tab leader uses
+  if (!("withResolvers" in Promise)) loading.push(import("core-js/es/promise/with-resolvers.js"));
   // `using` and AsyncDisposableStack, for cleanup (Chrome 134, Firefox 141, not yet in Safari).
   // The build lowers the `using` syntax itself, but not these symbols and classes.
   if (!("AsyncDisposableStack" in globalThis)) loading.push(import("./disposal.ts"));

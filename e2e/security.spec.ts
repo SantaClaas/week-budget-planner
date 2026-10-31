@@ -6,10 +6,10 @@ import { ISOLATED_URL, PAGES_URL, expectStatus } from "./app.ts";
 // the browser at runtime, so only a browser can test them.
 
 /**
- * Tries what the policy must refuse, from a timer so the code runs as the page's own: code that
+ * Tries what the policy must refuse, after a timer so the code runs as the page's own: code that
  * the test evaluates directly is exempt from the policy. Runs in the page.
  */
-function attemptForbidden(): Promise<Record<string, string>> {
+async function attemptForbidden(): Promise<Record<string, string>> {
   const attempts: Record<string, () => void> = {
     innerHTML: () => {
       document.createElement("div").innerHTML = "<img src=x onerror=alert(1)>";
@@ -25,21 +25,23 @@ function attemptForbidden(): Promise<Record<string, string>> {
       void new Worker("https://example.com/worker.js");
     },
   };
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const outcomes: Record<string, string> = {};
-      for (const [name, attempt] of Object.entries(attempts)) {
-        try {
-          attempt();
-        } catch (error) {
-          outcomes[name] = error instanceof Error ? error.name : "thrown";
-          continue;
-        }
-        outcomes[name] = "allowed";
-      }
-      resolve(outcomes);
-    });
+  // The rest runs in the timer's task, no longer in the test's evaluation.
+  const timer = Promise.withResolvers<void>();
+  setTimeout(() => {
+    timer.resolve();
   });
+  await timer.promise;
+  const outcomes: Record<string, string> = {};
+  for (const [name, attempt] of Object.entries(attempts)) {
+    try {
+      attempt();
+    } catch (error) {
+      outcomes[name] = error instanceof Error ? error.name : "thrown";
+      continue;
+    }
+    outcomes[name] = "allowed";
+  }
+  return outcomes;
 }
 
 /** Reloads and returns the navigation's response headers. */

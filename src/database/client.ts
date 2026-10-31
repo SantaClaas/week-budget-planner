@@ -126,17 +126,18 @@ function giveWayToNewerVersion(): void {
 }
 
 /** Resolves when the signal aborts, at once if it already has. */
-const waitForAbort = (signal: AbortSignal): Promise<void> =>
-  new Promise((resolve) => {
-    if (signal.aborted) resolve();
-    signal.addEventListener(
-      "abort",
-      () => {
-        resolve();
-      },
-      { once: true },
-    );
-  });
+function waitForAbort(signal: AbortSignal): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  if (signal.aborted) resolve();
+  signal.addEventListener(
+    "abort",
+    () => {
+      resolve();
+    },
+    { once: true },
+  );
+  return promise;
+}
 
 /**
  * Calls back once this tab learns that another runs a newer version of the app, and has stepped
