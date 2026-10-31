@@ -118,11 +118,12 @@ export function App(): JSX.Element {
         {/* The snackbar of the real UI (phase 4), which stays until Reload. */}
         <div>
           {/* An output is a polite live region, which announces the text once. */}
-          <output data-testid="outdated">
+          <output id="outdated-message" data-testid="outdated">
             Week Budget Planner was updated in another tab. This tab can't save until it reloads.
           </output>
           <button
             type="button"
+            aria-describedby="outdated-message"
             onClick={() => {
               location.reload();
             }}
