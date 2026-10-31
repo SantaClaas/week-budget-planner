@@ -8,18 +8,39 @@ import type { Plan } from "./plan/index.ts";
 import { open as openStorage } from "./storage/index.ts";
 import { NewerVersionError, type PlanStore } from "./storage/plan-store.ts";
 
-// Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
-// shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.
 /** Opens the best storage and loads the plan, which may turn out to be from a newer version. */
 async function openAndLoad() {
   const opened = await openStorage();
   return { store: opened, stored: await opened.load() };
 }
 
+/** A tab no one can see loses nothing by reloading into the new version. */
+function reloadWhenHidden(): void {
+  if (document.visibilityState === "hidden") location.reload();
+}
+
+// Placeholder until the UI lands (phase 4): opens storage, loads the example week on first run, and
+// shows what it found. `window.weekBudgetPlanner` is a temporary hook for the browser checks.
 export function App(): JSX.Element {
   const [store, setStore] = createSignal<PlanStore>();
   const [plan, setPlan] = createSignal<Plan>();
-  const [problem, setProblem] = createSignal<"newer-version">();
+  /**
+   * "newer-version": a newer version saved the plan before this tab started, so it shows nothing
+   * else. "outdated": a tab on a newer version took over while this one ran, so it can't save, and
+   * the plan stays on screen read-only until it reloads (see "Tabs on different versions" in
+   * docs/spec/persistence.md). The UI disables every change while it's "outdated".
+   */
+  const [problem, setProblem] = createSignal<"newer-version" | "outdated">();
+
+  /** Reloads now when hidden, else asks to reload and reloads once the tab is hidden. */
+  function leaveForNewerVersion(): void {
+    if (document.visibilityState === "hidden") {
+      location.reload();
+      return;
+    }
+    setProblem("outdated");
+    document.addEventListener("visibilitychange", reloadWhenHidden);
+  }
 
   onSettled(() => {
     let stopWatching: (() => void) | undefined;
@@ -55,7 +76,7 @@ export function App(): JSX.Element {
         };
         showLatest().catch((error: unknown) => {
           if (error instanceof NewerVersionError) {
-            setProblem("newer-version");
+            leaveForNewerVersion();
             return;
           }
           // The plan on screen stays as it was; the next change in another tab tries again.
@@ -72,6 +93,7 @@ export function App(): JSX.Element {
     return () => {
       isDisposed = true;
       stopWatching?.();
+      document.removeEventListener("visibilitychange", reloadWhenHidden);
     };
   });
 
@@ -92,7 +114,27 @@ export function App(): JSX.Element {
           Reload
         </button>
       </Show>
-      <Show when={store()} fallback={problem() ? undefined : <p>Opening your plan…</p>}>
+      <Show when={problem() === "outdated"}>
+        {/* The snackbar of the real UI (phase 4), which stays until Reload. */}
+        <div>
+          {/* An output is a polite live region, which announces the text once. */}
+          <output data-testid="outdated">
+            Week Budget Planner was updated in another tab. This tab can't save until it reloads.
+          </output>
+          <button
+            type="button"
+            onClick={() => {
+              location.reload();
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      </Show>
+      <Show
+        when={problem() === "newer-version" ? undefined : store()}
+        fallback={problem() ? undefined : <p>Opening your plan…</p>}
+      >
         {(opened) => (
           <p data-testid="status">
             Storage: {opened().level} · {plan()?.activities.length ?? 0} activities ·{" "}

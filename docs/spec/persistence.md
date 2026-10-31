@@ -92,7 +92,7 @@ erDiagram
 
 - Write when an action is complete: block added, drag or resize finished, keyboard nudge, activity saved. Never write per pointermove. Make one transaction per user action.
 - Undo stays in memory, as in the prototype. Applying an undo step writes the restored state back in one transaction.
-- The status in the top app bar says whether and where the last change is saved: "Saved in this browser", "Saving…", "Saved in limited storage" (see Progressive enhancement, which includes a database that won't open), or "Not saved". It is a link to Settings › Your data, so every question about the data ("saved how safely?") lands where the answers and actions are: keeping the plan, a broken database, export.
+- The status in the top app bar says whether and where the last change is saved: "Saved in this browser", "Saving…", "Saved in limited storage" (see Progressive enhancement, which includes a database that won't open), or "Not saved" (no storage, or a tab that another tab's update left unable to save, see Tabs on different versions). It is a link to Settings › Your data, so every question about the data ("saved how safely?") lands where the answers and actions are: keeping the plan, a broken database, export.
 - **The status never shows whether the browser keeps the plan** (see Keeping the data). That's about the future, not the last change, and most browsers don't grant persistent storage to a new site, so it would be a warning for nearly everyone nearly all the time, and "Not saved" would stop standing out. Storage problems that change what happens to a change (limited storage, no storage) do show there. On a write error, show a snackbar that explains what failed, with Retry ("Couldn't save your last change. It's still on screen."), and keep the in-memory state.
 
 ## Export, import and reset (required)
@@ -200,7 +200,14 @@ sequenceDiagram
   Note over Old,Follower: both show the newer version page
 ```
 
-Still to come: an outdated tab that isn't in use reloads by itself, and one in use shows a prompt to reload that doesn't interrupt what the user is doing, instead of the full-page state.
+**What the user sees in an outdated tab** depends on whether they can see it:
+
+- **A hidden tab** (`document.visibilityState` is `"hidden"`) reloads by itself at once, and so does a visible one as soon as it's hidden. The reload loads the new version, so the user comes back to a tab that saves again. A visible tab never reloads by itself, not even after a while without input: someone reading the week, or listening to it with a screen reader, gives none, and a reload would lose their scroll position, selection and reading position. The platform's Idle Detection API isn't used: it's only in Chromium and needs a permission prompt.
+- **A visible tab** shows a snackbar that stays until Reload: "Week Budget Planner was updated in another tab. This tab can't save until it reloads." with the action "Reload". It doesn't take focus or cover the page, so a drag in progress goes on. It replaces any other snackbar, and no other replaces it, since any other would be about a change that can't be kept.
+- **The plan turns read-only.** The week and the activities stay visible and every control stays focusable, but changes are disabled (`aria-disabled`), so nothing looks saved that isn't. A drag that was in progress when the update arrived finishes on screen, isn't saved, and the block goes back to where it was saved.
+- **The save status reads "Not saved"**, and Settings › Your data explains it in a notice in the secondary container color: "**Week Budget Planner was updated in another tab.** This tab can't save until it reloads. Everything saved so far is safe." with a Reload button. So the snackbar isn't the only way to reload, as Material asks of snackbars.
+
+The full-page "Your plan was saved by a newer version" stays for a tab that finds a newer plan when it starts. The design canvas's "Your data" board shows the snackbar and the notice.
 
 ## Hosting on GitHub Pages
 

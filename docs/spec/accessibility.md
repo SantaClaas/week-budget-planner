@@ -56,6 +56,11 @@ The week is a list of seven days, and each day a list of its blocks, in start or
 - **Theme, Contrast and Motion** are each a `<fieldset>` named by its visible title (`aria-labelledby`). The supporting text ("System is currently dark.") says what System resolves to, so it describes the System option's radio input (`aria-describedby`): "System, selected radio button, System is currently dark." Contrast stays at standard contrast in every mode, so it can always be read and changed back.
 - **The Your data buttons** (Export database, Import database, Delete all data, Keep my plan) are named by their title and described by their supporting text.
 
+## A tab another tab's update left behind
+
+- **The reload snackbar** ("Week Budget Planner was updated in another tab. This tab can't save until it reloads.") is announced once through the shared polite live region, like every snackbar. It doesn't take focus, so a screen reader user isn't pulled away from where they are. Its Reload button is reachable by Tab, and Settings › Your data has a Reload button too (see Tabs on different versions in [Persistence](persistence.md)).
+- **While the plan is read-only**, blocks, empty slots and activities keep their names and stay in Tab order, so the plan can still be read. Their actions are disabled with `aria-disabled="true"` rather than `disabled`, which would take them out of Tab order and hide them from some screen readers. A key or click that would change the plan does nothing.
+
 ## Checking it
 
 Check each screen and state with a screen reader before calling it done (see Screen reader checks in [`docs/guidelines/tests.md`](../guidelines/tests.md)), and with the keyboard alone: every block, every empty slot and every activity must be reachable and usable without a pointer. The automatic checks (the lint, the contrast tests, axe and the browser checks in [`e2e/accessibility.spec.ts`](../../e2e/accessibility.spec.ts)) catch what a machine can; add each new screen to them too (see Automatic accessibility checks in [`docs/guidelines/tests.md`](../guidelines/tests.md)).
