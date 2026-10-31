@@ -154,7 +154,16 @@
     --spatial-motion: 1;
     /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
     --hour: 3rem;
+    /* The shade over the hours outside the day hours, darker like the weekend tint and laid over
+       it, so a weekend's night is darker still. Translucent, so it sits on any column. */
+    --outside-day-hours: light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.16));
     --font: "Google Sans Flex", "Roboto Flex", system-ui, sans-serif;
+  }
+  /* The light value where light-dark() is missing, as for the scheme's colors below. */
+  @supports not (color: light-dark(#000, #fff)) {
+    :root {
+      --outside-day-hours: rgb(0 0 0 / 0.04);
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     :root:not([data-motion]) {
@@ -1070,12 +1079,12 @@
         }
       }
     }
-    &.full .track {
+    &[data-state="full"] .track {
       display: none;
     }
     /* over budget (approved deviation, see Deviations in docs/spec/design.md): the bar spans max(budget, placed). The within-budget
        part keeps the activity color, then the usual gap, then the overrun in red (--over-budget), sized by
-       flex in minutes:
+       flex in minutes, and the bar carries data-state="over-budget":
        <span class="indicator" style="flex: 720"></span><span class="over-budget" style="flex: 30"></span> */
     & .over-budget {
       height: 0.25rem;
@@ -1087,7 +1096,7 @@
         background: Mark;
       }
     }
-    &.over-budget .track {
+    &[data-state="over-budget"] .track {
       display: none;
     }
   }
@@ -1120,9 +1129,30 @@
       display: grid;
       grid-template-rows: subgrid;
     }
+    /* Saturday and Sunday, tinted. The header keeps the tint while it sticks. */
+    & .day[data-weekend] > :is(.day-header, .day-column) {
+      background-color: var(--weekend);
+    }
+    /* The empty corner above the gutter, which covers what scrolls under it both ways. */
+    &::before {
+      content: "";
+      grid-area: 1 / 1;
+      position: sticky;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      z-index: 4;
+      background: var(--card);
+      border-block-end: 1px solid var(--outline-variant);
+    }
   }
+  /* The day's heading sits in the header row, which stays at the top while the week scrolls. */
   .day-header {
     font: inherit;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 3;
+    background: var(--card);
+    border-block-end: 1px solid var(--outline-variant);
     min-height: 3rem;
     display: flex;
     flex-direction: column;
@@ -1159,20 +1189,26 @@
       }
     }
   }
+  /* The hour lines, over the shade outside the day hours, which the week sets as --day-start and
+     --day-end in hours. */
   .day-column {
     position: relative;
     border-inline-start: 1px solid var(--outline-variant);
-    background-image: repeating-linear-gradient(
-      to bottom,
-      var(--outline-variant) 0 1px,
-      transparent 1px calc(var(--hour) / 2),
-      color-mix(in srgb, var(--outline-variant) 45%, transparent) calc(var(--hour) / 2)
-        calc(var(--hour) / 2 + 1px),
-      transparent calc(var(--hour) / 2 + 1px) var(--hour)
-    );
-    &.weekend {
-      background-color: var(--weekend);
-    }
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        var(--outline-variant) 0 1px,
+        transparent 1px calc(var(--hour) / 2),
+        color-mix(in srgb, var(--outline-variant) 45%, transparent) calc(var(--hour) / 2)
+          calc(var(--hour) / 2 + 1px),
+        transparent calc(var(--hour) / 2 + 1px) var(--hour)
+      ),
+      linear-gradient(
+        to bottom,
+        var(--outside-day-hours) 0 calc(var(--day-start, 0) * var(--hour)),
+        transparent 0 calc(var(--day-end, 24) * var(--hour)),
+        var(--outside-day-hours) 0
+      );
     /* Forced colors drop the gradient, so draw the hour lines in GrayText, and let the blocks inside
        take forced colors again (forced-color-adjust is inherited). */
     @media (forced-colors: active) {
@@ -1189,14 +1225,25 @@
       }
     }
   }
+  /* The hour labels, beside the week and staying there while it scrolls sideways. One row per
+     hour, and each label sits centered on the line at the top of its row (--hour-index), so the
+     gutter is as wide as its widest label, whatever the clock ("08:00" or "8:00 AM"). */
   .gutter {
-    position: relative;
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-rows: repeat(24, var(--hour));
+    background: var(--card);
     font-size: 0.6875rem;
     line-height: calc(14 / 11);
     color: var(--on-surface-variant);
-    & span {
-      position: absolute;
-      inset-inline-end: 0.5rem;
+    & time {
+      grid-row-start: calc(var(--hour-index) + 1);
+      align-self: start;
+      justify-self: end;
+      padding-inline: 0.5rem;
+      white-space: nowrap;
       translate: 0 -50%;
     }
   }
@@ -1206,10 +1253,15 @@
      <li class="block color-blue"><button class="block-button" aria-pressed="false" aria-describedby="block-keys">
      <span class="visually-hidden">Gym, Monday 18:00 to 19:30, 1 hour, 30 minutes</span></button>
      <span class="name" aria-hidden="true">Gym</span><span class="time" aria-hidden="true">18:00–19:30 · 1h30</span></li> */
+  /* Placed from custom properties the week sets: --start and --length in minutes, and --lane of
+     --lanes for blocks that overlap, side by side. */
   .block {
     position: absolute;
     isolation: isolate;
-    inset-inline: 0.1875rem;
+    inset-block-start: calc(var(--start, 0) / 60 * var(--hour) + 1px);
+    block-size: calc(var(--length, 60) / 60 * var(--hour) - 2px);
+    inset-inline-start: calc(var(--lane, 0) / var(--lanes, 1) * 100% + 0.1875rem);
+    inline-size: calc(100% / var(--lanes, 1) - 0.375rem);
     border-radius: var(--corner-small);
     background: var(--activity-container);
     color: var(--on-activity-container);
@@ -1267,7 +1319,16 @@
     }
     &[data-length="tiny"] {
       border-radius: var(--corner-extra-small);
-      padding: 0;
+      padding-block: 0;
+    }
+    /* An overnight block's two parts meet at midnight with square corners. */
+    &[data-part="first"] {
+      border-end-start-radius: 0;
+      border-end-end-radius: 0;
+    }
+    &[data-part="second"] {
+      border-start-start-radius: 0;
+      border-start-end-radius: 0;
     }
     & > .block-button {
       position: absolute;

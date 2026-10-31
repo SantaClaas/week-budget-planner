@@ -1,13 +1,18 @@
-// Helpers for the browser tests. Until the UI exists (phase 4), the placeholder app shows its
-// storage level and plan size in a status line, and exposes its plan store as
-// window.weekBudgetPlanner. The tests use both; with the UI they'll drive the real controls.
-import { expect, type Locator, type Page } from "@playwright/test";
+// Helpers for the browser tests. Until the UI has every control (phase 4), the app exposes its plan
+// store and its planner as window.weekBudgetPlanner, and the tests read and drive the plan through
+// it where no control exists yet; as each control lands, they move to it.
+import { expect, type Page } from "@playwright/test";
 
 import type { PlanStore } from "../src/storage/plan-store.ts";
 
 declare global {
   interface Window {
-    weekBudgetPlanner?: { store: PlanStore };
+    // The planner's part these tests read. Its full type would pull the app's modules, Vite's
+    // import.meta.glob among them, into the tests' own TypeScript project.
+    weekBudgetPlanner?: {
+      store: PlanStore;
+      planner: { plan(): { activities: readonly unknown[]; blocks: readonly unknown[] } };
+    };
   }
 }
 
@@ -19,14 +24,28 @@ export const PAGES_URL = "http://localhost:4312/week-budget-planner/";
 /** The example week: 5 activities and 8 blocks. */
 const EXAMPLE_WEEK = "5 activities · 8 blocks";
 
-const status = (page: Page): Locator => page.getByTestId("status");
-
+/**
+ * Waits until the app has opened its plan at `level`, holding `plan` ("5 activities · 8 blocks"),
+ * as its store and planner report them.
+ */
 export async function expectStatus(
   page: Page,
   level: "full" | "limited" | "none",
   plan = EXAMPLE_WEEK,
 ): Promise<void> {
-  await expect(status(page)).toHaveText(`Storage: ${level} · ${plan}`);
+  await expect
+    .poll(() =>
+      page
+        .evaluate(() => {
+          const opened = window.weekBudgetPlanner;
+          if (opened === undefined) return "not open";
+          const { activities, blocks } = opened.planner.plan();
+          return `${opened.store.level} · ${activities.length.toString()} activities · ${blocks.length.toString()} blocks`;
+        })
+        // A reload in the middle of a check ends it, which counts as not yet.
+        .catch(() => "reloading"),
+    )
+    .toBe(`${level} · ${plan}`);
 }
 
 /** Removes the plan's first block, as a user's change would. */
