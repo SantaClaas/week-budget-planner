@@ -99,7 +99,7 @@ The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint
 - **Two operations that fail differently get a `try` each**, usually in functions of their own, as in the broadcast service's `answer()`: one `try` for the call, one for posting its result.
 - A `try` works like an `if`: a branch, and nesting when it grows. So the same rules apply as for `else` above.
 
-The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block with more than one statement, or with one that branches or loops. Two statements can still be one operation, such as a transaction's statements and its commit, which succeed or roll back together, or writing a file and closing it, which commits the write: there, disable the rule on that line and say why.
+The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block with more than one statement, or with one that branches or loops. When several statements belong together because they commit or roll back as one, like a transaction's, that's usually a resource: make it a disposable (see "Clean up with `using`" below) instead of widening the `try`. Where that doesn't fit, disable the rule on that line and say why.
 
 ### Clean up with `using`
 
@@ -107,7 +107,8 @@ The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block
 
 - **Most APIs don't support it yet**, since it's new (2025). `DisposableStack` and `AsyncDisposableStack` bridge them: `adopt()` takes a resource and its cleanup function, and `defer()` takes a cleanup on its own. `checkImport` in [`src/database/client.ts`](../../src/database/client.ts) defers deleting the import copy, and `readCopy` adopts the database connection.
 - **When the same kind of resource is used in many places**, a small wrapper can make it disposable once, for example a `Proxy` that adds `[Symbol.dispose]` to a library's object and passes everything else through. Write one when a resource keeps coming back, not before (see "Compress when it starts to repeat" below).
-- A cleanup that only runs on failure, like rolling back or reopening the database after a failed import, stays a `catch` that cleans up and rethrows.
+- **Work that commits at the end is a disposable too**, whose cleanup undoes it unless it committed. `startTransaction()` in [`src/database/connection.ts`](../../src/database/connection.ts) returns a transaction whose dispose rolls back unless `commit()` ran, and `startWriting()` in [`src/database/client.ts`](../../src/database/client.ts) aborts a file write unless it was committed. The work then reads as a plain sequence, and every error after the start, a programming mistake included, undoes it and still reaches the caller untouched.
+- Undoing a step that isn't a resource, like reopening the database after a failed import, stays a `catch` that cleans up and rethrows.
 
 The lint rule `week-budget-planner/prefer-using` fails on every `finally`. Where one really is the clearest way to write it, disable the rule on that line and say why.
 
