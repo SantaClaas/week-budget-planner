@@ -8,6 +8,7 @@ declare module "virtual:app-version" {
 
 /** core-js ships no types. These entries only install globals (see src/polyfill/index.ts). */
 declare module "core-js/es/iterator/index.js";
+declare module "core-js/es/promise/with-resolvers.js";
 declare module "core-js/es/symbol/dispose.js";
 declare module "core-js/es/symbol/async-dispose.js";
 declare module "core-js/es/disposable-stack/index.js";

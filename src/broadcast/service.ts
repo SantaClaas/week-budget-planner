@@ -317,15 +317,10 @@ export function consume<T extends AsyncApi>(
 
   function waitForProvider(): Promise<void> {
     if (providerId !== undefined) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      readyWaiters.push({
-        resolve: () => {
-          resolve();
-        },
-        reject,
-      });
-      startQuerying();
-    });
+    const waiter = Promise.withResolvers<void>();
+    readyWaiters.push(waiter);
+    startQuerying();
+    return waiter.promise;
   }
 
   const handler: ProxyHandler<object> = {
@@ -339,9 +334,8 @@ export function consume<T extends AsyncApi>(
       return async (...parameters: unknown[]) => {
         await waitForProvider();
         const id = crypto.randomUUID();
-        const response = new Promise((resolve, reject) => {
-          sent.set(id, { resolve, reject });
-        });
+        const { promise: response, resolve, reject } = Promise.withResolvers<unknown>();
+        sent.set(id, { resolve, reject });
         startQuerying();
         channel.postMessage({
           protocolVersion: PROTOCOL_VERSION,

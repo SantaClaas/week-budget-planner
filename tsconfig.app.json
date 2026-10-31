@@ -5,6 +5,7 @@
     "module": "esnext",
     "lib": [
       "ES2023",
+      "ES2024.Promise",
       "ES2025.Iterator",
       "ES2025.Intl",
       "ESNext.Disposable",
