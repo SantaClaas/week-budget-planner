@@ -94,16 +94,14 @@ test("exports the database and imports it again", async ({ page }) => {
 test("refuses files it can't import and keeps the plan", async ({ page }) => {
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "full");
-  expect(await importFile(page, "notes.db", toBytes("not a database"))).toBe(
-    "This file isn't a Week Budget Planner database, so nothing was changed.",
-  );
+  expect(await importFile(page, "notes.db", toBytes("not a database"))).toBe("invalid-file");
   // Has the SQLite header, but nothing a database can open after it.
   expect(await importFile(page, "fake.db", toBytes(`SQLite format 3\0${"x".repeat(5000)}`))).toBe(
-    "This file isn't a Week Budget Planner database, so nothing was changed.",
+    "invalid-file",
   );
   expect(
     await importFile(page, "notes.json", toBytes('{"name": "notes"}'), "application/json"),
-  ).toBe("This file isn't a Week Budget Planner plan, so nothing was changed.");
+  ).toBe("invalid-file");
   await page.reload();
   await expectStatus(page, "full");
 });
@@ -134,12 +132,10 @@ test.describe("a newer version of the app", () => {
   test("refuses its files and keeps the plan", async ({ page }) => {
     await page.goto(ISOLATED_URL);
     await expectStatus(page, "full");
-    const message =
-      "This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.";
-    expect(await importFile(page, "newer.db", newerDatabase)).toBe(message);
+    expect(await importFile(page, "newer.db", newerDatabase)).toBe("newer-version");
     expect(
       await importFile(page, "newer.json", toBytes('{"version": 2}'), "application/json"),
-    ).toBe(message);
+    ).toBe("newer-version");
     await page.reload();
     await expectStatus(page, "full");
   });

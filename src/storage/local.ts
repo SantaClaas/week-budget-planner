@@ -4,29 +4,25 @@ import * as planFile from "../plan/file.ts";
 import { randomIds } from "../plan/id.ts";
 import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import * as jsonFile from "./json-file.ts";
-import { NewerVersionError, type PlanStore } from "./plan-store.ts";
+import type { Result } from "../result.ts";
+import type { PlanStore } from "./plan-store.ts";
 
 export const PLAN_KEY = "week-budget-planner.plan";
 
-const NEWER_VERSION_MESSAGE =
-  "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.";
-
-/** The stored plan, or a throw when a newer version of the app wrote it. */
-function readStored(text: string): Plan {
-  const plan = planFile.parse(text, randomIds);
-  if (plan === "newer-version") throw new NewerVersionError(NEWER_VERSION_MESSAGE);
-  return plan;
+/**
+ * Whether another tab running a newer version of the app has written the plan since, so this one
+ * mustn't write over what it can't read.
+ */
+function isNewerStored(storage: Storage): boolean {
+  const text = storage.getItem(PLAN_KEY);
+  return text !== null && planFile.isWrittenByNewerVersion(text);
 }
 
-/**
- * Throws when another tab running a newer version of the app has written the plan since, so this
- * one doesn't write over what it can't read.
- */
-function refuseNewerStored(storage: Storage): void {
+/** The stored plan, or the plan this tab holds when nothing is stored. */
+function readStored(storage: Storage, current?: Plan): Result<Plan, "newer-version"> {
   const text = storage.getItem(PLAN_KEY);
-  if (text !== null && planFile.isWrittenByNewerVersion(text)) {
-    throw new NewerVersionError(NEWER_VERSION_MESSAGE);
-  }
+  if (text === null) return current ?? createEmptyPlan();
+  return planFile.parse(text, randomIds);
 }
 
 /**
@@ -42,29 +38,35 @@ export function create(
   return {
     level: "limited",
     async load() {
-      const text = storage.getItem(PLAN_KEY);
-      current = text === null ? undefined : readStored(text);
-      return { plan: current ?? createEmptyPlan(), isStored: text !== null };
+      const isStored = storage.getItem(PLAN_KEY) !== null;
+      const plan = readStored(storage);
+      if (plan === "newer-version") return plan;
+      current = isStored ? plan : undefined;
+      return { plan, isStored };
     },
     async save(_before, after) {
-      refuseNewerStored(storage);
+      if (isNewerStored(storage)) return "newer-version";
       storage.setItem(PLAN_KEY, planFile.serialize(after));
       current = after;
+      return "saved";
     },
     async exportFile() {
-      const text = storage.getItem(PLAN_KEY);
-      const plan = text === null ? (current ?? createEmptyPlan()) : readStored(text);
+      const plan = readStored(storage, current);
+      if (plan === "newer-version") return plan;
       return jsonFile.create(plan, Temporal.Now.plainDateISO());
     },
     async importFile(file) {
       const plan = await jsonFile.read(file);
-      refuseNewerStored(storage);
+      if (typeof plan === "string") return plan;
+      if (isNewerStored(storage)) return "newer-version";
       storage.setItem(PLAN_KEY, planFile.serialize(plan));
       current = plan;
+      return "imported";
     },
     async wipe() {
       storage.removeItem(PLAN_KEY);
       current = undefined;
+      return "wiped";
     },
     onExternalChange(callback) {
       const listener = (event: StorageEvent): void => {

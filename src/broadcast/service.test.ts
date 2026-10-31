@@ -1,21 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PROTOCOL_VERSION } from "./protocol/index.ts";
-import {
-  consume,
-  NewerProtocolError,
-  ProviderMissingError,
-  provide,
-  RemoteCallError,
-} from "./service.ts";
+import { consume, ProviderMissingError, provide, RemoteCallError } from "./service.ts";
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
 // their class when they're cloned, and a missing provider shows only as silence. These tests pin
 // that down (see Where rules are enforced in docs/guidelines/principles.md).
 
+// Every method of a consumed API can answer "newer-version" (see consume).
 type Calculator = {
-  add(first: number, second: number): Promise<number>;
-  fail(): Promise<never>;
+  add(first: number, second: number): Promise<number | "newer-version">;
+  fail(): Promise<"newer-version">;
 };
 
 class NamedError extends Error {
@@ -62,7 +57,13 @@ describe("broadcast service", () => {
     expect(error).toHaveProperty("cause.message", "on purpose");
   });
 
-  it("refuses its open calls at once when a tab on a newer protocol version answers", async () => {
+  it("only consumes an API whose every method can answer newer-version", () => {
+    type Strict = { add(first: number, second: number): Promise<number> };
+    // @ts-expect-error -- add can't give back "newer-version", which a refused call answers with.
+    expect(consume<Strict>(openChannel(), "test").proxy).toBeDefined();
+  });
+
+  it("answers its open calls and later ones with newer-version once a newer protocol answers", async () => {
     const other = openChannel();
     other.addEventListener("message", () => {
       other.postMessage({
@@ -78,8 +79,9 @@ describe("broadcast service", () => {
         newerVersions++;
       },
     });
-    await expect(proxy.add(1, 1)).rejects.toBeInstanceOf(NewerProtocolError);
+    await expect(proxy.add(1, 1)).resolves.toBe("newer-version");
     expect(newerVersions).toBeGreaterThan(0);
+    await expect(proxy.add(2, 2)).resolves.toBe("newer-version");
   });
 
   it("hands over to a newer protocol version, and stops serving when told", async () => {

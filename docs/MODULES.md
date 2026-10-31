@@ -57,6 +57,7 @@ flowchart LR
   module_storage --> module_broadcast
   module_storage --> module_database
   module_storage --> module_plan
+  module_storage --> module_result
   module_top_app_bar --> module_icons
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner

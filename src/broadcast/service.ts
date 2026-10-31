@@ -15,6 +15,24 @@ import { PROTOCOL_VERSION } from "./protocol/index.ts";
 /** Every exposed method must be async — the channel makes everything async anyway. */
 type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
 
+/**
+ * What a call gives back when a tab on a newer protocol version runs: the call never ran, since
+ * the provider it needs can't be trusted to read it.
+ */
+type NewerVersion = "newer-version";
+
+/**
+ * An API a consumer can call: every method can give back "newer-version", since a call refused for
+ * a newer protocol resolves with it. A method that can't doesn't compile here.
+ */
+type ConsumableApi<Api> = {
+  [Name in keyof Api]: Api[Name] extends (...parameters: never[]) => Promise<infer Answer>
+    ? NewerVersion extends Answer
+      ? Api[Name]
+      : never
+    : never;
+};
+
 /** Every message on the channel. Changing it can break older tabs (see ./protocol/index.ts). */
 export type ServiceMessage = { protocolVersion: number; scope: string } & (
   | { type: "call"; id: string; property: string; parameters: unknown[] }
@@ -40,12 +58,6 @@ class CallLostError extends Error {}
 
 /** No provider answered within the time limit. The call was never sent. */
 export class ProviderMissingError extends Error {}
-
-/**
- * Another tab runs a newer version of the protocol, so this tab is outdated: its open calls are
- * refused, since the provider they'd need can't be trusted to read them.
- */
-export class NewerProtocolError extends Error {}
 
 /** What a side does once it hears from a tab on a newer version of the protocol. */
 type Options = { readonly onNewerVersion?: () => void };
@@ -193,8 +205,11 @@ const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
  */
 const SILENCE_LIMIT_MILLISECONDS = 10_000;
 
-/** A proxy whose method calls are served by whichever tab currently provides `scope`. */
-export function consume<T extends AsyncApi>(
+/**
+ * A proxy whose method calls are served by whichever tab currently provides `scope`. Once a tab on
+ * a newer protocol version runs, every call, open or new, gives back "newer-version".
+ */
+export function consume<T extends AsyncApi & ConsumableApi<T>>(
   channel: BroadcastChannel,
   scope: string,
   { onNewerVersion = doNothing }: Options = {},
@@ -204,6 +219,7 @@ export function consume<T extends AsyncApi>(
   let readyWaiters: PendingCall[] = [];
   let queryTimer: ReturnType<typeof setInterval> | undefined;
   let lastHeardAt = 0;
+  let isOutdated = false;
 
   const query = (): void => {
     channel.postMessage({
@@ -217,6 +233,13 @@ export function consume<T extends AsyncApi>(
     const calls = sent.values().toArray();
     sent.clear();
     for (const call of calls) call.reject(reason);
+  }
+
+  /** Answers every sent call with `value` instead of the provider's answer. */
+  function answerSent(value: NewerVersion) {
+    const calls = sent.values().toArray();
+    sent.clear();
+    for (const call of calls) call.resolve(value);
   }
 
   function settleWaiters(settle: (waiter: PendingCall) => void) {
@@ -251,14 +274,14 @@ export function consume<T extends AsyncApi>(
     }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
   }
 
-  /** Refuses every open call, since a tab on a newer protocol runs, and says so. */
+  /** Answers every open call with "newer-version", since a tab on a newer protocol runs, and says so. */
   function giveWayToNewerVersion() {
-    const error = new NewerProtocolError("A newer version of the app runs in another tab.");
+    isOutdated = true;
     providerId = undefined;
     settleWaiters((waiter) => {
-      waiter.reject(error);
+      waiter.resolve("newer-version");
     });
-    failSent(error);
+    answerSent("newer-version");
     stopQueryingWhenIdle();
     onNewerVersion();
   }
@@ -271,7 +294,7 @@ export function consume<T extends AsyncApi>(
     providerId = announcedId;
     lastHeardAt = performance.now();
     settleWaiters((waiter) => {
-      waiter.resolve();
+      waiter.resolve("ready");
     });
     stopQueryingWhenIdle();
   }
@@ -315,9 +338,11 @@ export function consume<T extends AsyncApi>(
     }
   });
 
-  function waitForProvider(): Promise<void> {
-    if (providerId !== undefined) return Promise.resolve();
-    const waiter = Promise.withResolvers<void>();
+  /** Waits until a provider announced itself, or gives back "newer-version" once it can't come. */
+  function waitForProvider(): Promise<"ready" | NewerVersion> {
+    if (isOutdated) return Promise.resolve("newer-version");
+    if (providerId !== undefined) return Promise.resolve("ready");
+    const waiter = Promise.withResolvers<"ready" | NewerVersion>();
     readyWaiters.push(waiter);
     startQuerying();
     return waiter.promise;
@@ -332,7 +357,7 @@ export function consume<T extends AsyncApi>(
         return own;
       }
       return async (...parameters: unknown[]) => {
-        await waitForProvider();
+        if ((await waitForProvider()) === "newer-version") return "newer-version";
         const id = crypto.randomUUID();
         const { promise: response, resolve, reject } = Promise.withResolvers<unknown>();
         sent.set(id, { resolve, reject });

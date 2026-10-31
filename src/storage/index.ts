@@ -1,6 +1,7 @@
 import * as local from "./local.ts";
 import * as memory from "./memory.ts";
-import { isFromNewerVersion, NewerVersionError, type PlanStore } from "./plan-store.ts";
+import type { Result } from "../result.ts";
+import type { PlanStore } from "./plan-store.ts";
 
 /** Whether this page can run the SQLite database: isolation, OPFS, Web Locks and BroadcastChannel. */
 function isDatabaseUsable(): boolean {
@@ -21,17 +22,8 @@ function openFallback(): PlanStore {
 
 type DatabaseModule = typeof import("./database.ts");
 
-/**
- * The next level down after the database failed to open, saying so when its file exists. Throws
- * {@link NewerVersionError} instead when a newer version of the app saved it.
- */
+/** The next level down after the database failed to open, saying so when its file exists. */
 async function openFallbackAfter(error: unknown, database: DatabaseModule): Promise<PlanStore> {
-  if (isFromNewerVersion(error)) {
-    throw new NewerVersionError(
-      "Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.",
-      { cause: error },
-    );
-  }
   console.warn("[storage] the database couldn't be opened, using limited storage", error);
   const fallback = openFallback();
   // No file means the browser refused the database, as in a private window: nothing to report.
@@ -41,8 +33,10 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
     ...fallback,
     fallbackReason: "database-broken",
     async wipe() {
-      await fallback.wipe();
+      const wiped = await fallback.wipe();
+      if (wiped === "newer-version") return wiped;
       removeBrokenDatabase();
+      return "wiped";
     },
   };
 }
@@ -52,10 +46,10 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
  * to open (for example OPFS refusing access in a private window). Never blocks the UI for long: the
  * caller shows "Opening your plan…" until this resolves.
  *
- * Rejects with {@link NewerVersionError} when a newer version of the app saved the database. That
- * isn't a fallback case: the plan is fine, and only reloading to update the app can open it.
+ * "newer-version" when a newer version of the app saved the database. That isn't a fallback case:
+ * the plan is fine, and only reloading to update the app can open it.
  */
-export async function open(): Promise<PlanStore> {
+export async function open(): Promise<Result<PlanStore, "newer-version">> {
   if (!isDatabaseUsable()) return openFallback();
   let database: DatabaseModule;
   try {
@@ -66,10 +60,11 @@ export async function open(): Promise<PlanStore> {
     return openFallback();
   }
   const store = database.create();
+  let loaded: Awaited<ReturnType<PlanStore["load"]>>;
   try {
-    await store.load();
+    loaded = await store.load();
   } catch (error) {
     return openFallbackAfter(error, database);
   }
-  return store;
+  return loaded === "newer-version" ? loaded : store;
 }

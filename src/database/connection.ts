@@ -1,3 +1,5 @@
+import type { Result } from "../result.ts";
+
 /** A value SQLite can store, as Drizzle and Turso pass them. */
 export type SqlValue = string | number | bigint | null | Uint8Array;
 
@@ -26,12 +28,17 @@ type QueryResult = { rows: unknown[] };
 /**
  * The SQL surface every tab uses. The leader tab runs it on its local database; other tabs reach
  * it over a BroadcastChannel (see client.ts), so every method is async and every value is
- * structured-cloneable.
+ * structured-cloneable. Each gives back "newer-version" instead of rows when a newer version of
+ * the app made the database or runs in another tab, so nothing was run.
  */
 export type QueryService = {
-  query(sql: string, parameters: SqlValue[], method: QueryMethod): Promise<QueryResult>;
+  query(
+    sql: string,
+    parameters: SqlValue[],
+    method: QueryMethod,
+  ): Promise<Result<QueryResult, "newer-version">>;
   /** Runs every statement in one transaction, rolling back if any fails. */
-  batch(statements: BatchStatement[]): Promise<QueryResult[]>;
+  batch(statements: BatchStatement[]): Promise<Result<QueryResult[], "newer-version">>;
 };
 
 /** The subset of the Turso database API this app uses. Both the wasm and the Node package fit it. */
@@ -91,16 +98,22 @@ async function startTransaction(connection: TursoConnection): Promise<Transactio
   };
 }
 
-/** The {@link QueryService} for a local connection: the leader tab's, or a test database. */
+/**
+ * The {@link QueryService} for a local connection: the leader tab's, or a test database.
+ * `getConnection` gives back "newer-version" for a database that a newer version of the app made.
+ */
 export function createLocalQueryService(
-  getConnection: () => Promise<TursoConnection>,
+  getConnection: () => Promise<Result<TursoConnection, "newer-version">>,
 ): QueryService {
   return {
     async query(sql, parameters, method) {
-      return execute(await getConnection(), sql, parameters, method);
+      const connection = await getConnection();
+      if (connection === "newer-version") return connection;
+      return execute(connection, sql, parameters, method);
     },
     async batch(statements) {
       const connection = await getConnection();
+      if (connection === "newer-version") return connection;
       await using transaction = await startTransaction(connection);
       const results: QueryResult[] = [];
       for (const { sql, params: parameters, method } of statements) {
