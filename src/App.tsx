@@ -101,12 +101,15 @@ export function App(): JSX.Element {
     <main>
       <h1>Week Budget Planner</h1>
       <Show when={problem() === "newer-version"}>
-        <p data-testid="newer-version">
-          Your plan was saved by a newer version of Week Budget Planner. Reload to update the app.
-          Your plan is safe.
-        </p>
+        <section data-testid="newer-version" aria-labelledby="newer-version-title">
+          <h2 id="newer-version-title">Your plan was saved by a newer version</h2>
+          <p id="newer-version-text">
+            Reload to update Week Budget Planner. Your plan is safe, and nothing was changed.
+          </p>
+        </section>
         <button
           type="button"
+          aria-describedby="newer-version-title newer-version-text"
           onClick={() => {
             location.reload();
           }}
