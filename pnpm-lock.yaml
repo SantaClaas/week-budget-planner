@@ -173,6 +173,9 @@ importers:
       '@formatjs/intl-durationformat':
         specifier: 0.11.1
         version: 0.11.1
+      '@oddbird/popover-polyfill':
+        specifier: 0.7.2
+        version: 0.7.2
       '@solidjs/web':
         specifier: 2.0.0-rc.14
         version: 2.0.0-rc.14(solid-js@2.0.0-rc.14)
@@ -566,6 +569,9 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
+
+  '@oddbird/popover-polyfill@0.7.2':
+    resolution: {integrity: sha512-f9R6XrZEshs/5qugqNH8wAqVzwuXLsnJW+iFQnPzX+/5pEr13b5bmxDVbJWj1U+E7LKJMcSu+IFif49mgacbYQ==}
 
   '@oxc-parser/binding-android-arm-eabi@0.153.0':
     resolution: {integrity: sha512-BcWu25dMwMjHpaDCEidmpAi7rGg1qZoihJeUUH9bD55pVZ0z4Wa5CQgqSTo0R41H81oozisQKW3WqvAN2m77IQ==}
@@ -2461,6 +2467,8 @@ snapshots:
       '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.4
     optional: true
+
+  '@oddbird/popover-polyfill@0.7.2': {}
 
   '@oxc-parser/binding-android-arm-eabi@0.153.0':
     optional: true

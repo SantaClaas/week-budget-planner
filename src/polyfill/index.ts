@@ -16,5 +16,9 @@ export async function loadPolyfills(): Promise<void> {
   // `using` and AsyncDisposableStack, for cleanup (Chrome 134, Firefox 141, not yet in Safari).
   // The build lowers the `using` syntax itself, but not these symbols and classes.
   if (!("AsyncDisposableStack" in globalThis)) loading.push(import("./disposal.ts"));
+  // the Popover API (Chrome 114, Firefox 125, Safari 17), which the snackbar shows itself with.
+  // The unit tests load these too, in Node, which has no DOM to add it to.
+  if ("HTMLElement" in globalThis && !("popover" in HTMLElement.prototype))
+    loading.push(import("@oddbird/popover-polyfill"));
   await Promise.all(loading);
 }

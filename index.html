@@ -60,7 +60,8 @@
           storage?.setItem(flag, "1");
           location.reload();
         };
-        const url = new URL("service-worker.js", document.baseURI).href;
+        // From the base, not the page's path, so it's the same worker on every page.
+        const url = new URL("%BASE_URL%service-worker.js", location.href).href;
         // Registering takes a trusted script URL (see docs/spec/security.md). This policy
         // only ever returns the one service worker URL.
         const policy = window.trustedTypes?.createPolicy("service-worker", {
