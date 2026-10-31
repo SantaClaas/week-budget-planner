@@ -26,10 +26,11 @@ What assistive technology reads and how the keyboard moves, screen by screen. Ev
 
 ## The week
 
-The week is a list of seven days, and each day a list of its blocks, in start order:
+The week is a region that scrolls, holding a list of seven days, and each day a list of its blocks, in start order:
 
 ```html
-<ol class="week" aria-label="Week">
+<section class="week-scroller" aria-label="Week" tabindex="0">
+<ol class="days" aria-label="Days">
   <li class="day">
     <h2><span aria-hidden="true">Mon <time datetime="PT3H">3h</time> placed</span><span class="visually-hidden">Monday, 3 hours placed</span></h2>
     <ol class="blocks">
@@ -39,9 +40,11 @@ The week is a list of seven days, and each day a list of its blocks, in start or
   </li>
   …
 </ol>
+</section>
 <p id="block-keys" hidden>Arrow keys move the block, Shift and the arrow keys change its length, Delete removes it.</p>
 ```
 
+- **The week scrolls inside its own region**, named "Week", so a screen reader hears "Week, region" and then "Days, list, 7 items". The region takes focus (`tabindex="0"`) so the keyboard can scroll it with the arrow and page keys; once blocks and the empty slot take focus, moving between them scrolls the week as well.
 - **The day header row is the days' own headings.** Each day's `<h2>` sits in the sticky header row through the grid (the day is a subgrid item spanning the header row and its column), so there's no separate row of headers to keep in step, and a screen reader can jump between days by heading.
 - **The hour gutter, the hour lines and the day-hours shading are `aria-hidden`.** The times are in the blocks' names.
 - **A block is a `<button>`** in Tab order, by day and then start. Its name is the activity, the day and the range, and the length: "Statistics lecture, Monday 10:00 to 11:30, 1 hour, 30 minutes" (as in the prototype). It's pressed (`aria-pressed="true"`) while selected. Its description gives the keys. The remove button is the block's sibling in the same `<li>`, not inside it (a button can't contain a button), and out of Tab order (`tabindex="-1"`), since Delete does the same.

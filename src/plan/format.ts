@@ -50,12 +50,13 @@ const reuseClockFormat = ({ locale, hourCycle }: Format) =>
   );
 
 /**
- * A length, ignoring its sign: "1 hr, 30 min" (short, for text) or "1h 30m" (narrow, for blocks
- * and day totals). The words depend on the language.
+ * A length, ignoring its sign: "1 hr, 30 min" (short, for text), "1h 30m" (narrow, for blocks and
+ * day totals) or "1 hour, 30 minutes" (long, for screen readers, which read narrow text letter by
+ * letter). The words depend on the language.
  */
 export function formatLength(
   minutes: number,
-  style: "short" | "narrow" = "short",
+  style: "short" | "narrow" | "long" = "short",
   format: Format = {},
 ): string {
   const total = Math.round(Math.abs(minutes));
@@ -79,6 +80,47 @@ export function formatClock(minutes: number, format: Format = {}): string {
 export function formatClockRange(start: number, end: number, format: Format = {}): string {
   return reuseClockFormat(format).formatRange(toPlainTime(start), toPlainTime(end));
 }
+
+/** Where a piece of a formatted range comes from: its start, its end, or between them. */
+export type RangePiece = { text: string; source: "startRange" | "endRange" | "shared" };
+
+/**
+ * Two clock times as a range, in pieces, so the start and the end can each go in a `<time>`
+ * element: "10:00", "–", "11:30", or "10:00", " – ", "11:30", " AM".
+ */
+export function formatClockRangeToParts(
+  start: number,
+  end: number,
+  format: Format = {},
+): RangePiece[] {
+  const pieces: RangePiece[] = [];
+  for (const part of reuseClockFormat(format).formatRangeToParts(
+    toPlainTime(start),
+    toPlainTime(end),
+  )) {
+    const last = pieces.at(-1);
+    // Intl splits each piece into hours, separators and minutes; only where they come from matters.
+    if (last?.source === part.source) {
+      last.text += part.value;
+      continue;
+    }
+    pieces.push({ text: part.value, source: part.source });
+  }
+  return pieces;
+}
+
+/** A minute of the day as HTML's `datetime` value for a time: "10:30". Minutes past midnight wrap. */
+export const formatClockDatetime = (minutes: number): string =>
+  toPlainTime(minutes).toString({ smallestUnit: "minute" });
+
+/**
+ * A length as HTML's `datetime` value for a duration, in hours and minutes: "PT1H30M", and a day
+ * stays "PT24H", since HTML durations have no days.
+ */
+export const formatLengthDatetime = (minutes: number): string =>
+  Temporal.Duration.from({ minutes: Math.round(Math.abs(minutes)) })
+    .round({ largestUnit: "hour" })
+    .toString();
 
 /** A day of the week, 0 for Monday: "Mon" or "Monday". */
 export function formatWeekday(

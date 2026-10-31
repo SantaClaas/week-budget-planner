@@ -25,6 +25,9 @@ function findClippedText(): string[] {
     const isClippingY = overflowY === "hidden" || overflowY === "clip";
     // the visually hidden text clips on purpose
     if (element.closest(".visually-hidden") !== null) continue;
+    // So does a block's name, cut to the room left above its time (see docs/spec/grid-geometry.md).
+    // The block's spoken name has it in full.
+    if (element.matches(".block > .name")) continue;
     if (isClippingX && element.scrollWidth > element.clientWidth + 1) {
       clipped.push(
         `${element.tagName.toLowerCase()} hides ${element.scrollWidth - element.clientWidth}px across`,

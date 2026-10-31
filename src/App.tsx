@@ -10,8 +10,9 @@ import { createPath, createTitle, NAMES, type Page } from "./page/index.ts";
 import * as planner from "./planner/index.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
-import type { PlanStore } from "./storage/plan-store.ts";
+import { sanitizeDayIndex } from "./plan/time.ts";
 import { TopAppBar } from "./top-app-bar/TopAppBar.tsx";
+import { WeekPage } from "./week/WeekPage.tsx";
 
 /** The path the app is served from, `/week-budget-planner/` (see vite.config.ts). */
 const BASE = import.meta.env.BASE_URL;
@@ -91,7 +92,8 @@ function NotFound(): JSX.Element {
  */
 export function App(): JSX.Element {
   const [page, setPage] = createSignal<Page>("week");
-  const [store, setStore] = createSignal<PlanStore>();
+  // Today's weekday, read once as the app starts (Temporal's 1 for Monday is the week's 0).
+  const today = sanitizeDayIndex(Temporal.Now.plainDateISO().dayOfWeek - 1);
   const [current, setCurrent] = createSignal<planner.Planner>();
   /**
    * A newer version saved the plan before this tab started, so it shows nothing else (see "Tabs on
@@ -146,10 +148,11 @@ export function App(): JSX.Element {
         return;
       }
       opened = result.planner;
-      setStore(result.store);
       setCurrent(result.planner);
       // A hook for the browser tests, which still drive the store directly in places.
-      Object.assign(window, { weekBudgetPlanner: { store: result.store } });
+      Object.assign(window, {
+        weekBudgetPlanner: { store: result.store, planner: result.planner },
+      });
     }
 
     // Opening falls back to a lower storage level by itself, so an error here is a bug.
@@ -177,15 +180,11 @@ export function App(): JSX.Element {
         />
         {/* An address with no page needs no plan, so it shows at once. */}
         <Show when={page() !== "not-found"} fallback={<NotFound />}>
-          <Show when={store()} fallback={<p class="page-content">Opening your plan…</p>}>
+          <Show when={current()} fallback={<p class="page-content">Opening your plan…</p>}>
             {(opened) => (
               <Switch>
                 <Match when={page() === "week"}>
-                  {/* The week arrives in the next step of phase 4; until then, what was loaded. */}
-                  <p class="page-content" data-testid="status">
-                    Storage: {opened().level} · {current()?.plan().activities.length ?? 0}{" "}
-                    activities · {current()?.plan().blocks.length ?? 0} blocks
-                  </p>
+                  <WeekPage plan={opened().plan()} today={today} />
                 </Match>
                 <Match when={page() === "activities"}>
                   <p class="page-content">The activities arrive in a later step of phase 4.</p>

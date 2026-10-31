@@ -3,11 +3,13 @@
 
 @layer components {
   /* Wide screens: the rail beside the page. Phones (under 52.5em, Material's 840dp): the page
-     over the navigation bar. Only one navigation shows at a time (see docs/spec/layout.md). */
+     over the navigation bar. Only one navigation shows at a time (see docs/spec/layout.md). The
+     window itself doesn't scroll: the page does, inside <main>, so the week can fill what's left
+     of the screen and scroll inside its own region. */
   body {
     display: grid;
     grid-template: "rail page" minmax(0, 1fr) / auto minmax(0, 1fr);
-    min-block-size: 100dvh;
+    block-size: 100dvh;
     & > .navigation-rail {
       grid-area: rail;
       position: sticky;
@@ -18,6 +20,9 @@
     & > main {
       grid-area: page;
       min-inline-size: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow-y: auto;
     }
     & > .navigation-bar {
       display: none;
@@ -40,6 +45,63 @@
      so it shows no focus ring. */
   h1[tabindex="-1"]:focus {
     outline: none;
+  }
+
+  /* The app bar stays at the top while a long page scrolls under it. */
+  main > .top-app-bar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 5;
+    background: var(--surface-container);
+  }
+
+  /* The Week page: the summary, then the week filling the rest of the screen. */
+  .week-page {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.75rem;
+    padding-block-end: 1rem;
+    padding-inline: 1rem;
+    @media (width < 52.5em) {
+      padding-block-end: 0.5rem;
+      padding-inline: 0.5rem;
+    }
+  }
+  .summary {
+    display: grid;
+    gap: 0.5rem;
+    max-inline-size: 27.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  /* The region the week scrolls in, both ways. On wide screens the days share the width, at least
+     6rem each; on phones about three show, the next one just visible at the edge, and a sideways
+     swipe snaps to a day (see Phones in docs/spec/layout.md). */
+  .week-scroller {
+    overflow: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--corner-extra-large);
+    background: var(--card);
+    /* At least as wide as its columns need, so they overflow into the scroll instead of being cut
+       off by the week's rounded corners (overflow: clip). */
+    & > .week {
+      grid-template-columns: minmax(3.5rem, max-content) repeat(7, minmax(6rem, 1fr));
+      grid-template-rows: auto calc(24 * var(--hour));
+      min-inline-size: min-content;
+    }
+    /* The gutter is at least 4rem here, which fits a 12-hour clock's labels, so a day snaps to just
+       beside it. */
+    @media (width < 52.5em) {
+      container-type: inline-size;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline-start: 4rem;
+      & > .week {
+        grid-template-columns: minmax(4rem, max-content) repeat(7, calc((100cqi - 4rem) / 3.4));
+      }
+      & .day {
+        scroll-snap-align: start;
+      }
+    }
   }
 
   .page-content {
