@@ -71,10 +71,11 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     setStepCount(nextSteps.length);
   }
 
-  /** Keeps the change on screen and offers to save it again (see Writes and undo). */
-  function failSave(error: unknown): void {
-    console.error("[planner] couldn't save the change", error);
-    setSaveState("failed");
+  /**
+   * Offers to save again, once per run of failed saves (see Writes and undo). The change stays on
+   * screen, and `retry` saves it.
+   */
+  function offerRetry(retry: () => void): void {
     if (isFailing) return;
     isFailing = true;
     options.showSnackbar({
@@ -85,19 +86,21 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
         label: "Retry",
         run: () => {
           isFailing = false;
-          // oxlint-disable-next-line no-use-before-define -- Retry saves again, and saving calls this on failure: the two call each other.
-          save(current, Temporal.Now.instant());
+          retry();
         },
       },
     });
   }
 
-  async function saveNow(after: Plan, now: Temporal.Instant): Promise<void> {
+  /** Writes `after` over what the store holds, and offers `retry` when that fails. */
+  async function saveNow(after: Plan, now: Temporal.Instant, retry: () => void): Promise<void> {
     try {
       await store.save(saved, after, now);
     } catch (error) {
+      console.error("[planner] couldn't save the change", error);
       openSaves -= 1;
-      failSave(error);
+      setSaveState("failed");
+      offerRetry(retry);
       return;
     }
     saved = after;
@@ -106,11 +109,17 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     if (openSaves === 0) setSaveState("saved");
   }
 
-  /** Saves `after` once the saves before it are done, and says how it went. */
+  /**
+   * Saves `after` once the saves before it are done. When it fails, Retry saves what's on screen
+   * then.
+   */
   function save(after: Plan, now: Temporal.Instant): void {
     openSaves += 1;
     setSaveState("saving");
-    saving = saving.then(() => saveNow(after, now));
+    const retry = (): void => {
+      save(current, Temporal.Now.instant());
+    };
+    saving = saving.then(() => saveNow(after, now, retry));
   }
 
   /**

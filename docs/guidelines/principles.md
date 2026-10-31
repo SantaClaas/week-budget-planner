@@ -85,7 +85,7 @@ The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint
 
 - **It holds inside functions too.** A helper a closure calls is declared above the closure, even when the closure only runs later: the broadcast service declares `answer` and `postError` before the listener that calls them.
 - **Type references count**, so a type is declared above the types and signatures that use it.
-- **Two functions that call each other** can't both come first. F# marks that with `rec … and`; here the later call disables the rule on its line and says why, as the planner's Retry does: saving calls `failSave` on a failure, and Retry in `failSave` saves again.
+- **Two functions that call each other** can't both come first. Break the loop the way a module cycle is broken (see Coupling below): move the decision up into the one function that owns it, or pass the function down as a parameter. The planner's save fails, offers Retry, and Retry saves again; `save` passes its own retry into `saveNow`, so `saveNow` never names `save`, and `save` only refers to itself, which is declared by the time it runs. Where neither fits, the later call disables the rule on its line and says why, as F# marks such a pair with `rec … and`.
 - **The order of modules** is F#'s other half: there a file can only use the files listed above it. Here the module graph does that job: dependencies go one way, and a test fails on a cycle (see Coupling below).
 
 The lint rule `no-use-before-define` checks it, with functions, classes, variables and types all counted, type references included.
