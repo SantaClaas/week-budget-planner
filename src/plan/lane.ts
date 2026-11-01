@@ -1,7 +1,8 @@
 import type { BlockId } from "./id.ts";
 import type { BlockPart } from "./week.ts";
 
-export type Lane = { lane: number; lanes: number };
+/** Where a part sits among the parts it overlaps: lane `index` of `count`, side by side. */
+export type Lane = { index: number; count: number };
 
 /**
  * Places a day's parts side by side like a standard calendar: parts that overlap (directly or
@@ -30,7 +31,7 @@ export function layoutLanes(parts: readonly BlockPart[]): Map<BlockId, Lane> {
     }
     // Every part in the group shares the group's lane count, known once all are placed.
     for (const { part, lane } of placed)
-      result.set(part.block.id, { lane, lanes: laneEnds.length });
+      result.set(part.block.id, { index: lane, count: laneEnds.length });
     group = [];
     groupEnd = -1;
   };

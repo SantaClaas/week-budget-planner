@@ -59,7 +59,8 @@ export type DrawnBlock = {
 };
 
 export type DrawnDay = {
-  day: DayIndex;
+  /** The day's place in the week, 0 for Monday. */
+  index: DayIndex;
   /** The weekday as the header shows it: "Mon". */
   name: string;
   /** The total placed as the header shows it: "3h placed", or "free". */
@@ -187,7 +188,7 @@ export function layoutWeek(
     const total = totals[index] ?? 0;
     const longName = formatWeekday(day, "long", format);
     return {
-      day,
+      index: day,
       name: formatWeekday(day, "short", format),
       total: describeTotal(total, format),
       spoken:
@@ -199,7 +200,7 @@ export function layoutWeek(
       blocks: parts.flatMap((part) => {
         const activity = activities.get(part.block.activityId);
         if (activity === undefined) return [];
-        const lane = lanes.get(part.block.id) ?? { lane: 0, lanes: 1 };
+        const lane = lanes.get(part.block.id) ?? { index: 0, count: 1 };
         return [drawBlock(part, activity, lane, format)];
       }),
     };
