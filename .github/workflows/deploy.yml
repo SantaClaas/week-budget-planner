@@ -20,6 +20,8 @@ jobs:
   workflows:
     name: Lint the workflows
     runs-on: ubuntu-latest
+    # Stops a job that hangs, instead of GitHub's six hours. It takes under a minute today.
+    timeout-minutes: 10
     permissions:
       contents: read # Reads the repository to lint its workflows.
     steps:
@@ -43,6 +45,8 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    # Stops a job that hangs, instead of GitHub's six hours. It takes about two minutes today.
+    timeout-minutes: 10
     permissions:
       contents: read # Reads the repository to check and build it.
     steps:
@@ -64,8 +68,9 @@ jobs:
       - uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
       - run: pnpm test
       - run: pnpm build
-      # The browser tests run against the build above, in the Chromium this Playwright version expects.
-      - run: pnpm exec playwright install --with-deps chromium
+      # The browser tests run against the build above, in the Chromium this Playwright version expects,
+      # headless: only its headless shell is installed, a smaller download than the full browser.
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm exec playwright test
         env:
           # Node's type stripping loads the tests instead of Playwright's own loader (see
@@ -89,6 +94,8 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: [workflows, check]
     runs-on: ubuntu-latest
+    # Stops a job that hangs, instead of GitHub's six hours.
+    timeout-minutes: 10
     permissions:
       pages: write # Publishes the build to GitHub Pages.
       id-token: write # Lets deploy-pages prove to Pages that the build comes from this workflow.
