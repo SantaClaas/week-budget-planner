@@ -13,6 +13,9 @@ const executablePath = process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE"];
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: process.env["CI"] !== undefined,
+  // In CI, a run that hangs stops itself after five minutes and still writes its report; a whole
+  // run takes under a minute today. Locally there's no limit (0), for debugging.
+  globalTimeout: process.env["CI"] === undefined ? 0 : 5 * 60_000,
   retries: 0,
   reporter: process.env["CI"] === undefined ? "list" : "github",
   use: { trace: "retain-on-failure" },
