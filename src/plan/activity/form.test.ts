@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDecimal, readActivityForm } from "./form.ts";
+import { formatHours, parseDecimal, readActivityForm } from "./form.ts";
 
 describe("activity form", () => {
   const base = { name: "Gym", hours: "1.5", mode: "week" as const, days: "3" };
@@ -17,26 +17,43 @@ describe("activity form", () => {
   });
 
   it("explains what is wrong", () => {
-    expect(readActivityForm({ ...base, name: " " })).toMatchObject({ field: "name" });
+    expect(readActivityForm({ ...base, name: " " })).toMatchObject({
+      problems: { name: "Give the activity a name." },
+    });
     expect(readActivityForm({ ...base, hours: "0" })).toMatchObject({
-      message: "Enter the hours it needs, for example 1.5.",
+      problems: { hours: "Enter the hours it needs, for example 1.5." },
     });
     expect(readActivityForm({ ...base, hours: " " })).toMatchObject({
-      message: "Enter the hours it needs, for example 1.5.",
+      problems: { hours: "Enter the hours it needs, for example 1.5." },
     });
     expect(readActivityForm({ ...base, hours: "1.5h" })).toMatchObject({
-      message: "Enter the hours as a number, for example 1.5.",
+      problems: { hours: "Enter the hours as a number, for example 1.5." },
     });
     expect(readActivityForm({ ...base, mode: "day", hours: "25" })).toMatchObject({
-      message: "A day has 24 hours. Enter 24 or less.",
+      problems: { hours: "A day has 24 hours. Enter 24 or less." },
     });
     expect(readActivityForm({ ...base, hours: "169" })).toMatchObject({
-      message: "A week has 168 hours. Enter 168 or less.",
+      problems: { hours: "A week has 168 hours. Enter 168 or less." },
     });
-    expect(readActivityForm({ ...base, mode: "day", days: "8" })).toMatchObject({ field: "days" });
+    expect(readActivityForm({ ...base, mode: "day", days: "8" })).toMatchObject({
+      problems: { days: "Enter how many days per week, from 1 to 7." },
+    });
     expect(readActivityForm({ ...base, mode: "day", days: "2.5" })).toMatchObject({
-      field: "days",
+      problems: { days: "Enter how many days per week, from 1 to 7." },
     });
+  });
+
+  it("says what is wrong with every field at once", () => {
+    expect(readActivityForm({ name: "", hours: "x", mode: "day", days: "0" })).toEqual({
+      isOk: false,
+      problems: {
+        name: "Give the activity a name.",
+        hours: "Enter the hours as a number, for example 1.5.",
+        days: "Enter how many days per week, from 1 to 7.",
+      },
+    });
+    // Per week, the days aren't read.
+    expect(readActivityForm({ ...base, days: "0" })).toMatchObject({ isOk: true });
   });
 
   it("reads hours with the language's decimal separator, strictly", () => {
@@ -48,5 +65,12 @@ describe("activity form", () => {
     expect(parseDecimal("1.2.3")).toBeNaN();
     expect(parseDecimal("-1")).toBeNaN();
     expect(parseDecimal("")).toBeNaN();
+  });
+
+  it("shows a budget as hours that read back the same", () => {
+    expect(formatHours(90, "en")).toBe("1.5");
+    expect(formatHours(90, "de")).toBe("1,5");
+    expect(formatHours(4815, "en")).toBe("80.25");
+    expect(parseDecimal(formatHours(4815, "de"), "de") * 60).toBe(4815);
   });
 });

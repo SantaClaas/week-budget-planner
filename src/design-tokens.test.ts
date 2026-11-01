@@ -247,6 +247,7 @@ describe.each(AA_LEVELS)("color contrast, %s", (level) => {
     ["--on-primary-container", "--primary-container", TEXT],
     ["--on-secondary-container", "--secondary-container", TEXT],
     ["--on-tertiary-container", "--tertiary-container", TEXT],
+    ["--on-tertiary", "--tertiary", TEXT],
     ["--on-error", "--error", TEXT],
     ["--on-error-container", "--error-container", TEXT],
     ["--error", "--card", TEXT],

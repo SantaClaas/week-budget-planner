@@ -1,10 +1,12 @@
 import type { JSX } from "@solidjs/web";
 import { Show } from "solid-js";
 
+import { Activities } from "../activity/Activities.tsx";
 import { summarize } from "../plan/budget.ts";
 import { formatLength, formatLengthDatetime } from "../plan/format.ts";
 import type { Plan } from "../plan/index.ts";
 import type { DayIndex } from "../plan/time.ts";
+import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import { Week } from "./Week.tsx";
 
@@ -41,10 +43,18 @@ function Summary(props: { plan: Plan }): JSX.Element {
   );
 }
 
-/** The Week page: the summary of the whole week, and the week itself. */
-export function WeekPage(props: { plan: Plan; today: DayIndex | undefined }): JSX.Element {
+/**
+ * The Week page: the summary of the whole week and the week itself, with the Activities pane beside
+ * them on wide screens.
+ */
+export function WeekPage(props: {
+  plan: Plan;
+  planner: Planner;
+  today: DayIndex | undefined;
+}): JSX.Element {
   return (
     <div class="week-page">
+      <Activities plan={props.plan} planner={props.planner} place="pane" />
       <Summary plan={props.plan} />
       <Week plan={props.plan} today={props.today} />
     </div>

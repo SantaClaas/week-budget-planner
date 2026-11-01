@@ -72,6 +72,8 @@ test("reaches every page with the keyboard, and lands on its heading", async ({ 
     "true",
   );
   await page.keyboard.press("Tab");
+  await expect(navigation.getByRole("button", { name: "New activity" })).toBeFocused();
+  await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await expect(navigation.getByRole("link", { name: "Activities" })).toBeFocused();
   await page.keyboard.press("Enter");

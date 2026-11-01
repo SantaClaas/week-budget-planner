@@ -208,6 +208,9 @@
     --tertiary-standard-contrast: light-dark(#76546e, #e4bad9);
     --tertiary-more-contrast: light-dark(#3f223a, #ffeaf7);
     --tertiary-less-contrast: light-dark(#8d6985, #ab85a2);
+    --on-tertiary-standard-contrast: light-dark(#ffffff, #44273f);
+    --on-tertiary-more-contrast: light-dark(#ffffff, #000000);
+    --on-tertiary-less-contrast: light-dark(#fffbff, #3c2038);
     --tertiary-container-standard-contrast: light-dark(#ffd7f3, #5c3d56);
     --tertiary-container-more-contrast: light-dark(#5f3f58, #e0b6d5);
     --tertiary-container-less-contrast: light-dark(#f8ccec, #4e3049);
@@ -275,6 +278,7 @@
     --secondary-container: var(--secondary-container-standard-contrast);
     --on-secondary-container: var(--on-secondary-container-standard-contrast);
     --tertiary: var(--tertiary-standard-contrast);
+    --on-tertiary: var(--on-tertiary-standard-contrast);
     --tertiary-container: var(--tertiary-container-standard-contrast);
     --on-tertiary-container: var(--on-tertiary-container-standard-contrast);
     --error: var(--error-standard-contrast);
@@ -308,6 +312,7 @@
         --secondary-container: var(--secondary-container-more-contrast);
         --on-secondary-container: var(--on-secondary-container-more-contrast);
         --tertiary: var(--tertiary-more-contrast);
+        --on-tertiary: var(--on-tertiary-more-contrast);
         --tertiary-container: var(--tertiary-container-more-contrast);
         --on-tertiary-container: var(--on-tertiary-container-more-contrast);
         --error: var(--error-more-contrast);
@@ -338,6 +343,7 @@
       --secondary-container: var(--secondary-container-more-contrast);
       --on-secondary-container: var(--on-secondary-container-more-contrast);
       --tertiary: var(--tertiary-more-contrast);
+      --on-tertiary: var(--on-tertiary-more-contrast);
       --tertiary-container: var(--tertiary-container-more-contrast);
       --on-tertiary-container: var(--on-tertiary-container-more-contrast);
       --error: var(--error-more-contrast);
@@ -368,6 +374,7 @@
         --secondary-container: var(--secondary-container-less-contrast);
         --on-secondary-container: var(--on-secondary-container-less-contrast);
         --tertiary: var(--tertiary-less-contrast);
+        --on-tertiary: var(--on-tertiary-less-contrast);
         --tertiary-container: var(--tertiary-container-less-contrast);
         --on-tertiary-container: var(--on-tertiary-container-less-contrast);
         --error: var(--error-less-contrast);
@@ -398,6 +405,7 @@
       --secondary-container: var(--secondary-container-less-contrast);
       --on-secondary-container: var(--on-secondary-container-less-contrast);
       --tertiary: var(--tertiary-less-contrast);
+      --on-tertiary: var(--on-tertiary-less-contrast);
       --tertiary-container: var(--tertiary-container-less-contrast);
       --on-tertiary-container: var(--on-tertiary-container-less-contrast);
       --error: var(--error-less-contrast);
@@ -430,6 +438,7 @@
       --secondary-container: var(--secondary-container-standard-contrast);
       --on-secondary-container: var(--on-secondary-container-standard-contrast);
       --tertiary: var(--tertiary-standard-contrast);
+      --on-tertiary: var(--on-tertiary-standard-contrast);
       --tertiary-container: var(--tertiary-container-standard-contrast);
       --on-tertiary-container: var(--on-tertiary-container-standard-contrast);
       --error: var(--error-standard-contrast);
@@ -467,6 +476,7 @@
       --secondary-container: #dfe1f9;
       --on-secondary-container: #424659;
       --tertiary: #76546e;
+      --on-tertiary: #ffffff;
       --tertiary-container: #ffd7f3;
       --on-tertiary-container: #5c3d56;
       --error: #ba1a1a;
@@ -966,6 +976,109 @@
       }
     }
   }
+  /* What's left to place reads heavier once an activity is all placed or over budget. */
+  .left-to-place:is([data-state="all-placed"], [data-state="over-budget"]) > .title-small {
+    font-weight: 600;
+  }
+  /* The form of the activity being edited takes its row in the list, on the row's own surface. */
+  .activity-list > .editing > .activity-form {
+    background: transparent;
+  }
+
+  /* activity form (new activity and editing one): the heading with the activity's shape, the fields
+     in a run that wraps (name, hours, counted, and days only per day), the color and shape pickers and
+     the actions. The form carries data-color and --activity-shape for what's picked, so the heading's
+     shape and the pickers follow the choice.
+     <form class="activity-form" data-color="teal" style="--activity-shape: var(--shape-clover-8)">
+     <div class="heading"><span class="swatch"></span><h3>…</h3></div><div class="fields">…</div>
+     <fieldset class="picker">…</fieldset><div class="actions">…</div></form> */
+  .activity-form {
+    --text-field-background: var(--card);
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border-radius: var(--corner-extra-large);
+    background: var(--card);
+    & > .heading {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+      & > :is(h2, h3) {
+        flex: 1;
+        min-inline-size: 0;
+      }
+    }
+    & > .fields {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: start;
+      gap: 0.75rem;
+      & > .name {
+        flex: 1 1 14rem;
+      }
+      & > .hours {
+        flex: 0 1 7rem;
+      }
+      & > .mode {
+        flex: 1 1 12rem;
+        & > label {
+          min-height: 3.5rem;
+        }
+      }
+      & > .days {
+        flex: 0 1 6rem;
+      }
+    }
+    /* Days count only per day. */
+    &:has([name="mode"][value="week"]:checked) .days {
+      display: none;
+    }
+    & > .picker > legend {
+      margin-block-end: 0.5rem;
+    }
+    & > .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      & > [data-variant="text-danger"] {
+        margin-inline-end: auto;
+      }
+    }
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
+  }
+
+  /* example-week note: a tertiary card with an icon, its text, and Keep these and Start empty */
+  .example-week-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--corner-extra-large);
+    background: var(--tertiary-container);
+    color: var(--on-tertiary-container);
+    & > .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    & .button {
+      color: var(--on-tertiary-container);
+    }
+    & .button[data-variant="filled"] {
+      background: var(--tertiary);
+      color: var(--on-tertiary);
+    }
+    @media (forced-colors: active) {
+      border: 1px solid CanvasText;
+    }
+  }
+
   /* A row whose parts vary (an icon or not, a trailing value, a control that wraps) is a single run,
      so it stays flexbox. */
   .list-item {
@@ -1555,6 +1668,9 @@
     flex-direction: column;
     & input,
     & select {
+      /* As wide as the field, which the layout sizes: a percentage keeps the input's own default
+         width (about 20 characters) from holding the field wider than its share. */
+      inline-size: 100%;
       min-height: 3.5rem;
       padding: 0 1rem;
       border: 1px solid var(--outline);
