@@ -14,9 +14,9 @@ describe("lanes", () => {
       createBlock({ id: "d", start: 900, length: 60 }),
     ];
     const lanes = layoutLanes(findPartsOnDay(blocks, sanitizeDayIndex(0)));
-    expect(lanes.get(createBlockId("a"))).toEqual({ lane: 0, lanes: 2 });
-    expect(lanes.get(createBlockId("b"))).toEqual({ lane: 1, lanes: 2 });
-    expect(lanes.get(createBlockId("c"))).toEqual({ lane: 1, lanes: 2 });
-    expect(lanes.get(createBlockId("d"))).toEqual({ lane: 0, lanes: 1 });
+    expect(lanes.get(createBlockId("a"))).toEqual({ index: 0, count: 2 });
+    expect(lanes.get(createBlockId("b"))).toEqual({ index: 1, count: 2 });
+    expect(lanes.get(createBlockId("c"))).toEqual({ index: 1, count: 2 });
+    expect(lanes.get(createBlockId("d"))).toEqual({ index: 0, count: 1 });
   });
 });

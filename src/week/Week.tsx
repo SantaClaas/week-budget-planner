@@ -40,8 +40,8 @@ function Block(props: { block: DrawnBlock }): JSX.Element {
       style={{
         "--start": props.block.start,
         "--length": props.block.length,
-        "--lane": props.block.lane.lane,
-        "--lanes": props.block.lane.lanes,
+        "--lane": props.block.lane.index,
+        "--lanes": props.block.lane.count,
         "--name-lines": props.block.nameLines,
         "--activity-shape": `var(--shape-${props.block.activity.shape})`,
       }}
@@ -117,15 +117,15 @@ export function Week(props: { plan: Plan; today: DayIndex | undefined }): JSX.El
       >
         <div class="gutter" aria-hidden="true">
           <For each={listHours()}>
-            {(hour) => (
-              <time datetime={hour.datetime} style={{ "--hour-index": hour.hour }}>
-                {hour.text}
+            {(label) => (
+              <time datetime={label.datetime} style={{ "--hour-index": label.hour }}>
+                {label.text}
               </time>
             )}
           </For>
         </div>
         <ol class="days" aria-label="Days">
-          <For each={days()} keyed={(day) => day.day}>
+          <For each={days()} keyed={(day) => day.index}>
             {(day) => <Day day={day()} />}
           </For>
         </ol>
