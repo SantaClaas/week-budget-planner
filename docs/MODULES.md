@@ -9,6 +9,7 @@ Dependencies go one way (see Coupling in [`docs/guidelines/principles.md`](guide
 ```mermaid
 flowchart LR
   module_App["App"]
+  module_activity["activity"]
   module_announcement["announcement"]
   module_brand["brand"]
   module_broadcast["broadcast"]
@@ -31,6 +32,13 @@ flowchart LR
   module_top_app_bar["top-app-bar"]
   module_trusted_html["trusted-html"]
   module_week["week"]
+  module_activity --> module_announcement
+  module_activity --> module_icons
+  module_activity --> module_plan
+  module_activity --> module_planner
+  module_activity --> module_progress
+  module_activity --> module_snackbar
+  module_App --> module_activity
   module_App --> module_announcement
   module_App --> module_navigation
   module_App --> module_page
@@ -65,6 +73,8 @@ flowchart LR
   module_top_app_bar --> module_icons
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
+  module_week --> module_activity
   module_week --> module_plan
+  module_week --> module_planner
   module_week --> module_progress
 ```
