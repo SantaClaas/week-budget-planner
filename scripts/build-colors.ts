@@ -50,6 +50,7 @@ const SCHEME_ROLES: [token: string, role: DynamicColor][] = [
   ["secondary-container", Roles.secondaryContainer],
   ["on-secondary-container", Roles.onSecondaryContainer],
   ["tertiary", Roles.tertiary],
+  ["on-tertiary", Roles.onTertiary],
   ["tertiary-container", Roles.tertiaryContainer],
   ["on-tertiary-container", Roles.onTertiaryContainer],
   ["error", Roles.error],

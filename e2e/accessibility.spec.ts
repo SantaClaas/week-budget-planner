@@ -91,6 +91,14 @@ for (const colorScheme of ["light", "dark"] as const) {
     }) => {
       await openApp(page);
       const results = [await checkWithAxe(page)];
+      // An activity's form, with an error showing, and the form for a new one.
+      await page.getByRole("button", { name: "Edit Gym" }).click();
+      await page.getByLabel("Hours").fill("");
+      await page.getByLabel("Hours").press("Tab");
+      results.push(await checkWithAxe(page));
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "New activity" }).click();
+      results.push(await checkWithAxe(page));
       // Each page opened the way a user gets there.
       await page.getByRole("button", { name: "Expand navigation" }).click();
       for (const name of ["Activities", "Settings"]) {
@@ -99,6 +107,11 @@ for (const colorScheme of ["light", "dark"] as const) {
       }
       await page.setViewportSize({ width: 390, height: 760 });
       await page.getByRole("link", { name: "Week" }).click();
+      results.push(await checkWithAxe(page));
+      // The Activities page on a phone, and its empty state.
+      await page.getByRole("link", { name: "Activities" }).click();
+      results.push(await checkWithAxe(page));
+      await page.getByRole("button", { name: "Start empty" }).click();
       results.push(await checkWithAxe(page));
       await page.goto(`${ISOLATED_URL}no-such-page`);
       await page.getByRole("heading", { name: "Page not found" }).waitFor();

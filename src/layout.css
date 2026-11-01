@@ -67,6 +67,86 @@
       padding-inline: 0.5rem;
     }
   }
+  /* On wide screens the Activities pane sits beside the week, 22.5rem wide (Google's supporting
+     pane, 360dp), and scrolls on its own. On phones the Activities page takes its place. */
+  .week-page:has(> .activities) {
+    grid-template: "pane summary" auto "pane week" minmax(0, 1fr) / 22.5rem minmax(0, 1fr);
+    column-gap: 1rem;
+    & > .activities {
+      grid-area: pane;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    @media (width < 52.5em) {
+      grid-template: "summary" auto "week" minmax(0, 1fr) / minmax(0, 1fr);
+      & > .activities {
+        display: none;
+      }
+    }
+  }
+
+  /* The Activities list with what's around it: the example-week note, the heading or overview, the
+     forms and the list, or the empty state. */
+  .activities {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    & > :is(.heading, .overview, .intro) {
+      padding-inline: 0.5rem;
+    }
+    & > .heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding-block-start: 0.5rem;
+    }
+    & > .overview > strong {
+      color: var(--on-surface);
+    }
+    /* "or" between two lines */
+    & > .divider {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 0.75rem;
+      &::before,
+      &::after {
+        content: "";
+        border-block-start: 1px solid var(--outline-variant);
+      }
+    }
+    & > .load-example {
+      justify-self: center;
+    }
+  }
+
+  /* The Activities page: the list in a centered column up to 48rem wide, and on phones the extended
+     "New activity" button over its end (the rail holds it on wide screens). */
+  .activities-page {
+    display: grid;
+    align-content: start;
+    gap: 1rem;
+    inline-size: 100%;
+    max-inline-size: 48rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+    padding-block-end: 1rem;
+    & > .floating-action-button {
+      display: none;
+    }
+    @media (width < 52.5em) {
+      padding-inline: 0.5rem;
+      & > .floating-action-button {
+        display: inline-flex;
+        position: sticky;
+        inset-block-end: 1rem;
+        justify-self: end;
+      }
+    }
+  }
+
   .summary {
     display: grid;
     gap: 0.5rem;

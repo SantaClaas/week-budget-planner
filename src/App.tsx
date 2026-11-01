@@ -2,6 +2,8 @@ import type { JSX } from "@solidjs/web";
 import { createSignal, flush, Match, onSettled, Show, Switch } from "solid-js";
 import version from "virtual:app-version";
 
+import { ActivitiesPage } from "./activity/ActivitiesPage.tsx";
+import * as editing from "./activity/editing.ts";
 import { LiveRegion } from "./announcement/LiveRegion.tsx";
 import { NavigationBar } from "./navigation/NavigationBar.tsx";
 import { NavigationRail } from "./navigation/NavigationRail.tsx";
@@ -114,6 +116,18 @@ export function App(): JSX.Element {
     document.querySelector(`#${CSS.escape(location.hash.slice(1))}`)?.scrollIntoView();
   }
 
+  /**
+   * The rail's "New activity": opens the form in the list on the page, the pane on Week or the
+   * Activities page. From another page, it moves to the Activities page first.
+   */
+  function openNewActivity(): void {
+    if (page() !== "week" && page() !== "activities") {
+      history.pushState(null, "", createPath("activities", BASE));
+      showPage("activities", "link");
+    }
+    editing.openNew();
+  }
+
   const undoOnShortcut = (event: KeyboardEvent): void => {
     const isShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey;
     if (!isShortcut || event.key.toLowerCase() !== "z" || isInField(event.target)) return;
@@ -168,7 +182,7 @@ export function App(): JSX.Element {
 
   return (
     <Show when={!isFromNewerVersion()} fallback={<NewerVersionPage />}>
-      <NavigationRail current={page()} base={BASE} />
+      <NavigationRail current={page()} base={BASE} onNewActivity={openNewActivity} />
       <main>
         <TopAppBar
           title={NAMES[page()]}
@@ -184,10 +198,10 @@ export function App(): JSX.Element {
             {(opened) => (
               <Switch>
                 <Match when={page() === "week"}>
-                  <WeekPage plan={opened().plan()} today={today} />
+                  <WeekPage plan={opened().plan()} planner={opened()} today={today} />
                 </Match>
                 <Match when={page() === "activities"}>
-                  <p class="page-content">The activities arrive in a later step of phase 4.</p>
+                  <ActivitiesPage plan={opened().plan()} planner={opened()} />
                 </Match>
                 <Match when={page() === "settings"}>
                   <section class="page-content" aria-labelledby="about-title">
