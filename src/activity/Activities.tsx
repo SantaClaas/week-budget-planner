@@ -109,7 +109,7 @@ function Row(props: { row: ActivityRow }): JSX.Element {
       data-color={findColor(props.row.activity.hue).key}
       style={{ "--activity-shape": `var(--shape-${props.row.activity.shape})` }}
     >
-      <span class="swatch" />
+      <span class="emblem" aria-hidden="true" />
       <span class="name">
         <span class="title-medium">{props.row.activity.name}</span>
         <span class="body-small muted">{props.row.budget}</span>

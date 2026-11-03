@@ -218,7 +218,7 @@ export function ActivityForm(props: {
       }}
     >
       <div class="heading">
-        <span class="swatch" />
+        <span class="emblem" aria-hidden="true" />
         <Show
           when={props.level === 3}
           fallback={
