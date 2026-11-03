@@ -156,7 +156,7 @@ function readSchemeColors(contrastLevel: number): Colors {
   ];
 }
 
-/** One activity color's tokens at one contrast level. The activity color itself (the swatch, the
+/** One activity color's tokens at one contrast level. The activity color itself (the emblem, the
  * progress bar) stays at its standard tone at every level: the library darkens or lightens it so far
  * at more contrast that the eight colors become hard to tell apart, and the standard tones already
  * reach 3:1 on the card at every level (an approved deviation, see Deviations in

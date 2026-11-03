@@ -10,7 +10,7 @@
 - **Left pane, Activities** (360px wide, scrolls on its own):
   - The example-week card, shown only while `exampleLoadedAt` is set: "This is an example week. Change it, or start with an empty one." with "Keep these" and "Start empty".
   - A header, "Activities", with the total left to place.
-  - The activity list. Each item has a color swatch, the name, the budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress indicator, and an Edit icon button.
+  - The activity list. Each item has an emblem, the name, the budget line ("4 h 30 min per week" or "1 h 30 min per day, 3 days"), the remaining figure on the right ("1 h 30 min / left to place", "All placed / 3 h", or "30 min / over budget"), a progress indicator, and an Edit icon button.
   - A hint line: "Drag an activity onto the week, or click an empty slot to add a block there."
   - The rail's "New activity" button opens the form at the top of this pane: name, hours (step 0.25), counted per week or per day, days (shown only for per day), a color picker with 8 colors, and a shape picker with the 35 shapes drawn in the chosen color.
 - **Activities page** (the rail's Activities): the same list as the pane, in a centered column up to 48rem wide, under the summary ("12 h left to place across 4 activities"). Editing works as everywhere, inline in the list item, and the form has room to lay out name, hours and per week or per day on one line. The rail's "New activity" opens the form at the top of the list.

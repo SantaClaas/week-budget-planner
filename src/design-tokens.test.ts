@@ -217,7 +217,7 @@ function measureContrast(first: string, second: string): number {
 }
 
 // WCAG 2.2 AA: 4.5:1 for text (1.4.3), 3:1 for the parts of controls and graphics that carry
-// meaning (1.4.11), such as a swatch, a progress bar's overrun or an outlined button's border.
+// meaning (1.4.11), such as an emblem, a progress bar's overrun or an outlined button's border.
 const TEXT = 4.5;
 const GRAPHIC = 3;
 
@@ -273,7 +273,7 @@ describe.each(AA_LEVELS)("color contrast, %s", (level) => {
   );
 
   it.each(HUES.flatMap((hue) => (["light", "dark"] as const).map((scheme) => ({ hue, scheme }))))(
-    "activity color $hue ($scheme): block text and swatch",
+    "activity color $hue ($scheme): block text and emblem",
     ({ hue, scheme }) => {
       const activity = readLevel(`[data-color="${hue}"]`, level);
       const container = pickColor(activity, "--activity-container", scheme);
@@ -282,7 +282,7 @@ describe.each(AA_LEVELS)("color contrast, %s", (level) => {
       const card = pickColor(theme, "--card", scheme);
       // a block's name and time on its fill
       expect(measureContrast(text, container)).toBeGreaterThanOrEqual(TEXT);
-      // the swatch and the progress bar on the card they sit on
+      // the emblem and the progress bar on the card they sit on
       expect(measureContrast(solid, card)).toBeGreaterThanOrEqual(GRAPHIC);
     },
   );
