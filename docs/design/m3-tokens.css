@@ -1367,7 +1367,8 @@
      selected and is named for screen readers. The drawn text is aria-hidden, so it isn't read twice.
      <li class="block" data-color="blue" style="--activity-shape: var(--shape-arch)"><button class="block-button" aria-pressed="false" aria-describedby="block-keys">
      <span class="visually-hidden">Gym, Monday 18:00 to 19:30, 1 hour, 30 minutes</span></button>
-     <span class="name" aria-hidden="true">Gym</span><span class="time" aria-hidden="true">18:00–19:30 · 1h30</span></li> */
+     <span class="emblem" aria-hidden="true"></span><span class="name" aria-hidden="true">Gym</span><span class="time"
+     aria-hidden="true">18:00–19:30 · 1h30</span></li> */
   /* Placed from custom properties the week sets: --start and --length in minutes, and --lane of
      --lanes for blocks that overlap, side by side. */
   .block {
@@ -1412,37 +1413,27 @@
       line-height: calc(14 / 11);
       opacity: 0.85;
     }
-    /* The activity's shape, drawn by the block itself, since it says nothing the block's name doesn't
-       (see "Activity shape on blocks" in docs/spec/grid-geometry.md): 12dp in the top-right corner,
-       out of the name's way; 10dp at the start of a short block's one line; none on a tiny one. */
-    &::before {
-      content: "";
+    /* The activity's emblem (see "Activity shape on blocks" in docs/spec/grid-geometry.md): 12dp in
+       the top-right corner, out of the name's way; 10dp at the start of a short block's one line;
+       none on a tiny one. */
+    & > .emblem {
       position: absolute;
       inset-block-start: 0.25rem;
       inset-inline-end: 0.25rem;
       z-index: 1;
       width: 0.75rem;
       height: 0.75rem;
-      background: var(--activity-color);
-      clip-path: var(--activity-shape, var(--shape-circle));
-      @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
-        clip-path: none;
-        border-radius: 50%;
-      }
-      @media (forced-colors: active) {
-        forced-color-adjust: none;
-      }
     }
     & .name {
       padding-inline-end: 0.875rem;
     }
-    &[data-length="short"]::before {
+    &[data-length="short"] > .emblem {
       position: static;
       width: 0.625rem;
       height: 0.625rem;
     }
-    &[data-length="tiny"]::before {
-      content: none;
+    &[data-length="tiny"] > .emblem {
+      display: none;
     }
     &:is([data-length="short"], [data-length="tiny"]) .name {
       padding-inline-end: 0;
@@ -1457,6 +1448,10 @@
       align-items: center;
       gap: 0.25rem;
       padding: 0 0.5rem;
+    }
+    /* A short block's line starts with its emblem. */
+    &[data-length="short"] {
+      grid-template-columns: auto minmax(0, auto) auto;
     }
     &[data-length="short"] {
       grid-template-columns: auto minmax(0, auto) auto;
@@ -1722,8 +1717,8 @@
   /* color and shape pickers: every option is an emblem (color in shape); the selected one sits on a
      tonal rounded square with a primary ring. A color option sets its color-* class, a shape option
      sets --activity-shape inline; both inherit the other half from the form. */
-  /* <fieldset class="picker"><legend>Color</legend><label class="picker-option" data-color="blue"><input type="radio"
-     name="color" value="blue"><span class="visually-hidden">Blue</span></label>…</fieldset> */
+  /* <fieldset class="picker"><legend>Color</legend><label class="picker-option" data-color="blue"><span class="emblem" aria-hidden="true"></span>
+     <input type="radio" name="color" value="blue"><span class="visually-hidden">Blue</span></label>…</fieldset> */
   .picker {
     display: flex;
     gap: 0.25rem;
@@ -1740,19 +1735,12 @@
     border-radius: var(--corner-medium);
     background: transparent;
     cursor: pointer;
-    &::before {
-      content: "";
+    /* The emblem comes before the input in the markup: its clip-path makes it a stacking context,
+       which would otherwise paint over the input that lies over the whole option and take its
+       clicks. */
+    & > .emblem {
       width: 1.75rem;
       height: 1.75rem;
-      background: var(--activity-color);
-      clip-path: var(--activity-shape, var(--shape-circle));
-      @supports not (clip-path: shape(from 0 0, line to 100% 0, line to 0 100%, close)) {
-        clip-path: none;
-        border-radius: 50%;
-      }
-      @media (forced-colors: active) {
-        forced-color-adjust: none;
-      }
     }
     &:has(:checked) {
       background: var(--secondary-container);

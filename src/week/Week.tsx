@@ -47,6 +47,7 @@ function Block(props: { block: DrawnBlock }): JSX.Element {
       }}
     >
       <span class="visually-hidden">{props.block.spoken}</span>
+      <span class="emblem" aria-hidden="true" />
       <span class="name" aria-hidden="true">
         {props.block.activity.name}
       </span>

@@ -293,6 +293,7 @@ export function ActivityForm(props: {
         <For each={PALETTE}>
           {(color) => (
             <label class="picker-option" data-color={color.key}>
+              <span class="emblem" aria-hidden="true" />
               <input
                 type="radio"
                 name="color"
@@ -312,6 +313,7 @@ export function ActivityForm(props: {
         <For each={SHAPES}>
           {(option) => (
             <label class="picker-option" style={{ "--activity-shape": `var(--shape-${option})` }}>
+              <span class="emblem" aria-hidden="true" />
               <input
                 type="radio"
                 name="shape"
