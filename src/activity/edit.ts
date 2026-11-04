@@ -7,11 +7,11 @@ import type { ActivityId } from "../plan/id.ts";
  * none. One at a time, so opening one closes the other. With no activities at all, the
  * new-activity form shows anyway (see Changes from the prototype in docs/spec/).
  */
-type Editing = { type: "new" } | { type: "edit"; id: ActivityId } | undefined;
+type Edit = { type: "new" } | { type: "edit"; id: ActivityId } | undefined;
 
 // The rail's "New activity" button opens the form in the Activities list, which is elsewhere in
 // the page, so this is app-wide state: a global, as Solid's cheatsheet advises.
-const [current, setCurrent] = createSignal<Editing>();
+const [current, setCurrent] = createSignal<Edit>();
 
 export { current };
 
@@ -21,7 +21,7 @@ export function openNew(): void {
 }
 
 /** Opens the form of the activity `id` in its place in the list. */
-export function openEdit(id: ActivityId): void {
+export function open(id: ActivityId): void {
   setCurrent({ type: "edit", id });
 }
 
