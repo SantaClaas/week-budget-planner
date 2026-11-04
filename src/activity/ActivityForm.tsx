@@ -348,7 +348,7 @@ export function ActivityForm(props: {
         {(onDelete) => (
           <button
             type="button"
-            class={["button", "delete"]}
+            class="button delete"
             data-variant="text-danger"
             onClick={onDelete()}
           >
@@ -358,7 +358,7 @@ export function ActivityForm(props: {
       </Show>
       <Show when={props.onCancel}>
         {(onCancel) => (
-          <button type="button" class={["button", "cancel"]} onClick={onCancel()}>
+          <button type="button" class="button cancel" onClick={onCancel()}>
             Cancel
           </button>
         )}
