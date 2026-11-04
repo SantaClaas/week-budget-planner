@@ -13,7 +13,7 @@ import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
 import { ActivityForm, type SavedActivity } from "./ActivityForm.tsx";
-import * as editing from "./editing.ts";
+import * as edit from "./edit.ts";
 import { describeOverview, listRows, type ActivityRow } from "./row.ts";
 
 /** Where the list is: the pane beside the week, or the Activities page. */
@@ -89,7 +89,7 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           aria-describedby="example-week-note"
           onClick={() => {
             // The form for a new activity takes focus, as the next thing to do.
-            editing.openNew();
+            edit.openNew();
             properties.planner.change(startEmpty);
             showWithUndo(properties.planner, "Example week removed.");
           }}
@@ -123,7 +123,7 @@ function Row(properties: { row: ActivityRow }): JSX.Element {
         class="icon-button"
         id={createEditButtonId(properties.row.activity.id)}
         onClick={() => {
-          editing.openEdit(properties.row.activity.id);
+          edit.open(properties.row.activity.id);
         }}
       >
         <Icon name="edit" size={20} />
@@ -138,7 +138,7 @@ function Row(properties: { row: ActivityRow }): JSX.Element {
 function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; level: 2 | 3 }) {
   const id = (): ActivityId => properties.row.activity.id;
   const close = (): void => {
-    editing.close();
+    edit.close();
     focusEditButton(id());
   };
   return (
@@ -172,10 +172,10 @@ function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; l
           showWithUndo(properties.planner, describeRemoval(name, removedBlocks));
           // Focus goes to the next activity, or with none left, to the form for a new one.
           if (neighbour === undefined) {
-            editing.openNew();
+            edit.openNew();
             return;
           }
-          editing.close();
+          edit.close();
           focusEditButton(neighbour.id);
         }}
       />
@@ -216,11 +216,11 @@ function NewActivity(properties: {
               announce(`Added ${saved.name}.`);
               // The form stays open for the next activity, also after the first one in the empty
               // state, where the list then takes the empty state's place.
-              editing.openNew();
+              edit.openNew();
               setIsAfterSave(true);
               setId(randomIds.createActivityId());
             }}
-            {...(properties.isClosable ? { onCancel: editing.close } : {})}
+            {...(properties.isClosable ? { onCancel: edit.close } : {})}
           />
         );
       }}
@@ -241,7 +241,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
         planner={properties.planner}
         level={properties.level}
         isClosable={false}
-        isFocusedOnOpen={editing.current()?.type === "new"}
+        isFocusedOnOpen={edit.current()?.type === "new"}
       />
       <p class="divider body-small muted">or</p>
       <button
@@ -249,7 +249,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
         class="button load-example"
         data-variant="outlined"
         onClick={() => {
-          editing.close();
+          edit.close();
           properties.planner.change((_, now) => createExampleWeek(now, randomIds));
           // The button goes with the empty state, so focus moves to the note that replaces it.
           focus(`#${KEEP_EXAMPLE_WEEK_ID}`);
@@ -264,7 +264,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
 
 /** The activity whose form is open in its row, if any. */
 function findEditedId(): ActivityId | undefined {
-  const open = editing.current();
+  const open = edit.current();
   return open?.type === "edit" ? open.id : undefined;
 }
 
@@ -311,7 +311,7 @@ export function Activities(properties: {
             <p class="label-medium muted">{overview().leftToPlace}</p>
           </header>
         </Show>
-        <Show when={editing.current()?.type === "new"}>
+        <Show when={edit.current()?.type === "new"}>
           <NewActivity
             plan={properties.plan}
             planner={properties.planner}

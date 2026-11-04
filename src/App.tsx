@@ -3,7 +3,7 @@ import { createSignal, flush, Match, onSettled, Show, Switch } from "solid-js";
 import version from "virtual:app-version";
 
 import { ActivitiesPage } from "./activity/ActivitiesPage.tsx";
-import * as editing from "./activity/editing.ts";
+import * as edit from "./activity/edit.ts";
 import { LiveRegion } from "./announcement/LiveRegion.tsx";
 import { NavigationBar } from "./navigation/NavigationBar.tsx";
 import { NavigationRail } from "./navigation/NavigationRail.tsx";
@@ -125,7 +125,7 @@ export function App(): JSX.Element {
       history.pushState(null, "", createPath("activities", BASE));
       showPage("activities", "link");
     }
-    editing.openNew();
+    edit.openNew();
   }
 
   const undoOnShortcut = (event: KeyboardEvent): void => {

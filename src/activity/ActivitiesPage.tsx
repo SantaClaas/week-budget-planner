@@ -5,7 +5,7 @@ import { Icon } from "../icons/Icon.tsx";
 import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
 import { Activities } from "./Activities.tsx";
-import * as editing from "./editing.ts";
+import * as edit from "./edit.ts";
 
 /**
  * The Activities page: the list under its overview and, on phones, the extended "New activity"
@@ -17,7 +17,7 @@ export function ActivitiesPage(properties: { plan: Plan; planner: Planner }): JS
       <Activities plan={properties.plan} planner={properties.planner} place="page" />
       {/* With no activities the form is already open. */}
       <Show when={properties.plan.activities.length > 0}>
-        <button type="button" class="floating-action-button" onClick={editing.openNew}>
+        <button type="button" class="floating-action-button" onClick={edit.openNew}>
           <Icon name="add" />
           New activity
         </button>
