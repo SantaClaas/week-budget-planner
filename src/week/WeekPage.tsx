@@ -11,13 +11,17 @@ import { Progress } from "../progress/Progress.tsx";
 import { Week } from "./Week.tsx";
 
 /** A length in a `<time>` element: "20 hr". */
-function Length(props: { minutes: number }): JSX.Element {
-  return <time datetime={formatLengthDatetime(props.minutes)}>{formatLength(props.minutes)}</time>;
+function Length(properties: { minutes: number }): JSX.Element {
+  return (
+    <time datetime={formatLengthDatetime(properties.minutes)}>
+      {formatLength(properties.minutes)}
+    </time>
+  );
 }
 
 /** "20 hr placed of 32 hr · 12 hr left to place", with the overall progress under it. */
-function Summary(props: { plan: Plan }): JSX.Element {
-  const summary = () => summarize(props.plan);
+function Summary(properties: { plan: Plan }): JSX.Element {
+  const summary = () => summarize(properties.plan);
   return (
     <div class="summary">
       <p>
@@ -47,16 +51,16 @@ function Summary(props: { plan: Plan }): JSX.Element {
  * The Week page: the summary of the whole week and the week itself, with the Activities pane beside
  * them on wide screens.
  */
-export function WeekPage(props: {
+export function WeekPage(properties: {
   plan: Plan;
   planner: Planner;
   today: DayIndex | undefined;
 }): JSX.Element {
   return (
     <div class="week-page">
-      <Activities plan={props.plan} planner={props.planner} place="pane" />
-      <Summary plan={props.plan} />
-      <Week plan={props.plan} today={props.today} />
+      <Activities plan={properties.plan} planner={properties.planner} place="pane" />
+      <Summary plan={properties.plan} />
+      <Week plan={properties.plan} today={properties.today} />
     </div>
   );
 }

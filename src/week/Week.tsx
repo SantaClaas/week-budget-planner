@@ -14,9 +14,9 @@ import {
 } from "./layout.ts";
 
 /** Text pieces, each one with a `datetime` value in a `<time>` element. */
-function Times(props: { pieces: TimeText[] }): JSX.Element {
+function Times(properties: { pieces: TimeText[] }): JSX.Element {
   return (
-    <For each={props.pieces}>
+    <For each={properties.pieces}>
       {(piece) => (
         <Show when={piece.datetime} fallback={piece.text}>
           {(datetime) => <time datetime={datetime()}>{piece.text}</time>}
@@ -30,48 +30,48 @@ function Times(props: { pieces: TimeText[] }): JSX.Element {
  * One block, or one part of an overnight block. What's drawn is hidden from screen readers, which
  * read the spelled-out name instead (see The week in docs/spec/accessibility.md).
  */
-function Block(props: { block: DrawnBlock }): JSX.Element {
+function Block(properties: { block: DrawnBlock }): JSX.Element {
   return (
     <li
       class="block"
-      data-color={findColor(props.block.activity.hue).key}
-      data-length={props.block.size === "regular" ? undefined : props.block.size}
-      data-part={props.block.part === "only" ? undefined : props.block.part}
+      data-color={findColor(properties.block.activity.hue).key}
+      data-length={properties.block.size === "regular" ? undefined : properties.block.size}
+      data-part={properties.block.part === "only" ? undefined : properties.block.part}
       style={{
-        "--start": props.block.start,
-        "--length": props.block.length,
-        "--lane": props.block.lane.index,
-        "--lanes": props.block.lane.count,
-        "--name-lines": props.block.nameLines,
-        "--activity-shape": `var(--shape-${props.block.activity.shape})`,
+        "--start": properties.block.start,
+        "--length": properties.block.length,
+        "--lane": properties.block.lane.index,
+        "--lanes": properties.block.lane.count,
+        "--name-lines": properties.block.nameLines,
+        "--activity-shape": `var(--shape-${properties.block.activity.shape})`,
       }}
     >
-      <span class="visually-hidden">{props.block.spoken}</span>
+      <span class="visually-hidden">{properties.block.spoken}</span>
       <span class="emblem" aria-hidden="true" />
       <span class="name" aria-hidden="true">
-        {props.block.activity.name}
+        {properties.block.activity.name}
       </span>
       <span class="time" aria-hidden="true">
-        <Times pieces={props.block.time} />
+        <Times pieces={properties.block.time} />
       </span>
     </li>
   );
 }
 
-function Day(props: { day: DrawnDay }): JSX.Element {
+function Day(properties: { day: DrawnDay }): JSX.Element {
   return (
-    <li class="day" data-weekend={props.day.isWeekend}>
-      <h2 class="day-header" aria-current={props.day.isToday ? "date" : undefined}>
+    <li class="day" data-weekend={properties.day.isWeekend}>
+      <h2 class="day-header" aria-current={properties.day.isToday ? "date" : undefined}>
         <span class="day-name" aria-hidden="true">
-          {props.day.name}
+          {properties.day.name}
         </span>
         <span class="day-total" aria-hidden="true">
-          <Times pieces={props.day.total} />
+          <Times pieces={properties.day.total} />
         </span>
-        <span class="visually-hidden">{props.day.spoken}</span>
+        <span class="visually-hidden">{properties.day.spoken}</span>
       </h2>
       <ol class="day-column">
-        <For each={props.day.blocks} keyed={(block) => block.key}>
+        <For each={properties.day.blocks} keyed={(block) => block.key}>
           {(block) => <Block block={block()} />}
         </For>
       </ol>
@@ -84,16 +84,16 @@ function Day(props: { day: DrawnDay }): JSX.Element {
  * own region with the day headers and the gutter sticky (see docs/spec/grid-geometry.md). It opens
  * scrolled to the day hours, and again when they change, never while the user works.
  */
-export function Week(props: { plan: Plan; today: DayIndex | undefined }): JSX.Element {
+export function Week(properties: { plan: Plan; today: DayIndex | undefined }): JSX.Element {
   let scroller: HTMLElement | undefined;
-  const days = () => layoutWeek(props.plan, props.today);
+  const days = () => layoutWeek(properties.plan, properties.today);
 
   createEffect(
-    () => [props.plan.dayStart, props.plan.dayEnd],
+    () => [properties.plan.dayStart, properties.plan.dayEnd],
     () => {
       const column = scroller?.querySelector<HTMLElement>(".day-column");
       if (scroller === undefined || column === null || column === undefined) return;
-      const hour = untrack(() => findOpeningHour(props.plan));
+      const hour = untrack(() => findOpeningHour(properties.plan));
       // A quarter hour above it, so the hour's label, centered on its line, isn't half hidden
       // under the sticky day headers.
       scroller.scrollTop = (column.offsetHeight * (hour * 4 - 1)) / 96;
@@ -114,7 +114,7 @@ export function Week(props: { plan: Plan; today: DayIndex | undefined }): JSX.El
     >
       <div
         class="week"
-        style={{ "--day-start": props.plan.dayStart, "--day-end": props.plan.dayEnd }}
+        style={{ "--day-start": properties.plan.dayStart, "--day-end": properties.plan.dayEnd }}
       >
         <div class="gutter" aria-hidden="true">
           <For each={listHours()}>

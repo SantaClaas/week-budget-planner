@@ -7,13 +7,13 @@ import type { IconName } from "./name.ts";
  * readers: the text beside it, or a visually hidden one, says what it means. Only icons in the
  * iconset compile (see src/icons/name.ts).
  */
-export function Icon(props: { name: IconName; size?: 18 | 20 }): JSX.Element {
+export function Icon(properties: { name: IconName; size?: 18 | 20 }): JSX.Element {
   return (
     <svg
-      class={["icon", { "size-18": props.size === 18, "size-20": props.size === 20 }]}
+      class={["icon", { "size-18": properties.size === 18, "size-20": properties.size === 20 }]}
       aria-hidden="true"
     >
-      <use href={`#${props.name}`} />
+      <use href={`#${properties.name}`} />
     </svg>
   );
 }

@@ -61,7 +61,7 @@ function showWithUndo(planner: Planner, message: string): void {
  * Layout in docs/spec/layout.md). Its text describes both buttons, so their context is read when
  * they get focus.
  */
-function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
+function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
   return (
     <section class="example-week-card">
       <Icon name="auto_awesome" />
@@ -76,7 +76,7 @@ function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
           data-size="extra-small"
           aria-describedby="example-week-note"
           onClick={() => {
-            props.planner.change(keepExampleWeek);
+            properties.planner.change(keepExampleWeek);
           }}
         >
           Keep these
@@ -90,8 +90,8 @@ function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
           onClick={() => {
             // The form for a new activity takes focus, as the next thing to do.
             editing.openNew();
-            props.planner.change(startEmpty);
-            showWithUndo(props.planner, "Example week removed.");
+            properties.planner.change(startEmpty);
+            showWithUndo(properties.planner, "Example week removed.");
           }}
         >
           Start empty
@@ -102,41 +102,41 @@ function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
 }
 
 /** One activity in the list: its shape, name, budget, what's left to place, and Edit. */
-function Row(props: { row: ActivityRow }): JSX.Element {
+function Row(properties: { row: ActivityRow }): JSX.Element {
   return (
     <li
       class="activity"
-      data-color={findColor(props.row.activity.hue).key}
-      style={{ "--activity-shape": `var(--shape-${props.row.activity.shape})` }}
+      data-color={findColor(properties.row.activity.hue).key}
+      style={{ "--activity-shape": `var(--shape-${properties.row.activity.shape})` }}
     >
       <span class="emblem" aria-hidden="true" />
       <span class="name">
-        <span class="title-medium">{props.row.activity.name}</span>
-        <span class="body-small muted">{props.row.budget}</span>
+        <span class="title-medium">{properties.row.activity.name}</span>
+        <span class="body-small muted">{properties.row.budget}</span>
       </span>
-      <span class="left-to-place" data-state={props.row.state}>
-        <span class="title-small">{props.row.figure}</span>
-        <span class="label-small muted">{props.row.caption}</span>
+      <span class="left-to-place" data-state={properties.row.state}>
+        <span class="title-small">{properties.row.figure}</span>
+        <span class="label-small muted">{properties.row.caption}</span>
       </span>
       <button
         type="button"
         class="icon-button"
-        id={createEditButtonId(props.row.activity.id)}
+        id={createEditButtonId(properties.row.activity.id)}
         onClick={() => {
-          editing.openEdit(props.row.activity.id);
+          editing.openEdit(properties.row.activity.id);
         }}
       >
         <Icon name="edit" size={20} />
-        <span class="visually-hidden">Edit {props.row.activity.name}</span>
+        <span class="visually-hidden">Edit {properties.row.activity.name}</span>
       </button>
-      <Progress budget={props.row.weeklyBudget} placed={props.row.placedMinutes} />
+      <Progress budget={properties.row.weeklyBudget} placed={properties.row.placedMinutes} />
     </li>
   );
 }
 
 /** The form of the activity in `row`, in its place in the list: Save, Cancel and Delete. */
-function EditRow(props: { row: ActivityRow; plan: Plan; planner: Planner; level: 2 | 3 }) {
-  const id = (): ActivityId => props.row.activity.id;
+function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; level: 2 | 3 }) {
+  const id = (): ActivityId => properties.row.activity.id;
   const close = (): void => {
     editing.close();
     focusEditButton(id());
@@ -144,31 +144,32 @@ function EditRow(props: { row: ActivityRow; plan: Plan; planner: Planner; level:
   return (
     <li class="editing">
       <ActivityForm
-        title={`Edit ${props.row.activity.name}`}
-        level={props.level}
+        title={`Edit ${properties.row.activity.name}`}
+        level={properties.level}
         initial={{
-          name: props.row.activity.name,
-          hours: formatHours(props.row.activity.budgetMinutes),
-          mode: props.row.activity.mode,
-          days: String(props.row.activity.days),
-          hue: props.row.activity.hue,
-          shape: props.row.activity.shape,
+          name: properties.row.activity.name,
+          hours: formatHours(properties.row.activity.budgetMinutes),
+          mode: properties.row.activity.mode,
+          days: String(properties.row.activity.days),
+          hue: properties.row.activity.hue,
+          shape: properties.row.activity.shape,
         }}
-        placed={props.row.placed}
+        placed={properties.row.placed}
         submitLabel="Save"
         isFocusedOnOpen
         onSave={(saved: SavedActivity) => {
-          props.planner.change((plan) => list.update(plan, id(), saved));
+          properties.planner.change((plan) => list.update(plan, id(), saved));
           close();
         }}
         onCancel={close}
         onDelete={() => {
-          const { name } = props.row.activity;
-          const index = props.plan.activities.findIndex((activity) => activity.id === id());
-          const neighbour = props.plan.activities[index + 1] ?? props.plan.activities[index - 1];
-          const { removedBlocks } = list.remove(props.plan, id());
-          props.planner.change((plan) => list.remove(plan, id()).plan);
-          showWithUndo(props.planner, describeRemoval(name, removedBlocks));
+          const { name } = properties.row.activity;
+          const index = properties.plan.activities.findIndex((activity) => activity.id === id());
+          const neighbour =
+            properties.plan.activities[index + 1] ?? properties.plan.activities[index - 1];
+          const { removedBlocks } = list.remove(properties.plan, id());
+          properties.planner.change((plan) => list.remove(plan, id()).plan);
+          showWithUndo(properties.planner, describeRemoval(name, removedBlocks));
           // Focus goes to the next activity, or with none left, to the form for a new one.
           if (neighbour === undefined) {
             editing.openNew();
@@ -186,7 +187,7 @@ function EditRow(props: { row: ActivityRow; plan: Plan; planner: Planner; level:
  * The new-activity form. After adding, it opens again empty, with the next defaults, for the next
  * activity, as in the prototype.
  */
-function NewActivity(props: {
+function NewActivity(properties: {
   plan: Plan;
   planner: Planner;
   level: 2 | 3;
@@ -202,16 +203,16 @@ function NewActivity(props: {
   return (
     <Show when={id()} keyed>
       {(newId) => {
-        const look = pickDefaultLook(newId, props.plan.activities);
+        const look = pickDefaultLook(newId, properties.plan.activities);
         return (
           <ActivityForm
             title="New activity"
-            level={props.level}
+            level={properties.level}
             initial={{ name: "", hours: "", mode: "week", days: "5", ...look }}
             submitLabel="Add activity"
-            isFocusedOnOpen={props.isFocusedOnOpen || isAfterSave()}
+            isFocusedOnOpen={properties.isFocusedOnOpen || isAfterSave()}
             onSave={(saved) => {
-              props.planner.change((plan) => list.add(plan, { ...saved, id: newId }));
+              properties.planner.change((plan) => list.add(plan, { ...saved, id: newId }));
               announce(`Added ${saved.name}.`);
               // The form stays open for the next activity, also after the first one in the empty
               // state, where the list then takes the empty state's place.
@@ -219,7 +220,7 @@ function NewActivity(props: {
               setIsAfterSave(true);
               setId(randomIds.createActivityId());
             }}
-            {...(props.isClosable ? { onCancel: editing.close } : {})}
+            {...(properties.isClosable ? { onCancel: editing.close } : {})}
           />
         );
       }}
@@ -228,7 +229,7 @@ function NewActivity(props: {
 }
 
 /** With no activities: what to do first, the form, and the example week to try instead. */
-function EmptyState(props: { plan: Plan; planner: Planner; level: 2 | 3 }): JSX.Element {
+function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }): JSX.Element {
   return (
     <>
       <p class="body-medium muted intro">
@@ -236,9 +237,9 @@ function EmptyState(props: { plan: Plan; planner: Planner; level: 2 | 3 }): JSX.
         needs.
       </p>
       <NewActivity
-        plan={props.plan}
-        planner={props.planner}
-        level={props.level}
+        plan={properties.plan}
+        planner={properties.planner}
+        level={properties.level}
         isClosable={false}
         isFocusedOnOpen={editing.editing()?.type === "new"}
       />
@@ -249,7 +250,7 @@ function EmptyState(props: { plan: Plan; planner: Planner; level: 2 | 3 }): JSX.
         data-variant="outlined"
         onClick={() => {
           editing.close();
-          props.planner.change((_, now) => createExampleWeek(now, randomIds));
+          properties.planner.change((_, now) => createExampleWeek(now, randomIds));
           // The button goes with the empty state, so focus moves to the note that replaces it.
           focus(`#${KEEP_EXAMPLE_WEEK_ID}`);
         }}
@@ -272,25 +273,31 @@ function findEditedId(): ActivityId | undefined {
  * and the empty state. The same list is the pane beside the week on wide screens and the
  * Activities page (see Layout in docs/spec/layout.md).
  */
-export function Activities(props: { plan: Plan; planner: Planner; place: Place }): JSX.Element {
-  const rows = createMemo(() => listRows(props.plan));
-  const overview = () => describeOverview(props.plan);
-  const level = (): 2 | 3 => (props.place === "pane" ? 3 : 2);
+export function Activities(properties: {
+  plan: Plan;
+  planner: Planner;
+  place: Place;
+}): JSX.Element {
+  const rows = createMemo(() => listRows(properties.plan));
+  const overview = () => describeOverview(properties.plan);
+  const level = (): 2 | 3 => (properties.place === "pane" ? 3 : 2);
   return (
     <section
       class="activities"
-      data-place={props.place}
-      aria-labelledby={props.place === "pane" ? "activities-title" : undefined}
+      data-place={properties.place}
+      aria-labelledby={properties.place === "pane" ? "activities-title" : undefined}
     >
-      <Show when={props.plan.exampleLoadedAt !== null}>
-        <ExampleWeekCard planner={props.planner} />
+      <Show when={properties.plan.exampleLoadedAt !== null}>
+        <ExampleWeekCard planner={properties.planner} />
       </Show>
       <Show
-        when={props.plan.activities.length > 0}
-        fallback={<EmptyState plan={props.plan} planner={props.planner} level={level()} />}
+        when={properties.plan.activities.length > 0}
+        fallback={
+          <EmptyState plan={properties.plan} planner={properties.planner} level={level()} />
+        }
       >
         <Show
-          when={props.place === "pane"}
+          when={properties.place === "pane"}
           fallback={
             <p class="body-large muted overview">
               <strong>{overview().leftToPlace}</strong> {overview().detail}
@@ -306,8 +313,8 @@ export function Activities(props: { plan: Plan; planner: Planner; place: Place }
         </Show>
         <Show when={editing.editing()?.type === "new"}>
           <NewActivity
-            plan={props.plan}
-            planner={props.planner}
+            plan={properties.plan}
+            planner={properties.planner}
             level={level()}
             isClosable
             isFocusedOnOpen
@@ -318,7 +325,12 @@ export function Activities(props: { plan: Plan; planner: Planner; place: Place }
           <For each={rows()} keyed={(row) => row.activity.id}>
             {(row) => (
               <Show when={row().activity.id === findEditedId()} fallback={<Row row={row()} />}>
-                <EditRow row={row()} plan={props.plan} planner={props.planner} level={level()} />
+                <EditRow
+                  row={row()}
+                  plan={properties.plan}
+                  planner={properties.planner}
+                  level={level()}
+                />
               </Show>
             )}
           </For>

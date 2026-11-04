@@ -7,7 +7,7 @@ import { current, dismiss, type Snackbar as SnackbarState } from "./index.ts";
 const DURATION_MILLISECONDS = 7000;
 
 /** One snackbar's surface, shown in the top layer once it's in the page. */
-function Surface(props: { snackbar: SnackbarState }): JSX.Element {
+function Surface(properties: { snackbar: SnackbarState }): JSX.Element {
   let element: HTMLDivElement | undefined;
   onSettled(() => {
     element?.showPopover();
@@ -21,16 +21,16 @@ function Surface(props: { snackbar: SnackbarState }): JSX.Element {
       }}
     >
       <p id="snackbar-message" class="body-medium">
-        {props.snackbar.message}
+        {properties.snackbar.message}
       </p>
-      <Show when={props.snackbar.action}>
+      <Show when={properties.snackbar.action}>
         {(action) => (
           <button
             type="button"
             class="button"
             aria-describedby="snackbar-message"
             onClick={() => {
-              dismiss(props.snackbar);
+              dismiss(properties.snackbar);
               action().run();
             }}
           >
