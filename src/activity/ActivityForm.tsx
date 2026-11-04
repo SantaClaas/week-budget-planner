@@ -86,7 +86,6 @@ function TextField(properties: {
   isInvalid: boolean;
   inputmode?: "decimal" | "numeric";
   maxlength?: number;
-  ref?: (input: HTMLInputElement) => void;
 }): JSX.Element {
   return (
     <div class={["text-field", properties.name]}>
@@ -103,7 +102,6 @@ function TextField(properties: {
         ref={(input) => {
           // Set once, as a starting value: what the user types then belongs to the field.
           input.value = properties.value;
-          properties.ref?.(input);
         }}
       />
       <Show when={properties.isInvalid}>
@@ -142,16 +140,16 @@ export function ActivityForm(properties: {
   const [shape, setShape] = createSignal(properties.initial.shape);
   const [problems, setProblems] = createSignal<Partial<Record<ActivityFormField, string>>>({});
   const [invalid, setInvalid] = createSignal<ReadonlySet<ActivityFormField>>(new Set());
-  let form: HTMLFormElement | undefined;
-  let nameInput: HTMLInputElement | undefined;
+  // Only for the first check and the focus on open, once the form is in the page: its fields aren't
+  // inside it yet when the ref runs. The handlers get the form from their events.
+  let created: HTMLFormElement | undefined;
   let isFirstInvalid = true;
 
   /**
    * Runs the strict parsers over every field and gives each its message, or none, as its custom
    * validity, so the browser decides what's invalid and `validationMessage` is always ours.
    */
-  function validate(): void {
-    if (form === undefined) return;
+  function validate(form: HTMLFormElement): void {
     const result = readActivityForm(readInput(form));
     const found = result.isOk ? {} : result.problems;
     for (const field of FIELDS) findField(form, field)?.setCustomValidity(found[field] ?? "");
@@ -159,8 +157,7 @@ export function ActivityForm(properties: {
   }
 
   /** Marks the fields that show as invalid, so screen readers hear the error when it appears. */
-  function markInvalid(): void {
-    if (form === undefined) return;
+  function markInvalid(form: HTMLFormElement): void {
     const shown = new Set<ActivityFormField>();
     for (const field of FIELDS) {
       if (findField(form, field)?.matches(":user-invalid") === true) shown.add(field);
@@ -174,20 +171,23 @@ export function ActivityForm(properties: {
    */
   const onInvalid = (event: Event): void => {
     event.preventDefault();
-    if (!isFirstInvalid) return;
+    if (!isFirstInvalid || !(event.target instanceof HTMLInputElement)) return;
+    const { form } = event.target;
+    if (form === null) return;
     isFirstInvalid = false;
-    if (event.target instanceof HTMLInputElement) event.target.focus();
+    event.target.focus();
     // The browser sends one event per invalid field, each its own task's worth of microtasks, so
     // the next submit starts over only after all of them.
     setTimeout(() => {
       isFirstInvalid = true;
-      markInvalid();
+      markInvalid(form);
     });
   };
 
   onSettled(() => {
-    validate();
-    if (properties.isFocusedOnOpen) nameInput?.focus();
+    if (created === undefined) return;
+    validate(created);
+    if (properties.isFocusedOnOpen) findField(created, "name")?.focus();
   });
 
   return (
@@ -198,15 +198,19 @@ export function ActivityForm(properties: {
       style={{ "--activity-shape": `var(--shape-${shape()})` }}
       aria-labelledby={`${id}-title`}
       ref={(element) => {
-        form = element;
+        created = element;
         element.addEventListener("invalid", onInvalid, true);
       }}
-      onInput={() => {
-        validate();
-        markInvalid();
+      onInput={(event) => {
+        validate(event.currentTarget);
+        markInvalid(event.currentTarget);
       }}
-      onFocusIn={markInvalid}
-      onFocusOut={markInvalid}
+      onFocusIn={(event) => {
+        markInvalid(event.currentTarget);
+      }}
+      onFocusOut={(event) => {
+        markInvalid(event.currentTarget);
+      }}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || properties.onCancel === undefined) return;
         event.preventDefault();
@@ -215,8 +219,7 @@ export function ActivityForm(properties: {
       }}
       onSubmit={(event) => {
         event.preventDefault();
-        if (form === undefined) return;
-        const result = readActivityForm(readInput(form));
+        const result = readActivityForm(readInput(event.currentTarget));
         if (!result.isOk) return;
         properties.onSave({ ...result.value, hue: hue(), shape: shape() });
       }}
@@ -249,9 +252,6 @@ export function ActivityForm(properties: {
         problem={problems().name}
         isInvalid={invalid().has("name")}
         maxlength={MAX_NAME_CHARACTERS}
-        ref={(input) => {
-          nameInput = input;
-        }}
       />
       {/* The budget: how many hours, counted per week or per day on a number of days (see the
           glossary in docs/spec/glossary.md). */}
