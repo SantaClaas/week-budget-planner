@@ -77,7 +77,7 @@ function findField(form: HTMLFormElement, field: ActivityFormField): HTMLInputEl
  * An outlined text field: its label, the input, and under it the error message once the field
  * shows as invalid, which also describes it (see Activities in docs/spec/interactions.md).
  */
-function TextField(props: {
+function TextField(properties: {
   id: string;
   name: ActivityFormField;
   label: string;
@@ -89,26 +89,26 @@ function TextField(props: {
   ref?: (input: HTMLInputElement) => void;
 }): JSX.Element {
   return (
-    <div class={["text-field", props.name]}>
-      <label for={props.id}>{props.label}</label>
+    <div class={["text-field", properties.name]}>
+      <label for={properties.id}>{properties.label}</label>
       <input
-        id={props.id}
-        name={props.name}
+        id={properties.id}
+        name={properties.name}
         required
         autocomplete="off"
-        inputmode={props.inputmode}
-        maxlength={props.maxlength}
-        aria-invalid={props.isInvalid ? "true" : undefined}
-        aria-describedby={props.isInvalid ? `${props.id}-problem` : undefined}
+        inputmode={properties.inputmode}
+        maxlength={properties.maxlength}
+        aria-invalid={properties.isInvalid ? "true" : undefined}
+        aria-describedby={properties.isInvalid ? `${properties.id}-problem` : undefined}
         ref={(input) => {
           // Set once, as a starting value: what the user types then belongs to the field.
-          input.value = props.value;
-          props.ref?.(input);
+          input.value = properties.value;
+          properties.ref?.(input);
         }}
       />
-      <Show when={props.isInvalid}>
-        <p id={`${props.id}-problem`} class="supporting-text">
-          {props.problem}
+      <Show when={properties.isInvalid}>
+        <p id={`${properties.id}-problem`} class="supporting-text">
+          {properties.problem}
         </p>
       </Show>
     </div>
@@ -121,7 +121,7 @@ function TextField(props: {
  * validation and the strict parsers' messages: a field shows its error once the user is done with
  * it (`:user-invalid`), and the error clears as soon as the value is fixed. Escape cancels.
  */
-export function ActivityForm(props: {
+export function ActivityForm(properties: {
   /** "New activity" or "Edit Gym". */
   title: string;
   /** The heading level of the title: 3 under the pane's "Activities", 2 on the Activities page. */
@@ -138,8 +138,8 @@ export function ActivityForm(props: {
   onDelete?: () => void;
 }): JSX.Element {
   const id = createUniqueId();
-  const [hue, setHue] = createSignal(props.initial.hue);
-  const [shape, setShape] = createSignal(props.initial.shape);
+  const [hue, setHue] = createSignal(properties.initial.hue);
+  const [shape, setShape] = createSignal(properties.initial.shape);
   const [problems, setProblems] = createSignal<Partial<Record<ActivityFormField, string>>>({});
   const [invalid, setInvalid] = createSignal<ReadonlySet<ActivityFormField>>(new Set());
   let form: HTMLFormElement | undefined;
@@ -187,7 +187,7 @@ export function ActivityForm(props: {
 
   onSettled(() => {
     validate();
-    if (props.isFocusedOnOpen) nameInput?.focus();
+    if (properties.isFocusedOnOpen) nameInput?.focus();
   });
 
   return (
@@ -208,44 +208,44 @@ export function ActivityForm(props: {
       onFocusIn={markInvalid}
       onFocusOut={markInvalid}
       onKeyDown={(event) => {
-        if (event.key !== "Escape" || props.onCancel === undefined) return;
+        if (event.key !== "Escape" || properties.onCancel === undefined) return;
         event.preventDefault();
         event.stopPropagation();
-        props.onCancel();
+        properties.onCancel();
       }}
       onSubmit={(event) => {
         event.preventDefault();
         if (form === undefined) return;
         const result = readActivityForm(readInput(form));
         if (!result.isOk) return;
-        props.onSave({ ...result.value, hue: hue(), shape: shape() });
+        properties.onSave({ ...result.value, hue: hue(), shape: shape() });
       }}
     >
       {/* The title and what's placed, read as one heading with its subtitle. */}
       <hgroup>
         <Show
-          when={props.level === 3}
+          when={properties.level === 3}
           fallback={
             <h2 id={`${id}-title`} class="title-medium emphasized">
               <span class="emblem" aria-hidden="true" />
-              {props.title}
+              {properties.title}
             </h2>
           }
         >
           <h3 id={`${id}-title`} class="title-medium emphasized">
             <span class="emblem" aria-hidden="true" />
-            {props.title}
+            {properties.title}
           </h3>
         </Show>
-        <Show when={props.placed}>
-          <p class="label-medium muted">{props.placed}</p>
+        <Show when={properties.placed}>
+          <p class="label-medium muted">{properties.placed}</p>
         </Show>
       </hgroup>
       <TextField
         id={`${id}-name`}
         name="name"
         label="Name"
-        value={props.initial.name}
+        value={properties.initial.name}
         problem={problems().name}
         isInvalid={invalid().has("name")}
         maxlength={MAX_NAME_CHARACTERS}
@@ -261,7 +261,7 @@ export function ActivityForm(props: {
           id={`${id}-hours`}
           name="hours"
           label="Hours"
-          value={props.initial.hours}
+          value={properties.initial.hours}
           problem={problems().hours}
           isInvalid={invalid().has("hours")}
           inputmode="decimal"
@@ -273,7 +273,7 @@ export function ActivityForm(props: {
               type="radio"
               name="mode"
               value="week"
-              ref={checkOnce(props.initial.mode === "week")}
+              ref={checkOnce(properties.initial.mode === "week")}
             />
             per week
           </label>
@@ -282,7 +282,7 @@ export function ActivityForm(props: {
               type="radio"
               name="mode"
               value="day"
-              ref={checkOnce(props.initial.mode === "day")}
+              ref={checkOnce(properties.initial.mode === "day")}
             />
             per day
           </label>
@@ -291,7 +291,7 @@ export function ActivityForm(props: {
           id={`${id}-days`}
           name="days"
           label="Days"
-          value={props.initial.days}
+          value={properties.initial.days}
           problem={problems().days}
           isInvalid={invalid().has("days")}
           inputmode="numeric"
@@ -314,7 +314,7 @@ export function ActivityForm(props: {
                 type="radio"
                 name="color"
                 value={color.key}
-                ref={checkOnce(color.hue === props.initial.hue)}
+                ref={checkOnce(color.hue === properties.initial.hue)}
               />
               <span class="visually-hidden">{color.name}</span>
             </label>
@@ -337,14 +337,14 @@ export function ActivityForm(props: {
                 type="radio"
                 name="shape"
                 value={option}
-                ref={checkOnce(option === props.initial.shape)}
+                ref={checkOnce(option === properties.initial.shape)}
               />
               <span class="visually-hidden">{nameShape(option)}</span>
             </label>
           )}
         </For>
       </fieldset>
-      <Show when={props.onDelete}>
+      <Show when={properties.onDelete}>
         {(onDelete) => (
           <button
             type="button"
@@ -356,7 +356,7 @@ export function ActivityForm(props: {
           </button>
         )}
       </Show>
-      <Show when={props.onCancel}>
+      <Show when={properties.onCancel}>
         {(onCancel) => (
           <button type="button" class="button cancel" onClick={onCancel()}>
             Cancel
@@ -364,7 +364,7 @@ export function ActivityForm(props: {
         )}
       </Show>
       <button type="submit" class="button" data-variant="filled">
-        {props.submitLabel}
+        {properties.submitLabel}
       </button>
     </form>
   );

@@ -11,7 +11,7 @@ import { Destinations } from "./Destinations.tsx";
  * "New activity" button: only its icon while the rail is collapsed, extended with its label when
  * it's expanded.
  */
-export function NavigationRail(props: {
+export function NavigationRail(properties: {
   current: Page;
   base: string;
   onNewActivity(): void;
@@ -38,13 +38,13 @@ export function NavigationRail(props: {
         data-icon-only={!isExpanded()}
         title={isExpanded() ? undefined : "New activity"}
         onClick={() => {
-          props.onNewActivity();
+          properties.onNewActivity();
         }}
       >
         <Icon name="add" />
         <span class={{ "visually-hidden": !isExpanded() }}>New activity</span>
       </button>
-      <Destinations current={props.current} base={props.base} />
+      <Destinations current={properties.current} base={properties.base} />
     </nav>
   );
 }

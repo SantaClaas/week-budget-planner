@@ -10,7 +10,7 @@ import type { Planner } from "../planner/index.ts";
  * save status, which leads to Settings › Your data, and Undo. Without a planner yet, while the plan
  * opens, it shows only the name and a disabled Undo.
  */
-export function TopAppBar(props: {
+export function TopAppBar(properties: {
   title: string;
   base: string;
   planner: Planner | undefined;
@@ -19,14 +19,14 @@ export function TopAppBar(props: {
 }): JSX.Element {
   return (
     <header class="top-app-bar">
-      <h1 class="title-large grow" tabindex="-1" ref={props.headingRef}>
-        {props.title}
+      <h1 class="title-large grow" tabindex="-1" ref={properties.headingRef}>
+        {properties.title}
       </h1>
       {/* Not keyed, so a focused link stays focused while its text changes. */}
-      <Show when={props.planner}>
+      <Show when={properties.planner}>
         {(planner) => (
           <a
-            href={createPath("settings", props.base, "your-data")}
+            href={createPath("settings", properties.base, "your-data")}
             class="save-status button body-small"
             data-size="extra-small"
             data-variant={planner().saveStatus().variant}
@@ -40,9 +40,9 @@ export function TopAppBar(props: {
       <button
         type="button"
         class="icon-button"
-        disabled={props.planner?.canUndo() !== true}
+        disabled={properties.planner?.canUndo() !== true}
         onClick={() => {
-          props.planner?.undo();
+          properties.planner?.undo();
         }}
       >
         <Icon name="undo" />

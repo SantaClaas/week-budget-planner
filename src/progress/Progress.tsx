@@ -8,9 +8,9 @@ import { splitProgress } from "../plan/budget.ts";
  * past the budget (see "Progress over budget" in docs/spec/design.md). It only draws what the text
  * beside it already says, so it's hidden from screen readers.
  */
-export function Progress(props: { budget: number; placed: number }): JSX.Element {
+export function Progress(properties: { budget: number; placed: number }): JSX.Element {
   // Worked out once per change of the budget or what's placed, however often it's read below.
-  const split = createMemo(() => splitProgress(props.budget, props.placed));
+  const split = createMemo(() => splitProgress(properties.budget, properties.placed));
   // Two comparisons on the memo's numbers, too little to be worth a memo of its own.
   const state = () => {
     const { withinBudget, overBudget } = split();

@@ -15,17 +15,17 @@ const ICONS = {
  * The links to the destinations, the same in the rail and the bar; the one shown has the filled
  * icon. On the not-found page none of them is current.
  */
-export function Destinations(props: { current: Page; base: string }): JSX.Element {
+export function Destinations(properties: { current: Page; base: string }): JSX.Element {
   return (
     <For each={DESTINATIONS}>
       {(page) => (
         <a
-          href={createPath(page, props.base)}
+          href={createPath(page, properties.base)}
           class="navigation-item"
-          aria-current={props.current === page ? "page" : undefined}
+          aria-current={properties.current === page ? "page" : undefined}
         >
           <span class="active-indicator">
-            <Icon name={props.current === page ? `${ICONS[page]}-fill` : ICONS[page]} />
+            <Icon name={properties.current === page ? `${ICONS[page]}-fill` : ICONS[page]} />
           </span>
           {NAMES[page]}
         </a>
