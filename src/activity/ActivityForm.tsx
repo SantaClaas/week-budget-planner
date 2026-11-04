@@ -34,6 +34,10 @@ export type SavedActivity = {
 
 const FIELDS: readonly ActivityFormField[] = ["name", "hours", "days"];
 
+/** The value of the radio input a picker's change came from. */
+const readPicked = (event: Event): string | undefined =>
+  event.target instanceof HTMLInputElement ? event.target.value : undefined;
+
 /** A shape's name as a person reads it: "clover 8", "puffy diamond". */
 const nameShape = (shape: Shape): string => shape.replaceAll("-", " ");
 
@@ -293,7 +297,14 @@ export function ActivityForm(props: {
           inputmode="numeric"
         />
       </fieldset>
-      <fieldset class="picker">
+      {/* The radio input that changes passes its change up, so the group listens once. */}
+      <fieldset
+        class="picker"
+        onChange={(event) => {
+          const picked = PALETTE.find((color) => color.key === readPicked(event));
+          if (picked !== undefined) setHue(picked.hue);
+        }}
+      >
         <legend class="label-large muted">Color</legend>
         <For each={PALETTE}>
           {(color) => (
@@ -304,16 +315,19 @@ export function ActivityForm(props: {
                 name="color"
                 value={color.key}
                 ref={checkOnce(color.hue === props.initial.hue)}
-                onChange={() => {
-                  setHue(color.hue);
-                }}
               />
               <span class="visually-hidden">{color.name}</span>
             </label>
           )}
         </For>
       </fieldset>
-      <fieldset class="picker">
+      <fieldset
+        class="picker"
+        onChange={(event) => {
+          const picked = SHAPES.find((option) => option === readPicked(event));
+          if (picked !== undefined) setShape(picked);
+        }}
+      >
         <legend class="label-large muted">Shape</legend>
         <For each={SHAPES}>
           {(option) => (
@@ -324,9 +338,6 @@ export function ActivityForm(props: {
                 name="shape"
                 value={option}
                 ref={checkOnce(option === props.initial.shape)}
-                onChange={() => {
-                  setShape(option);
-                }}
               />
               <span class="visually-hidden">{nameShape(option)}</span>
             </label>
@@ -339,9 +350,7 @@ export function ActivityForm(props: {
             type="button"
             class={["button", "delete"]}
             data-variant="text-danger"
-            onClick={() => {
-              onDelete()();
-            }}
+            onClick={onDelete()}
           >
             Delete
           </button>
@@ -349,13 +358,7 @@ export function ActivityForm(props: {
       </Show>
       <Show when={props.onCancel}>
         {(onCancel) => (
-          <button
-            type="button"
-            class={["button", "cancel"]}
-            onClick={() => {
-              onCancel()();
-            }}
-          >
+          <button type="button" class={["button", "cancel"]} onClick={onCancel()}>
             Cancel
           </button>
         )}
