@@ -11,21 +11,21 @@ type Editing = { type: "new" } | { type: "edit"; id: ActivityId } | undefined;
 
 // The rail's "New activity" button opens the form in the Activities list, which is elsewhere in
 // the page, so this is app-wide state: a global, as Solid's cheatsheet advises.
-const [editing, setEditing] = createSignal<Editing>();
+const [current, setCurrent] = createSignal<Editing>();
 
-export { editing };
+export { current };
 
 /** Opens the new-activity form at the top of the list. */
 export function openNew(): void {
-  setEditing({ type: "new" });
+  setCurrent({ type: "new" });
 }
 
 /** Opens the form of the activity `id` in its place in the list. */
 export function openEdit(id: ActivityId): void {
-  setEditing({ type: "edit", id });
+  setCurrent({ type: "edit", id });
 }
 
 /** Closes whichever form is open. */
 export function close(): void {
-  setEditing(undefined);
+  setCurrent(undefined);
 }

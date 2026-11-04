@@ -241,7 +241,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
         planner={properties.planner}
         level={properties.level}
         isClosable={false}
-        isFocusedOnOpen={editing.editing()?.type === "new"}
+        isFocusedOnOpen={editing.current()?.type === "new"}
       />
       <p class="divider body-small muted">or</p>
       <button
@@ -264,7 +264,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
 
 /** The activity whose form is open in its row, if any. */
 function findEditedId(): ActivityId | undefined {
-  const open = editing.editing();
+  const open = editing.current();
   return open?.type === "edit" ? open.id : undefined;
 }
 
@@ -311,7 +311,7 @@ export function Activities(properties: {
             <p class="label-medium muted">{overview().leftToPlace}</p>
           </header>
         </Show>
-        <Show when={editing.editing()?.type === "new"}>
+        <Show when={editing.current()?.type === "new"}>
           <NewActivity
             plan={properties.plan}
             planner={properties.planner}
