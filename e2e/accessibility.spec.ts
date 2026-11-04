@@ -108,15 +108,28 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
-test("reflows at 320 CSS px without scrolling sideways (WCAG 1.4.10)", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  await openApp(page);
-  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-  }));
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-});
+// At 200% the text stands for the user's text size setting, which the app never sets itself (see
+// Text size and zoom in docs/spec/design.md). The rem sizes follow it, as they follow the setting.
+for (const textSize of ["100%", "200%"]) {
+  test(`reflows at 320 CSS px without scrolling sideways, text at ${textSize} (WCAG 1.4.10, 1.4.4)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    const paths = ["", "activities", "settings"];
+    // each page and how far it scrolls sideways, so a failure says where to look
+    const scrolls: string[] = [];
+    for (const path of paths) {
+      await page.goto(`${ISOLATED_URL}${path}`);
+      await expectStatus(page, "full");
+      const sideways = await page.evaluate((size) => {
+        document.documentElement.style.fontSize = size;
+        return document.documentElement.scrollWidth - document.documentElement.clientWidth;
+      }, textSize);
+      scrolls.push(`/${path} scrolls ${sideways.toString()}px sideways`);
+    }
+    expect(scrolls).toEqual(paths.map((path) => `/${path} scrolls 0px sideways`));
+  });
+}
 
 test("keeps all text with the WCAG text spacing (WCAG 1.4.12)", async ({ page }) => {
   await openApp(page);

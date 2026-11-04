@@ -735,16 +735,38 @@
   }
 
   /* small app bar (androidx AppBarSmallTokens, AppBar.kt): 64dp tall, the headline 16dp from the leading edge,
-     4dp after the last icon button, no space between icon buttons */
+     4dp after the last icon button, no space between icon buttons. When large text leaves no room
+     for one row (WCAG 1.4.10 Reflow), the trailing items wrap below the headline, at the end. */
   .top-app-bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     min-height: 4rem;
     padding-block: 0.5rem;
     padding-inline: 1rem 0.25rem;
+    /* Starts at its longest word and takes the rest of the row, so it wraps between words but never
+       inside one, and the row wraps before it would. */
     & .grow {
-      flex: 1;
-      min-width: 0;
+      flex: 1 1 0;
+      min-inline-size: min-content;
+    }
+    /* The trailing items sit at the end of whichever row they land on. */
+    & .grow + * {
+      margin-inline-start: auto;
+    }
+    /* The save status counts at its narrowest when the row is laid out, so its text wraps before
+       anything has to move to another row, and then takes the room left up to its natural width,
+       ahead of the headline. Undo stays on its row: the save status reserves Undo's room in its end
+       margin, and Undo moves back into it, so a row with room for the one has room for both. A
+       wrapper around the two would only be there for the layout. */
+    & .save-status {
+      flex: 1000 1 min-content;
+      max-inline-size: max-content;
+      text-align: start;
+      margin-inline-end: 3rem;
+      & + .icon-button {
+        margin-inline-start: -2.5rem;
+      }
     }
   }
 
@@ -769,10 +791,18 @@
     line-height: calc(16 / 12);
     font-weight: 500;
     letter-spacing: 0.0312rem;
+    /* When large text leaves an item narrower than its one-word label (WCAG 1.4.10 Reflow), the
+       label hyphenates instead of running into the next one, or, without a hyphenation dictionary,
+       wraps anywhere. */
+    hyphens: auto;
+    overflow-wrap: anywhere;
+    text-align: center;
     & .active-indicator {
       display: grid;
       place-items: center;
       width: 3.5rem;
+      /* and the indicator narrows with the item */
+      max-inline-size: 100%;
       height: 2rem;
       border-radius: var(--corner-full);
     }
@@ -1538,7 +1568,6 @@
     color: var(--on-surface-variant);
     font-weight: 400;
     text-decoration: none;
-    margin-inline-end: 0.5rem;
     &[data-variant="saved"] .icon {
       color: var(--success);
     }
