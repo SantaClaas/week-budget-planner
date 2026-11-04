@@ -987,24 +987,38 @@
 
   /* activity form (new activity and editing one): the title with the activity's emblem and what's
      placed, the name, the budget (hours, counted, and days only per day) in a run that wraps, the
-     color and shape pickers and the actions. The form carries data-color and --activity-shape for
+     color and shape pickers, and the buttons: Delete at the start, Cancel and the submit button
+     at the end, each in a column of the form's own grid. The form carries data-color and --activity-shape for
      what's picked, so the emblem in the title and the pickers follow the choice. Where the list
      has room (40rem and up, as on the Activities page), the name and the budget share a line.
      <form class="activity-form" data-color="teal" style="--activity-shape: var(--shape-clover-8)">
      <hgroup><h3><span class="emblem" aria-hidden="true"></span>…</h3><p>…</p></hgroup>
      <div class="text-field name">…</div><fieldset class="budget">…</fieldset>
-     <fieldset class="picker">…</fieldset><div class="actions">…</div></form> */
+     <fieldset class="picker">…</fieldset><button class="button delete">…</button>
+     <button class="button cancel">…</button><button type="submit" class="button">…</button></form> */
   .activity-form {
     --text-field-background: var(--card);
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    /* The last two columns are as wide as Cancel and the submit button. */
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: start;
     gap: 1.25rem 0.75rem;
     padding: 1.25rem;
     border-radius: var(--corner-extra-large);
     background: var(--card);
-    & > :not(.name, .budget) {
+    & > :not(.button) {
       grid-column: 1 / -1;
+    }
+    & > .delete {
+      grid-column: 1;
+      justify-self: start;
+    }
+    /* Counted from the end, so they keep the last two columns when the form has another. */
+    & > .cancel {
+      grid-column: -3 / -2;
+    }
+    & > [type="submit"] {
+      grid-column: -2 / -1;
     }
     & > hgroup {
       display: flex;
@@ -1043,22 +1057,29 @@
     & > .picker > legend {
       margin-block-end: 0.5rem;
     }
-    & > .actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 0.5rem;
-      & > [data-variant="text-danger"] {
-        margin-inline-end: auto;
-      }
-    }
     @media (forced-colors: active) {
       border: 1px solid CanvasText;
     }
   }
+  /* Where the three buttons don't fit on one line, as on a narrow phone with large text, each
+     takes a line of its own, as wide as the form. */
+  @container activities (width < 18rem) {
+    .activity-form > :is(.delete, .cancel, [type="submit"]) {
+      grid-column: 1 / -1;
+      justify-self: stretch;
+    }
+  }
+  /* With room, the name and the budget share a line: the budget gets a column of its own and the
+     buttons' columns, so those stay as wide as the buttons. */
   @container activities (width >= 40rem) {
     .activity-form {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto auto;
+      & > .name {
+        grid-column: 1;
+      }
+      & > .budget {
+        grid-column: 2 / -1;
+      }
     }
   }
 

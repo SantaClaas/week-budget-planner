@@ -333,38 +333,36 @@ export function ActivityForm(props: {
           )}
         </For>
       </fieldset>
-      <div class="actions">
-        <Show when={props.onDelete}>
-          {(onDelete) => (
-            <button
-              type="button"
-              class="button"
-              data-variant="text-danger"
-              onClick={() => {
-                onDelete()();
-              }}
-            >
-              Delete
-            </button>
-          )}
-        </Show>
-        <Show when={props.onCancel}>
-          {(onCancel) => (
-            <button
-              type="button"
-              class="button"
-              onClick={() => {
-                onCancel()();
-              }}
-            >
-              Cancel
-            </button>
-          )}
-        </Show>
-        <button type="submit" class="button" data-variant="filled">
-          {props.submitLabel}
-        </button>
-      </div>
+      <Show when={props.onDelete}>
+        {(onDelete) => (
+          <button
+            type="button"
+            class={["button", "delete"]}
+            data-variant="text-danger"
+            onClick={() => {
+              onDelete()();
+            }}
+          >
+            Delete
+          </button>
+        )}
+      </Show>
+      <Show when={props.onCancel}>
+        {(onCancel) => (
+          <button
+            type="button"
+            class={["button", "cancel"]}
+            onClick={() => {
+              onCancel()();
+            }}
+          >
+            Cancel
+          </button>
+        )}
+      </Show>
+      <button type="submit" class="button" data-variant="filled">
+        {props.submitLabel}
+      </button>
     </form>
   );
 }
