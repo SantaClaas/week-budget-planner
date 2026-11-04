@@ -88,13 +88,15 @@
   /* The Activities list with what's around it: the example-week note, the heading or overview, the
      forms and the list, or the empty state. */
   .activities {
+    /* The activity form lays out its fields by the room the list has. */
+    container: activities / inline-size;
     display: grid;
     align-content: start;
     gap: 0.75rem;
-    & > :is(.heading, .overview, .intro) {
+    & > :is(header, .overview, .intro) {
       padding-inline: 0.5rem;
     }
-    & > .heading {
+    & > header {
       display: flex;
       flex-wrap: wrap;
       align-items: baseline;

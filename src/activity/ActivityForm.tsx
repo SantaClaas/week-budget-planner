@@ -217,37 +217,42 @@ export function ActivityForm(props: {
         props.onSave({ ...result.value, hue: hue(), shape: shape() });
       }}
     >
-      <div class="heading">
-        <span class="emblem" aria-hidden="true" />
+      {/* The title and what's placed, read as one heading with its subtitle. */}
+      <hgroup>
         <Show
           when={props.level === 3}
           fallback={
             <h2 id={`${id}-title`} class="title-medium emphasized">
+              <span class="emblem" aria-hidden="true" />
               {props.title}
             </h2>
           }
         >
           <h3 id={`${id}-title`} class="title-medium emphasized">
+            <span class="emblem" aria-hidden="true" />
             {props.title}
           </h3>
         </Show>
         <Show when={props.placed}>
-          <span class="label-medium muted">{props.placed}</span>
+          <p class="label-medium muted">{props.placed}</p>
         </Show>
-      </div>
-      <div class="fields">
-        <TextField
-          id={`${id}-name`}
-          name="name"
-          label="Name"
-          value={props.initial.name}
-          problem={problems().name}
-          isInvalid={invalid().has("name")}
-          maxlength={MAX_NAME_CHARACTERS}
-          ref={(input) => {
-            nameInput = input;
-          }}
-        />
+      </hgroup>
+      <TextField
+        id={`${id}-name`}
+        name="name"
+        label="Name"
+        value={props.initial.name}
+        problem={problems().name}
+        isInvalid={invalid().has("name")}
+        maxlength={MAX_NAME_CHARACTERS}
+        ref={(input) => {
+          nameInput = input;
+        }}
+      />
+      {/* The budget: how many hours, counted per week or per day on a number of days (see the
+          glossary in docs/spec/glossary.md). */}
+      <fieldset class="budget">
+        <legend class="visually-hidden">Budget</legend>
         <TextField
           id={`${id}-hours`}
           name="hours"
@@ -287,7 +292,7 @@ export function ActivityForm(props: {
           isInvalid={invalid().has("days")}
           inputmode="numeric"
         />
-      </div>
+      </fieldset>
       <fieldset class="picker">
         <legend class="label-large muted">Color</legend>
         <For each={PALETTE}>

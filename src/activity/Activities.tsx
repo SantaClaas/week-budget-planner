@@ -68,7 +68,7 @@ function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
       <p class="body-medium" id="example-week-note">
         <strong>This is an example week.</strong> Change it, or start with an empty one.
       </p>
-      <div class="actions">
+      <footer>
         <button
           type="button"
           class="button"
@@ -96,7 +96,7 @@ function ExampleWeekCard(props: { planner: Planner }): JSX.Element {
         >
           Start empty
         </button>
-      </div>
+      </footer>
     </section>
   );
 }
@@ -297,12 +297,12 @@ export function Activities(props: { plan: Plan; planner: Planner; place: Place }
             </p>
           }
         >
-          <div class="heading">
+          <header>
             <h2 id="activities-title" class="title-medium emphasized">
               Activities
             </h2>
-            <span class="label-medium muted">{overview().leftToPlace}</span>
-          </div>
+            <p class="label-medium muted">{overview().leftToPlace}</p>
+          </header>
         </Show>
         <Show when={editing.editing()?.type === "new"}>
           <NewActivity

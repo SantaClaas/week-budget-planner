@@ -985,37 +985,44 @@
     background: transparent;
   }
 
-  /* activity form (new activity and editing one): the heading with the activity's shape, the fields
-     in a run that wraps (name, hours, counted, and days only per day), the color and shape pickers and
-     the actions. The form carries data-color and --activity-shape for what's picked, so the heading's
-     shape and the pickers follow the choice.
+  /* activity form (new activity and editing one): the title with the activity's emblem and what's
+     placed, the name, the budget (hours, counted, and days only per day) in a run that wraps, the
+     color and shape pickers and the actions. The form carries data-color and --activity-shape for
+     what's picked, so the emblem in the title and the pickers follow the choice. Where the list
+     has room (40rem and up, as on the Activities page), the name and the budget share a line.
      <form class="activity-form" data-color="teal" style="--activity-shape: var(--shape-clover-8)">
-     <div class="heading"><span class="emblem" aria-hidden="true"></span><h3>…</h3></div><div class="fields">…</div>
+     <hgroup><h3><span class="emblem" aria-hidden="true"></span>…</h3><p>…</p></hgroup>
+     <div class="text-field name">…</div><fieldset class="budget">…</fieldset>
      <fieldset class="picker">…</fieldset><div class="actions">…</div></form> */
   .activity-form {
     --text-field-background: var(--card);
     display: grid;
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem 0.75rem;
     padding: 1.25rem;
     border-radius: var(--corner-extra-large);
     background: var(--card);
-    & > .heading {
+    & > :not(.name, .budget) {
+      grid-column: 1 / -1;
+    }
+    & > hgroup {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 0.875rem;
+      justify-content: space-between;
+      gap: 0.25rem 0.875rem;
       & > :is(h2, h3) {
-        flex: 1;
-        min-inline-size: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
       }
     }
-    & > .fields {
+    & > .budget {
       display: flex;
       flex-wrap: wrap;
       align-items: start;
       gap: 0.75rem;
-      & > .name {
-        flex: 1 1 14rem;
-      }
       & > .hours {
         flex: 0 1 7rem;
       }
@@ -1049,6 +1056,11 @@
       border: 1px solid CanvasText;
     }
   }
+  @container activities (width >= 40rem) {
+    .activity-form {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    }
+  }
 
   /* example-week note: a tertiary card with an icon, its text, and Keep these and Start empty */
   .example-week-card {
@@ -1060,7 +1072,7 @@
     border-radius: var(--corner-extra-large);
     background: var(--tertiary-container);
     color: var(--on-tertiary-container);
-    & > .actions {
+    & > footer {
       grid-column: 1 / -1;
       display: flex;
       flex-wrap: wrap;
