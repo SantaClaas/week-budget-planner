@@ -31,6 +31,24 @@ describe("activity list", () => {
     expect(changed.blocks).toBe(plan.blocks);
   });
 
+  it("compares every field of an activity", () => {
+    // update() compares these by name. If Activity gains a field, add it there, then here.
+    expect(Object.keys(work).toSorted()).toEqual(
+      ["budgetMinutes", "days", "hue", "id", "mode", "name", "shape"].toSorted(),
+    );
+    for (const changes of [
+      { name: createActivity({ name: "Office" }).name },
+      { hue: 255 as const },
+      { shape: "heart" as const },
+      { mode: "day" as const },
+      { budgetMinutes: createActivity({ budgetMinutes: 600 }).budgetMinutes },
+      { days: createActivity({ days: 3 }).days },
+    ]) {
+      const { id: _, ...rest } = work;
+      expect(list.update(plan, work.id, { ...rest, ...changes })).not.toBe(plan);
+    }
+  });
+
   it("gives back the same plan when nothing changes", () => {
     const { id: _, ...unchanged } = gym;
     expect(list.update(plan, gym.id, unchanged)).toBe(plan);

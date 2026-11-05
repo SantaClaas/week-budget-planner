@@ -126,16 +126,34 @@ test("starts empty, loads the example week again, and keeps it", async ({ page }
   await expect(page.locator(".snackbar")).toContainText("Example week removed.");
   // With nothing in the list, the form for a new activity is the next thing to do.
   await expect(page.getByRole("form", { name: "New activity" }).getByLabel("Name")).toBeFocused();
+  // The pane keeps its name and heading, and the form's heading comes under it, a level down.
+  const pane = page.getByRole("region", { name: "Activities" });
+  await expect(pane.getByRole("heading", { level: 2, name: "Activities" })).toBeVisible();
+  await expect(pane.getByRole("heading", { level: 3, name: "New activity" })).toBeVisible();
 
   await page.getByRole("button", { name: "Load an example week" }).click();
   await expectStatus(page, "full");
   await expect(page.getByRole("button", { name: "Keep these" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByText("This is an example week.")).toBeHidden();
+  // The note goes with the focused button, so focus moves to the list's heading.
+  await expect(pane.getByRole("heading", { name: "Activities" })).toBeFocused();
 
   await page.reload();
   await expectStatus(page, "full");
   await expect(page.getByText("This is an example week.")).toBeHidden();
+});
+
+test("saves per week after the days were cleared per day", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: "Edit Gym" }).click();
+  const form = page.getByRole("form", { name: "Edit Gym" });
+  await form.getByLabel("Days").fill("");
+  await form.getByRole("radio", { name: "per week" }).check();
+  // The days don't count per week, so their empty field doesn't stop the save.
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(form).toBeHidden();
+  await expect(page.getByText("1 hr, 30 min per week")).toBeVisible();
 });
 
 test("opens the form on the Activities page from another page", async ({ page }) => {

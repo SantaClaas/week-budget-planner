@@ -1,33 +1,22 @@
 import type { JSX } from "@solidjs/web";
 import { createSignal, createUniqueId, For, onSettled, Show } from "solid-js";
 
-import type { Mode } from "../plan/activity/index.ts";
+import type { Activity, Mode } from "../plan/activity/index.ts";
 import {
   readActivityForm,
   type ActivityFormField,
   type ActivityFormInput,
 } from "../plan/activity/form.ts";
 import { findColor, PALETTE, SHAPES, type Hue, type Shape } from "../plan/activity/look.ts";
-import { MAX_NAME_CHARACTERS, type ActivityName } from "../plan/activity/name.ts";
-import type { BudgetMinutes, DayCount } from "../plan/time.ts";
+import { MAX_NAME_CHARACTERS } from "../plan/activity/name.ts";
 
 /** What the form starts with: the activity being edited, or a new one's defaults. */
-export type ActivityFormValues = {
+type ActivityFormValues = {
   name: string;
   /** As the hours field shows it (see `formatHours`). */
   hours: string;
   mode: Mode;
   days: string;
-  hue: Hue;
-  shape: Shape;
-};
-
-/** What a valid form gives back, ready to become an activity. */
-export type SavedActivity = {
-  name: ActivityName;
-  budgetMinutes: BudgetMinutes;
-  mode: Mode;
-  days: DayCount;
   hue: Hue;
   shape: Shape;
 };
@@ -54,6 +43,18 @@ function readInput(form: HTMLFormElement): ActivityFormInput {
     mode: read("mode") === "day" ? "day" : "week",
     days: read("days"),
   };
+}
+
+/**
+ * The color and shape the pickers hold. Undefined only if a picker has none checked, which the
+ * form never allows, since each starts with one.
+ */
+function readLook(form: HTMLFormElement): Pick<Activity, "hue" | "shape"> | undefined {
+  const data = new FormData(form);
+  const color = PALETTE.find((option) => option.key === data.get("color"));
+  const shape = SHAPES.find((option) => option === data.get("shape"));
+  if (color === undefined || shape === undefined) return undefined;
+  return { hue: color.hue, shape };
 }
 
 /**
@@ -130,7 +131,7 @@ export function ActivityForm(properties: {
   submitLabel: string;
   /** Takes focus to the name when the form opens, for a form the user opened. */
   isFocusedOnOpen: boolean;
-  onSave(activity: SavedActivity): void;
+  onSave(activity: Omit<Activity, "id">): void;
   /** Without it, the form can't be closed, as in the empty state. */
   onCancel?: () => void;
   onDelete?: () => void;
@@ -150,6 +151,11 @@ export function ActivityForm(properties: {
    * validity, so the browser decides what's invalid and `validationMessage` is always ours.
    */
   function validate(form: HTMLFormElement): void {
+    // Days count only per day. Per week the field is hidden, and disabled too, which keeps it out
+    // of the browser's validation: an empty, hidden field would otherwise block the submit
+    // without a word.
+    const days = findField(form, "days");
+    if (days !== undefined) days.disabled = readInput(form).mode === "week";
     const result = readActivityForm(readInput(form));
     const found = result.isOk ? {} : result.problems;
     for (const field of FIELDS) findField(form, field)?.setCustomValidity(found[field] ?? "");
@@ -220,8 +226,10 @@ export function ActivityForm(properties: {
       onSubmit={(event) => {
         event.preventDefault();
         const result = readActivityForm(readInput(event.currentTarget));
-        if (!result.isOk) return;
-        properties.onSave({ ...result.value, hue: hue(), shape: shape() });
+        // What's saved is what the inputs hold; the hue and shape signals only draw the choice.
+        const look = readLook(event.currentTarget);
+        if (!result.isOk || look === undefined) return;
+        properties.onSave({ ...result.value, ...look });
       }}
     >
       {/* The title and what's placed, read as one heading with its subtitle. */}

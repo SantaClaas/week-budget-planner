@@ -41,9 +41,9 @@
     }
   }
 
-  /* The heading takes focus when the user moves to its page, so it's read out. It isn't a control,
-     so it shows no focus ring. */
-  h1[tabindex="-1"]:focus {
+  /* A heading takes focus when the user moves to its page, or when what had focus goes, so it's
+     read out. It isn't a control, so it shows no focus ring. */
+  :is(h1, h2)[tabindex="-1"]:focus {
     outline: none;
   }
 
@@ -130,8 +130,8 @@
     display: grid;
     align-content: start;
     gap: 1rem;
-    inline-size: 100%;
-    max-inline-size: 48rem;
+    /* At most 48rem, and no wider than the page. */
+    inline-size: min(100%, 48rem);
     margin-inline: auto;
     padding-inline: 1rem;
     padding-block-end: 1rem;

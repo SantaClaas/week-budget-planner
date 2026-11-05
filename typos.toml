@@ -6,3 +6,7 @@ extend-exclude = [
   # Integrity hashes are random letters, so sooner or later one spells a typo.
   "pnpm-lock.yaml",
 ]
+
+[default.extend-words]
+# German for "days", as Intl formats a day count in German (src/plan/format.ts and its tests).
+Tage = "Tage"

@@ -1043,7 +1043,7 @@
       & > .mode {
         flex: 1 1 12rem;
         & > label {
-          min-height: 3.5rem;
+          min-block-size: 3.5rem;
         }
       }
       & > .days {
@@ -1483,9 +1483,6 @@
       padding: 0 0.5rem;
     }
     /* A short block's line starts with its emblem. */
-    &[data-length="short"] {
-      grid-template-columns: auto minmax(0, auto) auto;
-    }
     &[data-length="short"] {
       grid-template-columns: auto minmax(0, auto) auto;
       border-radius: 0.375rem;

@@ -137,6 +137,36 @@ export const formatLengthDatetime = (minutes: number): Datetime =>
       .toString(),
   );
 
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
+function reuseNumberFormat(locale: string | undefined, options: Intl.NumberFormatOptions) {
+  const key = JSON.stringify([locale, options]);
+  let format = numberFormats.get(key);
+  if (!format) numberFormats.set(key, (format = new Intl.NumberFormat(locale, options)));
+  return format;
+}
+
+/** A number of days, as the budget line counts them: "3 days", or "3 Tage" in German. */
+export const formatDayCount = (days: number, format: Format = {}): string =>
+  reuseNumberFormat(format.locale, { style: "unit", unit: "day", unitDisplay: "long" }).format(
+    days,
+  );
+
+// The copy is English for now (see Translations in docs/spec/dates-and-language.md), so its words
+// take English plurals, whatever the language the numbers are formatted in.
+const englishPlurals = new Intl.PluralRules("en");
+
+/**
+ * A count with its English word, chosen by the plural rules: "1 block", "3 blocks". The number is
+ * formatted in the user's language.
+ */
+export const formatCount = (
+  count: number,
+  words: { one: string; other: string },
+  format: Format = {},
+): string =>
+  `${reuseNumberFormat(format.locale, {}).format(count)} ${englishPlurals.select(count) === "one" ? words.one : words.other}`;
+
 /** A day of the week, 0 for Monday: "Mon" or "Monday". */
 export function formatWeekday(
   day: number,
