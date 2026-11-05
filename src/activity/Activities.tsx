@@ -4,6 +4,7 @@ import { createMemo, createSignal, flush, For, Show } from "solid-js";
 import { announce } from "../announcement/index.ts";
 import { Icon } from "../icons/Icon.tsx";
 import { formatHours } from "../plan/activity/form.ts";
+import { formatCount } from "../plan/format.ts";
 import * as list from "../plan/activity/list.ts";
 import { findColor, pickDefaultLook } from "../plan/activity/look.ts";
 import { createExampleWeek, keepExampleWeek, startEmpty } from "../plan/example.ts";
@@ -12,7 +13,7 @@ import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
-import { ActivityForm, type SavedActivity } from "./ActivityForm.tsx";
+import { ActivityForm } from "./ActivityForm.tsx";
 import * as edit from "./edit.ts";
 import { describeOverview, listRows, type ActivityRow } from "./row.ts";
 
@@ -37,7 +38,18 @@ function focusEditButton(id: ActivityId): void {
 /** "Deleted Gym and its 3 blocks.", or "Deleted Gym." when it had none. */
 function describeRemoval(name: string, removedBlocks: number): string {
   if (removedBlocks === 0) return `Deleted ${name}.`;
-  return `Deleted ${name} and its ${String(removedBlocks)} ${removedBlocks === 1 ? "block" : "blocks"}.`;
+  return `Deleted ${name} and its ${formatCount(removedBlocks, { one: "block", other: "blocks" })}.`;
+}
+
+/** The pane's heading, which names it and takes focus once the example-week note goes. */
+const ACTIVITIES_TITLE_ID = "activities-title";
+
+/** Takes focus to the list's heading: the pane's "Activities", or else the page's own heading. */
+function focusHeading(): void {
+  flush();
+  const heading =
+    document.querySelector(`#${ACTIVITIES_TITLE_ID}`) ?? document.querySelector("main h1");
+  if (heading instanceof HTMLElement) heading.focus();
 }
 
 /** The example-week note's "Keep these", which takes focus once the example week is loaded. */
@@ -77,6 +89,9 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           aria-describedby="example-week-note"
           onClick={() => {
             properties.planner.change(keepExampleWeek);
+            // The note goes with the button, so focus moves to the list's heading: the pane's, or
+            // on the Activities page the page's own.
+            focusHeading();
           }}
         >
           Keep these
@@ -135,7 +150,12 @@ function Row(properties: { row: ActivityRow }): JSX.Element {
 }
 
 /** The form of the activity in `row`, in its place in the list: Save, Cancel and Delete. */
-function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; level: 2 | 3 }) {
+function EditRow(properties: {
+  row: ActivityRow;
+  plan: Plan;
+  planner: Planner;
+  level: 2 | 3;
+}): JSX.Element {
   const id = (): ActivityId => properties.row.activity.id;
   const close = (): void => {
     edit.close();
@@ -157,7 +177,7 @@ function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; l
         placed={properties.row.placed}
         submitLabel="Save"
         isFocusedOnOpen
-        onSave={(saved: SavedActivity) => {
+        onSave={(saved) => {
           properties.planner.change((plan) => list.update(plan, id(), saved));
           close();
         }}
@@ -165,18 +185,23 @@ function EditRow(properties: { row: ActivityRow; plan: Plan; planner: Planner; l
         onDelete={() => {
           const { name } = properties.row.activity;
           const index = properties.plan.activities.findIndex((activity) => activity.id === id());
-          const neighbour =
+          const neighbor =
             properties.plan.activities[index + 1] ?? properties.plan.activities[index - 1];
-          const { removedBlocks } = list.remove(properties.plan, id());
-          properties.planner.change((plan) => list.remove(plan, id()).plan);
+          // Counted on the plan the change applies to, so the snackbar says what was removed.
+          let removedBlocks = 0;
+          properties.planner.change((plan) => {
+            const removal = list.remove(plan, id());
+            removedBlocks = removal.removedBlocks;
+            return removal.plan;
+          });
           showWithUndo(properties.planner, describeRemoval(name, removedBlocks));
           // Focus goes to the next activity, or with none left, to the form for a new one.
-          if (neighbour === undefined) {
+          if (neighbor === undefined) {
             edit.openNew();
             return;
           }
           edit.close();
-          focusEditButton(neighbour.id);
+          focusEditButton(neighbor.id);
         }}
       />
     </li>
@@ -285,10 +310,22 @@ export function Activities(properties: {
     <section
       class="activities"
       data-place={properties.place}
-      aria-labelledby={properties.place === "pane" ? "activities-title" : undefined}
+      aria-labelledby={properties.place === "pane" ? ACTIVITIES_TITLE_ID : undefined}
     >
       <Show when={properties.plan.exampleLoadedAt !== null}>
         <ExampleWeekCard planner={properties.planner} />
+      </Show>
+      {/* The pane's heading is there with or without activities, so the forms' headings below
+          it never skip a level, and it names the pane. */}
+      <Show when={properties.place === "pane"}>
+        <header>
+          <h2 id={ACTIVITIES_TITLE_ID} class="title-medium emphasized" tabindex="-1">
+            Activities
+          </h2>
+          <Show when={properties.plan.activities.length > 0}>
+            <p class="label-medium muted">{overview().leftToPlace}</p>
+          </Show>
+        </header>
       </Show>
       <Show
         when={properties.plan.activities.length > 0}
@@ -296,20 +333,10 @@ export function Activities(properties: {
           <EmptyState plan={properties.plan} planner={properties.planner} level={level()} />
         }
       >
-        <Show
-          when={properties.place === "pane"}
-          fallback={
-            <p class="body-large muted overview">
-              <strong>{overview().leftToPlace}</strong> {overview().detail}
-            </p>
-          }
-        >
-          <header>
-            <h2 id="activities-title" class="title-medium emphasized">
-              Activities
-            </h2>
-            <p class="label-medium muted">{overview().leftToPlace}</p>
-          </header>
+        <Show when={properties.place === "page"}>
+          <p class="body-large muted overview">
+            <strong>{overview().leftToPlace}</strong> {overview().detail}
+          </p>
         </Show>
         <Show when={edit.current()?.type === "new"}>
           <NewActivity

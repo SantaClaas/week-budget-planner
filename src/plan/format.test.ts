@@ -5,6 +5,8 @@ import {
   formatClockDatetime,
   formatClockRange,
   formatClockRangeToParts,
+  formatCount,
+  formatDayCount,
   formatLength,
   formatLengthDatetime,
   formatWeekday,
@@ -69,5 +71,17 @@ describe("format", () => {
     expect(formatClockDatetime(1500)).toBe("01:00");
     expect(formatLengthDatetime(90)).toBe("PT1H30M");
     expect(formatLengthDatetime(1440)).toBe("PT24H");
+  });
+
+  it("counts days and things with Intl's plural rules", () => {
+    expect(formatDayCount(1, { locale: "en" })).toBe("1 day");
+    expect(formatDayCount(3, { locale: "en" })).toBe("3 days");
+    expect(formatDayCount(3, { locale: "de" })).toBe("3 Tage");
+    const blocks = { one: "block", other: "blocks" };
+    expect(formatCount(0, blocks, { locale: "en" })).toBe("0 blocks");
+    expect(formatCount(1, blocks, { locale: "en" })).toBe("1 block");
+    expect(formatCount(2, blocks, { locale: "en" })).toBe("2 blocks");
+    // The words stay English, the number follows the language.
+    expect(formatCount(1200, blocks, { locale: "de" })).toBe("1.200 blocks");
   });
 });

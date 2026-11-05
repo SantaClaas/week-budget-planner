@@ -5,7 +5,7 @@
  */
 import type { Activity } from "../plan/activity/index.ts";
 import { calculateWeeklyBudget, summarize, sumPlacedByActivity } from "../plan/budget.ts";
-import { formatLength, type Format } from "../plan/format.ts";
+import { formatCount, formatDayCount, formatLength, type Format } from "../plan/format.ts";
 import type { Plan } from "../plan/index.ts";
 
 /** Whether an activity has some left to place, is all placed, or has more placed than its budget. */
@@ -32,7 +32,7 @@ export type ActivityRow = {
 function describeBudget(activity: Activity, format: Format): string {
   const length = formatLength(activity.budgetMinutes, "short", format);
   if (activity.mode === "week") return `${length} per week`;
-  return `${length} per day, ${String(activity.days)} ${activity.days === 1 ? "day" : "days"}`;
+  return `${length} per day, ${formatDayCount(activity.days, format)}`;
 }
 
 function drawRow(activity: Activity, placed: number, format: Format): ActivityRow {
@@ -74,11 +74,12 @@ export function describeOverview(
 ): { leftToPlace: string; detail: string } {
   const { leftToPlace } = summarize(plan);
   const placed = sumPlacedByActivity(plan.blocks);
-  const overBudget = plan.activities.filter(
-    (activity) => (placed.get(activity.id) ?? 0) > calculateWeeklyBudget(activity),
-  ).length;
+  let overBudget = 0;
+  for (const activity of plan.activities) {
+    if ((placed.get(activity.id) ?? 0) > calculateWeeklyBudget(activity)) overBudget += 1;
+  }
   const count = plan.activities.length;
-  const activities = `${String(count)} ${count === 1 ? "activity" : "activities"}`;
+  const activities = formatCount(count, { one: "activity", other: "activities" }, format);
   return {
     leftToPlace:
       leftToPlace > 0

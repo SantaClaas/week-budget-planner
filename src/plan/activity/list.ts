@@ -17,6 +17,8 @@ export const add = (plan: Plan, activity: Activity): Plan => ({
 export function update(plan: Plan, id: ActivityId, changes: Omit<Activity, "id">): Plan {
   const before = plan.activities.find((activity) => activity.id === id);
   if (before === undefined) return plan;
+  // Every field but the id, by name: a new field on Activity has to be added here, or a change to
+  // it would count as no change and be dropped. A test in ./list.test.ts fails until it is.
   const isUnchanged =
     changes.name === before.name &&
     changes.hue === before.hue &&

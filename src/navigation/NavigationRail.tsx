@@ -14,7 +14,7 @@ import { Destinations } from "./Destinations.tsx";
 export function NavigationRail(properties: {
   current: Page;
   base: string;
-  onNewActivity(): void;
+  onNewActivity: () => void;
 }): JSX.Element {
   const [isExpanded, setIsExpanded] = createSignal(false);
   return (
@@ -37,9 +37,7 @@ export function NavigationRail(properties: {
         class="floating-action-button"
         data-icon-only={!isExpanded()}
         title={isExpanded() ? undefined : "New activity"}
-        onClick={() => {
-          properties.onNewActivity();
-        }}
+        onClick={properties.onNewActivity}
       >
         <Icon name="add" />
         <span class={{ "visually-hidden": !isExpanded() }}>New activity</span>

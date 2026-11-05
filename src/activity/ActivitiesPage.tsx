@@ -13,6 +13,9 @@ import * as edit from "./edit.ts";
  */
 export function ActivitiesPage(properties: { plan: Plan; planner: Planner }): JSX.Element {
   return (
+    // The column the list and the phone's button share: it limits both to 48rem, and keeps the
+    // sticky button over the end of the list. Letting <main> lay out the page's parts instead is
+    // SantaClaas/week-budget-planner#19.
     <div class="activities-page">
       <Activities plan={properties.plan} planner={properties.planner} place="page" />
       {/* With no activities the form is already open. */}
