@@ -116,6 +116,38 @@ describe("the planner", () => {
     expect(recording.saves.at(-1)?.after.blocks).toHaveLength(0);
   });
 
+  it("shows a preview without saving it or recording a step, until the change ends it", async () => {
+    const recording = createRecordingStore();
+    using opened = openPlanner(recording.store);
+    const { planner } = opened;
+    // A drag shows each frame from the plan as it is, not from the frame before.
+    planner.preview(addBlock);
+    planner.preview(addBlock);
+    flush();
+    expect(planner.plan().blocks).toHaveLength(1);
+    expect(planner.canUndo()).toBe(false);
+    planner.endPreview();
+    flush();
+    expect(planner.plan().blocks).toHaveLength(0);
+    await settle();
+    expect(recording.saves).toHaveLength(0);
+
+    // A drag let go where it started changes nothing, and the preview goes.
+    planner.preview(addBlock);
+    planner.change((plan) => plan);
+    flush();
+    expect(planner.plan().blocks).toHaveLength(0);
+    expect(planner.canUndo()).toBe(false);
+
+    // Releasing the drag saves the change from the plan as it is, as one step.
+    planner.preview(addBlock);
+    planner.change(addBlock);
+    await settle();
+    expect(planner.plan().blocks).toHaveLength(1);
+    expect(recording.saves).toHaveLength(1);
+    expect(planner.canUndo()).toBe(true);
+  });
+
   it("records no step when nothing changed", () => {
     using opened = openPlanner(createRecordingStore().store);
     const { planner } = opened;

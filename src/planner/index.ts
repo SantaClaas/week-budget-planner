@@ -26,6 +26,13 @@ export type Planner = {
    * changed plan, or the same one when nothing changed. Does nothing in an outdated tab.
    */
   change(update: (before: Plan, now: Temporal.Instant) => Plan): void;
+  /**
+   * Shows `update` applied to the plan without saving it or recording an undo step, as a drag in
+   * progress does. Each call starts again from the plan as it is, not from the last preview.
+   */
+  preview(update: (before: Plan) => Plan): void;
+  /** Shows the plan as it is again, after a drag that changed nothing or was cancelled. */
+  endPreview(): void;
   /** Goes back one step and saves that, as its own action. */
   undo(): void;
   /** Stops following the changes other tabs save, when the app goes. */
@@ -169,9 +176,20 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
       const now = Temporal.Now.instant();
       const before = current;
       const after = update(before, now);
-      if (after === before) return;
+      if (after === before) {
+        // Ends a preview too, when a drag let go where it started.
+        setPlan(current);
+        return;
+      }
       showChange(after, undo.push(steps, before));
       save(after, now);
+    },
+    preview(update: (before: Plan) => Plan): void {
+      if (isStopped) return;
+      setPlan(update(current));
+    },
+    endPreview(): void {
+      setPlan(current);
     },
     undo(): void {
       const previous = steps.at(-1);
