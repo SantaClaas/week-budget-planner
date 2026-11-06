@@ -15,6 +15,7 @@ import {
   type Datetime,
   type Format,
 } from "../plan/format.ts";
+import type { Block } from "../plan/block/index.ts";
 import type { BlockId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import { layoutLanes, type Lane } from "../plan/lane.ts";
@@ -42,6 +43,8 @@ type BlockSize = "regular" | "short" | "tiny";
 export type DrawnBlock = {
   /** Unique within the week: an overnight block has a part on each of its two days. */
   key: `${BlockId}-${BlockPart["kind"]}`;
+  /** The whole block this is a part of, which a drag or a key changes. */
+  block: Block;
   activity: Activity;
   part: BlockPart["kind"];
   /** Where this part starts on its day, and how long it is on this day. */
@@ -130,17 +133,43 @@ function describeRange(part: BlockPart, format: Format): TimeText[] {
  * What a screen reader says for the part: "Gym, Monday 18:00 to 19:30, 1 hour, 30 minutes", or for
  * the second part of an overnight block "Work, continued from Tuesday, until 02:00".
  */
-function speak(part: BlockPart, activity: Activity, format: Format): string {
-  const { block } = part;
+/**
+ * The block's range as a screen reader says it: "Monday 18:00 to 19:30", or "Tuesday 22:00 to
+ * Wednesday 02:00" for an overnight block.
+ */
+function speakRange(block: Block, format: Format): string {
   const end = block.start + block.length;
   const startDay = formatWeekday(block.day, "long", format);
-  if (part.kind === "second") {
-    return `${activity.name}, continued from ${startDay}, until ${formatClock(end, format)}`;
-  }
-  const endDay =
-    part.kind === "first" ? `${formatWeekday(wrapDayIndex(block.day + 1), "long", format)} ` : "";
-  const range = `${startDay} ${formatClock(block.start, format)} to ${endDay}${formatClock(end, format)}`;
-  return `${activity.name}, ${range}, ${formatLength(block.length, "long", format)}`;
+  const endDay = end > DAY ? `${formatWeekday(wrapDayIndex(block.day + 1), "long", format)} ` : "";
+  return `${startDay} ${formatClock(block.start, format)} to ${endDay}${formatClock(end, format)}`;
+}
+
+function speak(part: BlockPart, activity: Activity, format: Format): string {
+  const { block } = part;
+  const length = formatLength(block.length, "long", format);
+  if (part.kind !== "second") return `${activity.name}, ${speakRange(block, format)}, ${length}`;
+  const startDay = formatWeekday(block.day, "long", format);
+  const end = formatClock(block.start + block.length, format);
+  return `${activity.name}, continued from ${startDay}, until ${end}`;
+}
+
+/**
+ * What the live region says after the keyboard changed a block (see The week in
+ * docs/spec/accessibility.md): "Moved to Tuesday 10:00 to 11:30" after a move, "Now Tuesday 10:00
+ * to 12:00, 2 hours" after a change of length, or "Removed Gym, Monday 18:00 to 19:30".
+ */
+export function announceChange(
+  change: "moved" | "resized" | "removed",
+  block: Block,
+  activity: Pick<Activity, "name">,
+  format: Format = {},
+): string {
+  const range = speakRange(block, format);
+  return {
+    moved: `Moved to ${range}`,
+    resized: `Now ${range}, ${formatLength(block.length, "long", format)}`,
+    removed: `Removed ${activity.name}, ${range}`,
+  }[change];
 }
 
 function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Format): DrawnBlock {
@@ -149,6 +178,7 @@ function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Form
   const lengthText = createLengthText(part.block.length, format);
   return {
     key: `${part.block.id}-${part.kind}`,
+    block: part.block,
     activity,
     part: part.kind,
     start: part.start,

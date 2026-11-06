@@ -139,6 +139,15 @@ export const moveDays = (block: Block, days: number): Block => ({
 });
 
 /**
+ * Changes the length by a number of minutes, keeping the start (keyboard Shift with Up or Down).
+ * Unlike a drag of the bottom edge, it may run past midnight: the block becomes an overnight one.
+ */
+export const changeLength = (block: Block, minutes: number): Block => ({
+  ...block,
+  length: sanitizeLength(clamp(block.length + minutes, SLOT, MAX_LENGTH)),
+});
+
+/**
  * Drags the top edge of the first (or only) part to `start`, keeping the end fixed. The start stays
  * on the block's own day, the length between one slot and a day.
  */

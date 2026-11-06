@@ -74,6 +74,8 @@ flowchart LR
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
   module_week --> module_activity
+  module_week --> module_announcement
+  module_week --> module_icons
   module_week --> module_plan
   module_week --> module_planner
   module_week --> module_progress

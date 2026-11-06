@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createActivity, createBlock, createDayHours } from "../plan/test-data.ts";
 import { sanitizeDayIndex } from "../plan/time.ts";
-import { findOpeningHour, layoutWeek, listHours } from "./layout.ts";
+import { announceChange, findOpeningHour, layoutWeek, listHours } from "./layout.ts";
 
 const BRITISH = { locale: "en-GB" };
 const work = createActivity({ id: "work", name: "Work" });
@@ -171,5 +171,19 @@ describe("where the week opens", () => {
     const dayHours = createDayHours(7, 22);
     const overnight = createBlock({ day: 1, start: 1320, length: 240 });
     expect(findOpeningHour({ ...dayHours, blocks: [overnight] })).toBe(7);
+  });
+  it("says what the keyboard changed", () => {
+    const block = createBlock({ day: 1, start: 600, length: 90 });
+    expect(announceChange("moved", block, gym, BRITISH)).toBe("Moved to Tuesday 10:00 to 11:30");
+    expect(announceChange("resized", block, gym, BRITISH)).toBe(
+      "Now Tuesday 10:00 to 11:30, 1 hour, 30 minutes",
+    );
+    expect(announceChange("removed", block, gym, BRITISH)).toBe(
+      "Removed Gym, Tuesday 10:00 to 11:30",
+    );
+    const night = createBlock({ day: 6, start: 1320, length: 240 });
+    expect(announceChange("moved", night, gym, BRITISH)).toBe(
+      "Moved to Sunday 22:00 to Monday 02:00",
+    );
   });
 });
