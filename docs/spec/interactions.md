@@ -65,7 +65,7 @@ Picking means a click, a tap, or Enter or Space on the focused slot or activity.
   - Submitting runs the browser's validation. Handle the `invalid` event with `preventDefault()` to hide the browser's bubble, since the message already shows under the field, and move focus to the first invalid field.
   - The message is linked to its field with `aria-describedby`. Set `aria-invalid` whenever the field matches `:user-invalid` (checked on `blur`, `focus` and `input`), so screen readers hear about the error at the same moment it appears on screen.
   - Hours accept the user's decimal separator ("1.5" and "1,5" in German), read with the separators from `Intl.NumberFormat(…).formatToParts()`.
-- Edit inline in the list item (same form, plus Save, Cancel and Delete). Escape cancels.
+- Edit inline in the list item: Edit opens the same form below the activity's row, plus Save, Cancel and Delete, and closes it again. Escape cancels.
 - Deleting an activity also deletes its blocks. Show a snackbar with Undo: "Deleted Gym and its 3 blocks."
 - A new activity gets a default color and shape, ideally ones no other activity uses yet (see Activity shapes in [Design](design.md)). The user can change both.
 

@@ -926,8 +926,8 @@
   .activity-list {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     column-gap: 0.875rem;
-    /* every row spans the columns; an activity takes them over, anything else (such as the form of
-       the activity being edited) just fills the row */
+    /* every row spans the columns; an activity takes them over, anything else just fills the
+       row */
     & > * {
       grid-column: 1 / -1;
     }
@@ -980,8 +980,12 @@
   .left-to-place:is([data-state="all-placed"], [data-state="over-budget"]) > .title-small {
     font-weight: 600;
   }
-  /* The form of the activity being edited takes its row in the list, on the row's own surface. */
-  .activity-list > .editing > .activity-form {
+  /* The form of the activity being edited opens below its row, in the same list item, on the
+     row's own surface, across all of the row's columns. */
+  .activity-list > .activity > .activity-form {
+    grid-column: 1 / -1;
+    padding: 0.5rem 0.5rem 0 0;
+    border-radius: 0;
     background: transparent;
   }
 
