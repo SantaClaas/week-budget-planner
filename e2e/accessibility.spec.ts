@@ -91,6 +91,9 @@ for (const colorScheme of ["light", "dark"] as const) {
     }) => {
       await openApp(page);
       const results = [await checkWithAxe(page)];
+      // A selected block, with its handles and remove button.
+      await page.getByRole("button", { name: /^Gym, Monday/u }).focus();
+      results.push(await checkWithAxe(page));
       // An activity's form, with an error showing, and the form for a new one.
       await page.getByRole("button", { name: "Edit Gym" }).click();
       await page.getByLabel("Hours").fill("");

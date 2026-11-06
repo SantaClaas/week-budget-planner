@@ -5,6 +5,7 @@ import {
   splitIntoParts,
   isBlockOverlapping,
   sumDayTotals,
+  changeLength,
   describeTime,
   convertFromWeekMinutes,
   moveBy,
@@ -86,5 +87,13 @@ describe("week", () => {
     const night = createBlock({ start: 1320, length: 240 });
     expect(resizeEnd(night, 1200)).toMatchObject({ length: 120 });
     expect(resizeEnd(night, 3000)).toMatchObject({ length: 1440 });
+  });
+  it("changes the length from the keyboard, across midnight", () => {
+    expect(changeLength(createBlock({ start: 1380, length: 60 }), 15)).toMatchObject({
+      start: 1380,
+      length: 75,
+    });
+    expect(changeLength(createBlock({ length: 15 }), -15)).toMatchObject({ length: 15 });
+    expect(changeLength(createBlock({ length: 1440 }), 15)).toMatchObject({ length: 1440 });
   });
 });

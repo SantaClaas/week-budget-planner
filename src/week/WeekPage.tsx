@@ -60,7 +60,7 @@ export function WeekPage(properties: {
     <div class="week-page">
       <Activities plan={properties.plan} planner={properties.planner} place="pane" />
       <Summary plan={properties.plan} />
-      <Week plan={properties.plan} today={properties.today} />
+      <Week plan={properties.plan} planner={properties.planner} today={properties.today} />
     </div>
   );
 }

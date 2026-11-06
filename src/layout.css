@@ -202,4 +202,14 @@
     padding: 1.5rem;
     grid-column: 1 / -1;
   }
+
+  /* While a block is dragged, the cursor stays the drag's wherever the pointer goes. */
+  :root[data-dragging="move"],
+  :root[data-dragging="move"] * {
+    cursor: grabbing;
+  }
+  :root[data-dragging="resize"],
+  :root[data-dragging="resize"] * {
+    cursor: ns-resize;
+  }
 }
