@@ -74,9 +74,13 @@ test("says what's wrong with each field once the user is done with it", async ({
 
 test("edits an activity in its place, and Escape cancels", async ({ page }) => {
   await openApp(page);
-  await page.getByRole("button", { name: "Edit Gym" }).click();
+  const editGym = page.getByRole("button", { name: "Edit Gym" });
+  await expect(editGym).toHaveAttribute("aria-expanded", "false");
+  await editGym.click();
   let form = page.getByRole("form", { name: "Edit Gym" });
   await expect(form.getByLabel("Name")).toBeFocused();
+  // The form opens below the row, whose Edit button stays and says it's open.
+  await expect(editGym).toHaveAttribute("aria-expanded", "true");
   await expect(form.getByLabel("Hours")).toHaveValue("1.5");
   await expect(form.getByRole("radio", { name: "per day" })).toBeChecked();
   await expect(form.getByRole("radio", { name: "Green" })).toBeChecked();
@@ -84,7 +88,8 @@ test("edits an activity in its place, and Escape cancels", async ({ page }) => {
   await page.keyboard.type("Climbing");
   await page.keyboard.press("Escape");
   await expect(form).toBeHidden();
-  await expect(page.getByRole("button", { name: "Edit Gym" })).toBeFocused();
+  await expect(editGym).toBeFocused();
+  await expect(editGym).toHaveAttribute("aria-expanded", "false");
 
   await page.keyboard.press("Enter");
   form = page.getByRole("form", { name: "Edit Gym" });

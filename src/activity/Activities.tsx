@@ -30,10 +30,13 @@ function focus(selector: string): void {
 /** The id of an activity's Edit button, so focus can go back to it when its form closes. */
 const createEditButtonId = (id: ActivityId): string => `edit-${id}`;
 
-/** Takes focus to the Edit button of the activity `id`, once the list shows it again. */
+/** Takes focus to the Edit button of the activity `id`. */
 function focusEditButton(id: ActivityId): void {
   focus(`#${CSS.escape(createEditButtonId(id))}`);
 }
+
+/** The id of an activity's form, which its Edit button controls while it's open. */
+const createFormId = (id: ActivityId): string => `edit-form-${id}`;
 
 /** "Deleted Gym and its 3 blocks.", or "Deleted Gym." when it had none. */
 function describeRemoval(name: string, removedBlocks: number): string {
@@ -116,8 +119,80 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
   );
 }
 
-/** One activity in the list: its shape, name, budget, what's left to place, and Edit. */
-function Row(properties: { row: ActivityRow }): JSX.Element {
+/**
+ * The form of the activity in `row`, below its row: Save, Cancel and Delete. Each moves focus on
+ * before the form goes, so the focused control is never removed from under a screen reader.
+ */
+function EditForm(properties: {
+  row: ActivityRow;
+  plan: Plan;
+  planner: Planner;
+  level: 2 | 3;
+}): JSX.Element {
+  const id = (): ActivityId => properties.row.activity.id;
+  const close = (): void => {
+    focusEditButton(id());
+    edit.close();
+  };
+  return (
+    <ActivityForm
+      id={createFormId(id())}
+      title={`Edit ${properties.row.activity.name}`}
+      level={properties.level}
+      initial={{
+        name: properties.row.activity.name,
+        hours: formatHours(properties.row.activity.budgetMinutes),
+        mode: properties.row.activity.mode,
+        days: String(properties.row.activity.days),
+        hue: properties.row.activity.hue,
+        shape: properties.row.activity.shape,
+      }}
+      placed={properties.row.placed}
+      submitLabel="Save"
+      isFocusedOnOpen
+      onSave={(saved) => {
+        properties.planner.change((plan) => list.update(plan, id(), saved));
+        close();
+      }}
+      onCancel={close}
+      onDelete={() => {
+        const { name } = properties.row.activity;
+        const index = properties.plan.activities.findIndex((activity) => activity.id === id());
+        const neighbor =
+          properties.plan.activities[index + 1] ?? properties.plan.activities[index - 1];
+        // Focus goes to the next activity before this one goes, or with none left, to the form
+        // for a new one.
+        if (neighbor !== undefined) focusEditButton(neighbor.id);
+        // Counted on the plan the change applies to, so the snackbar says what was removed.
+        let removedBlocks = 0;
+        properties.planner.change((plan) => {
+          const removal = list.remove(plan, id());
+          removedBlocks = removal.removedBlocks;
+          return removal.plan;
+        });
+        showWithUndo(properties.planner, describeRemoval(name, removedBlocks));
+        if (neighbor === undefined) {
+          edit.openNew();
+          return;
+        }
+        edit.close();
+      }}
+    />
+  );
+}
+
+/**
+ * One activity in the list: its emblem, name, budget, what's left to place, and Edit. Edit opens
+ * the activity's form below the row, in the same list item, and closes it again.
+ */
+function Row(properties: {
+  row: ActivityRow;
+  plan: Plan;
+  planner: Planner;
+  level: 2 | 3;
+  isEditing: boolean;
+}): JSX.Element {
+  const id = (): ActivityId => properties.row.activity.id;
   return (
     <li
       class="activity"
@@ -136,74 +211,29 @@ function Row(properties: { row: ActivityRow }): JSX.Element {
       <button
         type="button"
         class="icon-button"
-        id={createEditButtonId(properties.row.activity.id)}
+        id={createEditButtonId(id())}
+        aria-expanded={properties.isEditing ? "true" : "false"}
+        aria-controls={properties.isEditing ? createFormId(id()) : undefined}
         onClick={() => {
-          edit.open(properties.row.activity.id);
+          if (properties.isEditing) {
+            edit.close();
+            return;
+          }
+          edit.open(id());
         }}
       >
         <Icon name="edit" size={20} />
         <span class="visually-hidden">Edit {properties.row.activity.name}</span>
       </button>
       <Progress budget={properties.row.weeklyBudget} placed={properties.row.placedMinutes} />
-    </li>
-  );
-}
-
-/** The form of the activity in `row`, in its place in the list: Save, Cancel and Delete. */
-function EditRow(properties: {
-  row: ActivityRow;
-  plan: Plan;
-  planner: Planner;
-  level: 2 | 3;
-}): JSX.Element {
-  const id = (): ActivityId => properties.row.activity.id;
-  const close = (): void => {
-    edit.close();
-    focusEditButton(id());
-  };
-  return (
-    <li class="editing">
-      <ActivityForm
-        title={`Edit ${properties.row.activity.name}`}
-        level={properties.level}
-        initial={{
-          name: properties.row.activity.name,
-          hours: formatHours(properties.row.activity.budgetMinutes),
-          mode: properties.row.activity.mode,
-          days: String(properties.row.activity.days),
-          hue: properties.row.activity.hue,
-          shape: properties.row.activity.shape,
-        }}
-        placed={properties.row.placed}
-        submitLabel="Save"
-        isFocusedOnOpen
-        onSave={(saved) => {
-          properties.planner.change((plan) => list.update(plan, id(), saved));
-          close();
-        }}
-        onCancel={close}
-        onDelete={() => {
-          const { name } = properties.row.activity;
-          const index = properties.plan.activities.findIndex((activity) => activity.id === id());
-          const neighbor =
-            properties.plan.activities[index + 1] ?? properties.plan.activities[index - 1];
-          // Counted on the plan the change applies to, so the snackbar says what was removed.
-          let removedBlocks = 0;
-          properties.planner.change((plan) => {
-            const removal = list.remove(plan, id());
-            removedBlocks = removal.removedBlocks;
-            return removal.plan;
-          });
-          showWithUndo(properties.planner, describeRemoval(name, removedBlocks));
-          // Focus goes to the next activity, or with none left, to the form for a new one.
-          if (neighbor === undefined) {
-            edit.openNew();
-            return;
-          }
-          edit.close();
-          focusEditButton(neighbor.id);
-        }}
-      />
+      <Show when={properties.isEditing}>
+        <EditForm
+          row={properties.row}
+          plan={properties.plan}
+          planner={properties.planner}
+          level={properties.level}
+        />
+      </Show>
     </li>
   );
 }
@@ -351,14 +381,13 @@ export function Activities(properties: {
         <ul class="segmented-list activity-list" role="list">
           <For each={rows()} keyed={(row) => row.activity.id}>
             {(row) => (
-              <Show when={row().activity.id === findEditedId()} fallback={<Row row={row()} />}>
-                <EditRow
-                  row={row()}
-                  plan={properties.plan}
-                  planner={properties.planner}
-                  level={level()}
-                />
-              </Show>
+              <Row
+                row={row()}
+                plan={properties.plan}
+                planner={properties.planner}
+                level={level()}
+                isEditing={row().activity.id === findEditedId()}
+              />
             )}
           </For>
         </ul>

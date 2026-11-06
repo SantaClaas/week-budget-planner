@@ -121,6 +121,8 @@ function TextField(properties: {
  * it (`:user-invalid`), and the error clears as soon as the value is fixed. Escape cancels.
  */
 export function ActivityForm(properties: {
+  /** The form's id, for an Edit button that controls it. */
+  id?: string;
   /** "New activity" or "Edit Gym". */
   title: string;
   /** The heading level of the title: 3 under the pane's "Activities", 2 on the Activities page. */
@@ -199,6 +201,7 @@ export function ActivityForm(properties: {
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape in any of the form's fields cancels it, so the form listens for the key its fields pass up.
     <form
+      id={properties.id}
       class="activity-form"
       data-color={findColor(hue()).key}
       style={{ "--activity-shape": `var(--shape-${shape()})` }}
