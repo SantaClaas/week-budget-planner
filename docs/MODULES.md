@@ -68,6 +68,7 @@ flowchart LR
   module_page --> module_progress
   module_page --> module_week
   module_placing --> module_announcement
+  module_placing --> module_icons
   module_placing --> module_plan
   module_placing --> module_planner
   module_placing --> module_snackbar

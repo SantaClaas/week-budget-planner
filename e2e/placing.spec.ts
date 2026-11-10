@@ -105,7 +105,7 @@ test.describe("on a phone", () => {
     await expect(page).toHaveURL(ISOLATED_URL);
     const toolbar = page.getByRole("region", { name: /^Placing Gym/u });
     await expect(toolbar).toBeFocused();
-    await expect(toolbar).toContainText("Tap a time slot");
+    await expect(toolbar).toContainText("Tap a slot");
 
     const monday = await findSlot(page, 0, 12);
     await page.touchscreen.tap(monday.x, monday.y);

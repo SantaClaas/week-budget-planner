@@ -911,25 +911,15 @@
     margin-inline: auto;
     padding-inline: 0.75rem 0.5rem;
     gap: 0.5rem;
-    /* On phones the text takes a line of its own, with the buttons under it at the end, so neither
-       is squeezed; the toolbar keeps Google's extra-large corners, as a full round no longer fits
-       two lines. */
+    /* On phones it spans the width above the navigation bar, on one line with shorter labels: a
+       long name ends in an ellipsis rather than wrapping (the toolbar's name still holds it all). */
     @media (width < 52.5em) {
       inset-block-end: 5rem;
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto auto;
-      column-gap: 0.5rem;
       inline-size: auto;
-      padding: 0.25rem 0.5rem 0.5rem 0.75rem;
-      border-radius: var(--corner-extra-large);
-      & > .emblem {
-        grid-row: 1 / 3;
-      }
-      & > .text {
-        grid-column: 2 / -1;
-      }
-      & > .button:first-of-type {
-        grid-column: 3;
+      & > .text > * {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
     & > .emblem {

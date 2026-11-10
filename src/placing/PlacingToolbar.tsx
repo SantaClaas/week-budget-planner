@@ -1,6 +1,7 @@
 import type { JSX } from "@solidjs/web";
 import { flush, Show } from "solid-js";
 
+import { Icon } from "../icons/Icon.tsx";
 import type { Activity } from "../plan/activity/index.ts";
 import { findColor } from "../plan/activity/look.ts";
 import { pickDefaultLength } from "../plan/block/length.ts";
@@ -39,7 +40,9 @@ function useFirstFreeSlot(plan: Plan, planner: Planner, activity: Activity): voi
 /**
  * The floating toolbar while an activity is placing (see Adding blocks in
  * docs/spec/interactions.md): what's placing and at what length, what's left of it, "Use first
- * free slot" and "Done". It says "Click a time slot" with a mouse and "Tap a time slot" on touch.
+ * free slot" and "Done". It says "Click a time slot" with a mouse and "Tap a slot" on touch. On
+ * phones it keeps to one line with the design canvas's shorter labels: no length, "First free
+ * slot", and a close icon named "Stop placing" for Done.
  */
 export function PlacingToolbar(properties: { plan: Plan; planner: Planner }): JSX.Element {
   const activity = (): Activity | undefined =>
@@ -64,11 +67,12 @@ export function PlacingToolbar(properties: { plan: Plan; planner: Planner }): JS
             <span class="emblem" aria-hidden="true" />
             <p class="text">
               <span id="placing-title" class="label-large emphasized">
-                Placing {placed().name} · {formatLength(length())}
+                Placing {placed().name}
+                <span class="for-wide-window"> · {formatLength(length())}</span>
               </span>
               <span class="body-small">
                 <span class="for-fine-pointer">Click a time slot</span>
-                <span class="for-coarse-pointer">Tap a time slot</span>
+                <span class="for-coarse-pointer">Tap a slot</span>
                 {left() > 0 ? ` · ${formatLength(left())} left to place` : ""}
               </span>
             </p>
@@ -81,10 +85,20 @@ export function PlacingToolbar(properties: { plan: Plan; planner: Planner }): JS
                 useFirstFreeSlot(properties.plan, properties.planner, placed());
               }}
             >
-              Use first free slot
+              <span class="for-wide-window">Use first free slot</span>
+              <span class="for-narrow-window">First free slot</span>
             </button>
-            <button type="button" class="button" data-size="extra-small" onClick={placing.stop}>
+            <button
+              type="button"
+              class="button for-wide-window"
+              data-size="extra-small"
+              onClick={placing.stop}
+            >
               Done
+            </button>
+            <button type="button" class="icon-button for-narrow-window" onClick={placing.stop}>
+              <Icon name="close" />
+              <span class="visually-hidden">Stop placing</span>
             </button>
           </section>
         );
