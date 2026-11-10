@@ -9,12 +9,15 @@ import { NavigationBar } from "./navigation/NavigationBar.tsx";
 import { NavigationRail } from "./navigation/NavigationRail.tsx";
 import { follow } from "./page/history.ts";
 import { createPath, createTitle, NAMES, type Page } from "./page/index.ts";
+import { WeekPage } from "./page/WeekPage.tsx";
+import { DragChip } from "./placing/DragChip.tsx";
+import * as placing from "./placing/index.ts";
+import { PLACING_TOOLBAR_ID, PlacingToolbar } from "./placing/PlacingToolbar.tsx";
 import * as planner from "./planner/index.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
 import { sanitizeDayIndex } from "./plan/time.ts";
 import { TopAppBar } from "./top-app-bar/TopAppBar.tsx";
-import { WeekPage } from "./week/WeekPage.tsx";
 
 /** The path the app is served from, `/week-budget-planner/` (see vite.config.ts). */
 const BASE = import.meta.env.BASE_URL;
@@ -28,6 +31,12 @@ function reloadWhenHidden(): void {
 const isInField = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement &&
   (target.isContentEditable || target.matches("input, select, textarea"));
+
+/** Escape stops placing, wherever focus is, except in a field, where it belongs to the field. */
+function stopPlacingOnEscape(event: KeyboardEvent): void {
+  if (event.key !== "Escape" || placing.current() === undefined || isInField(event.target)) return;
+  placing.stop();
+}
 
 /**
  * A tab on a newer version took over while this one ran, and the planner stopped every change:
@@ -128,6 +137,16 @@ export function App(): JSX.Element {
     edit.openNew();
   }
 
+  /**
+   * Placing from the Activities page moves to the week, where the slots are, and focus goes to the
+   * placing toolbar, which says what's placing.
+   */
+  function showWeekForPlacing(): void {
+    history.pushState(null, "", createPath("week", BASE));
+    showPage("week", "link");
+    document.querySelector<HTMLElement>(`#${PLACING_TOOLBAR_ID}`)?.focus();
+  }
+
   const undoOnShortcut = (event: KeyboardEvent): void => {
     const isShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey;
     if (!isShortcut || event.key.toLowerCase() !== "z" || isInField(event.target)) return;
@@ -139,8 +158,10 @@ export function App(): JSX.Element {
 
   onSettled(() => {
     document.addEventListener("keydown", undoOnShortcut);
+    document.addEventListener("keydown", stopPlacingOnEscape);
     return () => {
       document.removeEventListener("keydown", undoOnShortcut);
+      document.removeEventListener("keydown", stopPlacingOnEscape);
     };
   });
 
@@ -201,7 +222,11 @@ export function App(): JSX.Element {
                   <WeekPage plan={opened().plan()} planner={opened()} today={today} />
                 </Match>
                 <Match when={page() === "activities"}>
-                  <ActivitiesPage plan={opened().plan()} planner={opened()} />
+                  <ActivitiesPage
+                    plan={opened().plan()}
+                    planner={opened()}
+                    onStartPlacing={showWeekForPlacing}
+                  />
                 </Match>
                 <Match when={page() === "settings"}>
                   <section class="page-content" aria-labelledby="about-title">
@@ -219,6 +244,17 @@ export function App(): JSX.Element {
           </Show>
         </Show>
       </main>
+      <Show when={current()}>
+        {(opened) => (
+          <>
+            {/* Placing picks slots on the week, so its toolbar shows with the week. */}
+            <Show when={page() === "week"}>
+              <PlacingToolbar plan={opened().plan()} planner={opened()} />
+            </Show>
+            <DragChip plan={opened().plan()} />
+          </>
+        )}
+      </Show>
       <NavigationBar current={page()} base={BASE} />
       <LiveRegion />
       <Snackbar />

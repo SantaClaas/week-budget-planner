@@ -93,7 +93,7 @@
     display: grid;
     align-content: start;
     gap: 0.75rem;
-    & > :is(header, .overview, .intro) {
+    & > :is(header, .overview, .intro, .hint) {
       padding-inline: 0.5rem;
     }
     & > header {
@@ -211,5 +211,18 @@
   :root[data-dragging="resize"],
   :root[data-dragging="resize"] * {
     cursor: ns-resize;
+  }
+
+  /* What a mouse or pen does is clicking, what a finger does is tapping: text that says so shows
+     for the pointer the user has. */
+  @media (pointer: coarse) {
+    .for-fine-pointer {
+      display: none;
+    }
+  }
+  @media not (pointer: coarse) {
+    .for-coarse-pointer {
+      display: none;
+    }
   }
 }

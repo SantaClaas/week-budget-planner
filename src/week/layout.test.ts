@@ -178,6 +178,7 @@ describe("where the week opens", () => {
     expect(announceChange("resized", block, gym, BRITISH)).toBe(
       "Now Tuesday 10:00 to 11:30, 1 hour, 30 minutes",
     );
+    expect(announceChange("added", block, gym, BRITISH)).toBe("Added Gym, Tuesday 10:00 to 11:30");
     expect(announceChange("removed", block, gym, BRITISH)).toBe(
       "Removed Gym, Tuesday 10:00 to 11:30",
     );

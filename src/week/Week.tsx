@@ -8,10 +8,12 @@ import type { Block } from "../plan/block/index.ts";
 import * as list from "../plan/block/list.ts";
 import type { BlockId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
-import { SLOT, type DayIndex } from "../plan/time.ts";
+import type { Activity } from "../plan/activity/index.ts";
+import { formatClockRange } from "../plan/format.ts";
+import { DAY, SLOT, type DayIndex } from "../plan/time.ts";
 import { changeLength, moveBy, moveDays } from "../plan/week.ts";
 import type { Planner } from "../planner/index.ts";
-import { isClickAfterDrag, startDrag } from "./drag-controller.ts";
+import { findSlot, isClickAfterDrag, startDrag, type Slot } from "./drag-controller.ts";
 import type { Grip } from "./drag.ts";
 import {
   announceChange,
@@ -165,6 +167,7 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events -- the pointer's path: a press anywhere on a part, also the second part of an overnight block, which has no button. The keyboard's path is the block's button.
     <li
       class="block"
+      data-block={id()}
       data-color={findColor(properties.block.activity.hue).key}
       data-length={properties.block.size === "regular" ? undefined : properties.block.size}
       data-part={properties.block.part === "only" ? undefined : properties.block.part}
@@ -240,7 +243,37 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
   );
 }
 
-function Day(properties: { day: DrawnDay; planner: Planner }): JSX.Element {
+/** Where a new block of `activity` would land, which the week draws as a dashed outline. */
+export type WeekPreview = { activity: Activity; day: DayIndex; start: number; length: number };
+
+/** Where a new block would land, as a dashed outline with its time ("10:00–11:30"). */
+type DrawnPreview = { color: string; start: number; length: number; time: string };
+
+/** The dashed outline of a new block, which only shows what a click or drop would add. */
+function Preview(properties: { preview: DrawnPreview }): JSX.Element {
+  return (
+    <li
+      class="block preview"
+      aria-hidden="true"
+      data-color={properties.preview.color}
+      data-length={properties.preview.length <= 30 ? "short" : undefined}
+      style={{
+        "--start": properties.preview.start,
+        "--length": properties.preview.length,
+        "--lane": 0,
+        "--lanes": 1,
+      }}
+    >
+      <span class="time">{properties.preview.time}</span>
+    </li>
+  );
+}
+
+function Day(properties: {
+  day: DrawnDay;
+  planner: Planner;
+  preview: DrawnPreview | undefined;
+}): JSX.Element {
   return (
     <li class="day" data-weekend={properties.day.isWeekend}>
       <h2 class="day-header" aria-current={properties.day.isToday ? "date" : undefined}>
@@ -256,6 +289,7 @@ function Day(properties: { day: DrawnDay; planner: Planner }): JSX.Element {
         <For each={properties.day.blocks} keyed={(block) => block.key}>
           {(block) => <BlockPartItem block={block()} planner={properties.planner} />}
         </For>
+        <Show when={properties.preview}>{(preview) => <Preview preview={preview()} />}</Show>
       </ol>
     </li>
   );
@@ -270,9 +304,34 @@ export function Week(properties: {
   plan: Plan;
   planner: Planner;
   today: DayIndex | undefined;
+  /** Whether an activity is placing, so a click on an empty slot adds a block instead of deselecting. */
+  isPlacing: boolean;
+  /** Where a new block would land, while placing. */
+  preview: WeekPreview | undefined;
+  /** An empty slot was clicked or tapped while placing. */
+  onPickSlot: (slot: Slot) => void;
+  /** The mouse is over the empty slot `slot` while placing. */
+  onHoverSlot: (slot: Slot) => void;
+  /** The mouse left the empty slots while placing: it's over a block, a header or off the week. */
+  onLeaveSlots: () => void;
 }): JSX.Element {
   let scroller: HTMLElement | undefined;
   const days = () => layoutWeek(properties.plan, properties.today);
+  /** The preview, drawn on its day, up to midnight. */
+  const drawnPreview = (): { day: DayIndex; drawn: DrawnPreview } | undefined => {
+    const shown = properties.preview;
+    if (shown === undefined) return undefined;
+    const end = shown.start + shown.length;
+    return {
+      day: shown.day,
+      drawn: {
+        color: findColor(shown.activity.hue).key,
+        start: shown.start,
+        length: Math.min(shown.length, DAY - shown.start),
+        time: formatClockRange(shown.start, end),
+      },
+    };
+  };
 
   createEffect(
     () => [properties.plan.dayStart, properties.plan.dayEnd],
@@ -301,7 +360,30 @@ export function Week(properties: {
       onClick={(event) => {
         const isOnBlock =
           event.target instanceof Element && event.target.closest(".block") !== null;
-        if (!isOnBlock && !isClickAfterDrag()) selection.clear();
+        if (isOnBlock || isClickAfterDrag()) return;
+        const slot = findSlot(event.currentTarget, event.clientX, event.clientY);
+        // While placing, a click on an empty slot adds a block there; otherwise it deselects.
+        if (!properties.isPlacing || slot === undefined) {
+          selection.clear();
+          return;
+        }
+        properties.onPickSlot(slot);
+      }}
+      onPointerMove={(event) => {
+        if (event.pointerType !== "mouse" || !properties.isPlacing) return;
+        const isOnBlock =
+          event.target instanceof Element && event.target.closest(".block:not(.preview)") !== null;
+        const slot = isOnBlock
+          ? undefined
+          : findSlot(event.currentTarget, event.clientX, event.clientY);
+        if (slot === undefined) {
+          properties.onLeaveSlots();
+          return;
+        }
+        properties.onHoverSlot(slot);
+      }}
+      onPointerLeave={() => {
+        if (properties.isPlacing) properties.onLeaveSlots();
       }}
     >
       <p id="block-keys" hidden>
@@ -322,7 +404,13 @@ export function Week(properties: {
         </div>
         <ol class="days" aria-label="Days">
           <For each={days()} keyed={(day) => day.index}>
-            {(day) => <Day day={day()} planner={properties.planner} />}
+            {(day) => (
+              <Day
+                day={day()}
+                planner={properties.planner}
+                preview={drawnPreview()?.day === day().index ? drawnPreview()?.drawn : undefined}
+              />
+            )}
           </For>
         </ol>
       </div>
