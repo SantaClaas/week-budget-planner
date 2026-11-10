@@ -225,4 +225,17 @@
       display: none;
     }
   }
+
+  /* Phones get shorter copy where the longer one wouldn't fit on a line, as the design canvas
+     draws them. */
+  @media (width < 52.5em) {
+    .for-wide-window {
+      display: none;
+    }
+  }
+  @media not (width < 52.5em) {
+    .for-narrow-window {
+      display: none;
+    }
+  }
 }
