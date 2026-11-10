@@ -1694,16 +1694,30 @@
       pointer-events: none;
     }
   }
-  /* the focused empty slot, a button named for the slot ("Empty slot, Friday 14:00") */
+  /* the focused empty slot, a button named for the slot ("Empty slot, Friday 14:00"), after the days
+     in the week's grid, so it comes after the blocks in Tab order. It sits in its day's column, as
+     tall as a slot, and shows only while it has keyboard focus or Add block is open on it, which
+     anchors to it. <button class="slot-highlight" aria-expanded="false" style="--day: 4; --start: 840"> */
   .slot-highlight {
-    margin: 0;
+    grid-area: 2 / calc(var(--day) + 2);
+    align-self: start;
+    z-index: 1;
+    anchor-name: --empty-slot;
+    margin-block-start: calc(var(--start) / 60 * var(--hour) + 1px);
+    margin-inline: 0.1875rem;
+    block-size: calc(var(--hour) / 4 - 2px);
     padding: 0;
     cursor: pointer;
-    position: absolute;
-    inset-inline: 0.1875rem;
-    border-radius: var(--corner-small);
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    border: 2px solid var(--primary);
+    border-radius: var(--corner-extra-small);
+    background: transparent;
+    border: 2px solid transparent;
+    &:is(:focus-visible, [aria-expanded="true"]) {
+      background: color-mix(in srgb, var(--primary) 12%, transparent);
+      border-color: var(--primary);
+      @media (forced-colors: active) {
+        border-color: Highlight;
+      }
+    }
   }
 
   /* menus, bottom sheets, dialogs, snackbar */
@@ -1729,6 +1743,9 @@
       background: transparent;
       text-align: start;
       width: 100%;
+      &:hover {
+        background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+      }
       &.highlighted {
         background: var(--secondary-container);
         color: var(--on-secondary-container);
@@ -1737,6 +1754,66 @@
           background: Highlight;
           color: HighlightText;
         }
+      }
+    }
+  }
+  /* Add block on wide screens: a menu in a popover beside the empty slot, on its inline-end side, or
+     on its start side when there's no room (flip-inline), and above when there's no room below.
+     Each choice is the activity's emblem, its name and what's left of it. */
+  .add-block-menu {
+    position-anchor: --empty-slot;
+    inset: auto;
+    inset-inline-start: anchor(end);
+    inset-block-start: anchor(start);
+    position-try-fallbacks:
+      flip-inline,
+      flip-block,
+      flip-block flip-inline;
+    margin: 0 0.5rem;
+    border: 0;
+    color: var(--on-surface);
+    inline-size: max-content;
+    min-inline-size: 14rem;
+    max-inline-size: min(22rem, 100vw - 2rem);
+    max-block-size: min(32rem, 100dvh - 2rem);
+    overflow-y: auto;
+    & > h2 {
+      padding: 0.625rem 0.75rem 0.375rem;
+    }
+    & > hr {
+      border: 0;
+      border-block-start: 1px solid var(--outline-variant);
+      margin: 0.25rem 0.75rem;
+    }
+    & .choice {
+      min-block-size: 3.5rem;
+      padding-block: 0.375rem;
+    }
+  }
+  /* What both choosers' activities share: the emblem beside the name and what's left. An activity
+     that's all placed or over budget is dimmed, but still there to choose. */
+  .choice {
+    cursor: pointer;
+    & > .emblem {
+      inline-size: 1.25rem;
+      block-size: 1.25rem;
+    }
+    & > .text {
+      display: grid;
+      flex: 1;
+      min-inline-size: 0;
+    }
+    & .name {
+      font-size: 0.875rem;
+      line-height: calc(20 / 14);
+      font-weight: 500;
+    }
+    &[data-state="over-budget"] {
+      & > .emblem {
+        opacity: 0.6;
+      }
+      & .name {
+        color: var(--on-surface-variant);
       }
     }
   }
@@ -1757,6 +1834,72 @@
       background: var(--on-surface-variant);
       opacity: 0.4;
       margin: 1rem auto 0.5rem;
+    }
+  }
+  /* Add block on phones: a modal bottom sheet at the bottom of the screen, at most 640dp wide, with
+     the title and the slot, the length stepper, the activities and its two actions. It scrolls
+     inside itself, and never scrolls the week under it. */
+  .add-block-sheet {
+    margin: auto auto 0;
+    padding: 0 0 1.5rem;
+    inline-size: 100%;
+    max-inline-size: 40rem;
+    max-block-size: calc(100dvh - 4.5rem);
+    overscroll-behavior: contain;
+    &::backdrop {
+      overflow: hidden;
+      overscroll-behavior: contain;
+    }
+    &[open] {
+      display: flex;
+      flex-direction: column;
+    }
+    & > header {
+      display: grid;
+      gap: 0.25rem;
+      padding: 0.5rem 1.5rem 1rem;
+    }
+    & > .length-stepper {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0 1.5rem 1rem;
+      /* a floated legend is laid out as an ordinary flex item */
+      & > legend {
+        float: inline-start;
+        flex: 1;
+      }
+      & > output {
+        min-inline-size: 5.5rem;
+        text-align: center;
+      }
+    }
+    & > .segmented-list {
+      padding-inline: 1rem;
+    }
+    & .choice {
+      inline-size: 100%;
+      min-block-size: 4rem;
+      border: 0;
+      background: transparent;
+      border-radius: inherit;
+      text-align: start;
+      & > .emblem {
+        inline-size: 2rem;
+        block-size: 2rem;
+      }
+      & .name {
+        font-size: 1rem;
+        line-height: 1.5;
+        font-weight: 400;
+      }
+    }
+    & > footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem 0;
     }
   }
   .dialog {

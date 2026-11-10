@@ -302,13 +302,16 @@ function NewActivity(properties: {
             submitLabel="Add activity"
             isFocusedOnOpen={properties.isFocusedOnOpen || isAfterSave()}
             onSave={(saved) => {
-              properties.planner.change((plan) => list.add(plan, { ...saved, id: newId }));
+              const open = edit.current();
+              const activity = { ...saved, id: newId };
+              properties.planner.change((plan) => list.add(plan, activity));
               announce(`Added ${saved.name}.`);
               // The form stays open for the next activity, also after the first one in the empty
               // state, where the list then takes the empty state's place.
               edit.openNew();
               setIsAfterSave(true);
               setId(randomIds.createActivityId());
+              if (open?.type === "new") open.onCreated?.(activity);
             }}
             {...(properties.isClosable ? { onCancel: edit.close } : {})}
           />
@@ -435,7 +438,19 @@ export function Activities(properties: {
             )}
           </For>
         </ul>
-        <Show when={properties.place === "page"}>
+        <Show
+          when={properties.place === "page"}
+          fallback={
+            <p class="body-small muted hint">
+              <span class="for-fine-pointer">
+                Drag an activity onto the week, or click an empty slot to add a block there.
+              </span>
+              <span class="for-coarse-pointer">
+                Tap an activity to place it, or tap an empty slot to add a block there.
+              </span>
+            </p>
+          }
+        >
           <p class="body-small muted hint">
             <span class="for-fine-pointer">
               Click an activity to place it, then click a slot on the week.

@@ -7,13 +7,8 @@
  */
 import * as list from "../plan/block/list.ts";
 import type { Plan } from "../plan/index.ts";
-import {
-  sanitizeDayIndex,
-  sanitizeDayMinute,
-  snapDown,
-  type DayIndex,
-  type DayMinute,
-} from "../plan/time.ts";
+import type { Slot } from "../plan/slot.ts";
+import { sanitizeDayIndex, sanitizeDayMinute, snapDown } from "../plan/time.ts";
 import type { BlockPart } from "../plan/week.ts";
 import type { Planner } from "../planner/index.ts";
 import { drag, measureGrab, readMinute, type Grip, type PointerPlace } from "./drag.ts";
@@ -53,9 +48,6 @@ function readPlace(scroller: HTMLElement, x: number, y: number): PointerPlace | 
     minute: readMinute(y - nearest.rectangle.top, nearest.rectangle.height),
   };
 }
-
-/** A slot on the week: its day, and the minute it starts. */
-export type Slot = { day: DayIndex; start: DayMinute };
 
 /**
  * The empty slot under a point in the week, as a day and the slot's start: only inside a day

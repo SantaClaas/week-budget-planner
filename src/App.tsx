@@ -13,6 +13,7 @@ import { WeekPage } from "./page/WeekPage.tsx";
 import { DragChip } from "./placing/DragChip.tsx";
 import * as placing from "./placing/index.ts";
 import { PLACING_TOOLBAR_ID, PlacingToolbar } from "./placing/PlacingToolbar.tsx";
+import type { Activity } from "./plan/activity/index.ts";
 import * as planner from "./planner/index.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
@@ -147,6 +148,27 @@ export function App(): JSX.Element {
     document.querySelector<HTMLElement>(`#${PLACING_TOOLBAR_ID}`)?.focus();
   }
 
+  /**
+   * Add block's "New activity…": opens the new-activity form, in the pane beside the week, or on
+   * the Activities page on phones, where the pane isn't shown. Once the activity is added, the form
+   * closes, `onCreated` adds the block, and a phone goes back to the week to show it.
+   */
+  function openNewActivityForBlock(onCreated: (activity: Activity) => void): void {
+    const isPaneHidden = matchMedia("(width < 52.5em)").matches;
+    if (isPaneHidden) {
+      history.pushState(null, "", createPath("activities", BASE));
+      showPage("activities", "link");
+    }
+    edit.openNewThen((activity) => {
+      edit.close();
+      if (isPaneHidden) {
+        history.pushState(null, "", createPath("week", BASE));
+        showPage("week", "link");
+      }
+      onCreated(activity);
+    });
+  }
+
   const undoOnShortcut = (event: KeyboardEvent): void => {
     const isShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey;
     if (!isShortcut || event.key.toLowerCase() !== "z" || isInField(event.target)) return;
@@ -219,7 +241,12 @@ export function App(): JSX.Element {
             {(opened) => (
               <Switch>
                 <Match when={page() === "week"}>
-                  <WeekPage plan={opened().plan()} planner={opened()} today={today} />
+                  <WeekPage
+                    plan={opened().plan()}
+                    planner={opened()}
+                    today={today}
+                    onNewActivity={openNewActivityForBlock}
+                  />
                 </Match>
                 <Match when={page() === "activities"}>
                   <ActivitiesPage

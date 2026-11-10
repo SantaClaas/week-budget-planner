@@ -91,6 +91,12 @@ for (const colorScheme of ["light", "dark"] as const) {
     }) => {
       await openApp(page);
       const results = [await checkWithAxe(page)];
+      // Add block, open on the focused empty slot.
+      await page.getByRole("button", { name: /^Empty slot/u }).focus();
+      await page.keyboard.press("Enter");
+      await page.getByRole("region", { name: /^Add block/u }).waitFor();
+      results.push(await checkWithAxe(page));
+      await page.keyboard.press("Escape");
       // A selected block, with its handles and remove button.
       await page.getByRole("button", { name: /^Gym, Monday/u }).focus();
       results.push(await checkWithAxe(page));
@@ -111,6 +117,12 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.setViewportSize({ width: 390, height: 760 });
       await page.getByRole("link", { name: "Week" }).click();
       results.push(await checkWithAxe(page));
+      // Add block's bottom sheet.
+      await page.getByRole("button", { name: /^Empty slot/u }).focus();
+      await page.keyboard.press("Enter");
+      await page.getByRole("dialog", { name: "Add block" }).waitFor();
+      results.push(await checkWithAxe(page));
+      await page.keyboard.press("Escape");
       // The Activities page on a phone, and its empty state.
       await page.getByRole("link", { name: "Activities" }).click();
       results.push(await checkWithAxe(page));
