@@ -22,6 +22,7 @@ flowchart LR
   module_layout["layout"]
   module_navigation["navigation"]
   module_page["page"]
+  module_placing["placing"]
   module_plan["plan"]
   module_planner["planner"]
   module_polyfill["polyfill"]
@@ -34,19 +35,21 @@ flowchart LR
   module_week["week"]
   module_activity --> module_announcement
   module_activity --> module_icons
+  module_activity --> module_placing
   module_activity --> module_plan
   module_activity --> module_planner
   module_activity --> module_progress
   module_activity --> module_snackbar
+  module_activity --> module_week
   module_App --> module_activity
   module_App --> module_announcement
   module_App --> module_navigation
   module_App --> module_page
+  module_App --> module_placing
   module_App --> module_plan
   module_App --> module_planner
   module_App --> module_snackbar
   module_App --> module_top_app_bar
-  module_App --> module_week
   module_database --> module_broadcast
   module_database --> module_plan
   module_database --> module_result
@@ -58,6 +61,17 @@ flowchart LR
   module_index --> module_trusted_html
   module_navigation --> module_icons
   module_navigation --> module_page
+  module_page --> module_activity
+  module_page --> module_placing
+  module_page --> module_plan
+  module_page --> module_planner
+  module_page --> module_progress
+  module_page --> module_week
+  module_placing --> module_announcement
+  module_placing --> module_plan
+  module_placing --> module_planner
+  module_placing --> module_snackbar
+  module_placing --> module_week
   module_plan --> module_brand
   module_plan --> module_result
   module_planner --> module_plan
@@ -73,10 +87,8 @@ flowchart LR
   module_top_app_bar --> module_icons
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
-  module_week --> module_activity
   module_week --> module_announcement
   module_week --> module_icons
   module_week --> module_plan
   module_week --> module_planner
-  module_week --> module_progress
 ```

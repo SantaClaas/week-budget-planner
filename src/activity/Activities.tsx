@@ -13,6 +13,9 @@ import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
+import * as placing from "../placing/index.ts";
+import { startListDrag } from "../placing/list-drag.ts";
+import { isClickAfterDrag } from "../week/drag-controller.ts";
 import { ActivityForm } from "./ActivityForm.tsx";
 import * as edit from "./edit.ts";
 import { describeOverview, listRows, type ActivityRow } from "./row.ts";
@@ -191,6 +194,8 @@ function Row(properties: {
   planner: Planner;
   level: 2 | 3;
   isEditing: boolean;
+  /** What else starting to place does where the list is: on its own page, it moves to the week. */
+  onStartPlacing: () => void;
 }): JSX.Element {
   const id = (): ActivityId => properties.row.activity.id;
   return (
@@ -199,15 +204,45 @@ function Row(properties: {
       data-color={findColor(properties.row.activity.hue).key}
       style={{ "--activity-shape": `var(--shape-${properties.row.activity.shape})` }}
     >
-      <span class="emblem" aria-hidden="true" />
-      <span class="name">
-        <span class="title-medium">{properties.row.activity.name}</span>
-        <span class="body-small muted">{properties.row.budget}</span>
-      </span>
-      <span class="left-to-place" data-state={properties.row.state}>
-        <span class="title-small">{properties.row.figure}</span>
-        <span class="label-small muted">{properties.row.caption}</span>
-      </span>
+      <button
+        type="button"
+        class="activity-button"
+        aria-pressed={placing.current() === id() ? "true" : "false"}
+        aria-labelledby={`${id()}-name`}
+        aria-describedby={`${id()}-budget ${id()}-left`}
+        onPointerDown={(event) => {
+          // A pointer drags the activity onto the week; touch taps it to start placing instead.
+          if (event.pointerType === "touch" || event.button !== 0) return;
+          startListDrag(event, {
+            activity: properties.row.activity,
+            plan: () => properties.plan,
+            planner: properties.planner,
+          });
+        }}
+        onClick={() => {
+          if (isClickAfterDrag()) return;
+          if (placing.current() === id()) {
+            placing.stop();
+            return;
+          }
+          placing.start(id());
+          properties.onStartPlacing();
+        }}
+      >
+        <span class="emblem" aria-hidden="true" />
+        <span class="name">
+          <span class="title-medium" id={`${id()}-name`}>
+            {properties.row.activity.name}
+          </span>
+          <span class="body-small muted" id={`${id()}-budget`}>
+            {properties.row.budget}
+          </span>
+        </span>
+        <span class="left-to-place" id={`${id()}-left`} data-state={properties.row.state}>
+          <span class="title-small">{properties.row.figure}</span>
+          <span class="label-small muted">{properties.row.caption}</span>
+        </span>
+      </button>
       <button
         type="button"
         class="icon-button"
@@ -332,8 +367,16 @@ export function Activities(properties: {
   plan: Plan;
   planner: Planner;
   place: Place;
+  /**
+   * An activity started placing. The Activities page moves to the week, where the slots are; the
+   * pane needs nothing, since the week is beside it.
+   */
+  onStartPlacing?: () => void;
 }): JSX.Element {
   const rows = createMemo(() => listRows(properties.plan));
+  const startPlacing = (): void => {
+    properties.onStartPlacing?.();
+  };
   const overview = () => describeOverview(properties.plan);
   const level = (): 2 | 3 => (properties.place === "pane" ? 3 : 2);
   return (
@@ -387,10 +430,21 @@ export function Activities(properties: {
                 planner={properties.planner}
                 level={level()}
                 isEditing={row().activity.id === findEditedId()}
+                onStartPlacing={startPlacing}
               />
             )}
           </For>
         </ul>
+        <Show when={properties.place === "page"}>
+          <p class="body-small muted hint">
+            <span class="for-fine-pointer">
+              Click an activity to place it, then click a slot on the week.
+            </span>
+            <span class="for-coarse-pointer">
+              Tap an activity to place it, then tap a slot on the week.
+            </span>
+          </p>
+        </Show>
       </Show>
     </section>
   );

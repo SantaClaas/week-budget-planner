@@ -155,17 +155,19 @@ function speak(part: BlockPart, activity: Activity, format: Format): string {
 
 /**
  * What the live region says after the keyboard changed a block (see The week in
- * docs/spec/accessibility.md): "Moved to Tuesday 10:00 to 11:30" after a move, "Now Tuesday 10:00
+ * docs/spec/accessibility.md): "Added Gym, Tuesday 10:00 to 11:30" after placing a block, "Moved
+ * to Tuesday 10:00 to 11:30" after a move, "Now Tuesday 10:00
  * to 12:00, 2 hours" after a change of length, or "Removed Gym, Monday 18:00 to 19:30".
  */
 export function announceChange(
-  change: "moved" | "resized" | "removed",
+  change: "added" | "moved" | "resized" | "removed",
   block: Block,
   activity: Pick<Activity, "name">,
   format: Format = {},
 ): string {
   const range = speakRange(block, format);
   return {
+    added: `Added ${activity.name}, ${range}`,
     moved: `Moved to ${range}`,
     resized: `Now ${range}, ${formatLength(block.length, "long", format)}`,
     removed: `Removed ${activity.name}, ${range}`,

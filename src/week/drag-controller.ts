@@ -7,13 +7,19 @@
  */
 import * as list from "../plan/block/list.ts";
 import type { Plan } from "../plan/index.ts";
-import { sanitizeDayIndex } from "../plan/time.ts";
+import {
+  sanitizeDayIndex,
+  sanitizeDayMinute,
+  snapDown,
+  type DayIndex,
+  type DayMinute,
+} from "../plan/time.ts";
 import type { BlockPart } from "../plan/week.ts";
 import type { Planner } from "../planner/index.ts";
 import { drag, measureGrab, readMinute, type Grip, type PointerPlace } from "./drag.ts";
 
 /** How far the pointer moves before a press becomes a drag, so a click stays a click. */
-const DRAG_THRESHOLD_PIXELS = 4;
+export const DRAG_THRESHOLD_PIXELS = 4;
 /** How long clicks are ignored after a drag, so the click that ends it does nothing else. */
 const CLICK_PAUSE_MILLISECONDS = 350;
 /** How near the week's top or bottom edge the pointer scrolls it, and by how much per frame. */
@@ -24,6 +30,11 @@ let clicksIgnoredUntil = 0;
 
 /** Whether a click comes right after a drag, and so belongs to it. */
 export const isClickAfterDrag = (): boolean => performance.now() < clicksIgnoredUntil;
+
+/** Ignores clicks for a moment, after a drag ended, so the click that ends it does nothing else. */
+export function ignoreClicksAfterDrag(): void {
+  clicksIgnoredUntil = performance.now() + CLICK_PAUSE_MILLISECONDS;
+}
 
 /** The day column under the pointer, or the nearest one across, and the minute at its height. */
 function readPlace(scroller: HTMLElement, x: number, y: number): PointerPlace | undefined {
@@ -43,11 +54,32 @@ function readPlace(scroller: HTMLElement, x: number, y: number): PointerPlace | 
   };
 }
 
+/** A slot on the week: its day, and the minute it starts. */
+export type Slot = { day: DayIndex; start: DayMinute };
+
+/**
+ * The empty slot under a point in the week, as a day and the slot's start: only inside a day
+ * column, below the sticky day headers. Undefined anywhere else.
+ */
+export function findSlot(scroller: HTMLElement, x: number, y: number): Slot | undefined {
+  const headers = scroller.querySelector(".day-header")?.getBoundingClientRect().bottom ?? 0;
+  if (y < headers) return undefined;
+  for (const [index, column] of [...scroller.querySelectorAll(".day-column")].entries()) {
+    const rectangle = column.getBoundingClientRect();
+    const isInside = x >= rectangle.left && x < rectangle.right;
+    if (isInside && y >= rectangle.top && y < rectangle.bottom) {
+      const minute = readMinute(y - rectangle.top, rectangle.height);
+      return { day: sanitizeDayIndex(index), start: sanitizeDayMinute(snapDown(minute)) };
+    }
+  }
+  return undefined;
+}
+
 /**
  * Scrolls the week a step when the pointer is near its top or bottom edge. The top edge is where
  * the hours start, under the sticky day headers.
  */
-function scrollNearEdge(scroller: HTMLElement, y: number): boolean {
+export function scrollNearEdge(scroller: HTMLElement, y: number): boolean {
   const { bottom } = scroller.getBoundingClientRect();
   const top =
     scroller.querySelector(".day-header")?.getBoundingClientRect().bottom ??
@@ -123,7 +155,7 @@ export function startDrag(
       options.onDone(false);
       return;
     }
-    clicksIgnoredUntil = performance.now() + CLICK_PAUSE_MILLISECONDS;
+    ignoreClicksAfterDrag();
     // A cancelled drag (the browser took the pointer, say for a scroll) puts the block back.
     if (ended.type === "pointercancel") {
       planner.endPreview();
