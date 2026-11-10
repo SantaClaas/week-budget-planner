@@ -22,6 +22,9 @@
     "week-budget-planner/require-reason": "error",
     // Return early instead (see Functions in docs/guidelines/principles.md).
     "week-budget-planner/no-else": "error",
+    // A ternary chooses between two values; a third choice reads better as an early return
+    // (see "Choosing between two values" in docs/guidelines/principles.md).
+    "no-nested-ternary": "error",
     // A catch handles one operation's failure, never a mistake around it (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/one-operation-per-try": "error",

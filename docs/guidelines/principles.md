@@ -75,7 +75,7 @@ Why it's worth it:
 
 The lint rule `week-budget-planner/shorter-branch-first` fails on an `if` whose block ends the scope (with `return`, `throw`, `continue` or `break`) and holds more lines of code than the statements after it. It counts lines, not statements, since one statement can span many and the cost is the indented code a reader has to scan; oxfmt decides every line break, so the same code always counts the same. Comments and the statement that ends the block don't count, so a guard whose only statement is a long `throw` passes.
 
-**Choosing between two values is a ternary**, not an `if` with an `else`: `const mode = raw["mode"] === "day" ? "day" : "week"`.
+**Choosing between two values is a ternary**, not an `if` with an `else`: `const mode = raw["mode"] === "day" ? "day" : "week"`. A choice between three values isn't a ternary inside a ternary, which is hard to follow: give it a function that returns early for the first case and ends in a ternary for the other two, as `readLeftState` in [`src/activity/row.ts`](../../src/activity/row.ts) does. The lint rule `no-nested-ternary` fails on a nested one.
 
 The lint rule `week-budget-planner/no-else` (in [`oxlint-plugins/`](../../oxlint-plugins/)) fails on every `else`. Where one really is the clearest way to write it, disable the rule on that line and say why.
 

@@ -77,6 +77,16 @@ function findLineAndColumn(file: SourceFile, position: number): { line: number; 
 }
 
 /** Every statement in the files that throws away a value that must be used. */
+/** Why a call's value must be used: its Result, or a mark on the function. Undefined if neither. */
+function findReason(
+  checker: Checker,
+  call: Expression,
+  type: Type | undefined,
+): string | undefined {
+  if (isResult(type)) return `its Result (${type ? checker.typeToString(type) : "unknown"})`;
+  return isMarkedMustUse(checker, call) ? "a value marked @mustUse" : undefined;
+}
+
 function checkFile(checker: Checker, file: SourceFile, folder: string): Finding[] {
   const findings: Finding[] = [];
   const visit = (node: Node): void => {
@@ -85,11 +95,7 @@ function checkFile(checker: Checker, file: SourceFile, folder: string): Finding[
       if (call) {
         // The statement's type is the call's, awaited when it's awaited.
         const type = checker.getTypeAtLocation(node.expression);
-        const reason = isResult(type)
-          ? `its Result (${type ? checker.typeToString(type) : "unknown"})`
-          : isMarkedMustUse(checker, call)
-            ? "a value marked @mustUse"
-            : undefined;
+        const reason = findReason(checker, call, type);
         if (reason !== undefined) {
           // Positions include the whitespace and comments before a node; the code starts after it.
           const text = file.text.slice(node.pos, node.end);
