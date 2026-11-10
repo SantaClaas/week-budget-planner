@@ -60,9 +60,10 @@ The week is a region that scrolls, holding a list of seven days, and each day a 
 
 ## Add block
 
-- **On wide screens it looks like Material's menu, but it's a popover with a list of buttons**, not `role="menu"`: a real menu promises arrow-key navigation and one Tab stop, and the popover doesn't need them. Its heading is "Add block · Friday 14:00". Opening it moves focus to the first activity; Tab moves through the list; Escape or choosing closes it and returns focus to the slot.
+- **On wide screens it looks like Material's menu, but it's a popover with a list of buttons**, not `role="menu"`: a real menu promises arrow-key navigation and one Tab stop, and the popover doesn't need them. Its heading is "Add block · Friday 14:00". Opening it moves focus to the first activity; Tab moves through the list; Escape closes it and returns focus to the slot. Choosing closes it and takes focus to the new block, which now covers the slot, so the next key can move or resize it.
 - **On phones it's a modal `<dialog>`** (the bottom sheet). The length stepper is a `<fieldset>` with the legend "Length": the "15 minutes shorter" and "15 minutes longer" buttons, and the length between them in an `<output>`, which announces each change by itself.
 - **Each activity button's name is its activity**, and its description what's left ("3 h left · usually 1 h 30 min", "All placed · this would go over budget").
+- **"New activity…"** closes the chooser and opens the new-activity form, in the pane beside the week, or on the Activities page on phones. Once the activity is added, the form closes, the block is added at the slot, and focus goes to it, back on the week.
 
 ## Settings
 

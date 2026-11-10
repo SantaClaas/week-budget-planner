@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { createEffect, flush, For, Show, untrack } from "solid-js";
+import { createEffect, createSignal, flush, For, Show, untrack } from "solid-js";
 
 import { announce } from "../announcement/index.ts";
 import { Icon } from "../icons/Icon.tsx";
@@ -9,11 +9,12 @@ import * as list from "../plan/block/list.ts";
 import type { BlockId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import type { Activity } from "../plan/activity/index.ts";
-import { formatClockRange } from "../plan/format.ts";
+import { formatClock, formatClockRange, formatWeekday } from "../plan/format.ts";
 import { DAY, SLOT, type DayIndex } from "../plan/time.ts";
 import { changeLength, moveBy, moveDays } from "../plan/week.ts";
 import type { Planner } from "../planner/index.ts";
-import { findSlot, isClickAfterDrag, startDrag, type Slot } from "./drag-controller.ts";
+import { findEmptySlot, moveEmptySlot, type Slot, type SlotMove } from "../plan/slot.ts";
+import { findSlot, isClickAfterDrag, startDrag } from "./drag-controller.ts";
 import type { Grip } from "./drag.ts";
 import {
   announceChange,
@@ -295,6 +296,61 @@ function Day(properties: {
   );
 }
 
+/** The focused empty slot's id, so focus can find it again once a move draws it anew. */
+const EMPTY_SLOT_ID = "empty-slot";
+
+/** Which way each key moves the empty slot (see The week in docs/spec/accessibility.md). */
+const SLOT_MOVES: Partial<Record<string, SlotMove>> = {
+  ArrowUp: "earlier",
+  ArrowDown: "later",
+  ArrowLeft: "day-earlier",
+  ArrowRight: "day-later",
+  PageUp: "hour-earlier",
+  PageDown: "hour-later",
+};
+
+/**
+ * The one empty slot in Tab order, after the blocks: a button drawn as the highlighted slot while
+ * it has focus or its Add block is open. The arrow and page keys move it past the blocks, and
+ * Enter or Space picks it, as a click on the slot does.
+ */
+function EmptySlot(properties: {
+  slot: Slot;
+  isAddingBlock: boolean;
+  onMove: (slot: Slot) => void;
+  onPick: (slot: Slot) => void;
+  blocks: readonly Block[];
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      id={EMPTY_SLOT_ID}
+      class="slot-highlight"
+      aria-expanded={properties.isAddingBlock ? "true" : "false"}
+      style={{ "--day": properties.slot.day, "--start": properties.slot.start }}
+      onClick={(event) => {
+        // The week's own click handler would pick the slot again, from the pointer's place.
+        event.stopPropagation();
+        properties.onPick(properties.slot);
+      }}
+      onKeyDown={(event) => {
+        const move = SLOT_MOVES[event.key];
+        if (move === undefined || event.altKey || event.ctrlKey || event.metaKey) return;
+        const next = moveEmptySlot(properties.blocks, properties.slot, move);
+        // At the week's ends the key does nothing here, and the page scrolls as usual.
+        if (next === undefined) return;
+        event.preventDefault();
+        properties.onMove(next);
+      }}
+    >
+      <span class="visually-hidden">
+        Empty slot, {formatWeekday(properties.slot.day, "long")}{" "}
+        {formatClock(properties.slot.start)}
+      </span>
+    </button>
+  );
+}
+
 /**
  * The week: a gutter of hours and seven days side by side, all 24 hours tall, scrolling inside its
  * own region with the day headers and the gutter sticky (see docs/spec/grid-geometry.md). It opens
@@ -304,11 +360,16 @@ export function Week(properties: {
   plan: Plan;
   planner: Planner;
   today: DayIndex | undefined;
-  /** Whether an activity is placing, so a click on an empty slot adds a block instead of deselecting. */
+  /** Whether an activity is placing, so a mouse over an empty slot shows the preview. */
   isPlacing: boolean;
+  /** Whether Add block is open, for the empty slot it's open on. */
+  isAddingBlock: boolean;
   /** Where a new block would land, while placing. */
   preview: WeekPreview | undefined;
-  /** An empty slot was clicked or tapped while placing. */
+  /**
+   * An empty slot was clicked or tapped, or picked from the keyboard: placing adds a block there,
+   * and otherwise Add block opens on it.
+   */
   onPickSlot: (slot: Slot) => void;
   /** The mouse is over the empty slot `slot` while placing. */
   onHoverSlot: (slot: Slot) => void;
@@ -317,6 +378,25 @@ export function Week(properties: {
 }): JSX.Element {
   let scroller: HTMLElement | undefined;
   const days = () => layoutWeek(properties.plan, properties.today);
+  /** Where the empty slot was last, which it keeps until a block covers it. */
+  const [remembered, setRemembered] = createSignal<Slot>();
+  const emptySlot = (): Slot | undefined => findEmptySlot(properties.plan, remembered());
+  /** Moves the empty slot, and focus with it, to the new button drawn there. */
+  const moveEmptySlotTo = (slot: Slot): void => {
+    setRemembered(slot);
+    focusOrWeek(scroller ?? null, EMPTY_SLOT_ID);
+  };
+  /**
+   * Picks `slot`. While placing, the block added there covers it, so focus follows the empty slot
+   * on to the next one, when it had focus.
+   */
+  const pickSlot = (slot: Slot): void => {
+    const isFocused = document.activeElement?.id === EMPTY_SLOT_ID;
+    const isPlacing = properties.isPlacing;
+    setRemembered(slot);
+    properties.onPickSlot(slot);
+    if (isPlacing && isFocused) focusOrWeek(scroller ?? null, EMPTY_SLOT_ID);
+  };
   /** The preview, drawn on its day, up to midnight. */
   const drawnPreview = (): { day: DayIndex; drawn: DrawnPreview } | undefined => {
     const shown = properties.preview;
@@ -362,12 +442,9 @@ export function Week(properties: {
           event.target instanceof Element && event.target.closest(".block") !== null;
         if (isOnBlock || isClickAfterDrag()) return;
         const slot = findSlot(event.currentTarget, event.clientX, event.clientY);
-        // While placing, a click on an empty slot adds a block there; otherwise it deselects.
-        if (!properties.isPlacing || slot === undefined) {
-          selection.clear();
-          return;
-        }
-        properties.onPickSlot(slot);
+        selection.clear();
+        // A click on an empty slot adds a block there while placing, or opens Add block on it.
+        if (slot !== undefined) pickSlot(slot);
       }}
       onPointerMove={(event) => {
         if (event.pointerType !== "mouse" || !properties.isPlacing) return;
@@ -413,6 +490,21 @@ export function Week(properties: {
             )}
           </For>
         </ol>
+        {/* Keyed by the slot, so each move draws a new button and is read as a new focus. */}
+        <For
+          each={[emptySlot()].filter((slot) => slot !== undefined)}
+          keyed={(slot) => `${String(slot.day)} ${String(slot.start)}`}
+        >
+          {(slot) => (
+            <EmptySlot
+              slot={slot()}
+              blocks={properties.plan.blocks}
+              isAddingBlock={properties.isAddingBlock}
+              onMove={moveEmptySlotTo}
+              onPick={pickSlot}
+            />
+          )}
+        </For>
       </div>
     </section>
   );

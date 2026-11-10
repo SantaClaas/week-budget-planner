@@ -56,6 +56,20 @@ test("places an activity from the keyboard into the first free slot, and stops",
   await expect(gym).toHaveAttribute("aria-pressed", "false");
 });
 
+test("adds a block on the focused empty slot while placing, and focus moves on", async ({
+  page,
+}) => {
+  await openApp(page);
+  await findActivity(page, "Gym").click();
+  const emptySlot = page.getByRole("button", { name: /^Empty slot/u });
+  await emptySlot.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => readAnnouncement(page)).toBe("Added Gym, Monday 07:00 to 08:30");
+  // The block covers the slot, so the empty slot moves on past it, and focus with it.
+  await expect(emptySlot).toBeFocused();
+  await expect(emptySlot).toHaveAccessibleName("Empty slot, Monday 08:30");
+});
+
 test("adds a block on each slot clicked while placing, until nothing is left", async ({ page }) => {
   await openApp(page);
   await findActivity(page, "Gym").click();

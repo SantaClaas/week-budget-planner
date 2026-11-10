@@ -10,6 +10,7 @@ Dependencies go one way (see Coupling in [`docs/guidelines/principles.md`](guide
 flowchart LR
   module_App["App"]
   module_activity["activity"]
+  module_add_block["add-block"]
   module_announcement["announcement"]
   module_brand["brand"]
   module_broadcast["broadcast"]
@@ -41,6 +42,8 @@ flowchart LR
   module_activity --> module_progress
   module_activity --> module_snackbar
   module_activity --> module_week
+  module_add_block --> module_icons
+  module_add_block --> module_plan
   module_App --> module_activity
   module_App --> module_announcement
   module_App --> module_navigation
@@ -62,10 +65,12 @@ flowchart LR
   module_navigation --> module_icons
   module_navigation --> module_page
   module_page --> module_activity
+  module_page --> module_add_block
   module_page --> module_placing
   module_page --> module_plan
   module_page --> module_planner
   module_page --> module_progress
+  module_page --> module_snackbar
   module_page --> module_week
   module_placing --> module_announcement
   module_placing --> module_icons
