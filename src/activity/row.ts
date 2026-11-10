@@ -35,10 +35,16 @@ function describeBudget(activity: Activity, format: Format): string {
   return `${length} per day, ${formatDayCount(activity.days, format)}`;
 }
 
+/** Whether `left` minutes are still to place, none, or fewer than none. */
+function readLeftState(left: number): LeftState {
+  if (left > 0) return "left";
+  return left === 0 ? "all-placed" : "over-budget";
+}
+
 function drawRow(activity: Activity, placed: number, format: Format): ActivityRow {
   const budget = calculateWeeklyBudget(activity);
   const left = budget - placed;
-  const state: LeftState = left > 0 ? "left" : left === 0 ? "all-placed" : "over-budget";
+  const state = readLeftState(left);
   return {
     activity,
     budget: describeBudget(activity, format),

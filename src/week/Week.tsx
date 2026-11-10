@@ -40,13 +40,17 @@ function Times(properties: { pieces: TimeText[] }): JSX.Element {
 /** The id of a block's button, so focus can find it again after a change redraws it. */
 const createBlockButtonId = (id: BlockId): string => `block-${id}`;
 
-/** Takes focus to the block's button, or to the week when the block has none any more. */
-function focusBlock(scroller: Element | null, id: BlockId | undefined): void {
+/** Takes focus to the element with the id `id`, once the page shows it, or else to the week. */
+function focusOrWeek(scroller: Element | null, id: string | undefined): void {
   flush();
-  const button =
-    id === undefined ? null : document.querySelector(`#${CSS.escape(createBlockButtonId(id))}`);
-  const target = button ?? scroller;
+  const element = id === undefined ? null : document.querySelector(`#${CSS.escape(id)}`);
+  const target = element ?? scroller;
   if (target instanceof HTMLElement) target.focus();
+}
+
+/** Takes focus to the block's button, or to the week when the block has none any more. */
+function focusBlock(scroller: Element | null, id: BlockId): void {
+  focusOrWeek(scroller, createBlockButtonId(id));
 }
 
 /**
@@ -62,14 +66,7 @@ function removeBlock(planner: Planner, drawn: DrawnBlock, scroller: Element | nu
   selection.clear();
   planner.change((plan) => list.remove(plan, drawn.block.id));
   announce(announceChange("removed", drawn.block, drawn.activity));
-  flush();
-  const target = next === undefined ? null : document.querySelector(`#${CSS.escape(next)}`);
-  (target instanceof HTMLElement
-    ? target
-    : scroller instanceof HTMLElement
-      ? scroller
-      : null
-  )?.focus();
+  focusOrWeek(scroller, next);
 }
 
 /**
