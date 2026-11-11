@@ -1780,7 +1780,13 @@
     &:is(:focus-visible, [aria-expanded="true"]) {
       background: color-mix(in srgb, var(--primary) 12%, transparent);
       border-color: var(--primary);
-      @media (forced-colors: active) {
+    }
+    /* Forced colors would draw the transparent border while the slot is hidden, so the slot draws
+       itself: nothing while hidden, a Highlight border while shown. */
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      &:is(:focus-visible, [aria-expanded="true"]) {
+        background: transparent;
         border-color: Highlight;
       }
     }

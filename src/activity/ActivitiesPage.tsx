@@ -30,9 +30,9 @@ export function ActivitiesPage(properties: {
         place="page"
         onStartPlacing={properties.onStartPlacing}
       />
-      {/* The button opens the new-activity form, so it goes while that's open, also in the empty
-          state, where the form is always there. It would float over the form's pickers. */}
-      <Show when={properties.plan.activities.length > 0 && edit.current()?.type !== "new"}>
+      {/* The button goes while any activity's form is open, where it would float over the form's
+          fields and pickers, and in the empty state, where the new-activity form is always there. */}
+      <Show when={properties.plan.activities.length > 0 && edit.current() === undefined}>
         <button
           type="button"
           class="floating-action-button"
