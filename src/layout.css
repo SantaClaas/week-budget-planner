@@ -69,9 +69,34 @@
       grid-column: full;
     }
   }
-  main:has(> .week-page) {
+  /* The Week page fills the rest of the screen: on wide screens the Activities pane (Google's
+     supporting pane, 360dp) beside the week with its summary, each scrolling on its own; on phones
+     only the week, since the Activities page takes the pane's place. */
+  main:has(> .week-with-summary) {
+    grid-template-columns:
+      [full-start] 1rem [pane-start] 22.5rem [pane-end] 1rem [week-start] minmax(0, 1fr)
+      [week-end] 1rem [full-end];
     grid-template-rows: auto minmax(0, 1fr);
     align-content: stretch;
+    padding-block-end: 1rem;
+    & > .activities {
+      grid-column: pane;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    & > .week-with-summary {
+      grid-column: week;
+    }
+    @media (width < 52.5em) {
+      grid-template-columns: [full-start] 0.5rem [week-start] minmax(
+          0,
+          1fr
+        ) [week-end] 0.5rem [full-end];
+      padding-block-end: 0.5rem;
+      & > .activities {
+        display: none;
+      }
+    }
   }
 
   /* The app bar stays at the top while a long page scrolls under it. */
@@ -82,40 +107,18 @@
     background: var(--surface-container);
   }
 
-  /* The Week page: the summary, then the week filling the rest of the screen. */
-  .week-page {
+  /* The week with its summary: the summary, then the week filling the rest. The note over an empty
+     week shares the week's place, centered in it. The summary lays out by the room it has. */
+  .week-with-summary {
+    container: week-with-summary / inline-size;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template: "summary" auto "week" minmax(0, 1fr) / minmax(0, 1fr);
     gap: 0.75rem;
-    padding-block-end: 1rem;
-    padding-inline: 1rem;
-    @media (width < 52.5em) {
-      padding-block-end: 0.5rem;
-      padding-inline: 0.5rem;
-    }
-  }
-  /* On wide screens the Activities pane sits beside the week, 22.5rem wide (Google's supporting
-     pane, 360dp), and scrolls on its own. On phones the Activities page takes its place. */
-  .week-page:has(> .activities) {
-    grid-template: "pane summary" auto "pane week" minmax(0, 1fr) / 22.5rem minmax(0, 1fr);
-    column-gap: 1rem;
     & > .summary {
       grid-area: summary;
     }
-    /* The note over an empty week shares the week's place, centered in it. */
     & > :is(.week-scroller, .empty-week) {
       grid-area: week;
-    }
-    & > .activities {
-      grid-area: pane;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-    }
-    @media (width < 52.5em) {
-      grid-template: "summary" auto "week" minmax(0, 1fr) / minmax(0, 1fr);
-      & > .activities {
-        display: none;
-      }
     }
   }
 
@@ -189,7 +192,7 @@
 
   /* The Activities page: the list in a centered column up to 48rem wide, and on phones the extended
      "New activity" button pinned over its end (the rail holds it on wide screens). */
-  main:has(> .activities) {
+  main:has(> .activities[data-place="page"]) {
     padding-block-end: 1rem;
     & > .activities {
       grid-column: column;
@@ -213,9 +216,6 @@
      where there's room for them and the whole 27.5rem of text, else on a line of their own below,
      so the text never wraps more because of them (a line more, when a drag takes an activity over
      budget, would move the week under the pointer). On phones they're in Settings › Week. */
-  .week-page {
-    container: week-page / inline-size;
-  }
   .summary {
     display: grid;
     grid-template-columns: minmax(0, 27.5rem) minmax(0, 1fr) auto auto;
@@ -231,8 +231,8 @@
     & > .button:last-of-type {
       grid-column: 4;
     }
-    /* the pane, the gaps, the text and the two buttons */
-    @container week-page (width >= 80rem) {
+    /* the text, the gaps and the two buttons */
+    @container week-with-summary (width >= 56.5rem) {
       & > :is(p, .progress) {
         grid-column: 1;
       }
@@ -277,9 +277,14 @@
     }
   }
 
+  /* A page's few parts of its own, as on "Page not found": each starts at the page's edge and is
+     only as wide as it needs, so a link isn't clickable across the whole page. */
   .page-content {
-    padding-inline: 1rem;
-    padding-block-end: 1rem;
+    justify-self: start;
+    margin-inline: 1rem;
+    &:last-child {
+      margin-block-end: 1rem;
+    }
   }
 
   /* The Settings page: its sections in a centered column up to 40rem wide, each a title in primary
