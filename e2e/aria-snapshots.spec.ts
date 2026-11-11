@@ -344,8 +344,11 @@ test("the Settings page", async ({ page }) => {
         - heading "About" [level=2]
         - list:
           - listitem:
-            - link /Version \\d+-\\d+-\\d+( · [0-9a-f]{7})? Opens in a new tab/:
+            - link /Version \\d+-\\d+-\\d+( · [0-9a-f]{7})? Built .+ Opens in a new tab/:
               - /url: /https:\\/\\/github\\.com\\/SantaClaas\\/week-budget-planner\\/tree\\/\\S+/
+              - text: /Version \\d+-\\d+-\\d+( · [0-9a-f]{7})? Built/
+              - time: /.+/
+              - text: Opens in a new tab
   `);
 });
 
