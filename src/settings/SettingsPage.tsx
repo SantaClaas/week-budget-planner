@@ -142,7 +142,13 @@ function Appearance(): JSX.Element {
   );
 }
 
-/** The version this build is, as a link to the repository at its commit. */
+/** When the app was built, in the browser's language and time zone: "11 Nov 2026, 14:32". */
+const builtAt = Temporal.Instant.from(version.builtAt).toLocaleString(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+/** The version this build is, as a link to the repository at its commit, and when it was built. */
 function About(): JSX.Element {
   return (
     <section class="settings-section" aria-labelledby="about-title">
@@ -158,6 +164,9 @@ function About(): JSX.Element {
               <span class="body-medium muted">
                 {version.date}
                 {version.commit === undefined ? "" : ` · ${version.commit.slice(0, 7)}`}
+              </span>
+              <span class="body-medium muted">
+                Built <time datetime={version.builtAt}>{builtAt}</time>
               </span>
             </span>
             <Icon name="open_in_new" />
