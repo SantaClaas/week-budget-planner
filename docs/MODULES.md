@@ -89,6 +89,7 @@ flowchart LR
   module_placing --> module_icons
   module_placing --> module_plan
   module_placing --> module_planner
+  module_placing --> module_progress
   module_placing --> module_snackbar
   module_placing --> module_week
   module_plan --> module_brand
@@ -119,5 +120,6 @@ flowchart LR
   module_week --> module_icons
   module_week --> module_plan
   module_week --> module_planner
+  module_week --> module_progress
   module_week --> module_snackbar
 ```

@@ -12,6 +12,7 @@ import { createExampleWeek, keepExampleWeek, startEmpty } from "../plan/example.
 import { randomIds, type ActivityId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
+import * as changing from "../progress/changing.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
 import type { PlanStore } from "../storage/plan-store.ts";
@@ -274,7 +275,11 @@ function Row(properties: {
         <Icon name="edit" size={20} />
         <span class="visually-hidden">Edit {properties.row.activity.name}</span>
       </button>
-      <Progress budget={properties.row.weeklyBudget} placed={properties.row.placedMinutes} />
+      <Progress
+        budget={properties.row.weeklyBudget}
+        placed={properties.row.placedMinutes}
+        isWavy={changing.current() === id()}
+      />
       <Show when={properties.isEditing}>
         <EditForm
           row={properties.row}

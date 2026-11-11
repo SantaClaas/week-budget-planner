@@ -156,6 +156,58 @@ test("drags a block to another day and resizes it from both edges", async ({ pag
   ).toBeAttached();
 });
 
+/** The progress bars drawn as Google's wavy indicator now. */
+const findWavyBars = (page: Page): Locator => page.locator(".progress[data-wavy]");
+
+test("waves the activity's and the week's bars while a resize changes placed time", async ({
+  page,
+}) => {
+  await openApp(page);
+  const hour = await measureHour(page);
+  const box = await measure(findBlock(page, "Statistics lecture, Monday 10:00"));
+
+  // A move doesn't change placed time, so the bars stay flat.
+  await page.mouse.move(box.x + box.width / 2, box.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 12 + hour, { steps: 4 });
+  await expect(findWavyBars(page)).toHaveCount(0);
+  await page.mouse.up();
+
+  // The bottom edge, half an hour down: the lecture's bar and the summary's wave meanwhile.
+  const edge = await measure(findBlock(page, "Statistics lecture, Monday 11:00"));
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height - 2);
+  await page.mouse.down();
+  await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height - 2 + hour / 2, { steps: 4 });
+  await expect(findWavyBars(page)).toHaveCount(2);
+  const lectureRow = page.getByRole("listitem").filter({
+    has: page.getByRole("button", { name: "Statistics lecture", exact: true }),
+  });
+  await expect(lectureRow.locator(".progress")).toHaveAttribute("data-wavy");
+  // Released, the wave flattens and goes.
+  await page.mouse.up();
+  await expect(findWavyBars(page)).toHaveCount(0);
+});
+
+test.describe("with reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("keeps the bars flat while a resize changes placed time", async ({ page }) => {
+    await openApp(page);
+    const hour = await measureHour(page);
+    const lecture = findBlock(page, "Statistics lecture, Monday 10:00");
+    // Selected, the block shows its handles.
+    await lecture.click();
+    const edge = await measure(lecture);
+    await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height - 2);
+    await page.mouse.down();
+    await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height - 2 + hour, { steps: 4 });
+    // The block follows the drag, so the placed time has changed by now.
+    await expect(findBlock(page, "Statistics lecture, Monday 10:00 to 12:")).toBeVisible();
+    await expect(findWavyBars(page)).toHaveCount(0);
+    await page.mouse.up();
+  });
+});
+
 test("removes a block with Delete and with its button, and Undo brings it back", async ({
   page,
 }) => {

@@ -15,6 +15,7 @@ import type { Block } from "../plan/block/index.ts";
 import type { Plan } from "../plan/index.ts";
 import type { DayIndex, Length as BlockLength } from "../plan/time.ts";
 import type { Planner } from "../planner/index.ts";
+import * as changing from "../progress/changing.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
 import type { PlanStore } from "../storage/plan-store.ts";
@@ -60,7 +61,11 @@ function Summary(properties: { plan: Plan; planner: Planner }): JSX.Element {
           </Show>
         </span>
       </p>
-      <Progress budget={summary().budget} placed={summary().placed} />
+      <Progress
+        budget={summary().budget}
+        placed={summary().placed}
+        isWavy={changing.current() !== undefined}
+      />
       <DayHours plan={properties.plan} planner={properties.planner} variant="button" />
       <ClearWeek plan={properties.plan} planner={properties.planner} variant="button" />
     </div>
