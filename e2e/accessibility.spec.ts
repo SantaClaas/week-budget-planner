@@ -164,6 +164,31 @@ for (const textSize of ["100%", "200%"]) {
   });
 }
 
+/** How far the window itself can scroll down: 0 when only the page's own regions scroll. */
+const measureWindowScroll = (): number =>
+  document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+// Only <main>, the Activities pane and the week scroll (see the body rule in src/layout.css). An
+// absolutely positioned element whose containing block is the window's, like visually hidden text
+// in a region that isn't positioned, escapes that region's overflow and lets the window scroll too,
+// over the app bar and the navigation into empty space. Short windows, so every page overflows.
+for (const { device, width, height } of [
+  { device: "wide screens", width: 1280, height: 500 },
+  { device: "phones", width: 390, height: 600 },
+]) {
+  test(`scrolls only inside the page, never the window, on ${device}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const paths = ["", "activities", "settings", "no-such-page"];
+    const scrolls: string[] = [];
+    for (const path of paths) {
+      await page.goto(`${ISOLATED_URL}${path}`);
+      await expectStatus(page, "full");
+      scrolls.push(`/${path}: ${String(await page.evaluate(measureWindowScroll))}px`);
+    }
+    expect(scrolls).toEqual(paths.map((path) => `/${path}: 0px`));
+  });
+}
+
 test("keeps all text with the WCAG text spacing (WCAG 1.4.12)", async ({ page }) => {
   await openApp(page);
   // the spacing a user's style sheet may set, from the success criterion
