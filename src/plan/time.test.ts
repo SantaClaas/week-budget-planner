@@ -6,6 +6,7 @@ import {
   parseDayEnd,
   parseDayStart,
   sanitizePlaced,
+  sanitizeTotalBudget,
   sanitizeWeeklyBudget,
   snapDown,
   snap,
@@ -19,9 +20,20 @@ describe("time", () => {
   });
 });
 
+describe("weekly budgets", () => {
+  it("keeps an activity's weekly budget a multiple of the slot from a slot to a week", () => {
+    expect(sanitizeWeeklyBudget(270)).toBe(270);
+    expect(sanitizeWeeklyBudget(97)).toBe(90);
+    expect(sanitizeWeeklyBudget(0)).toBe(15);
+    expect(sanitizeWeeklyBudget(10_080)).toBe(10_080);
+    expect(sanitizeWeeklyBudget(20_160)).toBe(10_080);
+    expect(sanitizeWeeklyBudget(Number.NaN)).toBe(60);
+  });
+});
+
 describe("totals", () => {
   it.each([
-    ["a weekly budget", sanitizeWeeklyBudget],
+    ["a total budget", sanitizeTotalBudget],
     ["placed time", sanitizePlaced],
   ])("keeps %s a multiple of the slot from 0 up, with no upper limit", (_, sanitize) => {
     expect(sanitize(270)).toBe(270);
@@ -32,7 +44,7 @@ describe("totals", () => {
   });
 
   it.each([
-    ["a weekly budget", sanitizeWeeklyBudget],
+    ["a total budget", sanitizeTotalBudget],
     ["placed time", sanitizePlaced],
   ])("repairs %s that is below 0 or not finite to 0", (_, sanitize) => {
     expect(sanitize(-15)).toBe(0);

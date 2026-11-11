@@ -2,7 +2,14 @@ import type { ActivityId } from "./id.ts";
 import type { Activity } from "./activity/index.ts";
 import type { Block } from "./block/index.ts";
 import type { Plan } from "./index.ts";
-import { sanitizePlaced, sanitizeWeeklyBudget, type Placed, type WeeklyBudget } from "./time.ts";
+import {
+  sanitizePlaced,
+  sanitizeTotalBudget,
+  sanitizeWeeklyBudget,
+  type Placed,
+  type TotalBudget,
+  type WeeklyBudget,
+} from "./time.ts";
 
 /** The activity's budget counted per week: per day, the day's budget times its days. */
 export const calculateWeeklyBudget = (
@@ -26,7 +33,7 @@ export const readPlaced = (placed: ReadonlyMap<ActivityId, Placed>, id: Activity
 
 export type Summary = {
   /** Sum of all budgets. */
-  budget: WeeklyBudget;
+  budget: TotalBudget;
   /** Sum of all blocks. */
   placed: Placed;
   /** Sum of what each activity still has left (activities over budget count as zero). */
@@ -50,7 +57,7 @@ export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
     overBudget += Math.max(0, activityPlaced - activityBudget);
   }
   return {
-    budget: sanitizeWeeklyBudget(budget),
+    budget: sanitizeTotalBudget(budget),
     placed: sanitizePlaced(placed),
     leftToPlace,
     overBudget,
@@ -64,7 +71,7 @@ export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
  * of the track.
  */
 export function splitProgress(
-  budget: WeeklyBudget,
+  budget: WeeklyBudget | TotalBudget,
   placed: Placed,
 ): { withinBudget: number; overBudget: number } {
   if (budget <= 0) return { withinBudget: 0, overBudget: placed > 0 ? 1 : 0 };
