@@ -7,13 +7,13 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | Code: `Plan` |
 | **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color, a shape and a budget. | Code: `Activity` |
 | **Emblem** | An activity's color in its shape, drawn small beside its name, on its blocks and in the pickers. It tells activities apart without relying on color alone. | Was "swatch". Code: `.emblem` |
-| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes` (type `BudgetMinutes`), `days` (type `DayCount`) |
+| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes` (type `BudgetMinutes`), `days` (type `DayCount`); counted per week, type `WeeklyBudget` |
 | **Block** | One piece of an activity on the week: a day, a start time and a length. You add, move, resize and remove blocks. | Was "tile" in the prototype. Code: `Block` |
 | **Slot** | A 15-minute cell on the week. An empty slot has no block. Blocks start and end on slots. | Everything snaps to 15 min |
 | **Length** | How long a block is, in minutes. | Code: `length`, type `Length` |
 | **Overnight block** | A block that runs past midnight into the next day, for example a night shift from Tuesday 22:00 to Wednesday 02:00. It is one block, drawn in two parts. Sunday night runs into Monday morning. | |
 | **Default length** | The length a new block gets: the per-day budget for per-day activities, otherwise 1 h 30 min, and never more than what is left. | |
-| **Placed** | The total length of an activity's blocks. | |
+| **Placed** | The total length of an activity's blocks. | Code: type `Placed` |
 | **Left to place** | Budget minus placed. At zero it reads "All placed". Below zero it is "Over budget". | |
 | **Placing** | The mode you are in after picking an activity: every click or tap on an empty slot adds a block of it, until you press Done or nothing is left. | Was "armed" in the prototype |
 | **Add block** | Click or tap an empty slot when you are not placing, then choose the activity. | Phone: a bottom sheet. Desktop: a menu |

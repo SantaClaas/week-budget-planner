@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 
 import { announce } from "../announcement/index.ts";
 import type { Activity } from "../plan/activity/index.ts";
-import { calculateWeeklyBudget, sumPlacedByActivity } from "../plan/budget.ts";
+import { calculateWeeklyBudget, readPlaced, sumPlacedByActivity } from "../plan/budget.ts";
 import type { Block } from "../plan/block/index.ts";
 import * as list from "../plan/block/list.ts";
 import { randomIds, type ActivityId } from "../plan/id.ts";
@@ -65,7 +65,7 @@ export function hideChip(): void {
 
 /** Whether `activity` has nothing left to place in `plan`. */
 const isAllPlaced = (plan: Plan, activity: Activity): boolean =>
-  (sumPlacedByActivity(plan.blocks).get(activity.id) ?? 0) >= calculateWeeklyBudget(activity);
+  readPlaced(sumPlacedByActivity(plan.blocks), activity.id) >= calculateWeeklyBudget(activity);
 
 /**
  * Adds a block of `activity` at the slot, with the default length, selects it and says so, and

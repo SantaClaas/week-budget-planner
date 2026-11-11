@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { sumPlacedByActivity, splitProgress, summarize, calculateWeeklyBudget } from "./budget.ts";
+import {
+  calculateWeeklyBudget,
+  readPlaced,
+  splitProgress,
+  summarize,
+  sumPlacedByActivity,
+} from "./budget.ts";
 import { createActivityId, createActivity, createBlock } from "./test-data.ts";
+import { sanitizePlaced, sanitizeWeeklyBudget } from "./time.ts";
 
 describe("budget", () => {
   it("counts per-day budgets times their days", () => {
@@ -19,6 +26,8 @@ describe("budget", () => {
       createBlock({ id: "2", activityId: "g", length: 90 }),
     ];
     expect(sumPlacedByActivity(blocks).get(createActivityId("a"))).toBe(750);
+    // An activity without blocks has nothing placed.
+    expect(readPlaced(sumPlacedByActivity(blocks), createActivityId("none"))).toBe(0);
     expect(summarize({ activities: [work, gym], blocks })).toEqual({
       budget: 990,
       placed: 840,
@@ -28,9 +37,16 @@ describe("budget", () => {
   });
 
   it("splits the progress bar at the budget when over", () => {
-    expect(splitProgress(720, 360)).toEqual({ withinBudget: 0.5, overBudget: 0 });
-    expect(splitProgress(720, 720)).toEqual({ withinBudget: 1, overBudget: 0 });
-    const overBudget = splitProgress(720, 750);
+    const twelveHours = sanitizeWeeklyBudget(720);
+    expect(splitProgress(twelveHours, sanitizePlaced(360))).toEqual({
+      withinBudget: 0.5,
+      overBudget: 0,
+    });
+    expect(splitProgress(twelveHours, sanitizePlaced(720))).toEqual({
+      withinBudget: 1,
+      overBudget: 0,
+    });
+    const overBudget = splitProgress(twelveHours, sanitizePlaced(750));
     expect(overBudget.withinBudget).toBeCloseTo(0.96);
     expect(overBudget.overBudget).toBeCloseTo(0.04);
   });

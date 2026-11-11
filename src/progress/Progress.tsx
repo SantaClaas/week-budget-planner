@@ -2,6 +2,7 @@ import type { JSX } from "@solidjs/web";
 import { createEffect, createMemo, Show } from "solid-js";
 
 import { splitProgress } from "../plan/budget.ts";
+import type { Placed, WeeklyBudget } from "../plan/time.ts";
 
 /** Whether this browser can draw the wave: without `clip-path: shape()`, the bar stays flat. */
 const isWaveSupported = (): boolean =>
@@ -54,8 +55,8 @@ function settle(bar: HTMLElement): void {
  * draws what the text beside it already says, so it's hidden from screen readers.
  */
 export function Progress(properties: {
-  budget: number;
-  placed: number;
+  budget: WeeklyBudget;
+  placed: Placed;
   isWavy?: boolean;
 }): JSX.Element {
   // Worked out once per change of the budget or what's placed, however often it's read below.

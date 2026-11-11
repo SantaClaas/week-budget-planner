@@ -4,9 +4,15 @@
  * Layout in docs/spec/layout.md).
  */
 import type { Activity } from "../plan/activity/index.ts";
-import { calculateWeeklyBudget, summarize, sumPlacedByActivity } from "../plan/budget.ts";
+import {
+  calculateWeeklyBudget,
+  readPlaced,
+  summarize,
+  sumPlacedByActivity,
+} from "../plan/budget.ts";
 import { formatCount, formatDayCount, formatLength, type Format } from "../plan/format.ts";
 import type { Plan } from "../plan/index.ts";
+import type { Placed, WeeklyBudget } from "../plan/time.ts";
 
 /** Whether an activity has some left to place, is all placed, or has more placed than its budget. */
 type LeftState = "left" | "all-placed" | "over-budget";
@@ -22,8 +28,8 @@ export type ActivityRow = {
   /** Under the figure: "left to place", the weekly budget when all placed, or "over budget". */
   caption: string;
   /** The weekly budget and what's placed, in minutes, for the progress indicator. */
-  weeklyBudget: number;
-  placedMinutes: number;
+  weeklyBudget: WeeklyBudget;
+  placedMinutes: Placed;
   /** The total length of its blocks, for the form's "4 hr, 30 min placed". */
   placed: string;
 };
@@ -41,7 +47,7 @@ function readLeftState(left: number): LeftState {
   return left === 0 ? "all-placed" : "over-budget";
 }
 
-function drawRow(activity: Activity, placed: number, format: Format): ActivityRow {
+function drawRow(activity: Activity, placed: Placed, format: Format): ActivityRow {
   const budget = calculateWeeklyBudget(activity);
   const left = budget - placed;
   const state = readLeftState(left);
@@ -67,7 +73,9 @@ export function listRows(
   format: Format = {},
 ): ActivityRow[] {
   const placed = sumPlacedByActivity(plan.blocks);
-  return plan.activities.map((activity) => drawRow(activity, placed.get(activity.id) ?? 0, format));
+  return plan.activities.map((activity) =>
+    drawRow(activity, readPlaced(placed, activity.id), format),
+  );
 }
 
 /**
@@ -82,7 +90,7 @@ export function describeOverview(
   const placed = sumPlacedByActivity(plan.blocks);
   let overBudget = 0;
   for (const activity of plan.activities) {
-    if ((placed.get(activity.id) ?? 0) > calculateWeeklyBudget(activity)) overBudget += 1;
+    if (readPlaced(placed, activity.id) > calculateWeeklyBudget(activity)) overBudget += 1;
   }
   const count = plan.activities.length;
   const activities = formatCount(count, { one: "activity", other: "activities" }, format);

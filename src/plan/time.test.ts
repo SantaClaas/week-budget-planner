@@ -5,6 +5,8 @@ import {
   parseDayCount,
   parseDayEnd,
   parseDayStart,
+  sanitizePlaced,
+  sanitizeWeeklyBudget,
   snapDown,
   snap,
 } from "./time.ts";
@@ -14,6 +16,28 @@ describe("time", () => {
     expect(snap(52)).toBe(45);
     expect(snap(53)).toBe(60);
     expect(snapDown(59)).toBe(45);
+  });
+});
+
+describe("totals", () => {
+  it.each([
+    ["a weekly budget", sanitizeWeeklyBudget],
+    ["placed time", sanitizePlaced],
+  ])("keeps %s a multiple of the slot from 0 up, with no upper limit", (_, sanitize) => {
+    expect(sanitize(270)).toBe(270);
+    expect(sanitize(97)).toBe(90);
+    expect(sanitize(0)).toBe(0);
+    // more than a week fits: the week's budget can ask for more than there is
+    expect(sanitize(20_160)).toBe(20_160);
+  });
+
+  it.each([
+    ["a weekly budget", sanitizeWeeklyBudget],
+    ["placed time", sanitizePlaced],
+  ])("repairs %s that is below 0 or not finite to 0", (_, sanitize) => {
+    expect(sanitize(-15)).toBe(0);
+    expect(sanitize(Number.NaN)).toBe(0);
+    expect(sanitize(Number.POSITIVE_INFINITY)).toBe(0);
   });
 });
 

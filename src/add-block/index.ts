@@ -6,7 +6,7 @@
 import type { Activity } from "../plan/activity/index.ts";
 import type { Block } from "../plan/block/index.ts";
 import { fitToDayHours, pickDefaultLength } from "../plan/block/length.ts";
-import { calculateWeeklyBudget, sumPlacedByActivity } from "../plan/budget.ts";
+import { calculateWeeklyBudget, readPlaced, sumPlacedByActivity } from "../plan/budget.ts";
 import {
   formatClock,
   formatClockRange,
@@ -52,7 +52,7 @@ export function listChoices(
   const placed = sumPlacedByActivity(plan.blocks);
   return plan.activities
     .map((activity) => {
-      const left = calculateWeeklyBudget(activity) - (placed.get(activity.id) ?? 0);
+      const left = calculateWeeklyBudget(activity) - readPlaced(placed, activity.id);
       const length = fitToDayHours(slot.start, pickDefaultLength(activity, plan.blocks), plan);
       return {
         activity,
