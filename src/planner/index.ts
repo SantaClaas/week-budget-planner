@@ -52,7 +52,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
   // Solid shows a write only after it flushes, so two changes in one event would read the same
   // plan from the signals. The plan and the steps live here, and the signals follow them.
   let current = stored;
-  let steps: readonly Plan[] = [];
+  let steps: readonly undo.Step[] = [];
   const [plan, setPlan] = createSignal(current);
   const [stepCount, setStepCount] = createSignal(0);
   const [saveState, setSaveState] = createSignal<saveStatus.SaveState>("saved");
@@ -66,7 +66,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
   let isFailing = false;
   let isStopped = false;
 
-  function showChange(next: Plan, nextSteps: readonly Plan[]): void {
+  function showChange(next: Plan, nextSteps: readonly undo.Step[]): void {
     current = next;
     steps = nextSteps;
     setPlan(next);
@@ -74,12 +74,12 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
   }
 
   /**
-   * Shows the plan another tab saved. The undo steps go, since applying one would write back an
-   * older plan over the other tab's change.
+   * Shows the plan another tab saved. The undo steps stay: each one records only what this tab's
+   * change did, and undoing it checks that the other tab hasn't changed the same things since.
    */
   function showSaved(changed: Plan): void {
     saved = changed;
-    showChange(changed, []);
+    showChange(changed, steps);
   }
 
   /**
@@ -190,7 +190,8 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
         setPlan(current);
         return;
       }
-      showChange(after, undo.push(steps, before));
+      const step = undo.record(before, after);
+      showChange(after, undo.isEmpty(step) ? steps : undo.push(steps, step));
       save(after, now);
     },
     preview(update: (before: Plan) => Plan): void {
@@ -201,10 +202,18 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
       setPlan(current);
     },
     undo(): void {
-      const previous = steps.at(-1);
-      if (previous === undefined || isStopped) return;
-      showChange(previous, steps.slice(0, -1));
-      save(previous, Temporal.Now.instant());
+      const step = steps.at(-1);
+      if (step === undefined || isStopped) return;
+      const earlier = steps.slice(0, -1);
+      const reverted = undo.revert(current, step);
+      if (reverted === "conflict") {
+        // Undoing it would overwrite what another tab changed since, so it goes without a change.
+        showChange(current, earlier);
+        options.showSnackbar({ message: "Couldn't undo: that changed in another tab." });
+        return;
+      }
+      showChange(reverted, earlier);
+      save(reverted, Temporal.Now.instant());
     },
     stop: stopWatching,
   };
