@@ -2,7 +2,13 @@
 
 /** The app's version, from vite-plugins/app-version.ts. */
 declare module "virtual:app-version" {
-  const version: { date: string; commit?: string; url: string };
+  const version: {
+    date: string;
+    commit?: string;
+    url: string;
+    /** When the app was built, as an ISO 8601 instant in UTC to the second. */
+    builtAt: string;
+  };
   export default version;
 }
 
