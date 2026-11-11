@@ -19,7 +19,7 @@ export function TopAppBar(properties: {
 }): JSX.Element {
   return (
     <header class="top-app-bar">
-      <h1 class="title-large grow" tabindex="-1" ref={properties.headingRef}>
+      <h1 class="headline" tabindex="-1" ref={properties.headingRef}>
         {properties.title}
       </h1>
       {/* Not keyed, so a focused link stays focused while its text changes. */}

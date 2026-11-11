@@ -58,6 +58,10 @@
       [full-start] minmax(var(--gutter), 1fr) [column-start] minmax(0, var(--column))
       [column-end] minmax(var(--gutter), 1fr) [full-end];
     align-content: start;
+    /* Each part as tall as it is. With align-content: start, an auto row would stay at its part's
+       minimum, which for the app bar is its min-height, not the second line the medium flexible app
+       bar wraps onto. */
+    grid-auto-rows: max-content;
     @media (width < 52.5em) {
       --gutter: 0.5rem;
     }
@@ -114,6 +118,9 @@
     /* The activity form lays out its fields by the room the list has. */
     container: activities / inline-size;
     display: grid;
+    /* One column as wide as the list, never wider: the implicit column would be auto, which long
+       text or a row of buttons widens past the page (see Grid in docs/guidelines/css.md). */
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: 0.75rem;
     & > :is(header, .overview, .intro, .hint) {
@@ -261,6 +268,7 @@
   main > .settings-section {
     grid-column: column;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
     & + .settings-section {
       margin-block-start: 1.75rem;

@@ -136,15 +136,33 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
-test("reflows at 320 CSS px without scrolling sideways (WCAG 1.4.10)", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  await openApp(page);
-  const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-  }));
-  expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
-});
+/** How far the page, or <main> inside it, reaches past the window's width: 0 when it reflows. */
+const measureOverflow = (): number => {
+  const main = document.querySelector("main");
+  const page = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+  const inMain = main === null ? 0 : main.scrollWidth - main.clientWidth;
+  return Math.max(0, page, inMain);
+};
+
+for (const textSize of ["100%", "200%"]) {
+  test(`reflows at 320 CSS px with text at ${textSize}, without scrolling sideways (WCAG 1.4.10, 1.4.4)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    const paths = ["", "activities", "settings"];
+    const overflows: string[] = [];
+    for (const path of paths) {
+      await page.goto(`${ISOLATED_URL}${path}`);
+      await expectStatus(page, "full");
+      // Stands in for the user's text size; the app itself never sets a font size on the root.
+      await page.evaluate((size) => {
+        document.documentElement.style.fontSize = size;
+      }, textSize);
+      overflows.push(`/${path}: ${String(await page.evaluate(measureOverflow))}px`);
+    }
+    expect(overflows).toEqual(paths.map((path) => `/${path}: 0px`));
+  });
+}
 
 test("keeps all text with the WCAG text spacing (WCAG 1.4.12)", async ({ page }) => {
   await openApp(page);
