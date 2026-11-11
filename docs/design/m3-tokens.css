@@ -1207,6 +1207,34 @@
       align-items: flex-end;
       text-align: end;
     }
+    & > .icon {
+      color: var(--on-surface-variant);
+    }
+    /* A list item that is a button or a link fills its row, and takes the row's corners. */
+    &:is(button, a) {
+      inline-size: 100%;
+      border: 0;
+      border-radius: inherit;
+      background: transparent;
+      color: inherit;
+      text-align: start;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    &:is(button, a):hover:not(:disabled) {
+      background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+    }
+    &:is(button):disabled {
+      color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
+      cursor: default;
+      & .muted,
+      & > .icon {
+        color: inherit;
+      }
+      @media (forced-colors: active) {
+        color: GrayText;
+      }
+    }
   }
 
   /* activity emblem: the activity's solid color clipped to its Material 3 Expressive shape, a small
@@ -1755,6 +1783,38 @@
           color: HighlightText;
         }
       }
+    }
+  }
+  /* Day hours: a menu below its button, with the two hour selects. It's always in the page, so it
+     shows only while open (the polyfill marks an open popover with a class). */
+  .day-hours-menu {
+    inset: auto;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline;
+    margin: 0.25rem 0;
+    border: 0;
+    color: var(--on-surface);
+    padding: 0.75rem;
+    gap: 0.75rem;
+    max-inline-size: min(20rem, 100vw - 2rem);
+    &:not(:is(:popover-open, .\:popover-open)) {
+      display: none;
+    }
+    & > .hour-select {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 1rem;
+    }
+    & select {
+      min-block-size: 2.5rem;
+      padding-inline: 0.75rem;
+      border: 1px solid var(--outline);
+      border-radius: var(--corner-extra-small);
+      background: transparent;
     }
   }
   /* Add block on wide screens: a menu in a popover beside the empty slot, on its inline-end side, or

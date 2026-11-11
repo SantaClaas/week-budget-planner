@@ -16,7 +16,7 @@
 - **Activities page** (the rail's Activities): the same list as the pane, in a centered column up to 48rem wide, under the summary ("12 h left to place across 4 activities"). Editing works as everywhere, inline in the list item, and the form has room to lay out name, hours and per week or per day on one line. The rail's "New activity" opens the form at the top of the list.
 - **Right pane, the week:**
   - A summary ("20 h placed of 32 h · 12 h left to place") with an overall progress indicator.
-  - Tools: a "Day hours" button (opens a menu with the two hour selects, for example "07:00 – 22:00") and "Clear week".
+  - Tools: a "Day hours" button (opens a menu with the two hour selects, for example "07:00 – 22:00") and "Clear week", at the end of the summary: beside it where there's room for them and the summary's whole line, else on a line of their own below it, so they never make the summary wrap (a line more, when a drag takes an activity over budget, would move the week under the pointer). Clear week removes every block, keeps the activities, and says so in a snackbar with Undo ("Removed 8 blocks from the week."); it's disabled while there are no blocks.
   - The grid. It has a sticky day header row (day name plus the total placed that day), a sticky hour gutter on the left, and 7 day columns. Columns are at least 6rem wide and the grid scrolls horizontally if needed. Weekend columns are slightly tinted, and today's weekday is marked in the header.
 - **Floating:** the placing toolbar and snackbars (see [Interactions](interactions.md)), at the bottom center.
 

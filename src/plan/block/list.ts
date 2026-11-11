@@ -53,3 +53,7 @@ export const add = (plan: Plan, block: Block): Plan => ({
   ...plan,
   blocks: [...plan.blocks, block],
 });
+
+/** The plan without any blocks, as Clear week leaves it. The same plan when it has none. */
+export const clear = (plan: Plan): Plan =>
+  plan.blocks.length === 0 ? plan : { ...plan, blocks: [] };

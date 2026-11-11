@@ -159,7 +159,7 @@ For example, in Rust's axum every endpoint goes through a router, so the router 
 
 **The package test.** A module is split well when it, with all its submodules, could be shipped as its own package, or deleted, without touching much else. For example, `broadcast/` depends on nothing else in the app.
 
-**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. [`docs/MODULES.md`](../MODULES.md) draws which module imports which, generated from the imports by `pnpm modules`, and a test fails when the graph has a cycle or the drawing is out of date. In this project the color scheme got its own module (`color-scheme`) when `database` and `storage` both needed its type, since `storage` already imports `database`.
+**Dependencies go one way.** Two modules never import from each other. When they'd need to, the shared piece usually belongs in a module of its own. [`docs/MODULES.md`](../MODULES.md) draws which module imports which, generated from the imports by `pnpm modules`, and a test fails when the graph has a cycle or the drawing is out of date. In this project, `activity` and `week` once depended on each other: the Activities list needed placing, which lived in `week`, and the Week page, also in `week`, showed the Activities list. Placing became a module of its own (`placing`), and the Week page, which puts both together, moved to `page`.
 
 ### Code taken from elsewhere
 

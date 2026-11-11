@@ -12,9 +12,9 @@ flowchart LR
   module_activity["activity"]
   module_add_block["add-block"]
   module_announcement["announcement"]
+  module_appearance["appearance"]
   module_brand["brand"]
   module_broadcast["broadcast"]
-  module_color_scheme["color-scheme"]
   module_database["database"]
   module_download["download"]
   module_font["font"]
@@ -29,6 +29,7 @@ flowchart LR
   module_polyfill["polyfill"]
   module_progress["progress"]
   module_result["result"]
+  module_settings["settings"]
   module_snackbar["snackbar"]
   module_storage["storage"]
   module_top_app_bar["top-app-bar"]
@@ -51,6 +52,7 @@ flowchart LR
   module_App --> module_placing
   module_App --> module_plan
   module_App --> module_planner
+  module_App --> module_settings
   module_App --> module_snackbar
   module_App --> module_top_app_bar
   module_database --> module_broadcast
@@ -85,6 +87,11 @@ flowchart LR
   module_planner --> module_snackbar
   module_planner --> module_storage
   module_progress --> module_plan
+  module_settings --> module_appearance
+  module_settings --> module_icons
+  module_settings --> module_plan
+  module_settings --> module_planner
+  module_settings --> module_week
   module_snackbar --> module_announcement
   module_storage --> module_broadcast
   module_storage --> module_database
@@ -97,4 +104,5 @@ flowchart LR
   module_week --> module_icons
   module_week --> module_plan
   module_week --> module_planner
+  module_week --> module_snackbar
 ```
