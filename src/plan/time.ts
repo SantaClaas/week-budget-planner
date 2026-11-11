@@ -24,6 +24,15 @@ export type WeekMinute = Brand<number, "WeekMinute">;
 export type Length = Brand<number, "Length">;
 /** An activity's budget in minutes, per week or per day: a multiple of the slot, at least one slot. */
 export type BudgetMinutes = Brand<number, "BudgetMinutes">;
+/**
+ * A budget counted per week, in minutes: a multiple of the slot. One activity's is 15 to 10080
+ * (`calculateWeeklyBudget` turns a per-day budget into it); the week's, the sum over all
+ * activities, can be 0, or more than a week when the plan asks for more than fits. Its own brand,
+ * so a per-day `BudgetMinutes` can't be drawn as if it were the week's.
+ */
+export type WeeklyBudget = Brand<number, "WeeklyBudget">;
+/** Placed time: the total length of blocks, in minutes, a multiple of the slot from 0 up. */
+export type Placed = Brand<number, "Placed">;
 /** How many days per week a per-day budget counts, 1 to 7. */
 export type DayCount = Brand<number, "DayCount">;
 /** A whole hour of the day, 0 to 24, for the day hours. */
@@ -83,6 +92,15 @@ export const sanitizeBudgetMinutes = (
   brand<BudgetMinutes>(
     Math.max(SLOT, snap(sanitizeInteger(value, SLOT, mode === "day" ? DAY : WEEK, fallback))),
   );
+
+/** A multiple of the slot from 0 up, with no upper limit: the totals of budgets and blocks. */
+const sanitizeTotal = (value: number): number =>
+  Number.isFinite(value) ? Math.max(0, snap(value)) : 0;
+
+export const sanitizeWeeklyBudget = (value: number): WeeklyBudget =>
+  brand<WeeklyBudget>(sanitizeTotal(value));
+
+export const sanitizePlaced = (value: number): Placed => brand<Placed>(sanitizeTotal(value));
 
 export const sanitizeDayCount = (value: number, fallback = 5): DayCount =>
   brand<DayCount>(sanitizeInteger(value, 1, 7, fallback));

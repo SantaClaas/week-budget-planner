@@ -1,5 +1,5 @@
 import type { Activity } from "../activity/index.ts";
-import { calculateWeeklyBudget, sumPlacedByActivity } from "../budget.ts";
+import { calculateWeeklyBudget, readPlaced, sumPlacedByActivity } from "../budget.ts";
 import type { Plan } from "../index.ts";
 import { DAY, MAX_LENGTH, SLOT, clamp, sanitizeLength, type Length } from "../time.ts";
 import type { Block } from "./index.ts";
@@ -13,7 +13,7 @@ const WEEKLY_DEFAULT_LENGTH = 90;
  */
 export function pickDefaultLength(activity: Activity, blocks: readonly Block[]): Length {
   const left =
-    calculateWeeklyBudget(activity) - (sumPlacedByActivity(blocks).get(activity.id) ?? 0);
+    calculateWeeklyBudget(activity) - readPlaced(sumPlacedByActivity(blocks), activity.id);
   let length: number = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
   if (left > 0) length = Math.min(length, left);
   return sanitizeLength(clamp(length, SLOT, MAX_LENGTH));
