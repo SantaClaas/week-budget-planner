@@ -25,12 +25,16 @@ export type Length = Brand<number, "Length">;
 /** An activity's budget in minutes, per week or per day: a multiple of the slot, at least one slot. */
 export type BudgetMinutes = Brand<number, "BudgetMinutes">;
 /**
- * A budget counted per week, in minutes: a multiple of the slot. One activity's is 15 to 10080
- * (`calculateWeeklyBudget` turns a per-day budget into it); the week's, the sum over all
- * activities, can be 0, or more than a week when the plan asks for more than fits. Its own brand,
- * so a per-day `BudgetMinutes` can't be drawn as if it were the week's.
+ * An activity's budget counted per week, in minutes: a multiple of the slot, 15 to 10080.
+ * `calculateWeeklyBudget` turns a per-day budget into it. Its own brand, so a per-day
+ * `BudgetMinutes` can't be drawn as if it were the week's.
  */
 export type WeeklyBudget = Brand<number, "WeeklyBudget">;
+/**
+ * The weekly budgets of all activities together, in minutes: a multiple of the slot from 0 up. It
+ * can be more than a week, when the plan asks for more than fits.
+ */
+export type TotalBudget = Brand<number, "TotalBudget">;
 /** Placed time: the total length of blocks, in minutes, a multiple of the slot from 0 up. */
 export type Placed = Brand<number, "Placed">;
 /** How many days per week a per-day budget counts, 1 to 7. */
@@ -97,8 +101,12 @@ export const sanitizeBudgetMinutes = (
 const sanitizeTotal = (value: number): number =>
   Number.isFinite(value) ? Math.max(0, snap(value)) : 0;
 
-export const sanitizeWeeklyBudget = (value: number): WeeklyBudget =>
-  brand<WeeklyBudget>(sanitizeTotal(value));
+/** At least a slot, at most a week. */
+export const sanitizeWeeklyBudget = (value: number, fallback = 60): WeeklyBudget =>
+  brand<WeeklyBudget>(clamp(snap(sanitizeInteger(value, SLOT, WEEK, fallback)), SLOT, WEEK));
+
+export const sanitizeTotalBudget = (value: number): TotalBudget =>
+  brand<TotalBudget>(sanitizeTotal(value));
 
 export const sanitizePlaced = (value: number): Placed => brand<Placed>(sanitizeTotal(value));
 

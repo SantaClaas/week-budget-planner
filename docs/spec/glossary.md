@@ -7,7 +7,7 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | Code: `Plan` |
 | **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color, a shape and a budget. | Code: `Activity` |
 | **Emblem** | An activity's color in its shape, drawn small beside its name, on its blocks and in the pickers. It tells activities apart without relying on color alone. | Was "swatch". Code: `.emblem` |
-| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes` (type `BudgetMinutes`), `days` (type `DayCount`); counted per week, type `WeeklyBudget` |
+| **Budget** | How many hours an activity needs, counted per week ("4 h per week") or per day on a number of days ("1 h 30 min per day, 3 days"). | Code: `mode`, `budgetMinutes` (type `BudgetMinutes`), `days` (type `DayCount`); counted per week, type `WeeklyBudget`; all activities' together, type `TotalBudget` |
 | **Block** | One piece of an activity on the week: a day, a start time and a length. You add, move, resize and remove blocks. | Was "tile" in the prototype. Code: `Block` |
 | **Slot** | A 15-minute cell on the week. An empty slot has no block. Blocks start and end on slots. | Everything snaps to 15 min |
 | **Length** | How long a block is, in minutes. | Code: `length`, type `Length` |
