@@ -6,7 +6,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   ISOLATED_URL,
-  deleteAllData,
   expectStatus,
   exportDatabase,
   importFile,
@@ -199,6 +198,11 @@ test.describe("a newer version of the app", () => {
     await expect(page.getByRole("status")).toHaveText(OUTDATED_MESSAGE);
     await expect(page.getByRole("button", { name: "Reload" })).toBeVisible();
     expect(await readDescription(page, "Reload")).toBe(OUTDATED_MESSAGE);
+    // Settings › Your data says so too, so the snackbar isn't the only way to reload.
+    await page.getByRole("link", { name: "Settings" }).click();
+    await expect(
+      page.getByRole("region", { name: "Week Budget Planner was updated in another tab." }),
+    ).toBeVisible();
     const reloaded = page.waitForEvent("load");
     await hide(page);
     await reloaded;
@@ -214,8 +218,15 @@ test("reports a database that won't open, and deleting it starts over", async ({
     "database-broken",
   );
 
-  await deleteAllData(page);
-  await page.reload();
+  await page.goto(`${ISOLATED_URL}settings`);
+  const notice = page.getByRole("region", {
+    name: "The database in this browser couldn't be opened",
+  });
+  await notice.getByRole("button", { name: "Delete all data" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Delete all data?" })
+    .getByRole("button", { name: "Delete all data" })
+    .click();
   await expectStatus(page, "full");
   expect(await page.evaluate(() => window.weekBudgetPlanner?.store.fallbackReason)).toBeUndefined();
 });

@@ -14,10 +14,33 @@ export async function request(): Promise<boolean> {
 }
 
 /** Whether the browser keeps this site's storage until the user deletes it. */
-export async function isPersisted(): Promise<boolean> {
+async function isPersisted(): Promise<boolean> {
   try {
     return (await navigator.storage?.persisted?.()) ?? false;
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether the browser keeps this site's storage, may delete it, or said no when asked (see Keeping
+ * the data in docs/spec/persistence.md), so the app doesn't offer to ask again after a no.
+ */
+export type KeepingState = "persisted" | "not-persisted" | "denied";
+
+/** Whether the browser was asked to keep this site's storage and said no. */
+async function isDenied(): Promise<boolean> {
+  let status: PermissionStatus | undefined;
+  try {
+    status = await navigator.permissions?.query({ name: "persistent-storage" });
+  } catch {
+    return false;
+  }
+  return status?.state === "denied";
+}
+
+/** What the browser does with this site's storage now. */
+export async function findState(): Promise<KeepingState> {
+  if (await isPersisted()) return "persisted";
+  return (await isDenied()) ? "denied" : "not-persisted";
 }

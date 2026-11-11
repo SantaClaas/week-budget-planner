@@ -54,6 +54,7 @@ flowchart LR
   module_App --> module_planner
   module_App --> module_settings
   module_App --> module_snackbar
+  module_App --> module_storage
   module_App --> module_top_app_bar
   module_database --> module_broadcast
   module_database --> module_plan
@@ -88,9 +89,12 @@ flowchart LR
   module_planner --> module_storage
   module_progress --> module_plan
   module_settings --> module_appearance
+  module_settings --> module_download
   module_settings --> module_icons
   module_settings --> module_plan
   module_settings --> module_planner
+  module_settings --> module_snackbar
+  module_settings --> module_storage
   module_settings --> module_week
   module_snackbar --> module_announcement
   module_storage --> module_broadcast

@@ -10,7 +10,9 @@ import { Icon } from "../icons/Icon.tsx";
 import type { IconName } from "../icons/name.ts";
 import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import { ClearWeek, DayHours } from "../week/WeekTools.tsx";
+import { Storage, YourData } from "./YourData.tsx";
 
 /** Whether the media query matches, following the browser as it changes. */
 function watchMediaQuery(query: string): () => boolean {
@@ -168,11 +170,15 @@ function About(): JSX.Element {
 }
 
 /**
- * The Settings page (see Settings page in docs/spec/layout.md): Appearance, then the Week tools on
- * phones, where they aren't above the week, and About last. The sections are the page's own
+ * The Settings page (see Settings page in docs/spec/layout.md): Appearance, the Week tools on phones,
+ * where they aren't above the week, Your data, Storage, and About last. The sections are the page's own
  * parts, which <main> lays out in its column.
  */
-export function SettingsPage(properties: { plan: Plan; planner: Planner }): JSX.Element {
+export function SettingsPage(properties: {
+  plan: Plan;
+  planner: Planner;
+  store: PlanStore;
+}): JSX.Element {
   return (
     <>
       <Appearance />
@@ -189,6 +195,8 @@ export function SettingsPage(properties: { plan: Plan; planner: Planner }): JSX.
           </li>
         </ul>
       </section>
+      <YourData plan={properties.plan} planner={properties.planner} store={properties.store} />
+      <Storage plan={properties.plan} store={properties.store} />
       <About />
     </>
   );

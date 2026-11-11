@@ -3,6 +3,7 @@ import { databaseService, getDatabase, onNewerVersion } from "../database/client
 export { hasDatabaseFile, removeBrokenDatabase } from "../database/client.ts";
 import { runOnDatabase } from "../database/drizzle.ts";
 import { loadPlan, savePlan } from "../database/plan-repository.ts";
+import * as size from "../database/size.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
@@ -55,6 +56,7 @@ export function create(): PlanStore {
       if (typeof imported === "string") return imported;
       return replacePlan(database, imported);
     },
+    measureSize: () => size.measure(databaseService),
     wipe: () => databaseService.wipe(),
     onExternalChange(callback) {
       const stopListening = listenForBroadcasts(() => {
