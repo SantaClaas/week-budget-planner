@@ -20,8 +20,6 @@
     & > main {
       grid-area: page;
       min-inline-size: 0;
-      display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
       overflow-y: auto;
     }
     & > .navigation-bar {
@@ -45,6 +43,31 @@
      read out. It isn't a control, so it shows no focus ring. */
   :is(h1, h2)[tabindex="-1"]:focus {
     outline: none;
+  }
+
+  /* A page's parts are <main>'s own children, after the top app bar, with no wrapper of their own.
+     Each takes the whole width, or the page's centered column (--column wide, between gutters).
+     The Week page fills the rest of the screen, so the week can scroll in its own region. The
+     Appearance settings lay out by the page's width. */
+  main {
+    --gutter: 1rem;
+    --column: 48rem;
+    container: page / inline-size;
+    display: grid;
+    grid-template-columns:
+      [full-start] minmax(var(--gutter), 1fr) [column-start] minmax(0, var(--column))
+      [column-end] minmax(var(--gutter), 1fr) [full-end];
+    align-content: start;
+    @media (width < 52.5em) {
+      --gutter: 0.5rem;
+    }
+    & > * {
+      grid-column: full;
+    }
+  }
+  main:has(> .week-page) {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
   }
 
   /* The app bar stays at the top while a long page scrolls under it. */
@@ -125,26 +148,23 @@
   }
 
   /* The Activities page: the list in a centered column up to 48rem wide, and on phones the extended
-     "New activity" button over its end (the rail holds it on wide screens). */
-  .activities-page {
-    display: grid;
-    align-content: start;
-    gap: 1rem;
-    /* At most 48rem, and no wider than the page. */
-    inline-size: min(100%, 48rem);
-    margin-inline: auto;
-    padding-inline: 1rem;
+     "New activity" button pinned over its end (the rail holds it on wide screens). */
+  main:has(> .activities) {
     padding-block-end: 1rem;
+    & > .activities {
+      grid-column: column;
+    }
     & > .floating-action-button {
       display: none;
     }
     @media (width < 52.5em) {
-      padding-inline: 0.5rem;
       & > .floating-action-button {
         display: inline-flex;
+        grid-column: column;
+        justify-self: end;
         position: sticky;
         inset-block-end: 1rem;
-        justify-self: end;
+        margin-block-start: 1rem;
       }
     }
   }
@@ -224,24 +244,31 @@
 
   /* The Settings page: its sections in a centered column up to 40rem wide, each a title in primary
      over a grouped list. */
-  .settings-page {
-    container: settings / inline-size;
-    display: grid;
-    align-content: start;
-    gap: 1.75rem;
-    /* A container has no width of its own to shrink to, so it says how wide it is. */
-    inline-size: min(100%, 40rem);
-    margin-inline: auto;
-    padding: 1rem 1rem 2rem;
+  main:has(> .settings-section) {
+    --column: 40rem;
+    padding-block-end: 2rem;
     @media (width < 52.5em) {
-      gap: 1.5rem;
-      padding: 0 0.5rem 1rem;
+      padding-block-end: 1rem;
     }
-    & > section {
-      display: grid;
-      gap: 0.75rem;
+  }
+  /* below the app bar, which stays at the very top */
+  main > .top-app-bar + .settings-section {
+    margin-block-start: 1rem;
+    @media (width < 52.5em) {
+      margin-block-start: 0;
     }
-    & > section > h2 {
+  }
+  main > .settings-section {
+    grid-column: column;
+    display: grid;
+    gap: 0.75rem;
+    & + .settings-section {
+      margin-block-start: 1.75rem;
+      @media (width < 52.5em) {
+        margin-block-start: 1.5rem;
+      }
+    }
+    & > h2 {
       color: var(--primary);
       padding-inline: 1rem;
     }
@@ -267,7 +294,8 @@
     & > .system {
       grid-area: system;
     }
-    @container settings (width >= 36rem) {
+    /* the 36rem column and its two gutters */
+    @container page (width >= 38rem) {
       grid-template: "icon title group" auto "icon system group" auto / auto minmax(0, 1fr) auto;
       row-gap: 0;
       align-items: center;

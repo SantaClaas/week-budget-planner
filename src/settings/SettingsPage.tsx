@@ -105,7 +105,7 @@ function Appearance(): JSX.Element {
     return isLessContrast() ? "less" : "standard";
   };
   return (
-    <section aria-labelledby="appearance-title">
+    <section class="settings-section" aria-labelledby="appearance-title">
       <h2 id="appearance-title" class="title-small emphasized">
         Appearance
       </h2>
@@ -143,7 +143,7 @@ function Appearance(): JSX.Element {
 /** The version this build is, as a link to the repository at its commit. */
 function About(): JSX.Element {
   return (
-    <section aria-labelledby="about-title">
+    <section class="settings-section" aria-labelledby="about-title">
       <h2 id="about-title" class="title-small emphasized">
         About
       </h2>
@@ -169,13 +169,14 @@ function About(): JSX.Element {
 
 /**
  * The Settings page (see Settings page in docs/spec/layout.md): Appearance, then the Week tools on
- * phones, where they aren't above the week, and About last.
+ * phones, where they aren't above the week, and About last. The sections are the page's own
+ * parts, which <main> lays out in its column.
  */
 export function SettingsPage(properties: { plan: Plan; planner: Planner }): JSX.Element {
   return (
-    <div class="settings-page">
+    <>
       <Appearance />
-      <section class="for-narrow-window" aria-labelledby="week-settings-title">
+      <section class="settings-section for-narrow-window" aria-labelledby="week-settings-title">
         <h2 id="week-settings-title" class="title-small emphasized">
           Week
         </h2>
@@ -189,6 +190,6 @@ export function SettingsPage(properties: { plan: Plan; planner: Planner }): JSX.
         </ul>
       </section>
       <About />
-    </div>
+    </>
   );
 }
