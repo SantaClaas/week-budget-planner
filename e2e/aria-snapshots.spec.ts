@@ -5,7 +5,8 @@ import { ISOLATED_URL, expectStatus } from "./app.ts";
 // Each screen's accessibility tree, pinned (see Automatic accessibility checks in
 // docs/guidelines/tests.md): what screen readers get, as Playwright's role queries read it. A lost
 // name, a changed role or a heading out of order shows up as a diff in review. The text that
-// changes from day to day (today's date, the version) is matched with a pattern.
+// changes from day to day or from build to build (today's date, the version's date and commit) is
+// matched with a pattern.
 test.use({ locale: "en-GB" });
 
 async function openPage(page: Page, path = ""): Promise<void> {
@@ -343,8 +344,8 @@ test("the Settings page", async ({ page }) => {
         - heading "About" [level=2]
         - list:
           - listitem:
-            - link /Version \\d+-\\d+-\\d+ · b6c31c5 Opens in a new tab/:
-              - /url: https://github.com/SantaClaas/week-budget-planner/tree/b6c31c563f2cd68a06cc49bd10bee4b8e13740dd
+            - link /Version \\d+-\\d+-\\d+( · [0-9a-f]{7})? Opens in a new tab/:
+              - /url: /https:\\/\\/github\\.com\\/SantaClaas\\/week-budget-planner\\/tree\\/\\S+/
   `);
 });
 
