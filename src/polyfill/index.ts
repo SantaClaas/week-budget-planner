@@ -20,5 +20,8 @@ export async function loadPolyfills(): Promise<void> {
   // The unit tests load these too, in Node, which has no DOM to add it to.
   if ("HTMLElement" in globalThis && !("popover" in HTMLElement.prototype))
     loading.push(import("@oddbird/popover-polyfill"));
+  // Invoker commands (Chrome 135, Firefox 144, Safari 26.2), which open the Settings dialogs.
+  if ("HTMLButtonElement" in globalThis && !("commandForElement" in HTMLButtonElement.prototype))
+    loading.push(import("invokers-polyfill"));
   await Promise.all(loading);
 }

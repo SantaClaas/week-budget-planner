@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { createEffect, createSignal, onSettled, Show } from "solid-js";
+import { createEffect, createSignal, flush, onSettled, Show } from "solid-js";
 
 import { downloadBlob } from "../download.ts";
 import { Icon } from "../icons/Icon.tsx";
@@ -95,44 +95,47 @@ async function deleteAllData(store: PlanStore): Promise<void> {
 }
 
 /**
- * A question before something that can't be undone, as a modal `<dialog>`: its title, what will
- * happen, and the action named for what it does. Cancel, Escape and a click outside close it
- * without doing anything.
+ * A question before something that can't be undone, as a modal `<dialog>` that's always in the
+ * page: its title, what will happen (the paragraphs `describedBy` names, its own children), and
+ * the action named for what it does. A button opens it with `commandfor` and `command="show-modal"`,
+ * or the code with `showModal()`. Cancel, Escape and a click outside close it without doing
+ * anything.
  */
 function ConfirmDialog(properties: {
   id: string;
   title: string;
+  /** The ids of the paragraphs that say what will happen, which the dialog is described by. */
+  describedBy: string;
   children: JSX.Element;
   action: string;
   onConfirm: () => void;
-  onClose: () => void;
+  onClose?: () => void;
+  ref?: (dialog: HTMLDialogElement) => void;
 }): JSX.Element {
-  let dialog: HTMLDialogElement | undefined;
-  onSettled(() => {
-    dialog?.showModal();
-  });
   return (
     <dialog
+      id={properties.id}
       class="dialog"
       closedby="any"
       role="alertdialog"
       aria-labelledby={`${properties.id}-title`}
-      aria-describedby={`${properties.id}-text`}
+      aria-describedby={properties.describedBy}
       ref={(created) => {
-        dialog = created;
+        properties.ref?.(created);
       }}
       onClose={(event) => {
         // The form's buttons close the dialog with their value; Escape and a click outside don't.
-        if (event.currentTarget.returnValue === "confirm") properties.onConfirm();
-        properties.onClose();
+        // The dialog stays in the page, so its value is cleared for the next time it opens.
+        const isConfirmed = event.currentTarget.returnValue === "confirm";
+        event.currentTarget.returnValue = "";
+        if (isConfirmed) properties.onConfirm();
+        properties.onClose?.();
       }}
     >
       <h2 id={`${properties.id}-title`} class="headline-small">
         {properties.title}
       </h2>
-      <div id={`${properties.id}-text`} class="body-medium muted">
-        {properties.children}
-      </div>
+      {properties.children}
       <form method="dialog">
         <button type="submit" class="button" value="cancel" autofocus>
           Cancel
@@ -197,8 +200,8 @@ export function YourData(properties: {
 }): JSX.Element {
   const [keeping, setKeeping] = createSignal<persistence.KeepingState>();
   const [importing, setImporting] = createSignal<File>();
-  const [isDeleting, setIsDeleting] = createSignal(false);
   let fileInput: HTMLInputElement | undefined;
+  let importDialog: HTMLDialogElement | undefined;
   const isFull = (): boolean => properties.store.level === "full";
   const exportName = (): string =>
     createExportName(Temporal.Now.plainDateISO(), isFull() ? "db" : "json");
@@ -207,9 +210,6 @@ export function YourData(properties: {
   };
   const pickFile = (): void => {
     fileInput?.click();
-  };
-  const askToDelete = (): void => {
-    setIsDeleting(true);
   };
   const refreshKeeping = async (): Promise<void> => {
     setKeeping(await persistence.findState());
@@ -270,7 +270,13 @@ export function YourData(properties: {
           title="The database in this browser couldn't be opened"
           text="So your plan is in limited storage for now. Import a backup, or delete all data to start over."
         >
-          <button type="button" class="button" data-variant="outlined" onClick={askToDelete}>
+          <button
+            type="button"
+            class="button"
+            data-variant="outlined"
+            commandfor="delete-dialog"
+            command="show-modal"
+          >
             Delete all data
           </button>
           <button type="button" class="button" data-variant="filled" onClick={pickFile}>
@@ -381,7 +387,11 @@ export function YourData(properties: {
               const [file] = event.currentTarget.files ?? [];
               // The same file can be picked again after a cancelled import.
               event.currentTarget.value = "";
-              if (file !== undefined) setImporting(file);
+              if (file === undefined) return;
+              // The picked file is only known now, so the code opens the dialog, once it names it.
+              setImporting(file);
+              flush();
+              importDialog?.showModal();
             }}
           />
         </li>
@@ -391,7 +401,8 @@ export function YourData(properties: {
             class="list-item delete-all-data"
             aria-labelledby="delete-all-data-title"
             aria-describedby="delete-all-data-text"
-            onClick={askToDelete}
+            commandfor="delete-dialog"
+            command="show-modal"
           >
             <Icon name="delete_forever" />
             <span class="grow">
@@ -405,50 +416,48 @@ export function YourData(properties: {
           </button>
         </li>
       </ul>
-      <Show when={importing()} keyed>
-        {(file) => (
-          <ConfirmDialog
-            id="import-dialog"
-            title="Replace your plan?"
-            action="Replace"
-            onConfirm={() => {
-              void importPlan(properties.store, file);
-            }}
-            onClose={() => {
-              setImporting(undefined);
-            }}
-          >
-            <p>
-              “{file.name}” replaces the plan in this browser: {describeContents(properties.plan)}.
-            </p>
-            <p>
-              To keep a copy of it,{" "}
-              <button type="button" class="inline-link" onClick={exportCurrent}>
-                export it first
-              </button>
-              .
-            </p>
-          </ConfirmDialog>
-        )}
-      </Show>
-      <Show when={isDeleting()}>
-        <ConfirmDialog
-          id="delete-dialog"
-          title="Delete all data?"
-          action="Delete all data"
-          onConfirm={() => {
-            void deleteAllData(properties.store);
-          }}
-          onClose={() => {
-            setIsDeleting(false);
-          }}
-        >
-          <p>
-            This removes your plan from this browser: {describeContents(properties.plan)}. It can't
-            be undone, so export it first to keep a copy.
-          </p>
-        </ConfirmDialog>
-      </Show>
+      <ConfirmDialog
+        id="import-dialog"
+        title="Replace your plan?"
+        describedBy="import-dialog-replaces import-dialog-export"
+        action="Replace"
+        ref={(created) => {
+          importDialog = created;
+        }}
+        onConfirm={() => {
+          const file = importing();
+          if (file !== undefined) void importPlan(properties.store, file);
+        }}
+        onClose={() => {
+          setImporting(undefined);
+        }}
+      >
+        <p id="import-dialog-replaces" class="body-medium muted">
+          “{importing()?.name}” replaces the plan in this browser:{" "}
+          {describeContents(properties.plan)}.
+        </p>
+        <p id="import-dialog-export" class="body-medium muted">
+          To keep a copy of it,{" "}
+          <button type="button" class="inline-link" onClick={exportCurrent}>
+            export it first
+          </button>
+          .
+        </p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        id="delete-dialog"
+        title="Delete all data?"
+        describedBy="delete-dialog-text"
+        action="Delete all data"
+        onConfirm={() => {
+          void deleteAllData(properties.store);
+        }}
+      >
+        <p id="delete-dialog-text" class="body-medium muted">
+          This removes your plan from this browser: {describeContents(properties.plan)}. It can't be
+          undone, so export it first to keep a copy.
+        </p>
+      </ConfirmDialog>
     </section>
   );
 }

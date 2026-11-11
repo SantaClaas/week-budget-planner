@@ -2025,9 +2025,6 @@
       justify-content: flex-end;
       gap: 0.5rem;
     }
-    & p + p {
-      margin-block-start: 0.5rem;
-    }
   }
   /* a button inside running text that reads like a link, such as "export it first" */
   .inline-link {
