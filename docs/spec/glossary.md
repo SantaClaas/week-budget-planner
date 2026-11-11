@@ -2,9 +2,9 @@
 
 Use one name per thing, the same way in the UI copy, this spec and the code.
 
-**Also called** lists other words people use for a term: old names from the prototype, everyday words and words from other apps. When someone uses one of them, in an issue, a finding, a review or a request, read it as the term, and answer, write and code with the term itself. Never use these words in the copy or in new code. When a word turns up that isn't listed, add it to its term.
+**Wrong names (look-up only)** lists words people use by mistake for a term: old names from the prototype, everyday words and words from other apps. They are not synonyms or alternatives, and none of them is ever correct. The column exists only to find the right term: when someone uses one of these words, in an issue, a finding, a review or a request, read it as the term, and answer, write and code with the term alone. Don't use a wrong name anywhere, not in the copy, the code, the spec, commit messages or replies, not even in brackets beside the term, except to point out that it's wrong. When a word turns up that isn't listed, add it to its term.
 
-| Term | Meaning | Also called | Notes |
+| Term | Meaning | Wrong names (look-up only) | Notes |
 | --- | --- | --- | --- |
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | plan, schedule, timetable, calendar, grid | Code: `Plan` |
 | **Activity** | Something you budget time for, like a class, your job or the gym. It has a name, a color, a shape and a budget. | category, project, item, task, event | Code: `Activity` |
