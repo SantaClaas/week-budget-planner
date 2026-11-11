@@ -4,6 +4,7 @@ import { Show } from "solid-js";
 import { Icon } from "../icons/Icon.tsx";
 import { createPath } from "../page/index.ts";
 import type { Planner } from "../planner/index.ts";
+import { animate } from "../week/transition.ts";
 
 /**
  * The page's header (see Top app bar in docs/spec/layout.md): its name as the page's heading, the
@@ -42,7 +43,9 @@ export function TopAppBar(properties: {
         class="icon-button"
         disabled={properties.planner?.canUndo() !== true}
         onClick={() => {
-          properties.planner?.undo();
+          animate(() => {
+            properties.planner?.undo();
+          });
         }}
       >
         <Icon name="undo" />

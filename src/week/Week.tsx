@@ -26,6 +26,7 @@ import {
   type TimeText,
 } from "./layout.ts";
 import * as selection from "./selection.ts";
+import { animate } from "./transition.ts";
 
 /** Text pieces, each one with a `datetime` value in a `<time>` element. */
 function Times(properties: { pieces: TimeText[] }): JSX.Element {
@@ -58,18 +59,68 @@ function focusBlock(scroller: Element | null, id: BlockId): void {
 
 /**
  * Removes the block, says so, and takes focus to the next block in Tab order, or the one before,
- * or else the week, since the focused button goes with the block.
+ * or else the week, since the focused button goes with the block. It's animated, so it runs once
+ * the week is captured, and does nothing when the block went in the meantime (a second Delete).
  */
 function removeBlock(planner: Planner, drawn: DrawnBlock, scroller: Element | null): void {
-  const buttons = [...(scroller?.querySelectorAll(".block-button") ?? [])].map(
-    (button) => button.id,
-  );
-  const index = buttons.indexOf(createBlockButtonId(drawn.block.id));
-  const next = buttons[index + 1] ?? buttons[index - 1];
-  selection.clear();
-  planner.change((plan) => list.remove(plan, drawn.block.id));
-  announce(announceChange("removed", drawn.block, drawn.activity));
-  focusOrWeek(scroller, next);
+  animate(() => {
+    const isInPlan = planner.plan().blocks.some((block) => block.id === drawn.block.id);
+    if (!isInPlan) return;
+    const buttons = [...(scroller?.querySelectorAll(".block-button") ?? [])].map(
+      (button) => button.id,
+    );
+    const index = buttons.indexOf(createBlockButtonId(drawn.block.id));
+    const next = buttons[index + 1] ?? buttons[index - 1];
+    selection.clear();
+    planner.change((plan) => list.remove(plan, drawn.block.id));
+    announce(announceChange("removed", drawn.block, drawn.activity));
+    focusOrWeek(scroller, next);
+  });
+}
+
+/** What a key does to a block, or `undefined` for a key that doesn't change it. */
+type KeyChange = { change: "moved" | "resized"; apply: (block: Block) => Block };
+
+/** Up and Down move by 15 minutes, with Shift they change the length, Left and Right the day. */
+function readKeyChange(event: KeyboardEvent): KeyChange | undefined {
+  switch (event.key) {
+    case "ArrowUp":
+      return event.shiftKey
+        ? { change: "resized", apply: (block) => changeLength(block, -SLOT) }
+        : { change: "moved", apply: (block) => moveBy(block, -SLOT) };
+    case "ArrowDown":
+      return event.shiftKey
+        ? { change: "resized", apply: (block) => changeLength(block, SLOT) }
+        : { change: "moved", apply: (block) => moveBy(block, SLOT) };
+    case "ArrowLeft":
+      return { change: "moved", apply: (block) => moveDays(block, -1) };
+    case "ArrowRight":
+      return { change: "moved", apply: (block) => moveDays(block, 1) };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Applies a key's change to the block as the plan has it now, which may already hold the change
+ * of the key before, says where it is, and keeps focus on it.
+ */
+function changeByKey(
+  planner: Planner,
+  drawn: DrawnBlock,
+  keyChange: KeyChange,
+  scroller: Element | null,
+): void {
+  const block = planner.plan().blocks.find((each) => each.id === drawn.block.id);
+  if (block === undefined) return;
+  const changed = keyChange.apply(block);
+  const isUnchanged =
+    changed.day === block.day && changed.start === block.start && changed.length === block.length;
+  if (isUnchanged) return;
+  planner.change((plan) => list.update(plan, changed));
+  announce(announceChange(keyChange.change, changed, drawn.activity));
+  // A move to another day draws the block in that day's list, as a new button.
+  focusBlock(scroller, block.id);
 }
 
 /**
@@ -84,25 +135,7 @@ function handleKey(event: KeyboardEvent, drawn: DrawnBlock, planner: Planner): v
   if (planner.isOutdated() && event.key !== "Escape") return;
   const scroller =
     event.currentTarget instanceof Element ? event.currentTarget.closest(".week-scroller") : null;
-  const { block } = drawn;
-  let changed: { block: Block; change: "moved" | "resized" };
   switch (event.key) {
-    case "ArrowUp":
-      changed = event.shiftKey
-        ? { block: changeLength(block, -SLOT), change: "resized" }
-        : { block: moveBy(block, -SLOT), change: "moved" };
-      break;
-    case "ArrowDown":
-      changed = event.shiftKey
-        ? { block: changeLength(block, SLOT), change: "resized" }
-        : { block: moveBy(block, SLOT), change: "moved" };
-      break;
-    case "ArrowLeft":
-      changed = { block: moveDays(block, -1), change: "moved" };
-      break;
-    case "ArrowRight":
-      changed = { block: moveDays(block, 1), change: "moved" };
-      break;
     case "Delete":
     case "Backspace":
       event.preventDefault();
@@ -112,18 +145,14 @@ function handleKey(event: KeyboardEvent, drawn: DrawnBlock, planner: Planner): v
       selection.clear();
       return;
     default:
-      return;
+      break;
   }
+  const keyChange = readKeyChange(event);
+  if (keyChange === undefined) return;
   event.preventDefault();
-  const isUnchanged =
-    changed.block.day === block.day &&
-    changed.block.start === block.start &&
-    changed.block.length === block.length;
-  if (isUnchanged) return;
-  planner.change((plan) => list.update(plan, changed.block));
-  announce(announceChange(changed.change, changed.block, drawn.activity));
-  // A move to another day draws the block in that day's list, as a new button.
-  focusBlock(scroller, block.id);
+  animate(() => {
+    changeByKey(planner, drawn, keyChange, scroller);
+  });
 }
 
 /** What a press took hold of: an edge's handle, or the block's body. */
@@ -182,6 +211,10 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
         "--lanes": properties.block.lane.count,
         "--name-lines": properties.block.nameLines,
         "--activity-shape": `var(--shape-${properties.block.activity.shape})`,
+        // Unique on the week, so an animated change tracks each part, also across days.
+        "view-transition-name": CSS.escape(
+          `block-${id()}${properties.block.part === "second" ? "-continued" : ""}`,
+        ),
       }}
       onPointerDown={(event) => {
         pressBlock(event, properties.block, properties.planner);
@@ -315,6 +348,9 @@ const SLOT_MOVES: Partial<Record<string, SlotMove>> = {
   PageDown: "hour-later",
 };
 
+/** What picked an empty slot. */
+type Picker = "pointer" | "keyboard";
+
 /**
  * The one empty slot in Tab order, after the blocks: a button drawn as the highlighted slot while
  * it has focus or its Add block is open. The arrow and page keys move it past the blocks, and
@@ -326,7 +362,7 @@ function EmptySlot(properties: {
   /** A tab on a newer version took over, so picking it would change a plan that can't be saved. */
   isReadOnly: boolean;
   onMove: (slot: Slot) => void;
-  onPick: (slot: Slot) => void;
+  onPick: (slot: Slot, picker: Picker) => void;
   blocks: readonly Block[];
 }): JSX.Element {
   return (
@@ -341,7 +377,8 @@ function EmptySlot(properties: {
         // The week's own click handler would pick the slot again, from the pointer's place.
         event.stopPropagation();
         if (properties.isReadOnly) return;
-        properties.onPick(properties.slot);
+        // A click from Enter or Space has no pointer, and so no click count.
+        properties.onPick(properties.slot, event.detail === 0 ? "keyboard" : "pointer");
       }}
       onKeyDown={(event) => {
         const move = SLOT_MOVES[event.key];
@@ -398,15 +435,24 @@ export function Week(properties: {
   };
   /**
    * Picks `slot`. While placing, the block added there covers it, so focus follows the empty slot
-   * on to the next one, when it had focus.
+   * on to the next one, when it had focus. A block placed from the keyboard is animated; one
+   * placed by a click isn't, since the week takes no clicks while it animates (Chromium), and
+   * placing is where the next click comes right away.
    */
-  const pickSlot = (slot: Slot): void => {
+  const pickSlot = (slot: Slot, picker: Picker): void => {
     if (properties.planner.isOutdated()) return;
     const isFocused = document.activeElement?.id === EMPTY_SLOT_ID;
     const isPlacing = properties.isPlacing;
     setRemembered(slot);
-    properties.onPickSlot(slot);
-    if (isPlacing && isFocused) focusOrWeek(scroller ?? null, EMPTY_SLOT_ID);
+    const place = (): void => {
+      properties.onPickSlot(slot);
+      if (isPlacing && isFocused) focusOrWeek(scroller ?? null, EMPTY_SLOT_ID);
+    };
+    if (isPlacing && picker === "keyboard") {
+      animate(place);
+      return;
+    }
+    place();
   };
   /** The preview, drawn on its day, up to midnight. */
   const drawnPreview = (): { day: DayIndex; drawn: DrawnPreview } | undefined => {
@@ -455,7 +501,7 @@ export function Week(properties: {
         const slot = findSlot(event.currentTarget, event.clientX, event.clientY);
         selection.clear();
         // A click on an empty slot adds a block there while placing, or opens Add block on it.
-        if (slot !== undefined) pickSlot(slot);
+        if (slot !== undefined) pickSlot(slot, "pointer");
       }}
       onPointerMove={(event) => {
         if (event.pointerType !== "mouse" || !properties.isPlacing) return;

@@ -22,6 +22,7 @@ import type { Slot } from "../plan/slot.ts";
 import * as selection from "../week/selection.ts";
 import { EmptyWeek } from "../week/EmptyWeek.tsx";
 import { Week, type WeekPreview } from "../week/Week.tsx";
+import { animate } from "../week/transition.ts";
 import { ClearWeek, DayHours } from "../week/WeekTools.tsx";
 
 /** A length in a `<time>` element: "20 hr". */
@@ -70,15 +71,11 @@ function Summary(properties: { plan: Plan; planner: Planner }): JSX.Element {
 const PHONE_QUERY = "(width < 52.5em)";
 
 /**
- * Adds a block of `activity` at the slot, `length` long or else with its default length, selects it and takes focus to it, and
- * says so in a snackbar with Undo (see Adding blocks in docs/spec/interactions.md).
+ * Adds a block of `activity` at the slot, `length` long or else with its default length, selects
+ * it and takes focus to it, and says so in a snackbar with Undo (see Adding blocks in
+ * docs/spec/interactions.md).
  */
-function addChosenBlock(
-  planner: Planner,
-  activity: Activity,
-  slot: Slot,
-  length?: BlockLength,
-): void {
+function addBlockNow(planner: Planner, activity: Activity, slot: Slot, length?: BlockLength): void {
   const id = randomIds.createBlockId();
   let added: Block | undefined;
   planner.change((plan) => {
@@ -93,12 +90,26 @@ function addChosenBlock(
     action: {
       label: "Undo",
       run: () => {
-        planner.undo();
+        animate(() => {
+          planner.undo();
+        });
       },
     },
   });
   flush();
   document.querySelector<HTMLElement>(`[data-block="${CSS.escape(id)}"] .block-button`)?.focus();
+}
+
+/** Adds the chosen block, animated (see `animate`). */
+function addChosenBlock(
+  planner: Planner,
+  activity: Activity,
+  slot: Slot,
+  length?: BlockLength,
+): void {
+  animate(() => {
+    addBlockNow(planner, activity, slot, length);
+  });
 }
 
 /**

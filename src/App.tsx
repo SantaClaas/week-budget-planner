@@ -20,6 +20,7 @@ import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
 import { sanitizeDayIndex } from "./plan/time.ts";
 import { TopAppBar } from "./top-app-bar/TopAppBar.tsx";
+import { animate } from "./week/transition.ts";
 
 /** The path the app is served from, `/week-budget-planner/` (see vite.config.ts). */
 const BASE = import.meta.env.BASE_URL;
@@ -184,7 +185,9 @@ export function App(): JSX.Element {
     const isShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey;
     if (!isShortcut || event.key.toLowerCase() !== "z" || isInField(event.target)) return;
     event.preventDefault();
-    current()?.undo();
+    animate(() => {
+      current()?.undo();
+    });
   };
 
   // Once a tab on a newer version took over, nothing here can change the plan: placing stops and

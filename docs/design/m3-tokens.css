@@ -152,6 +152,122 @@
        getComputedStyle(), so both follow prefers-reduced-motion, or the Motion setting through
        data-motion on :root (see Motion in docs/spec/design.md). Fades and progress widths stay. */
     --spatial-motion: 1;
+    /* Material 3 Expressive's springs (androidx ExpressiveMotionTokens: damping ratio and
+       stiffness) as linear() curves, each sampled at 33 points over the time the spring takes to
+       settle within 0.1% of its end. The test in src/design-tokens.test.ts samples the spring again
+       from the two numbers and fails when a curve drifts from it. Spatial springs move things, so
+       their duration multiplies by --spatial-motion; effects springs fade and stay. */
+    /* SpringDefaultSpatial: damping 0.8, stiffness 380 */
+    --spring-default-spatial-duration: 450ms;
+    --spring-default-spatial: linear(
+      0,
+      0.032,
+      0.112,
+      0.217,
+      0.332,
+      0.446,
+      0.554,
+      0.65,
+      0.733,
+      0.803,
+      0.86,
+      0.905,
+      0.94,
+      0.966,
+      0.985,
+      0.998,
+      1.007,
+      1.012,
+      1.014,
+      1.015,
+      1.015,
+      1.014,
+      1.012,
+      1.01,
+      1.009,
+      1.007,
+      1.005,
+      1.004,
+      1.003,
+      1.002,
+      1.002,
+      1.001,
+      1
+    );
+    /* SpringFastSpatial: damping 0.6, stiffness 800 */
+    --spring-fast-spatial-duration: 410ms;
+    --spring-fast-spatial: linear(
+      0,
+      0.056,
+      0.192,
+      0.366,
+      0.544,
+      0.708,
+      0.845,
+      0.95,
+      1.023,
+      1.068,
+      1.09,
+      1.095,
+      1.088,
+      1.074,
+      1.057,
+      1.041,
+      1.025,
+      1.013,
+      1.003,
+      0.997,
+      0.993,
+      0.991,
+      0.991,
+      0.992,
+      0.993,
+      0.995,
+      0.996,
+      0.998,
+      0.999,
+      1,
+      1,
+      1.001,
+      1
+    );
+    /* SpringDefaultEffects: damping 1, stiffness 1600 */
+    --spring-default-effects-duration: 180ms;
+    --spring-default-effects: linear(
+      0,
+      0.022,
+      0.075,
+      0.147,
+      0.228,
+      0.31,
+      0.391,
+      0.467,
+      0.537,
+      0.601,
+      0.657,
+      0.708,
+      0.751,
+      0.789,
+      0.822,
+      0.85,
+      0.874,
+      0.895,
+      0.912,
+      0.927,
+      0.939,
+      0.949,
+      0.958,
+      0.965,
+      0.971,
+      0.976,
+      0.98,
+      0.984,
+      0.987,
+      0.989,
+      0.991,
+      0.993,
+      1
+    );
     /* Height of one hour on the week grid. In rem, so the grid grows with the text size. */
     --hour: 3rem;
     /* The shade over the hours outside the day hours, darker like the weekend tint and laid over
@@ -1655,6 +1771,66 @@
       padding-inline: 0.5rem;
       white-space: nowrap;
       translate: 0 -50%;
+    }
+  }
+
+  /* Block changes, animated with a View Transition scoped to the week (src/week/transition.ts).
+     Each block part has its own view-transition-name, set from its id, so a block moved to another
+     day glides there instead of fading out and in again. The day headers and the hour gutter are
+     captured too, so they stay painted over the blocks that move under them, as they are while the
+     week scrolls. Moves follow the default spatial spring; blocks added pop in with the fast one,
+     whose overshoot is the expressive part, and fade in; blocks removed shrink and fade out. Text
+     that changes, like a day's total, cross-fades with the effects spring. With reduced motion,
+     only the fades stay. */
+  .block:not(.preview) {
+    view-transition-class: block;
+  }
+  .day-header,
+  .gutter {
+    view-transition-name: match-element;
+  }
+  .week::before {
+    view-transition-name: week-corner;
+  }
+  ::view-transition-group(*) {
+    animation-duration: calc(var(--spring-default-spatial-duration) * var(--spatial-motion));
+    animation-timing-function: var(--spring-default-spatial);
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: var(--spring-default-effects-duration);
+    animation-timing-function: var(--spring-default-effects);
+  }
+  ::view-transition-new(.block):only-child {
+    animation:
+      var(--spring-default-effects-duration) var(--spring-default-effects) both block-fade-in,
+      calc(var(--spring-fast-spatial-duration) * var(--spatial-motion)) var(--spring-fast-spatial)
+        both block-pop-in;
+  }
+  ::view-transition-old(.block):only-child {
+    animation:
+      var(--spring-default-effects-duration) var(--spring-default-effects) both block-fade-out,
+      calc(var(--spring-default-effects-duration) * var(--spatial-motion))
+        var(--spring-default-effects) both block-shrink-out;
+  }
+  @keyframes block-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes block-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes block-pop-in {
+    from {
+      scale: 0.6;
+    }
+  }
+  @keyframes block-shrink-out {
+    to {
+      scale: 0.6;
     }
   }
 

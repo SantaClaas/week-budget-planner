@@ -9,6 +9,7 @@ import { sanitizeDayEnd, sanitizeDayStart } from "../plan/time.ts";
 import type { Planner } from "../planner/index.ts";
 import * as snackbar from "../snackbar/index.ts";
 import * as selection from "./selection.ts";
+import { animate } from "./transition.ts";
 
 /** The day hours' menu, which its button opens. */
 const DAY_HOURS_ID = "day-hours";
@@ -128,13 +129,17 @@ function clearWeek(planner: Planner): void {
   const count = planner.plan().blocks.length;
   if (count === 0 || planner.isOutdated()) return;
   selection.clear();
-  planner.change(list.clear);
+  animate(() => {
+    planner.change(list.clear);
+  });
   snackbar.show({
     message: `Removed ${formatCount(count, { one: "block", other: "blocks" })} from the week.`,
     action: {
       label: "Undo",
       run: () => {
-        planner.undo();
+        animate(() => {
+          planner.undo();
+        });
       },
     },
   });

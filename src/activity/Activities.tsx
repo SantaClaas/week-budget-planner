@@ -18,6 +18,7 @@ import type { PlanStore } from "../storage/plan-store.ts";
 import * as placing from "../placing/index.ts";
 import { startListDrag } from "../placing/list-drag.ts";
 import { isClickAfterDrag } from "../week/drag-controller.ts";
+import { animate } from "../week/transition.ts";
 import { ActivityForm } from "./ActivityForm.tsx";
 import * as edit from "./edit.ts";
 import { describeOverview, listRows, type ActivityRow } from "./row.ts";
@@ -70,7 +71,9 @@ function showWithUndo(planner: Planner, message: string): void {
     action: {
       label: "Undo",
       run: () => {
-        planner.undo();
+        animate(() => {
+          planner.undo();
+        });
       },
     },
   });

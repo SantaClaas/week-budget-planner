@@ -8,7 +8,7 @@ This is a cutting-edge app, built first for its author's own up-to-date browsers
 | --- | --- | --- |
 | SQLite in OPFS (`createSyncAccessHandle`), Web Locks, BroadcastChannel, cross-origin isolation | Chrome 102, Firefox 111, Safari 15.4 | The lower storage levels (see Progressive enhancement in [Persistence](persistence.md)). |
 | `<meta name="text-scale">` | Chrome 146 | Ignored. Browser text size and zoom still work. |
-| View Transitions | Chrome 111, Firefox 144, Safari 18 | Changes apply without the animation. |
+| Element-scoped View Transitions (`element.startViewTransition()`), for block changes on the week | Chrome 147 | Changes apply without the animation. Document-wide View Transitions (Chrome 111, Firefox 144, Safari 18) aren't used as a fallback: they would block the rest of the page during the animation and draw over the snackbar and the open popovers. While one runs, Chromium 153 hit-tests nothing inside the week (a click there lands on its parent), which is why placing by click isn't animated (see Motion in [Design](design.md)). TypeScript's DOM types don't have the method yet, so [`src/vite-env.d.ts`](../../src/vite-env.d.ts) declares it, optional, on `Element`. |
 | `clip-path: shape()` for the wavy progress bar | Chrome 135, Firefox 148, Safari 18.4 | The bar stays flat. |
 | `forced-colors` rules, `forced-color-adjust`, `Mark` | Chrome, Firefox (Windows High Contrast) | Not needed where forced colors don't exist. |
 | Translucent colors | `color-mix()`: Chrome 111, Firefox 113, Safari 16.2 | Used instead of the relative color syntax (`rgb(from …)`, Safari 18), with the same result. |
