@@ -70,4 +70,4 @@ Picking means a click, a tap, or Enter or Space on the focused slot or activity.
 - A new activity gets a default color and shape, ideally ones no other activity uses yet (see Activity shapes in [Design](design.md)). The user can change both.
 
 **History**
-- Undo covers every change: block add, move, resize and remove, activity add, edit and delete, Clear week, and Start empty. It keeps up to 100 steps. Ctrl/Cmd+Z works when focus isn't in a form field. The snackbar Undo and the Undo icon button use the same stack.
+- Undo covers every change: block add, move, resize and remove, activity add, edit and delete, Clear week, Start empty, and Keep these, which the prototype didn't record (one rule for every change, and a mistaken tap can be undone). It keeps up to 100 steps. Ctrl/Cmd+Z works when focus isn't in a form field. The snackbar Undo and the Undo icon button use the same stack.
