@@ -8,6 +8,7 @@ import { fitToDayHours, pickDefaultLength } from "../plan/block/length.ts";
 import type { Plan } from "../plan/index.ts";
 import type { DayIndex, DayMinute } from "../plan/time.ts";
 import type { Planner } from "../planner/index.ts";
+import * as changing from "../progress/changing.ts";
 import {
   DRAG_THRESHOLD_PIXELS,
   findSlot,
@@ -57,8 +58,11 @@ export function startListDrag(
     const slot = findTarget();
     if (slot === undefined) {
       placing.hidePreview();
+      changing.stop();
       return;
     }
+    // Over the week, a release would add placed time, so the activity's bar waves.
+    changing.start(activity.id);
     const plan = options.plan();
     placing.showPreview({
       activityId: activity.id,
@@ -85,6 +89,7 @@ export function startListDrag(
     delete document.documentElement.dataset["dragging"];
     placing.hideChip();
     placing.hidePreview();
+    changing.stop();
     if (!isDragged) return;
     ignoreClicksAfterDrag();
     if (ended.type === "pointercancel") return;

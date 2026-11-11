@@ -11,6 +11,7 @@ import type { Slot } from "../plan/slot.ts";
 import { sanitizeDayIndex, sanitizeDayMinute, snapDown } from "../plan/time.ts";
 import type { BlockPart } from "../plan/week.ts";
 import type { Planner } from "../planner/index.ts";
+import * as changing from "../progress/changing.ts";
 import { drag, measureGrab, readMinute, type Grip, type PointerPlace } from "./drag.ts";
 
 /** How far the pointer moves before a press becomes a drag, so a click stays a click. */
@@ -134,6 +135,8 @@ export function startDrag(
       if (Math.hypot(pointer.x - start.x, pointer.y - start.y) < DRAG_THRESHOLD_PIXELS) return;
       isDragged = true;
       document.documentElement.dataset["dragging"] = grip === "body" ? "move" : "resize";
+      // A resize changes the activity's placed time; a move doesn't.
+      if (grip !== "body") changing.start(part.block.activityId);
     }
     if (frame === 0) frame = requestAnimationFrame(showFrame);
   };
@@ -143,6 +146,7 @@ export function startDrag(
     listening.abort();
     cancelAnimationFrame(frame);
     delete document.documentElement.dataset["dragging"];
+    changing.stop();
     if (!isDragged) {
       options.onDone(false);
       return;
