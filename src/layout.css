@@ -5,7 +5,11 @@
   /* Wide screens: the rail beside the page. Phones (under 52.5em, Material's 840dp): the page
      over the navigation bar. Only one navigation shows at a time (see docs/spec/layout.md). The
      window itself doesn't scroll: the page does, inside <main>, so the week can fill what's left
-     of the screen and scroll inside its own region. */
+     of the screen and scroll inside its own region.
+     Every region that scrolls is also positioned (position: relative), so it's the containing block
+     of the absolutely positioned elements in it, like .visually-hidden text. Otherwise their
+     containing block is the window's, they escape the region's overflow, and the window scrolls as
+     far as the lowest of them. */
   body {
     display: grid;
     grid-template: "rail page" minmax(0, 1fr) / auto minmax(0, 1fr);
@@ -20,6 +24,7 @@
     & > main {
       grid-area: page;
       min-inline-size: 0;
+      position: relative;
       overflow-y: auto;
     }
     & > .navigation-bar {
@@ -81,6 +86,7 @@
     padding-block-end: 1rem;
     & > .activities {
       grid-column: pane;
+      position: relative;
       overflow-y: auto;
       overscroll-behavior: contain;
     }
@@ -251,6 +257,7 @@
      6rem each; on phones about three show, the next one just visible at the edge, and a sideways
      swipe snaps to a day (see Phones in docs/spec/layout.md). */
   .week-scroller {
+    position: relative;
     overflow: auto;
     overscroll-behavior: contain;
     border-radius: var(--corner-extra-large);
