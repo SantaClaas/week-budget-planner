@@ -111,8 +111,18 @@ export function startDrag(
   let pointer = start;
   let isDragged = false;
   let frame = 0;
-  // Stops every window listener of this press at once, when it's released or cancelled.
-  const listening = new AbortController();
+  // Everything the press changes outside itself, undone when it's released or cancelled: each step
+  // runs however the release ends, even when an earlier step or the save throws.
+  const cleanup = new DisposableStack();
+  // Stops every window listener of this press at once.
+  const listening = cleanup.adopt(new AbortController(), (controller) => {
+    controller.abort();
+  });
+  cleanup.defer(() => {
+    cancelAnimationFrame(frame);
+    delete document.documentElement.dataset["dragging"];
+  });
+  cleanup.defer(changing.stop);
 
   /** The change to the plan with the pointer where it is now. */
   const update = (): ((plan: Plan) => Plan) => {
@@ -143,24 +153,20 @@ export function startDrag(
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
-    listening.abort();
-    cancelAnimationFrame(frame);
-    delete document.documentElement.dataset["dragging"];
-    changing.stop();
-    if (!isDragged) {
-      options.onDone(false);
-      return;
-    }
+    using ending = cleanup.move();
+    // Once the change is saved, or however else the release ends, and before the cleanup.
+    ending.defer(() => {
+      options.onDone(isDragged);
+    });
+    if (!isDragged) return;
     ignoreClicksAfterDrag();
     // A cancelled drag (the browser took the pointer, say for a scroll) puts the block back.
     if (ended.type === "pointercancel") {
       planner.endPreview();
-      options.onDone(true);
       return;
     }
     pointer = { x: ended.clientX, y: ended.clientY };
     planner.change(update());
-    options.onDone(true);
   };
 
   const { signal } = listening;

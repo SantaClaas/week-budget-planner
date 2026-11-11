@@ -37,8 +37,20 @@ export function startListDrag(
   let pointer = start;
   let isDragged = false;
   let frame = 0;
-  // Stops every window listener of this press at once, when it's released or cancelled.
-  const listening = new AbortController();
+  // Everything the press changes outside itself, undone when it's released or cancelled: each step
+  // runs however the release ends, even when an earlier step or the drop throws.
+  const cleanup = new DisposableStack();
+  // Stops every window listener of this press at once.
+  const listening = cleanup.adopt(new AbortController(), (controller) => {
+    controller.abort();
+  });
+  cleanup.defer(() => {
+    cancelAnimationFrame(frame);
+    delete document.documentElement.dataset["dragging"];
+  });
+  cleanup.defer(placing.hideChip);
+  cleanup.defer(placing.hidePreview);
+  cleanup.defer(changing.stop);
 
   /** The week's region, if this page shows it, and the slot under the pointer in it. */
   const findTarget = (): { day: DayIndex; start: DayMinute } | undefined => {
@@ -84,12 +96,7 @@ export function startListDrag(
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
-    listening.abort();
-    cancelAnimationFrame(frame);
-    delete document.documentElement.dataset["dragging"];
-    placing.hideChip();
-    placing.hidePreview();
-    changing.stop();
+    using _ending = cleanup.move();
     if (!isDragged) return;
     ignoreClicksAfterDrag();
     if (ended.type === "pointercancel") return;
