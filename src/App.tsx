@@ -42,9 +42,9 @@ function stopPlacingOnEscape(event: KeyboardEvent): void {
 /**
  * A tab on a newer version took over while this one ran, and the planner stopped every change:
  * reloads now when hidden, else asks to reload with the plan on screen read-only, and reloads once
- * the tab is hidden.
+ * the tab is hidden, until `signal` aborts.
  */
-function leaveForNewerVersion(): void {
+function leaveForNewerVersion(signal: AbortSignal): void {
   if (document.visibilityState === "hidden") {
     location.reload();
     return;
@@ -60,7 +60,7 @@ function leaveForNewerVersion(): void {
       },
     },
   });
-  document.addEventListener("visibilitychange", reloadWhenHidden);
+  document.addEventListener("visibilitychange", reloadWhenHidden, { signal });
 }
 
 /** The full page when a newer version saved the plan: nothing else can be shown or changed. */
@@ -179,32 +179,43 @@ export function App(): JSX.Element {
   onSettled(() => follow(BASE, showPage));
 
   onSettled(() => {
-    document.addEventListener("keydown", undoOnShortcut);
-    document.addEventListener("keydown", stopPlacingOnEscape);
+    const listening = new AbortController();
+    const { signal } = listening;
+    document.addEventListener("keydown", undoOnShortcut, { signal });
+    document.addEventListener("keydown", stopPlacingOnEscape, { signal });
     return () => {
-      document.removeEventListener("keydown", undoOnShortcut);
-      document.removeEventListener("keydown", stopPlacingOnEscape);
+      listening.abort();
     };
   });
 
   onSettled(() => {
-    let opened: planner.Planner | undefined;
-    let isDisposed = false;
+    // Aborts when the app goes away, and with it everything the open planner started.
+    const lifetime = new AbortController();
+    const { signal } = lifetime;
 
     async function start(): Promise<void> {
       const result = await planner.open({
         showSnackbar: snackbar.show,
-        onNewerVersion: leaveForNewerVersion,
+        onNewerVersion: () => {
+          leaveForNewerVersion(signal);
+        },
       });
       if (result === "newer-version") {
         setIsFromNewerVersion(true);
         return;
       }
-      if (isDisposed) {
+      // The app went away while the plan was opening.
+      if (signal.aborted) {
         result.planner.stop();
         return;
       }
-      opened = result.planner;
+      signal.addEventListener(
+        "abort",
+        () => {
+          result.planner.stop();
+        },
+        { once: true },
+      );
       setCurrent(result.planner);
       // A hook for the browser tests, which still drive the store directly in places.
       Object.assign(window, {
@@ -217,9 +228,7 @@ export function App(): JSX.Element {
       console.error("[app] couldn't open the plan", error);
     });
     return () => {
-      isDisposed = true;
-      opened?.stop();
-      document.removeEventListener("visibilitychange", reloadWhenHidden);
+      lifetime.abort();
     };
   });
 

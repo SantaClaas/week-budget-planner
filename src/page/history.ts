@@ -47,11 +47,12 @@ export function follow(base: string, show: (page: Page, cause: Cause) => void): 
     showCurrent("history");
   };
 
-  document.addEventListener("click", onClick);
-  window.addEventListener("popstate", onPopState);
+  const following = new AbortController();
+  const { signal } = following;
+  document.addEventListener("click", onClick, { signal });
+  window.addEventListener("popstate", onPopState, { signal });
   showCurrent("history");
   return () => {
-    document.removeEventListener("click", onClick);
-    window.removeEventListener("popstate", onPopState);
+    following.abort();
   };
 }
