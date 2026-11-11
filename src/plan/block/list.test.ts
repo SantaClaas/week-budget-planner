@@ -65,3 +65,19 @@ describe("block list", () => {
     expect(list.create(empty, gym, at(2, 1380), id).length).toBe(90);
   });
 });
+
+describe("clearing the week", () => {
+  it("removes every block and keeps the activities", () => {
+    const planned: Plan = {
+      ...createEmptyPlan(),
+      activities: [createActivity()],
+      blocks: [lecture],
+    };
+    expect(list.clear(planned)).toEqual({ ...planned, blocks: [] });
+  });
+
+  it("gives back the same plan when it has no blocks, so there's no undo step", () => {
+    const empty = createEmptyPlan();
+    expect(list.clear(empty)).toBe(empty);
+  });
+});

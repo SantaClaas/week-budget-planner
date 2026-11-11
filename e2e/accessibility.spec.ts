@@ -102,8 +102,8 @@ for (const colorScheme of ["light", "dark"] as const) {
       results.push(await checkWithAxe(page));
       // An activity's form, with an error showing, and the form for a new one.
       await page.getByRole("button", { name: "Edit Gym" }).click();
-      await page.getByLabel("Hours").fill("");
-      await page.getByLabel("Hours").press("Tab");
+      await page.getByLabel("Hours", { exact: true }).fill("");
+      await page.getByLabel("Hours", { exact: true }).press("Tab");
       results.push(await checkWithAxe(page));
       await page.keyboard.press("Escape");
       await page.getByRole("button", { name: "New activity" }).click();

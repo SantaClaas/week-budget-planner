@@ -20,6 +20,7 @@ import * as snackbar from "../snackbar/index.ts";
 import type { Slot } from "../plan/slot.ts";
 import * as selection from "../week/selection.ts";
 import { Week, type WeekPreview } from "../week/Week.tsx";
+import { ClearWeek, DayHours } from "../week/WeekTools.tsx";
 
 /** A length in a `<time>` element: "20 hr". */
 function Length(properties: { minutes: number }): JSX.Element {
@@ -30,8 +31,11 @@ function Length(properties: { minutes: number }): JSX.Element {
   );
 }
 
-/** "20 hr placed of 32 hr · 12 hr left to place", with the overall progress under it. */
-function Summary(properties: { plan: Plan }): JSX.Element {
+/**
+ * "20 hr placed of 32 hr · 12 hr left to place", with the overall progress under it, and Day hours
+ * and Clear week beside it on wide screens (on phones they're in Settings › Week).
+ */
+function Summary(properties: { plan: Plan; planner: Planner }): JSX.Element {
   const summary = () => summarize(properties.plan);
   return (
     <div class="summary">
@@ -54,6 +58,8 @@ function Summary(properties: { plan: Plan }): JSX.Element {
         </span>
       </p>
       <Progress budget={summary().budget} placed={summary().placed} />
+      <DayHours plan={properties.plan} planner={properties.planner} variant="button" />
+      <ClearWeek plan={properties.plan} planner={properties.planner} variant="button" />
     </div>
   );
 }
@@ -151,7 +157,7 @@ export function WeekPage(properties: {
   return (
     <div class="week-page">
       <Activities plan={properties.plan} planner={properties.planner} place="pane" />
-      <Summary plan={properties.plan} />
+      <Summary plan={properties.plan} planner={properties.planner} />
       <Week
         plan={properties.plan}
         planner={properties.planner}

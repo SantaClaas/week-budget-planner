@@ -1,6 +1,5 @@
 import type { JSX } from "@solidjs/web";
 import { createSignal, flush, Match, onSettled, Show, Switch } from "solid-js";
-import version from "virtual:app-version";
 
 import { ActivitiesPage } from "./activity/ActivitiesPage.tsx";
 import * as edit from "./activity/edit.ts";
@@ -15,6 +14,7 @@ import * as placing from "./placing/index.ts";
 import { PLACING_TOOLBAR_ID, PlacingToolbar } from "./placing/PlacingToolbar.tsx";
 import type { Activity } from "./plan/activity/index.ts";
 import * as planner from "./planner/index.ts";
+import { SettingsPage } from "./settings/SettingsPage.tsx";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
 import { sanitizeDayIndex } from "./plan/time.ts";
@@ -256,15 +256,7 @@ export function App(): JSX.Element {
                   />
                 </Match>
                 <Match when={page() === "settings"}>
-                  <section class="page-content" aria-labelledby="about-title">
-                    <h2 id="about-title" class="title-medium emphasized">
-                      About
-                    </h2>
-                    <a href={version.url} target="_blank" rel="noopener">
-                      Version {version.date}
-                      {version.commit === undefined ? "" : ` · ${version.commit.slice(0, 7)}`}
-                    </a>
-                  </section>
+                  <SettingsPage plan={opened().plan()} planner={opened()} />
                 </Match>
               </Switch>
             )}

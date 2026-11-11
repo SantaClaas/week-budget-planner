@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import * as colorScheme from "./color-scheme.ts";
+import { colorScheme } from "./color-scheme.ts";
+import { contrast } from "./contrast.ts";
+import { motion } from "./motion.ts";
 
 const createStorage = () => {
   const items = new Map<string, string>();
@@ -12,10 +14,22 @@ const createStorage = () => {
   };
 };
 
+const blocked = {
+  getItem: () => {
+    throw new Error("blocked");
+  },
+  setItem: () => {
+    throw new Error("blocked");
+  },
+  removeItem: () => {
+    throw new Error("blocked");
+  },
+};
+
 // Node has no StorageEvent, so a plain event carries the key.
 const storageEvent = (key: string | null): Event => Object.assign(new Event("storage"), { key });
 
-describe("color scheme", () => {
+describe("the color scheme", () => {
   it("follows the system until a choice is stored", () => {
     const storage = createStorage();
     expect(colorScheme.read(storage)).toBe("light dark");
@@ -36,17 +50,6 @@ describe("color scheme", () => {
   });
 
   it("still applies the choice when storage is blocked", () => {
-    const blocked = {
-      getItem: () => {
-        throw new Error("blocked");
-      },
-      setItem: () => {
-        throw new Error("blocked");
-      },
-      removeItem: () => {
-        throw new Error("blocked");
-      },
-    };
     const meta = { content: "light dark" };
     colorScheme.save("light", blocked, meta);
     expect(meta.content).toBe("light");
@@ -57,7 +60,7 @@ describe("color scheme", () => {
     const storage = createStorage();
     const meta = { content: "light dark" };
     const events = new EventTarget();
-    const seen: colorScheme.ColorScheme[] = [];
+    const seen: string[] = [];
     const stop = colorScheme.listenForChanges(
       (next) => {
         seen.push(next);
@@ -73,5 +76,33 @@ describe("color scheme", () => {
     events.dispatchEvent(storageEvent(null));
     expect(seen).toEqual(["dark"]);
     expect(meta.content).toBe("dark");
+  });
+});
+
+describe("contrast and motion", () => {
+  it("set their attribute on the root, and remove it for system", () => {
+    const storage = createStorage();
+    const root: { dataset: DOMStringMap } = { dataset: {} };
+    contrast.save("less", storage, root);
+    motion.save("reduced", storage, root);
+    expect(root.dataset).toEqual({ contrast: "less", motion: "reduced" });
+    expect(storage.items).toEqual(
+      new Map([
+        ["week-budget-planner.contrast", "less"],
+        ["week-budget-planner.motion", "reduced"],
+      ]),
+    );
+    contrast.save("system", storage, root);
+    motion.save("system", storage, root);
+    expect(root.dataset).toEqual({});
+    expect(storage.items.size).toBe(0);
+  });
+
+  it("keep standard contrast as a choice of its own, apart from the system's", () => {
+    const storage = createStorage();
+    contrast.save("standard", storage, { dataset: {} });
+    expect(contrast.read(storage)).toBe("standard");
+    storage.setItem("week-budget-planner.motion", "fast");
+    expect(motion.read(storage)).toBe("system");
   });
 });
