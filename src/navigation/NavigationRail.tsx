@@ -15,6 +15,8 @@ export function NavigationRail(properties: {
   current: Page;
   base: string;
   onNewActivity: () => void;
+  /** A tab on a newer version took over, so no activity can be added. */
+  isReadOnly: boolean;
 }): JSX.Element {
   const [isExpanded, setIsExpanded] = createSignal(false);
   return (
@@ -37,6 +39,7 @@ export function NavigationRail(properties: {
         class="floating-action-button"
         data-icon-only={!isExpanded()}
         title={isExpanded() ? undefined : "New activity"}
+        aria-disabled={properties.isReadOnly ? "true" : undefined}
         onClick={properties.onNewActivity}
       >
         <Icon name="add" />

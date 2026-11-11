@@ -20,6 +20,13 @@ const ENDS = Array.from({ length: 12 }, (_, index) => index + 13);
 /** How the tools look: outlined buttons above the week, or list items in Settings › Week. */
 type Variant = "button" | "list-item";
 
+/**
+ * "true" once a tab on a newer version took over: the tools stay focusable, but change nothing
+ * (see Tabs on different versions in docs/spec/persistence.md).
+ */
+const readOnlyState = (planner: Planner): "true" | undefined =>
+  planner.isOutdated() ? "true" : undefined;
+
 /** "07:00–22:00". */
 const formatDayHours = (plan: Plan): string =>
   formatClockRange(plan.dayStart * 60, plan.dayEnd * 60);
@@ -58,7 +65,8 @@ export function DayHours(properties: {
           type="button"
           class="button day-hours-button"
           data-variant="outlined"
-          popovertarget={DAY_HOURS_ID}
+          aria-disabled={readOnlyState(properties.planner)}
+          popovertarget={properties.planner.isOutdated() ? undefined : DAY_HOURS_ID}
         >
           <Icon name="schedule" size={18} />
           Day hours · {formatDayHours(properties.plan)}
@@ -67,7 +75,8 @@ export function DayHours(properties: {
         <button
           type="button"
           class="list-item day-hours-button"
-          popovertarget={DAY_HOURS_ID}
+          aria-disabled={readOnlyState(properties.planner)}
+          popovertarget={properties.planner.isOutdated() ? undefined : DAY_HOURS_ID}
           aria-labelledby={`${DAY_HOURS_ID}-title`}
           aria-describedby={`${DAY_HOURS_ID}-range`}
         >
@@ -117,7 +126,7 @@ export function DayHours(properties: {
 /** Removes every block, keeps the activities, and says so in a snackbar with Undo. */
 function clearWeek(planner: Planner): void {
   const count = planner.plan().blocks.length;
-  if (count === 0) return;
+  if (count === 0 || planner.isOutdated()) return;
   selection.clear();
   planner.change(list.clear);
   snackbar.show({
@@ -147,6 +156,7 @@ export function ClearWeek(properties: {
       class="button"
       data-variant="outlined"
       disabled={isEmpty()}
+      aria-disabled={readOnlyState(properties.planner)}
       onClick={clear}
     >
       <Icon name="delete_sweep" size={18} />
@@ -157,6 +167,7 @@ export function ClearWeek(properties: {
       type="button"
       class="list-item"
       disabled={isEmpty()}
+      aria-disabled={readOnlyState(properties.planner)}
       aria-labelledby="clear-week-title"
       aria-describedby="clear-week-text"
       onClick={clear}

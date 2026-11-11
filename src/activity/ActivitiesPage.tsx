@@ -33,7 +33,14 @@ export function ActivitiesPage(properties: {
       {/* The button opens the new-activity form, so it goes while that's open, also in the empty
           state, where the form is always there. It would float over the form's pickers. */}
       <Show when={properties.plan.activities.length > 0 && edit.current()?.type !== "new"}>
-        <button type="button" class="floating-action-button" onClick={edit.openNew}>
+        <button
+          type="button"
+          class="floating-action-button"
+          aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
+          onClick={() => {
+            if (!properties.planner.isOutdated()) edit.openNew();
+          }}
+        >
           <Icon name="add" />
           New activity
         </button>

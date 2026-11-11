@@ -596,14 +596,18 @@
     &[data-variant="text-danger"] {
       color: var(--error);
     }
-    /* Disabled: only buttons with a container get the disabled container. */
-    &:disabled {
+    /* Disabled, or focusable but doing nothing (aria-disabled): only buttons with a container get
+       the disabled container. */
+    &:is(:disabled, [aria-disabled="true"]) {
       color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
       @media (forced-colors: active) {
         border-color: GrayText;
       }
     }
-    &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):disabled {
+    &:is([data-variant="filled"], [data-variant="tonal"], [data-variant="danger"]):is(
+        :disabled,
+        [aria-disabled="true"]
+      ) {
       background: color-mix(
         in srgb,
         var(--on-surface) var(--disabled-container-opacity),
@@ -1158,6 +1162,27 @@
     }
   }
 
+  /* A control that stays focusable but does nothing, as in a tab that a newer version took over
+     (see Tabs on different versions in docs/spec/persistence.md). The buttons draw it as disabled
+     with their :disabled rules; these draw the rest. Blocks, the empty slot and the activities keep
+     their look, so the plan can still be read. */
+  :is(.icon-button, .list-item, .floating-action-button)[aria-disabled="true"] {
+    cursor: default;
+    color: color-mix(in srgb, var(--on-surface) var(--disabled-content-opacity), transparent);
+    @media (forced-colors: active) {
+      color: GrayText;
+    }
+  }
+  .floating-action-button[aria-disabled="true"] {
+    background: color-mix(
+      in srgb,
+      var(--on-surface) var(--disabled-container-opacity),
+      transparent
+    );
+  }
+  :is(.button, .activity-button, .block-button, .slot-highlight, .remove)[aria-disabled="true"] {
+    cursor: default;
+  }
   /* in-place prompts at the top of the Activities list: a tertiary card with an icon, its text and
      its two buttons. The example-week note (Keep these, Start empty), the keep-your-plan card (Not
      now, Keep it), and on the error container the no-storage card (Dismiss, Export). */

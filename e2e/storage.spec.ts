@@ -191,6 +191,40 @@ test.describe("a newer version of the app", () => {
     await expectStatus(page, "full");
   });
 
+  test("leaves the plan to read, but changes nothing, in a tab it took over", async ({ page }) => {
+    await page.goto(ISOLATED_URL);
+    await expectStatus(page, "full");
+    await page.getByRole("button", { name: "Gym", exact: true }).click();
+    await postNewerTabQuery(page);
+    await expect(page.getByRole("status")).toHaveText(OUTDATED_MESSAGE);
+    // Placing stopped, and every control that would change the plan says it's disabled.
+    await expect(page.getByRole("region", { name: /^Placing Gym/u })).toBeHidden();
+    const block = page.getByRole("button", { name: /^Statistics lecture, Monday 10:00/u });
+    await expect(block).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("button", { name: "Gym", exact: true })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await expect(page.getByRole("button", { name: "Clear week" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    // Still focusable, so it can be read, but the keys don't move it.
+    await block.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(block).toHaveAccessibleName(/^Statistics lecture, Monday 10:00( AM)? to 11:30/u);
+    // Nor does a click on an empty slot open Add block.
+    const emptySlot = page.getByRole("button", { name: /^Empty slot/u });
+    await emptySlot.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("region", { name: /^Add block/u })).toBeHidden();
+    // Playwright won't click a button that says it's disabled, so the keyboard presses it.
+    await page.getByRole("button", { name: "Clear week" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".block-button")).toHaveCount(8);
+  });
+
   test("asks a visible tab to reload, and reloads it once it's hidden", async ({ page }) => {
     await page.goto(ISOLATED_URL);
     await expectStatus(page, "full");
