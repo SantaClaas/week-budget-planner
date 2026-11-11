@@ -1,6 +1,7 @@
-// Helpers for the browser tests. Until the UI has every control (phase 4), the app exposes its plan
-// store and its planner as window.weekBudgetPlanner, and the tests read and drive the plan through
-// it where no control exists yet; as each control lands, they move to it.
+// Helpers for the browser tests. The app exposes its plan store and its planner as
+// window.weekBudgetPlanner. The tests read the storage level and what's stored through it, which no
+// control shows exactly, and drive the store directly where a test is about the store itself, such
+// as an import it must refuse. Everything a user does goes through the controls.
 import { expect, type Page } from "@playwright/test";
 
 import type { PlanStore } from "../src/storage/plan-store.ts";
