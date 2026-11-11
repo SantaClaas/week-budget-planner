@@ -1568,12 +1568,13 @@
     gap: 0.25rem;
     height: 0.625rem; /* 10dp: room for the wavy state */
     & .indicator {
+      --part-color: var(--activity-color, var(--primary));
       height: 0.25rem;
       border-radius: 0.125rem;
-      background: var(--activity-color, var(--primary));
+      background: var(--part-color);
       @media (forced-colors: active) {
         forced-color-adjust: none;
-        background: Highlight;
+        --part-color: Highlight;
       }
     }
     & .track {
@@ -1609,23 +1610,264 @@
        flex in minutes, and the bar carries data-state="over-budget":
        <span class="indicator" style="flex: 720"></span><span class="over-budget" style="flex: 30"></span> */
     & .over-budget {
+      --part-color: var(--over-budget);
       height: 0.25rem;
       min-width: 0.25rem;
       border-radius: 0.125rem;
-      background: var(--over-budget);
+      background: var(--part-color);
       @media (forced-colors: active) {
         forced-color-adjust: none;
-        background: Mark;
+        --part-color: Mark;
       }
     }
     &[data-state="over-budget"] .track {
       display: none;
     }
-    /* wavy, while a drag changes placed time (src/progress/Progress.tsx): the parts fill the 10dp
-       container, and a clip-path: shape() set each frame draws the wave and its round ends in it */
-    &[data-wavy] :is(.indicator, .over-budget) {
+    /* Google's wavy indicator, while a drag changes placed time (see "Wavy progress while resizing"
+       in docs/spec/design.md). Script only sets data-wave: "on" while the drag lasts, "settling"
+       while the wave flattens after it. Values from androidx LinearProgressIndicatorTokens
+       (ActiveWaveAmplitude 3dp, ActiveWaveWavelength 40dp, ActiveThickness 4dp, WaveHeight 10dp),
+       WavyProgressIndicator.kt (one wavelength a second) and MotionTokens (DurationLong2 500ms with
+       EasingStandardCubicBezier to grow, EasingEmphasizedAccelerateCubicBezier to shrink).
+       - The amplitude is a registered length, so it transitions: towards "on" with the standard
+         easing, back with the emphasized accelerate one (a transition takes the timing of the state
+         it goes to). It multiplies by --spatial-motion, so reduced motion stays flat.
+       - The phase is a registered number from 0 to 1 that @keyframes moves once a second. */
+    --wave-amplitude: 0px;
+    --wave-direction: 1;
+    transition: --wave-amplitude 500ms cubic-bezier(0.3, 0, 0.8, 0.15);
+    /* the wave travels towards the bar's end, which is the left right-to-left */
+    &:dir(rtl) {
+      --wave-direction: -1;
+    }
+    &[data-wave="on"] {
+      --wave-amplitude: calc(0.1875rem * var(--spatial-motion));
+      transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    }
+    &[data-wave] {
+      animation: wave-travel 1s linear infinite;
+    }
+    /* Each part fills the 10dp container and draws its wave on ::before, with Google's own geometry
+       (LinearWavyProgressModifiers.kt): a quadratic curve per half wavelength, its ends on the
+       center line and its control point twice the amplitude off it, all shifted along by the phase.
+       It starts two wavelengths before the part and runs on past it: 72 halves cover a part 80rem
+       wide, wider than any bar in the app (the summary's is at most 80rem; a test checks the
+       count). ::before is inset by the round ends' radius, so the part's box cuts the band there,
+       and ::after draws the two round ends as dots, at the wave's height at each end. */
+    &[data-wave] :is(.indicator, .over-budget) {
+      --wave-shift: calc(var(--wave-phase) * var(--wave-direction));
+      position: relative;
+      container-type: inline-size;
       height: 0.625rem;
       border-radius: 0;
+      background: none;
+      &::before {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline: 0.125rem;
+        background: var(--part-color);
+        clip-path: shape(
+          from calc((var(--wave-shift) - 2) * 2.5rem - 0.125rem) 0.1875rem,
+          curve by 1.25rem 0rem with 0.625rem calc(-2 * var(--wave-amplitude)),
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          smooth by 1.25rem 0rem,
+          line by 0rem 0.25rem,
+          curve by -1.25rem 0rem with -0.625rem calc(2 * var(--wave-amplitude)),
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          smooth by -1.25rem 0rem,
+          close
+        );
+      }
+    }
+    /* The round ends need the wave's height at the part's end, so its width as a number of
+       wavelengths: a length divided by a length (Chrome 140, Safari 26, Firefox 158). Without it the
+       band's ends are cut straight. The height at x counts half wavelengths from the wave's start:
+       each half is a parabola, up in even halves and down in odd ones, as the curves above. */
+    @supports (width: calc(1px * (1px / 1px))) {
+      &[data-wave] :is(.indicator, .over-budget)::after {
+        --wave-start-halves: calc((0.05 - var(--wave-shift) + 2) * 2);
+        --wave-end-halves: calc(((100cqi - 0.125rem) / 2.5rem - var(--wave-shift) + 2) * 2);
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 0.125rem
+              calc(
+                0.3125rem - (1 - 2 * mod(round(down, var(--wave-start-halves)), 2)) * 4 *
+                  (var(--wave-start-halves) - round(down, var(--wave-start-halves))) *
+                  (1 - (var(--wave-start-halves) - round(down, var(--wave-start-halves)))) *
+                  var(--wave-amplitude)
+              ),
+            var(--part-color) 0.125rem,
+            transparent calc(0.125rem + 0.5px)
+          ),
+          radial-gradient(
+            circle at calc(100% - 0.125rem)
+              calc(
+                0.3125rem - (1 - 2 * mod(round(down, var(--wave-end-halves)), 2)) * 4 *
+                  (var(--wave-end-halves) - round(down, var(--wave-end-halves))) *
+                  (1 - (var(--wave-end-halves) - round(down, var(--wave-end-halves)))) *
+                  var(--wave-amplitude)
+              ),
+            var(--part-color) 0.125rem,
+            transparent calc(0.125rem + 0.5px)
+          );
+      }
+    }
+  }
+  @property --wave-amplitude {
+    syntax: "<length>";
+    inherits: true;
+    initial-value: 0px;
+  }
+  @property --wave-phase {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+  @keyframes wave-travel {
+    to {
+      --wave-phase: 1;
     }
   }
 

@@ -157,7 +157,7 @@ test("drags a block to another day and resizes it from both edges", async ({ pag
 });
 
 /** The progress bars drawn as Google's wavy indicator now. */
-const findWavyBars = (page: Page): Locator => page.locator(".progress[data-wavy]");
+const findWavyBars = (page: Page): Locator => page.locator(".progress[data-wave]");
 
 test("waves the activity's and the week's bars while a resize changes placed time", async ({
   page,
@@ -182,10 +182,29 @@ test("waves the activity's and the week's bars while a resize changes placed tim
   const lectureRow = page.getByRole("listitem").filter({
     has: page.getByRole("button", { name: "Statistics lecture", exact: true }),
   });
-  await expect(lectureRow.locator(".progress")).toHaveAttribute("data-wavy");
+  await expect(lectureRow.locator(".progress")).toHaveAttribute("data-wave", "on");
   // Released, the wave flattens and goes.
   await page.mouse.up();
   await expect(findWavyBars(page)).toHaveCount(0);
+});
+
+test.describe("in a very wide window", () => {
+  test.use({ viewport: { width: 3840, height: 1200 } });
+
+  test("keeps every progress bar within the 80rem the drawn wave covers", async ({ page }) => {
+    await openApp(page);
+    // The stylesheet's wave runs for 72 half wavelengths, two of them before the bar starts (see
+    // .progress in docs/design/m3-tokens.css).
+    const widest = await page.evaluate(() => {
+      // A computed font size is always in pixels, as "16px".
+      const rem = Number(getComputedStyle(document.documentElement).fontSize.slice(0, -2));
+      const widths = [...document.querySelectorAll(".progress")].map(
+        (bar) => bar.getBoundingClientRect().width / rem,
+      );
+      return Math.max(...widths);
+    });
+    expect(widest).toBeLessThanOrEqual(80);
+  });
 });
 
 test.describe("with reduced motion", () => {
