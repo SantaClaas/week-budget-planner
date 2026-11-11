@@ -110,6 +110,8 @@ export function startDrag(
   let pointer = start;
   let isDragged = false;
   let frame = 0;
+  // Stops every window listener of this press at once, when it's released or cancelled.
+  const listening = new AbortController();
 
   /** The change to the plan with the pointer where it is now. */
   const update = (): ((plan: Plan) => Plan) => {
@@ -138,9 +140,7 @@ export function startDrag(
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", stop);
-    window.removeEventListener("pointercancel", stop);
+    listening.abort();
     cancelAnimationFrame(frame);
     delete document.documentElement.dataset["dragging"];
     if (!isDragged) {
@@ -159,7 +159,8 @@ export function startDrag(
     options.onDone(true);
   };
 
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", stop);
-  window.addEventListener("pointercancel", stop);
+  const { signal } = listening;
+  window.addEventListener("pointermove", onMove, { signal });
+  window.addEventListener("pointerup", stop, { signal });
+  window.addEventListener("pointercancel", stop, { signal });
 }
