@@ -80,6 +80,8 @@ function removeBlock(planner: Planner, drawn: DrawnBlock, scroller: Element | nu
  */
 function handleKey(event: KeyboardEvent, drawn: DrawnBlock, planner: Planner): void {
   if (event.altKey || event.ctrlKey || event.metaKey) return;
+  // A tab on a newer version took over: the plan can be read, not changed, so keys only deselect.
+  if (planner.isOutdated() && event.key !== "Escape") return;
   const scroller =
     event.currentTarget instanceof Element ? event.currentTarget.closest(".week-scroller") : null;
   const { block } = drawn;
@@ -138,6 +140,7 @@ function readGrip(target: Element): Grip {
  */
 function pressBlock(event: PointerEvent, drawn: DrawnBlock, planner: Planner): void {
   if (event.pointerType === "mouse" && event.button !== 0) return;
+  if (planner.isOutdated()) return;
   if (!(event.target instanceof Element) || event.target.closest(".remove") !== null) return;
   const isSelected = selection.current() === drawn.block.id;
   if (event.pointerType === "touch" && !isSelected) return;
@@ -197,6 +200,7 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
           id={createBlockButtonId(id())}
           aria-pressed={isSelected() ? "true" : "false"}
           aria-describedby="block-keys"
+          aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onFocus={() => {
             selection.select(id());
           }}
@@ -227,8 +231,10 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
           type="button"
           class="remove"
           tabindex="-1"
+          aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onClick={(event) => {
             event.stopPropagation();
+            if (properties.planner.isOutdated()) return;
             removeBlock(
               properties.planner,
               properties.block,
@@ -317,6 +323,8 @@ const SLOT_MOVES: Partial<Record<string, SlotMove>> = {
 function EmptySlot(properties: {
   slot: Slot;
   isAddingBlock: boolean;
+  /** A tab on a newer version took over, so picking it would change a plan that can't be saved. */
+  isReadOnly: boolean;
   onMove: (slot: Slot) => void;
   onPick: (slot: Slot) => void;
   blocks: readonly Block[];
@@ -327,10 +335,12 @@ function EmptySlot(properties: {
       id={EMPTY_SLOT_ID}
       class="slot-highlight"
       aria-expanded={properties.isAddingBlock ? "true" : "false"}
+      aria-disabled={properties.isReadOnly ? "true" : undefined}
       style={{ "--day": properties.slot.day, "--start": properties.slot.start }}
       onClick={(event) => {
         // The week's own click handler would pick the slot again, from the pointer's place.
         event.stopPropagation();
+        if (properties.isReadOnly) return;
         properties.onPick(properties.slot);
       }}
       onKeyDown={(event) => {
@@ -391,6 +401,7 @@ export function Week(properties: {
    * on to the next one, when it had focus.
    */
   const pickSlot = (slot: Slot): void => {
+    if (properties.planner.isOutdated()) return;
     const isFocused = document.activeElement?.id === EMPTY_SLOT_ID;
     const isPlacing = properties.isPlacing;
     setRemembered(slot);
@@ -500,6 +511,7 @@ export function Week(properties: {
               slot={slot()}
               blocks={properties.plan.blocks}
               isAddingBlock={properties.isAddingBlock}
+              isReadOnly={properties.planner.isOutdated()}
               onMove={moveEmptySlotTo}
               onPick={pickSlot}
             />

@@ -194,7 +194,13 @@ export function YourData(properties: {
     // exportPlan() reports its own failure.
     void keeping.exportPlan(properties.store);
   };
+  const isReadOnly = (): boolean => properties.planner.isOutdated();
+  /** "true" while a tab on a newer version took over, so importing or deleting is refused. */
+  const readOnlyState = (): "true" | undefined => (isReadOnly() ? "true" : undefined);
+  /** Opens the dialog asking before all data is deleted, unless the tab is read-only. */
+  const deleteDialogTarget = (): string | undefined => (isReadOnly() ? undefined : "delete-dialog");
   const pickFile = (): void => {
+    if (isReadOnly()) return;
     fileInput?.click();
   };
   const refreshKeeping = async (): Promise<void> => {
@@ -250,12 +256,19 @@ export function YourData(properties: {
             type="button"
             class="button"
             data-variant="outlined"
-            commandfor="delete-dialog"
+            aria-disabled={readOnlyState()}
+            commandfor={deleteDialogTarget()}
             command="show-modal"
           >
             Delete all data
           </button>
-          <button type="button" class="button" data-variant="filled" onClick={pickFile}>
+          <button
+            type="button"
+            class="button"
+            data-variant="filled"
+            aria-disabled={readOnlyState()}
+            onClick={pickFile}
+          >
             Import backup
           </button>
         </Notice>
@@ -333,6 +346,7 @@ export function YourData(properties: {
             class="list-item"
             aria-labelledby="import-title"
             aria-describedby="import-text"
+            aria-disabled={readOnlyState()}
             onClick={pickFile}
           >
             <Icon name="upload" />
@@ -377,7 +391,8 @@ export function YourData(properties: {
             class="list-item delete-all-data"
             aria-labelledby="delete-all-data-title"
             aria-describedby="delete-all-data-text"
-            commandfor="delete-dialog"
+            aria-disabled={readOnlyState()}
+            commandfor={deleteDialogTarget()}
             command="show-modal"
           >
             <Icon name="delete_forever" />

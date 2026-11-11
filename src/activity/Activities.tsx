@@ -95,7 +95,9 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           id={KEEP_EXAMPLE_WEEK_ID}
           data-size="extra-small"
           aria-describedby="example-week-note"
+          aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onClick={() => {
+            if (properties.planner.isOutdated()) return;
             properties.planner.change(keepExampleWeek);
             // The note goes with the button, so focus moves to the list's heading: the pane's, or
             // on the Activities page the page's own.
@@ -110,7 +112,9 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           data-size="extra-small"
           data-variant="filled"
           aria-describedby="example-week-note"
+          aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onClick={() => {
+            if (properties.planner.isOutdated()) return;
             // The form for a new activity takes focus, as the next thing to do.
             edit.openNew();
             properties.planner.change(startEmpty);
@@ -155,6 +159,7 @@ function EditForm(properties: {
       placed={properties.row.placed}
       submitLabel="Save"
       isFocusedOnOpen
+      isReadOnly={properties.planner.isOutdated()}
       onSave={(saved) => {
         properties.planner.change((plan) => list.update(plan, id(), saved));
         close();
@@ -212,9 +217,11 @@ function Row(properties: {
         aria-pressed={placing.current() === id() ? "true" : "false"}
         aria-labelledby={`${id()}-name`}
         aria-describedby={`${id()}-budget ${id()}-left`}
+        aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
         onPointerDown={(event) => {
           // A pointer drags the activity onto the week; touch taps it to start placing instead.
           if (event.pointerType === "touch" || event.button !== 0) return;
+          if (properties.planner.isOutdated()) return;
           startListDrag(event, {
             activity: properties.row.activity,
             plan: () => properties.plan,
@@ -222,7 +229,7 @@ function Row(properties: {
           });
         }}
         onClick={() => {
-          if (isClickAfterDrag()) return;
+          if (isClickAfterDrag() || properties.planner.isOutdated()) return;
           if (placing.current() === id()) {
             placing.stop();
             return;
@@ -251,7 +258,9 @@ function Row(properties: {
         id={createEditButtonId(id())}
         aria-expanded={properties.isEditing ? "true" : "false"}
         aria-controls={properties.isEditing ? createFormId(id()) : undefined}
+        aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
         onClick={() => {
+          if (properties.planner.isOutdated()) return;
           if (properties.isEditing) {
             edit.close();
             return;
@@ -303,6 +312,7 @@ function NewActivity(properties: {
             initial={{ name: "", hours: "", mode: "week", days: "5", ...look }}
             submitLabel="Add activity"
             isFocusedOnOpen={properties.isFocusedOnOpen || isAfterSave()}
+            isReadOnly={properties.planner.isOutdated()}
             onSave={(saved) => {
               const open = edit.current();
               const activity = { ...saved, id: newId };
@@ -343,7 +353,9 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
         type="button"
         class="button load-example"
         data-variant="outlined"
+        aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
         onClick={() => {
+          if (properties.planner.isOutdated()) return;
           edit.close();
           properties.planner.change((_, now) => createExampleWeek(now, randomIds));
           // The button goes with the empty state, so focus moves to the note that replaces it.

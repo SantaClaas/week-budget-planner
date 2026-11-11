@@ -205,6 +205,9 @@ describe("the planner", () => {
     expect(isTold).toBe(true);
     expect(planner.saveStatus().text).toBe("Not saved");
     expect(planner.canUndo()).toBe(false);
+    // The change wasn't saved, so it doesn't stay on screen as if it were.
+    flush();
+    expect(planner.plan().blocks).toHaveLength(0);
   });
 
   it("changes nothing once a tab on a newer version took over, and says so", async () => {
@@ -224,5 +227,20 @@ describe("the planner", () => {
     flush();
     expect(planner.plan().blocks).toHaveLength(0);
     expect(planner.saveStatus().text).toBe("Not saved");
+  });
+
+  it("puts a drag back where it was saved when it ends after a newer version took over", async () => {
+    const recording = createRecordingStore();
+    using opened = openPlanner(recording.store);
+    const { planner } = opened;
+    planner.preview(addBlock);
+    flush();
+    expect(planner.plan().blocks).toHaveLength(1);
+    recording.isFromNewerVersion = true;
+    await recording.saveInOtherTab(createEmptyPlan());
+    await settle();
+    planner.change(addBlock);
+    flush();
+    expect(planner.plan().blocks).toHaveLength(0);
   });
 });

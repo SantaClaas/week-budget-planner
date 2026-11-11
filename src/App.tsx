@@ -1,5 +1,5 @@
 import type { JSX } from "@solidjs/web";
-import { createSignal, flush, Match, onSettled, Show, Switch } from "solid-js";
+import { createEffect, createSignal, flush, Match, onSettled, Show, Switch } from "solid-js";
 
 import { ActivitiesPage } from "./activity/ActivitiesPage.tsx";
 import * as edit from "./activity/edit.ts";
@@ -141,6 +141,7 @@ export function App(): JSX.Element {
    * Activities page. From another page, it moves to the Activities page first.
    */
   function openNewActivity(): void {
+    if (current()?.isOutdated() === true) return;
     if (page() !== "week" && page() !== "activities") {
       history.pushState(null, "", createPath("activities", BASE));
       showPage("activities", "link");
@@ -185,6 +186,18 @@ export function App(): JSX.Element {
     event.preventDefault();
     current()?.undo();
   };
+
+  // Once a tab on a newer version took over, nothing here can change the plan: placing stops and
+  // the open forms close, and the rest stays to read (see Tabs on different versions in
+  // docs/spec/persistence.md).
+  createEffect(
+    () => current()?.isOutdated() === true,
+    (isOutdated) => {
+      if (!isOutdated) return;
+      placing.stop();
+      edit.close();
+    },
+  );
 
   onSettled(() => follow(BASE, showPage));
 
@@ -245,7 +258,12 @@ export function App(): JSX.Element {
 
   return (
     <Show when={!isFromNewerVersion()} fallback={<NewerVersionPage />}>
-      <NavigationRail current={page()} base={BASE} onNewActivity={openNewActivity} />
+      <NavigationRail
+        current={page()}
+        base={BASE}
+        onNewActivity={openNewActivity}
+        isReadOnly={current()?.isOutdated() === true}
+      />
       <main>
         <TopAppBar
           title={NAMES[page()]}

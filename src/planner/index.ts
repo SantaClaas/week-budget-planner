@@ -82,10 +82,15 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     showChange(changed, []);
   }
 
-  /** Stops every change, once a tab on a newer version took over the storage. */
+  /**
+   * Stops every change, once a tab on a newer version took over the storage. The plan goes back to
+   * what's saved, so nothing on screen looks saved that isn't, and the undo steps go with the
+   * changes they'd make.
+   */
   function stopForNewerVersion(): void {
     if (isStopped) return;
     isStopped = true;
+    showChange(saved, []);
     setIsOutdated(true);
     options.onNewerVersion();
   }
@@ -172,7 +177,11 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     canUndo: () => stepCount() > 0 && !isOutdated(),
     saveStatus: () => saveStatus.describe(store.level, saveState(), isOutdated()),
     change(update: (before: Plan, now: Temporal.Instant) => Plan): void {
-      if (isStopped) return;
+      // A drag that ends after a newer version took over goes back to where it was saved.
+      if (isStopped) {
+        setPlan(current);
+        return;
+      }
       const now = Temporal.Now.instant();
       const before = current;
       const after = update(before, now);

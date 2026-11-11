@@ -137,8 +137,15 @@ export function ActivityForm(properties: {
   /** Without it, the form can't be closed, as in the empty state. */
   onCancel?: () => void;
   onDelete?: () => void;
+  /**
+   * A tab on a newer version took over, so saving and deleting would change a plan that can't be
+   * saved: they're disabled, and only Cancel works.
+   */
+  isReadOnly?: boolean;
 }): JSX.Element {
   const id = createUniqueId();
+  const readOnlyState = (): "true" | undefined =>
+    properties.isReadOnly === true ? "true" : undefined;
   const [hue, setHue] = createSignal(properties.initial.hue);
   const [shape, setShape] = createSignal(properties.initial.shape);
   const [problems, setProblems] = createSignal<Partial<Record<ActivityFormField, string>>>({});
@@ -231,7 +238,7 @@ export function ActivityForm(properties: {
         const result = readActivityForm(readInput(event.currentTarget));
         // What's saved is what the inputs hold; the hue and shape signals only draw the choice.
         const look = readLook(event.currentTarget);
-        if (!result.isOk || look === undefined) return;
+        if (!result.isOk || look === undefined || properties.isReadOnly === true) return;
         properties.onSave({ ...result.value, ...look });
       }}
     >
@@ -361,7 +368,10 @@ export function ActivityForm(properties: {
             type="button"
             class="button delete"
             data-variant="text-danger"
-            onClick={onDelete()}
+            aria-disabled={readOnlyState()}
+            onClick={() => {
+              if (properties.isReadOnly !== true) onDelete()();
+            }}
           >
             Delete
           </button>
@@ -374,7 +384,7 @@ export function ActivityForm(properties: {
           </button>
         )}
       </Show>
-      <button type="submit" class="button" data-variant="filled">
+      <button type="submit" class="button" data-variant="filled" aria-disabled={readOnlyState()}>
         {properties.submitLabel}
       </button>
     </form>
