@@ -268,9 +268,33 @@
         margin-block-start: 1.5rem;
       }
     }
+    & > :is(h2, .introduction) {
+      padding-inline: 1rem;
+    }
     & > h2 {
       color: var(--primary);
-      padding-inline: 1rem;
+    }
+    /* the Keeping your plan row: its button wraps under the text when there's no room beside it */
+    & .keeping {
+      flex-wrap: wrap;
+      &[data-state="persisted"] > .icon {
+        color: var(--success);
+      }
+      & > .grow {
+        flex: 1 1 16rem;
+      }
+      & > .button {
+        margin-inline-start: auto;
+      }
+    }
+    & .delete-all-data {
+      color: var(--error);
+      & > .icon {
+        color: inherit;
+      }
+    }
+    & dd {
+      margin: 0;
     }
   }
   /* An Appearance setting: on a phone its title, its choices and what System is now, one under the

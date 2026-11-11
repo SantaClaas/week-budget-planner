@@ -25,6 +25,8 @@ export function create(): PlanStore {
       plan = imported;
       return "imported";
     },
+    // No database here: the plan is JSON in localStorage, or in memory.
+    measureSize: () => Promise.resolve("no-database"),
     async wipe() {
       plan = undefined;
       return "wiped";

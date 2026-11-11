@@ -15,6 +15,7 @@ import { PLACING_TOOLBAR_ID, PlacingToolbar } from "./placing/PlacingToolbar.tsx
 import type { Activity } from "./plan/activity/index.ts";
 import * as planner from "./planner/index.ts";
 import { SettingsPage } from "./settings/SettingsPage.tsx";
+import type { PlanStore } from "./storage/plan-store.ts";
 import * as snackbar from "./snackbar/index.ts";
 import { Snackbar } from "./snackbar/Snackbar.tsx";
 import { sanitizeDayIndex } from "./plan/time.ts";
@@ -107,6 +108,8 @@ export function App(): JSX.Element {
   // Today's weekday, read once as the app starts (Temporal's 1 for Monday is the week's 0).
   const today = sanitizeDayIndex(Temporal.Now.plainDateISO().dayOfWeek - 1);
   const [current, setCurrent] = createSignal<planner.Planner>();
+  /** Where the plan is kept, which Settings › Your data exports, imports and deletes. */
+  const [store, setStore] = createSignal<PlanStore>();
   /**
    * A newer version saved the plan before this tab started, so it shows nothing else (see "Tabs on
    * different versions" in docs/spec/persistence.md).
@@ -216,6 +219,7 @@ export function App(): JSX.Element {
         },
         { once: true },
       );
+      setStore(result.store);
       setCurrent(result.planner);
       // A hook for the browser tests, which still drive the store directly in places.
       Object.assign(window, {
@@ -265,7 +269,15 @@ export function App(): JSX.Element {
                   />
                 </Match>
                 <Match when={page() === "settings"}>
-                  <SettingsPage plan={opened().plan()} planner={opened()} />
+                  <Show when={store()}>
+                    {(openedStore) => (
+                      <SettingsPage
+                        plan={opened().plan()}
+                        planner={opened()}
+                        store={openedStore()}
+                      />
+                    )}
+                  </Show>
                 </Match>
               </Switch>
             )}

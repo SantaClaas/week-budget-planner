@@ -60,6 +60,11 @@ export interface PlanStore {
    * it changed nothing.
    */
   importFile(file: File): Promise<Result<"imported", ImportProblem>>;
+  /**
+   * How big the database is, in bytes, at the full level. "no-database" at the levels below, which
+   * keep the plan without one.
+   */
+  measureSize(): Promise<Result<number, "newer-version" | "no-database">>;
   /** Deletes everything this level stored. */
   wipe(): Promise<Result<"wiped", "newer-version">>;
   /**

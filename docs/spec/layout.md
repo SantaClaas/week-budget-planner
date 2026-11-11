@@ -35,8 +35,10 @@
   - Motion, as a connected button group: System, Reduced, Full. Supporting text: "System is currently full." (or "reduced").
   - Each mirrors a browser setting, so the user can try every level without changing their system, and set this app apart from others. System follows the browser and is the default.
 - **Week** (phones only): Day hours, Clear week.
-- **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then Export database, Import database, and Delete all data (in the error color).
-- **Storage:** number of activities, number of blocks, database size.
+- **Your data:** "Your plan is stored only in this browser. Nothing is uploaded. Export it to keep a backup or to move it to another device." Then any notice about where the plan is kept (see [Persistence](persistence.md)), the "Keeping your plan" row, Export database, Import database, and Delete all data (in the error color). Below the full level they read Export plan and Import plan, since they use a `.json` file.
+  - Import asks first, in a dialog: "Replace your plan?", "“backup.db” replaces the plan in this browser: 5 activities and 8 blocks.", "To keep a copy of it, export it first." (a button that exports), with Cancel and Replace.
+  - Delete all data asks first: "Delete all data?", "This removes your plan from this browser: 5 activities and 8 blocks. It can't be undone, so export it first to keep a copy.", with Cancel and Delete all data.
+- **Storage:** number of activities, number of blocks, and, at the full level, the database's size ("33 kB": its pages times their size, as SQLite counts them).
 - **About**, the last section: one list item that starts with the GitHub mark (see Deviations in [Design](design.md)): "Version", with "2026-10-17 · 74ea982" (the date and the short commit hash) under it. The whole item is a link that opens the repository at that commit in a new tab, and it ends with the `open_in_new` icon instead of a chevron, so it reads as leaving the app. The icon's label says "Opens in a new tab". A build without git shows only the date, and the item opens the repository's main branch instead (see Version).
 - On wide screens it is a full page next to the navigation rail, with Settings active in the rail. The rail's Week leads back.
 

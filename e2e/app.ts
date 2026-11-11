@@ -120,14 +120,6 @@ export function tryLoading(page: Page): Promise<"answered" | "gave up"> {
   });
 }
 
-/** Deletes all data and waits for the reload that follows. */
-export async function deleteAllData(page: Page): Promise<void> {
-  const reloaded = page.waitForEvent("load");
-  // Deleting reloads every tab, which ends this page's script before it can answer.
-  await page.evaluate(() => window.weekBudgetPlanner?.store.wipe()).catch(() => {});
-  await reloaded;
-}
-
 /**
  * The description Chromium gives the button with this name, which is what screen readers hear.
  * Playwright's toHaveAccessibleDescription computes its own, which found none when the reload
