@@ -13,3 +13,11 @@ declare module "core-js/es/symbol/dispose.js";
 declare module "core-js/es/symbol/async-dispose.js";
 declare module "core-js/es/disposable-stack/index.js";
 declare module "core-js/es/async-disposable-stack/index.js";
+
+/**
+ * Element-scoped View Transitions, which TypeScript's DOM types don't have yet (see
+ * docs/spec/browser-support.md). Optional, since only Chromium has them, so a call checks first.
+ */
+interface Element {
+  startViewTransition?: (update?: ViewTransitionUpdateCallback) => ViewTransition;
+}

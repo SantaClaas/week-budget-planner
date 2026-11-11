@@ -40,6 +40,26 @@ const measureHour = (page: Page): Promise<number> =>
     return column.offsetHeight / 24;
   });
 
+/**
+ * Notes, right after the next key's own handlers ran, whether a View Transition runs on the week
+ * and on the whole page, so a slow test machine can't miss one that's already over. Element-scoped
+ * transitions aren't in TypeScript's DOM types yet, hence the `in` check.
+ */
+const watchNextKey = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    document.addEventListener(
+      "keydown",
+      () => {
+        const week = document.querySelector(".week-scroller");
+        const isWeek =
+          week !== null && "activeViewTransition" in week && week.activeViewTransition !== null;
+        document.body.dataset["transitions"] =
+          `week ${String(isWeek)}, page ${String(document.activeViewTransition !== null)}`;
+      },
+      { once: true },
+    );
+  });
+
 test("moves and resizes a block with the keys, says where it is, and keeps it", async ({
   page,
 }) => {
@@ -68,6 +88,21 @@ test("moves and resizes a block with the keys, says where it is, and keeps it", 
   await page.reload();
   await expectStatus(page, "full");
   await expect(findBlock(page, "Gym, Tuesday 18:15 to 20:00, 1 hour, 45 minutes")).toBeAttached();
+});
+
+test("animates a key move within the week, and a key pressed meanwhile builds on it", async ({
+  page,
+}) => {
+  await openApp(page);
+  await findBlock(page, "Gym, Monday 18:00").focus();
+  await watchNextKey(page);
+  await page.keyboard.press("ArrowRight");
+  // Scoped to the week, so the rest of the page stays usable while the block moves.
+  await expect(page.locator("body")).toHaveAttribute("data-transitions", "week true, page false");
+  // Each key moves the block as the last one left it, even before that change shows.
+  for (let step = 0; step < 4; step++) await page.keyboard.press("ArrowDown");
+  await expect.poll(() => readAnnouncement(page)).toBe("Moved to Tuesday 19:00 to 20:30");
+  await expect(findBlock(page, "Gym, Tuesday 19:00 to 20:30")).toBeFocused();
 });
 
 test("moves a block across midnight into an overnight block with the keys", async ({ page }) => {

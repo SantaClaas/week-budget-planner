@@ -12,6 +12,7 @@ import { findFirstFreeSlot } from "../plan/slot.ts";
 import type { Planner } from "../planner/index.ts";
 import * as snackbar from "../snackbar/index.ts";
 import * as placing from "./index.ts";
+import { animate } from "../week/transition.ts";
 
 /** The toolbar's id, so focus can go to it when placing starts from the Activities page. */
 export const PLACING_TOOLBAR_ID = "placing-toolbar";
@@ -29,12 +30,14 @@ function useFirstFreeSlot(plan: Plan, planner: Planner, activity: Activity): voi
     snackbar.show({ message: `No free ${formatLength(length)} slot between ${from} and ${to}.` });
     return;
   }
-  const block = placing.addBlock(planner, activity, slot);
-  if (block === undefined) return;
-  flush();
-  document
-    .querySelector(`[data-block="${CSS.escape(block.id)}"]`)
-    ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  animate(() => {
+    const block = placing.addBlock(planner, activity, slot);
+    if (block === undefined) return;
+    flush();
+    document
+      .querySelector(`[data-block="${CSS.escape(block.id)}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
 }
 
 /**

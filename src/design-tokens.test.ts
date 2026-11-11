@@ -161,6 +161,62 @@ describe("design tokens", () => {
   });
 });
 
+/**
+ * Where a spring with this damping ratio and stiffness (and a mass of 1) is after `seconds`, going
+ * from 0 to 1 from rest: the closed form of a damped harmonic oscillator.
+ */
+function moveSpring(damping: number, stiffness: number, seconds: number): number {
+  const natural = Math.sqrt(stiffness);
+  if (damping >= 1) return 1 - Math.exp(-natural * seconds) * (1 + natural * seconds);
+  const damped = natural * Math.sqrt(1 - damping * damping);
+  return (
+    1 -
+    Math.exp(-damping * natural * seconds) *
+      (Math.cos(damped * seconds) + ((damping * natural) / damped) * Math.sin(damped * seconds))
+  );
+}
+
+/** The springs the tokens approximate, from androidx ExpressiveMotionTokens. */
+const SPRINGS = [
+  { name: "default-spatial", damping: 0.8, stiffness: 380 },
+  { name: "fast-spatial", damping: 0.6, stiffness: 800 },
+  { name: "default-effects", damping: 1, stiffness: 1600 },
+];
+
+/** A spring's duration token in seconds, and its linear() curve's points. */
+function readSpring(name: string): { duration: number; points: number[] } {
+  const root = readBase(":root");
+  const duration = /^(\d+)ms$/u.exec(root.get(`--spring-${name}-duration`) ?? "")?.[1];
+  const curve = /^linear\(([^)]*)\)$/u.exec(root.get(`--spring-${name}`) ?? "")?.[1];
+  if (duration === undefined || curve === undefined) throw new Error(`No spring ${name}`);
+  return { duration: Number(duration) / 1000, points: curve.split(",").map(Number) };
+}
+
+/** Where the spring should be at each of the curve's 33 points, ending exactly at 1. */
+const sampleSpring = (damping: number, stiffness: number, duration: number): number[] =>
+  Array.from({ length: 33 }, (_, index) =>
+    index === 32 ? 1 : moveSpring(damping, stiffness, (duration * index) / 32),
+  );
+
+/** How far the furthest point is from where it should be. */
+const measureDrift = (points: number[], expected: number[]): number =>
+  Math.max(...points.map((point, index) => Math.abs(point - (expected[index] ?? Number.NaN))));
+
+describe.each(SPRINGS)("the $name spring", ({ name, damping, stiffness }) => {
+  it("lasts until it settles within 0.1% of its end, rounded up to 10ms", () => {
+    const settled = Math.log(1000) / (Math.min(damping, 1) * Math.sqrt(stiffness));
+    expect(readSpring(name).duration).toBeCloseTo(Math.ceil(settled * 100) / 100, 5);
+  });
+
+  it("follows the spring at each point of its linear() curve", () => {
+    const { duration, points } = readSpring(name);
+    expect(points).toHaveLength(33);
+    // Each point within 0.0005 of the spring, the most rounding to three decimals can be off.
+    const expected = sampleSpring(damping, stiffness, duration);
+    expect(measureDrift(points, expected)).toBeLessThanOrEqual(0.0005);
+  });
+});
+
 /** A color token's two values, from `light-dark(light, dark)`. */
 interface ColorPair {
   light: string;
