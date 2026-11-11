@@ -31,6 +31,10 @@
     // A cleanup that runs however a scope ends is a using declaration (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/prefer-using": "error",
+    // A using declaration that's only there to clean up when its scope ends is never read, and
+    // TypeScript only allows that when its name starts with "_" (as in `using _ending`). Elsewhere a
+    // leading or trailing underscore stays an error; parameters like `_before` are allowed already.
+    "no-underscore-dangle": ["error", { "allowInUsingDeclarations": true }],
     // The shorter of two branches goes inside the if (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/shorter-branch-first": "error",
