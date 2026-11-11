@@ -74,6 +74,35 @@ test("keeps the plan across a reload and shares changes between tabs", async ({
   await expectStatus(page, "full", "5 activities · 7 blocks");
 });
 
+test("undoes its own change after another tab's, and keeps the other tab's", async ({
+  page,
+  context,
+}) => {
+  await page.goto(ISOLATED_URL);
+  await expectStatus(page, "full");
+  const other = await context.newPage();
+  await other.goto(ISOLATED_URL);
+  await expectStatus(other, "full");
+
+  const gym = page
+    .getByRole("region", { name: "Week" })
+    .getByRole("button", { name: /^Gym, Monday/u });
+  await gym.focus();
+  await page.keyboard.press("Delete");
+  await expectStatus(other, "full", "5 activities · 7 blocks");
+  // The other tab removes another block, after this tab's change.
+  await removeFirstBlock(other);
+  await expectStatus(page, "full", "5 activities · 6 blocks");
+
+  // Undo brings this tab's block back, and the other tab's change stays.
+  await page.keyboard.press("Control+z");
+  await expect(gym).toBeAttached();
+  await expectStatus(page, "full", "5 activities · 7 blocks");
+  await expectStatus(other, "full", "5 activities · 7 blocks");
+  await other.reload();
+  await expectStatus(other, "full", "5 activities · 7 blocks");
+});
+
 test("exports the database and imports it again", async ({ page }) => {
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "full");

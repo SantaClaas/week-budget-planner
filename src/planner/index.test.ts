@@ -2,7 +2,7 @@ import { createRoot, flush } from "solid-js";
 import { describe, expect, it } from "vitest";
 
 import { createEmptyPlan, type Plan } from "../plan/index.ts";
-import { createBlock } from "../plan/test-data.ts";
+import { createActivity, createBlock } from "../plan/test-data.ts";
 import type { Snackbar } from "../snackbar/index.ts";
 import * as memory from "../storage/memory.ts";
 import type { PlanStore } from "../storage/plan-store.ts";
@@ -84,6 +84,15 @@ async function settle(): Promise<void> {
 }
 
 const addBlock = (plan: Plan): Plan => ({ ...plan, blocks: [...plan.blocks, createBlock()] });
+const addWork = (plan: Plan): Plan => ({ ...plan, activities: [createActivity()] });
+const addOwnBlock = (plan: Plan): Plan => ({
+  ...plan,
+  blocks: [...plan.blocks, createBlock({ id: "mine" })],
+});
+const addOtherTabsBlock = (plan: Plan): Plan => ({
+  ...plan,
+  blocks: [...plan.blocks, createBlock({ id: "theirs", start: 900 })],
+});
 
 describe("the planner", () => {
   it("saves each change from the plan the previous one left", async () => {
@@ -178,16 +187,48 @@ describe("the planner", () => {
     expect(planner.saveStatus().text).toBe("Saved in this browser");
   });
 
-  it("shows what another tab saved, and forgets the undo steps", async () => {
+  it("keeps its undo steps when another tab saves, and undoes only its own change", async () => {
     const recording = createRecordingStore();
     using opened = openPlanner(recording.store);
     const { planner } = opened;
-    planner.change(addBlock);
+    planner.change(addWork);
+    planner.change(addOwnBlock);
     await settle();
-    await recording.saveInOtherTab(addBlock(addBlock(createEmptyPlan())));
+    await recording.saveInOtherTab(addOtherTabsBlock(planner.plan()));
     await settle();
-    expect(planner.plan().blocks).toHaveLength(2);
-    expect(planner.canUndo()).toBe(false);
+    expect(planner.plan().blocks.map((block) => block.id)).toEqual(["mine", "theirs"]);
+    expect(planner.canUndo()).toBe(true);
+    planner.undo();
+    flush();
+    expect(planner.plan().blocks.map((block) => block.id)).toEqual(["theirs"]);
+    await settle();
+    expect(recording.saves.at(-1)?.after.blocks.map((block) => block.id)).toEqual(["theirs"]);
+  });
+
+  it("drops a step another tab changed the same things since, and says why", async () => {
+    const recording = createRecordingStore();
+    const snackbars: Snackbar[] = [];
+    using opened = openPlanner(recording.store, {
+      showSnackbar: (snackbar) => {
+        snackbars.push(snackbar);
+      },
+    });
+    const { planner } = opened;
+    planner.change(addWork);
+    planner.change(addOwnBlock);
+    await settle();
+    // The other tab deletes the block this tab added.
+    await recording.saveInOtherTab({ ...planner.plan(), blocks: [] });
+    await settle();
+    const savesBefore = recording.saves.length;
+    planner.undo();
+    flush();
+    expect(snackbars.at(-1)?.message).toBe("Couldn't undo: that changed in another tab.");
+    expect(planner.plan().activities).toHaveLength(1);
+    // The step went without a change, and the one before it is next.
+    expect(planner.canUndo()).toBe(true);
+    await settle();
+    expect(recording.saves).toHaveLength(savesBefore);
   });
 
   it("stops when a save finds that a newer version took over", async () => {
