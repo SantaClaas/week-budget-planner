@@ -20,6 +20,7 @@ flowchart LR
   module_font["font"]
   module_icons["icons"]
   module_index["index"]
+  module_keeping["keeping"]
   module_layout["layout"]
   module_navigation["navigation"]
   module_page["page"]
@@ -37,11 +38,13 @@ flowchart LR
   module_week["week"]
   module_activity --> module_announcement
   module_activity --> module_icons
+  module_activity --> module_keeping
   module_activity --> module_placing
   module_activity --> module_plan
   module_activity --> module_planner
   module_activity --> module_progress
   module_activity --> module_snackbar
+  module_activity --> module_storage
   module_activity --> module_week
   module_add_block --> module_icons
   module_add_block --> module_plan
@@ -65,6 +68,11 @@ flowchart LR
   module_index --> module_layout
   module_index --> module_polyfill
   module_index --> module_trusted_html
+  module_keeping --> module_download
+  module_keeping --> module_icons
+  module_keeping --> module_plan
+  module_keeping --> module_snackbar
+  module_keeping --> module_storage
   module_navigation --> module_icons
   module_navigation --> module_page
   module_page --> module_activity
@@ -74,6 +82,7 @@ flowchart LR
   module_page --> module_planner
   module_page --> module_progress
   module_page --> module_snackbar
+  module_page --> module_storage
   module_page --> module_week
   module_placing --> module_announcement
   module_placing --> module_icons
@@ -89,8 +98,8 @@ flowchart LR
   module_planner --> module_storage
   module_progress --> module_plan
   module_settings --> module_appearance
-  module_settings --> module_download
   module_settings --> module_icons
+  module_settings --> module_keeping
   module_settings --> module_plan
   module_settings --> module_planner
   module_settings --> module_snackbar

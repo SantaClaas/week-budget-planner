@@ -1,8 +1,8 @@
 import type { JSX } from "@solidjs/web";
 import { createEffect, createSignal, flush, onSettled, Show } from "solid-js";
 
-import { downloadBlob } from "../download.ts";
 import { Icon } from "../icons/Icon.tsx";
+import * as keeping from "../keeping/index.ts";
 import type { IconName } from "../icons/name.ts";
 import { formatCount } from "../plan/format.ts";
 import type { Plan } from "../plan/index.ts";
@@ -16,21 +16,6 @@ import { formatSize } from "./size.ts";
 /** "5 activities and 8 blocks". */
 const describeContents = (plan: Plan): string =>
   `${formatCount(plan.activities.length, { one: "activity", other: "activities" })} and ${formatCount(plan.blocks.length, { one: "block", other: "blocks" })}`;
-
-/** Downloads the plan: the `.db` file at the full level, the `.json` plan file below it. */
-async function exportPlan(store: PlanStore): Promise<void> {
-  let exported: Awaited<ReturnType<PlanStore["exportFile"]>>;
-  try {
-    exported = await store.exportFile();
-  } catch (error) {
-    console.error("[settings] couldn't export the plan", error);
-    snackbar.show({ message: "Couldn't export your plan. Try again." });
-    return;
-  }
-  // A newer version took over in another tab, which this tab already says.
-  if (exported === "newer-version") return;
-  downloadBlob(exported.blob, exported.filename);
-}
 
 /** What the snackbar says when an import changed nothing (see Export, import and reset). */
 function showImportProblem(problem: ImportProblem, file: File): void {
@@ -198,7 +183,7 @@ export function YourData(properties: {
   planner: Planner;
   store: PlanStore;
 }): JSX.Element {
-  const [keeping, setKeeping] = createSignal<persistence.KeepingState>();
+  const [keepingState, setKeeping] = createSignal<persistence.KeepingState>();
   const [importing, setImporting] = createSignal<File>();
   let fileInput: HTMLInputElement | undefined;
   let importDialog: HTMLDialogElement | undefined;
@@ -206,7 +191,8 @@ export function YourData(properties: {
   const exportName = (): string =>
     createExportName(Temporal.Now.plainDateISO(), isFull() ? "db" : "json");
   const exportCurrent = (): void => {
-    void exportPlan(properties.store);
+    // exportPlan() reports its own failure.
+    void keeping.exportPlan(properties.store);
   };
   const pickFile = (): void => {
     fileInput?.click();
@@ -214,19 +200,9 @@ export function YourData(properties: {
   const refreshKeeping = async (): Promise<void> => {
     setKeeping(await persistence.findState());
   };
-  /** Asks the browser to keep the plan, from the user's own click, and says what it answered. */
+  /** Asks the browser to keep the plan, from the user's own click, and shows what it answered. */
   const keepPlan = async (): Promise<void> => {
-    const isKept = await persistence.request();
-    await refreshKeeping();
-    snackbar.show(
-      isKept
-        ? { message: "This browser will keep your plan." }
-        : {
-            message:
-              "This browser didn't agree to keep your plan. Export now and then to keep a copy.",
-            action: { label: "Export", run: exportCurrent },
-          },
-    );
+    setKeeping(await keeping.ask(properties.store));
   };
   onSettled(() => {
     // findState() never rejects: each browser call in it falls back on failure.
@@ -305,7 +281,7 @@ export function YourData(properties: {
         />
       </Show>
       <ul class="segmented-list">
-        <Show when={keeping()}>
+        <Show when={keepingState()}>
           {(state) => (
             <li class="list-item keeping" data-state={state()}>
               <Icon name={KEEPING[state()].icon} />

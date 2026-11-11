@@ -3,6 +3,7 @@ import { createMemo, createSignal, flush, For, Show } from "solid-js";
 
 import { announce } from "../announcement/index.ts";
 import { Icon } from "../icons/Icon.tsx";
+import { KeepPlanCard, NoStorageCard } from "../keeping/KeepingCards.tsx";
 import { formatHours } from "../plan/activity/form.ts";
 import { formatCount } from "../plan/format.ts";
 import * as list from "../plan/activity/list.ts";
@@ -13,6 +14,7 @@ import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import * as placing from "../placing/index.ts";
 import { startListDrag } from "../placing/list-drag.ts";
 import { isClickAfterDrag } from "../week/drag-controller.ts";
@@ -369,6 +371,8 @@ function findEditedId(): ActivityId | undefined {
 export function Activities(properties: {
   plan: Plan;
   planner: Planner;
+  /** Where the plan is kept, which the cards about keeping it ask about. */
+  store: PlanStore;
   place: Place;
   /**
    * An activity started placing. The Activities page moves to the week, where the slots are; the
@@ -391,6 +395,8 @@ export function Activities(properties: {
       <Show when={properties.plan.exampleLoadedAt !== null}>
         <ExampleWeekCard planner={properties.planner} />
       </Show>
+      <NoStorageCard store={properties.store} onDismissed={focusHeading} />
+      <KeepPlanCard plan={properties.plan} store={properties.store} onAnswered={focusHeading} />
       {/* The pane's heading is there with or without activities, so the forms' headings below
           it never skip a level, and it names the pane. */}
       <Show when={properties.place === "pane"}>

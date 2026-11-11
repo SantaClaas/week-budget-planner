@@ -1158,8 +1158,10 @@
     }
   }
 
-  /* example-week note: a tertiary card with an icon, its text, and Keep these and Start empty */
-  .example-week-card {
+  /* in-place prompts at the top of the Activities list: a tertiary card with an icon, its text and
+     its two buttons. The example-week note (Keep these, Start empty), the keep-your-plan card (Not
+     now, Keep it), and on the error container the no-storage card (Dismiss, Export). */
+  :is(.example-week-card, .keep-plan-card, .no-storage-card) {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
@@ -1184,6 +1186,17 @@
     }
     @media (forced-colors: active) {
       border: 1px solid CanvasText;
+    }
+  }
+  .no-storage-card {
+    background: var(--error-container);
+    color: var(--on-error-container);
+    & .button {
+      color: var(--on-error-container);
+    }
+    & .button[data-variant="filled"] {
+      background: var(--error);
+      color: var(--on-error);
     }
   }
 
