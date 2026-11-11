@@ -27,6 +27,15 @@ async function measureWidths(week: Locator): Promise<{ week: number; day: number
   return { week: measured.week, day: measured.day };
 }
 
+/** Where a locator is on screen, which the test expects it to be. */
+async function measure(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("The element isn't on screen.");
+  return box;
+}
+
 test("shows the example week as days with headings and spelled-out blocks", async ({ page }) => {
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "full");
@@ -79,4 +88,37 @@ test("shows about three days on a phone, and snaps to a day when swiped", async 
   await expect
     .poll(() => week.evaluate((element) => element.scrollLeft))
     .toBeCloseTo(widths.day, -1);
+});
+
+test("says what to do on an empty week, and goes with the first block", async ({ page }) => {
+  await page.goto(ISOLATED_URL);
+  await expectStatus(page, "full");
+  const note = page.getByRole("region", { name: "Your week is empty" });
+  // The example week has blocks.
+  await expect(note).toBeHidden();
+
+  await page.getByRole("button", { name: "Start empty" }).click();
+  // Only the variant for this screen and pointer shows, so it's the visible text that counts.
+  await expect
+    .poll(() => note.getByRole("paragraph").innerText())
+    .toBe(
+      "Add an activity on the left. Then drag it here, or click any empty slot to add a block.",
+    );
+
+  const form = page.getByRole("form", { name: "New activity" });
+  await form.getByLabel("Name").fill("Piano");
+  await form.getByLabel("Hours", { exact: true }).fill("2");
+  await form.getByRole("button", { name: "Add activity" }).click();
+  await expect
+    .poll(() => note.getByRole("paragraph").innerText())
+    .toBe("Drag an activity here, or click any empty slot to add a block.");
+
+  // The note lets the click through to the empty slot under it.
+  const box = await measure(note);
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page
+    .getByRole("region", { name: /^Add block/u })
+    .getByRole("button", { name: "Piano" })
+    .click();
+  await expect(note).toBeHidden();
 });

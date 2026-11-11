@@ -20,6 +20,7 @@ import * as snackbar from "../snackbar/index.ts";
 import type { PlanStore } from "../storage/plan-store.ts";
 import type { Slot } from "../plan/slot.ts";
 import * as selection from "../week/selection.ts";
+import { EmptyWeek } from "../week/EmptyWeek.tsx";
 import { Week, type WeekPreview } from "../week/Week.tsx";
 import { ClearWeek, DayHours } from "../week/WeekTools.tsx";
 
@@ -165,6 +166,10 @@ export function WeekPage(properties: {
         place="pane"
       />
       <Summary plan={properties.plan} planner={properties.planner} />
+      {/* Before the week, so screen readers read it before the days; drawn over the week. */}
+      <Show when={properties.plan.blocks.length === 0}>
+        <EmptyWeek hasActivities={properties.plan.activities.length > 0} />
+      </Show>
       <Week
         plan={properties.plan}
         planner={properties.planner}
