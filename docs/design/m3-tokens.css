@@ -808,13 +808,67 @@
     }
   }
 
-  /* navigation bar (flexible, 64dp) */
+  /* navigation bar (flexible, 64dp; androidx NavigationBarTokens, ShortNavigationBar.kt). Its items
+     are vertical (the icon above the label) while it's narrow, as in a compact window, and horizontal
+     (the icon beside the label, both inside the active indicator) from 37.5rem (600dp), as in a
+     medium window, which the items ask of the bar with a container query, so larger text keeps them
+     vertical longer. Vertical items share the bar in equal thirds (EqualWeight). Horizontal ones are
+     centered with 20% of the bar on each side (Centered, for three items). Fifteen columns divide
+     into both, and the items place themselves on them, since a container can't query itself.
+     <nav class="navigation-bar"><a class="navigation-item" aria-current="page"><span class="active-indicator"><svg class="icon">…</svg></span>Week</a>…</nav> */
   .navigation-bar {
+    container: navigation-bar / inline-size;
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(15, minmax(0, 1fr));
     min-height: 4rem;
     background: var(--surface-container);
+    & > .navigation-item {
+      grid-column-end: span 5;
+    }
+    /* horizontal items (NavigationBarHorizontalItemTokens): the item itself is the indicator, 40dp
+       tall, with 16dp before the icon and after the label and 4dp between them, centered in its
+       fifth of the bar. Its target reaches the bar's full height. */
+    @container navigation-bar (width >= 37.5rem) {
+      & > .navigation-item {
+        position: relative;
+        grid-column-end: span 3;
+        justify-self: center;
+        align-self: center;
+        flex-direction: row;
+        gap: 0.25rem;
+        inline-size: fit-content;
+        max-inline-size: 100%;
+        min-block-size: 2.5rem;
+        padding: 0 1rem;
+        border-radius: var(--corner-full);
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        letter-spacing: 0.00625rem;
+        &::before {
+          content: "";
+          position: absolute;
+          inset-block: -0.75rem;
+          inset-inline: 0;
+        }
+        & .active-indicator {
+          width: auto;
+          height: auto;
+          background: none;
+        }
+        &[aria-current="page"] {
+          background: var(--secondary-container);
+          color: var(--on-secondary-container);
+          @media (forced-colors: active) {
+            forced-color-adjust: none;
+            background: Highlight;
+            color: HighlightText;
+          }
+        }
+      }
+      & > .navigation-item:first-child {
+        grid-column-start: 4;
+      }
+    }
   }
   .navigation-item {
     display: flex;
