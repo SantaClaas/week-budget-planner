@@ -18,23 +18,23 @@ export function ActivitiesPage(properties: {
   onStartPlacing: () => void;
 }): JSX.Element {
   return (
-    // The column the list and the phone's button share: it limits both to 48rem, and keeps the
-    // sticky button over the end of the list. Letting <main> lay out the page's parts instead is
-    // SantaClaas/week-budget-planner#19.
-    <div class="activities-page">
+    // The list and the phone's button are the page's own parts, which <main> lays out in its
+    // column, with the button pinned over the end of the list.
+    <>
       <Activities
         plan={properties.plan}
         planner={properties.planner}
         place="page"
         onStartPlacing={properties.onStartPlacing}
       />
-      {/* With no activities the form is already open. */}
-      <Show when={properties.plan.activities.length > 0}>
+      {/* The button opens the new-activity form, so it goes while that's open, also in the empty
+          state, where the form is always there. It would float over the form's pickers. */}
+      <Show when={properties.plan.activities.length > 0 && edit.current()?.type !== "new"}>
         <button type="button" class="floating-action-button" onClick={edit.openNew}>
           <Icon name="add" />
           New activity
         </button>
       </Show>
-    </div>
+    </>
   );
 }
