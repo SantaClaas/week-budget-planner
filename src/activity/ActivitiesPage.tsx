@@ -4,6 +4,7 @@ import { Show } from "solid-js";
 import { Icon } from "../icons/Icon.tsx";
 import type { Plan } from "../plan/index.ts";
 import type { Planner } from "../planner/index.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import { Activities } from "./Activities.tsx";
 import * as edit from "./edit.ts";
 
@@ -14,6 +15,7 @@ import * as edit from "./edit.ts";
 export function ActivitiesPage(properties: {
   plan: Plan;
   planner: Planner;
+  store: PlanStore;
   /** An activity started placing, which moves to the week. */
   onStartPlacing: () => void;
 }): JSX.Element {
@@ -24,6 +26,7 @@ export function ActivitiesPage(properties: {
       <Activities
         plan={properties.plan}
         planner={properties.planner}
+        store={properties.store}
         place="page"
         onStartPlacing={properties.onStartPlacing}
       />

@@ -110,6 +110,13 @@ export function App(): JSX.Element {
   const [current, setCurrent] = createSignal<planner.Planner>();
   /** Where the plan is kept, which Settings › Your data exports, imports and deletes. */
   const [store, setStore] = createSignal<PlanStore>();
+  /** The planner and its store, once both are open. */
+  const findOpened = (): { planner: planner.Planner; store: PlanStore } | undefined => {
+    const openedPlanner = current();
+    const openedStore = store();
+    if (openedPlanner === undefined || openedStore === undefined) return undefined;
+    return { planner: openedPlanner, store: openedStore };
+  };
   /**
    * A newer version saved the plan before this tab started, so it shows nothing else (see "Tabs on
    * different versions" in docs/spec/persistence.md).
@@ -250,34 +257,32 @@ export function App(): JSX.Element {
         />
         {/* An address with no page needs no plan, so it shows at once. */}
         <Show when={page() !== "not-found"} fallback={<NotFound />}>
-          <Show when={current()} fallback={<p class="page-content">Opening your plan…</p>}>
+          <Show when={findOpened()} fallback={<p class="page-content">Opening your plan…</p>}>
             {(opened) => (
               <Switch>
                 <Match when={page() === "week"}>
                   <WeekPage
-                    plan={opened().plan()}
-                    planner={opened()}
+                    plan={opened().planner.plan()}
+                    planner={opened().planner}
+                    store={opened().store}
                     today={today}
                     onNewActivity={openNewActivityForBlock}
                   />
                 </Match>
                 <Match when={page() === "activities"}>
                   <ActivitiesPage
-                    plan={opened().plan()}
-                    planner={opened()}
+                    plan={opened().planner.plan()}
+                    planner={opened().planner}
+                    store={opened().store}
                     onStartPlacing={showWeekForPlacing}
                   />
                 </Match>
                 <Match when={page() === "settings"}>
-                  <Show when={store()}>
-                    {(openedStore) => (
-                      <SettingsPage
-                        plan={opened().plan()}
-                        planner={opened()}
-                        store={openedStore()}
-                      />
-                    )}
-                  </Show>
+                  <SettingsPage
+                    plan={opened().planner.plan()}
+                    planner={opened().planner}
+                    store={opened().store}
+                  />
                 </Match>
               </Switch>
             )}

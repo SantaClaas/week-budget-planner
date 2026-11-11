@@ -17,6 +17,7 @@ import type { DayIndex, Length as BlockLength } from "../plan/time.ts";
 import type { Planner } from "../planner/index.ts";
 import { Progress } from "../progress/Progress.tsx";
 import * as snackbar from "../snackbar/index.ts";
+import type { PlanStore } from "../storage/plan-store.ts";
 import type { Slot } from "../plan/slot.ts";
 import * as selection from "../week/selection.ts";
 import { Week, type WeekPreview } from "../week/Week.tsx";
@@ -106,6 +107,7 @@ function addChosenBlock(
 export function WeekPage(properties: {
   plan: Plan;
   planner: Planner;
+  store: PlanStore;
   today: DayIndex | undefined;
   /**
    * Add block's "New activity…": opens the new-activity form, wherever it is on this screen, and
@@ -156,7 +158,12 @@ export function WeekPage(properties: {
 
   return (
     <div class="week-page">
-      <Activities plan={properties.plan} planner={properties.planner} place="pane" />
+      <Activities
+        plan={properties.plan}
+        planner={properties.planner}
+        store={properties.store}
+        place="pane"
+      />
       <Summary plan={properties.plan} planner={properties.planner} />
       <Week
         plan={properties.plan}
