@@ -34,7 +34,6 @@ export type IconName =
   | "gpp_maybe"
   | "menu"
   | "menu_open"
-  | "more_vert"
   | "open_in_new"
   | "refresh"
   | "remove"
