@@ -44,6 +44,7 @@ The week is a region that scrolls, holding a list of seven days, and each day a 
 <p id="block-keys" hidden>Arrow keys move the block, Shift and the arrow keys change its length, Delete removes it.</p>
 ```
 
+- **The summary introduces the week**: it's the `<header>` of a `<section>` around the summary and the week's region. Neither has a name, so neither is a landmark: inside a section a `<header>` has no role, and an unnamed `<section>` isn't a region. A screen reader hears the totals as text, then the "Week" region.
 - **The week scrolls inside its own region**, named "Week", so a screen reader hears "Week, region" and then "Days, list, 7 items". The region takes focus (`tabindex="0"`) so the keyboard can scroll it with the arrow and page keys; once blocks and the empty slot take focus, moving between them scrolls the week as well.
 - **The day header row is the days' own headings.** Each day's `<h2>` sits in the sticky header row through the grid (the day is a subgrid item spanning the header row and its column), so there's no separate row of headers to keep in step, and a screen reader can jump between days by heading.
 - **The hour gutter, the hour lines and the day-hours shading are `aria-hidden`.** The times are in the blocks' names.

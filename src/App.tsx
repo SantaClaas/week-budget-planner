@@ -93,10 +93,12 @@ function NewerVersionPage(): JSX.Element {
 /** The page for an address with no page: says so, and leads to the week. */
 function NotFound(): JSX.Element {
   return (
-    <div class="page-content">
-      <p class="body-large">There's no page at this address.</p>
-      <a href={createPath("week", BASE)}>Go to the week</a>
-    </div>
+    <>
+      <p class="body-large page-content">There's no page at this address.</p>
+      <a class="page-content" href={createPath("week", BASE)}>
+        Go to the week
+      </a>
+    </>
   );
 }
 

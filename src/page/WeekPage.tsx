@@ -37,12 +37,13 @@ function Length(properties: { minutes: number }): JSX.Element {
 
 /**
  * "20 hr placed of 32 hr · 12 hr left to place", with the overall progress under it, and Day hours
- * and Clear week beside it on wide screens (on phones they're in Settings › Week).
+ * and Clear week beside it on wide screens (on phones they're in Settings › Week). It introduces
+ * the week, so it's the `<header>` of the section around it, which gives it no landmark role.
  */
 function Summary(properties: { plan: Plan; planner: Planner }): JSX.Element {
   const summary = () => summarize(properties.plan);
   return (
-    <div class="summary">
+    <header class="summary">
       <p>
         <span class="headline-small emphasized">
           <Length minutes={summary().placed} />
@@ -68,7 +69,7 @@ function Summary(properties: { plan: Plan; planner: Planner }): JSX.Element {
       />
       <DayHours plan={properties.plan} planner={properties.planner} variant="button" />
       <ClearWeek plan={properties.plan} planner={properties.planner} variant="button" />
-    </div>
+    </header>
   );
 }
 
@@ -173,48 +174,53 @@ export function WeekPage(properties: {
     });
   };
 
+  // The page's parts are <main>'s own children: the Activities pane beside the week on wide
+  // screens, and the week with its summary as its header. The section has no name, so it adds no
+  // landmark; the week's own region keeps its name "Week".
   return (
-    <div class="week-page">
+    <>
       <Activities
         plan={properties.plan}
         planner={properties.planner}
         store={properties.store}
         place="pane"
       />
-      <Summary plan={properties.plan} planner={properties.planner} />
-      {/* Before the week, so screen readers read it before the days; drawn over the week. */}
-      <Show when={properties.plan.blocks.length === 0}>
-        <EmptyWeek hasActivities={properties.plan.activities.length > 0} />
-      </Show>
-      <Week
-        plan={properties.plan}
-        planner={properties.planner}
-        today={properties.today}
-        isPlacing={findPlacingActivity() !== undefined}
-        preview={findPreview()}
-        isAddingBlock={adding() !== undefined}
-        onPickSlot={pickSlot}
-        onHoverSlot={showPreview}
-        onLeaveSlots={placing.hidePreview}
-      />
-      <Show when={adding()} keyed>
-        {(open) => (
-          <AddBlock
-            plan={properties.plan}
-            slot={open.slot}
-            variant={open.variant}
-            onChoose={(activity, length) => {
-              addChosenBlock(properties.planner, activity, open.slot, length);
-            }}
-            onNewActivity={() => {
-              addWithNewActivity(open.slot);
-            }}
-            onClose={() => {
-              setAdding(undefined);
-            }}
-          />
-        )}
-      </Show>
-    </div>
+      <section class="week-with-summary">
+        <Summary plan={properties.plan} planner={properties.planner} />
+        {/* Before the week, so screen readers read it before the days; drawn over the week. */}
+        <Show when={properties.plan.blocks.length === 0}>
+          <EmptyWeek hasActivities={properties.plan.activities.length > 0} />
+        </Show>
+        <Week
+          plan={properties.plan}
+          planner={properties.planner}
+          today={properties.today}
+          isPlacing={findPlacingActivity() !== undefined}
+          preview={findPreview()}
+          isAddingBlock={adding() !== undefined}
+          onPickSlot={pickSlot}
+          onHoverSlot={showPreview}
+          onLeaveSlots={placing.hidePreview}
+        />
+        <Show when={adding()} keyed>
+          {(open) => (
+            <AddBlock
+              plan={properties.plan}
+              slot={open.slot}
+              variant={open.variant}
+              onChoose={(activity, length) => {
+                addChosenBlock(properties.planner, activity, open.slot, length);
+              }}
+              onNewActivity={() => {
+                addWithNewActivity(open.slot);
+              }}
+              onClose={() => {
+                setAdding(undefined);
+              }}
+            />
+          )}
+        </Show>
+      </section>
+    </>
   );
 }
