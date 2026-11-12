@@ -16,6 +16,9 @@ const plan: Plan = {
   ],
 };
 
+/** The plan's activities' ids, in their order. */
+const listIds = (moved: Plan): string[] => moved.activities.map((activity) => activity.id);
+
 describe("activity list", () => {
   it("adds an activity at the end", () => {
     const yoga = createActivity({ id: "yoga", name: "Yoga" });
@@ -61,5 +64,22 @@ describe("activity list", () => {
     expect(removed.blocks.map((block) => block.id)).toEqual(["1"]);
     expect(removedBlocks).toBe(2);
     expect(list.remove(plan, createActivityId("gone"))).toEqual({ plan, removedBlocks: 0 });
+  });
+
+  it("moves an activity to another place, the others keeping their order", () => {
+    const lecture = createActivity({ id: "lecture", name: "Lecture" });
+    const three: Plan = { ...plan, activities: [work, gym, lecture] };
+    expect(listIds(list.move(three, lecture.id, 0))).toEqual(["lecture", "work", "gym"]);
+    expect(listIds(list.move(three, work.id, 2))).toEqual(["gym", "lecture", "work"]);
+    expect(listIds(list.move(three, work.id, 1))).toEqual(["gym", "work", "lecture"]);
+    // Past either end, it goes to that end.
+    expect(listIds(list.move(three, gym.id, 9))).toEqual(["work", "lecture", "gym"]);
+    expect(listIds(list.move(three, gym.id, -1))).toEqual(["gym", "work", "lecture"]);
+    expect(list.move(three, lecture.id, 0).blocks).toBe(three.blocks);
+  });
+
+  it("gives back the same plan when an activity moves to where it is, or doesn't exist", () => {
+    expect(list.move(plan, gym.id, 1)).toBe(plan);
+    expect(list.move(plan, createActivityId("none"), 0)).toBe(plan);
   });
 });

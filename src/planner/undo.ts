@@ -6,7 +6,8 @@ import type { Result } from "../result.ts";
 /**
  * The undo steps (see History in docs/spec/interactions.md and Writes and undo in
  * docs/spec/persistence.md). Each step records what one change did, not the whole plan before it:
- * the activities and blocks it added, removed or changed, and the plan's own fields it set. Undo
+ * the activities and blocks it added, removed or changed, the activities' order when it moved
+ * them, and the plan's own fields it set. Undo
  * applies the step backwards to the plan as it is now, so another tab's changes since stay, and
  * the steps survive them. When something the step touches has changed since, undoing it would
  * overwrite that change, so the step can't be undone at all.
@@ -37,9 +38,17 @@ const FIELD_NAMES = [
   "exampleLoadedAt",
 ] as const satisfies readonly (keyof Fields)[];
 
+/**
+ * The ids of the activities in the list both before and after a change, in each order: what a
+ * reorder did. Undefined when the change kept their order.
+ */
+type Order = { before: string[]; after: string[] } | undefined;
+
 /** What one change did. */
 export type Step = {
   activities: EntityChange<Activity>[];
+  /** The activities' order, when the change moved some of them. */
+  order: Order;
   blocks: EntityChange<Block>[];
   /** The fields the change set: their values before and after. */
   fields: { before: Partial<Fields>; after: Partial<Fields> };
@@ -73,6 +82,22 @@ function compareLists<Value extends Entity>(
   return changes;
 }
 
+/** Whether two lists of ids hold the same ids in the same order. */
+const isSameOrder = (first: readonly string[], second: readonly string[]): boolean =>
+  first.length === second.length && first.every((id, index) => id === second[index]);
+
+/** The ids of `list` that are also in `other`, in the order of `list`. */
+const listSharedIds = (list: readonly Entity[], other: readonly Entity[]): string[] => {
+  const otherIds = new Set(other.map((entity) => entity.id));
+  return list.map((entity) => entity.id).filter((id) => otherIds.has(id));
+};
+
+/** The activities' order before and after, when the change moved some of them. */
+function compareOrder(before: readonly Entity[], after: readonly Entity[]): Order {
+  const order = { before: listSharedIds(before, after), after: listSharedIds(after, before) };
+  return isSameOrder(order.before, order.after) ? undefined : order;
+}
+
 /** What the change from `before` to `after` did. */
 export function record(before: Plan, after: Plan): Step {
   const fields: Step["fields"] = { before: {}, after: {} };
@@ -83,6 +108,7 @@ export function record(before: Plan, after: Plan): Step {
   }
   return {
     activities: compareLists(before.activities, after.activities),
+    order: compareOrder(before.activities, after.activities),
     blocks: compareLists(before.blocks, after.blocks),
     fields,
   };
@@ -91,6 +117,7 @@ export function record(before: Plan, after: Plan): Step {
 /** Whether a step did nothing, so there's nothing to undo. */
 export const isEmpty = (step: Step): boolean =>
   step.activities.length === 0 &&
+  step.order === undefined &&
   step.blocks.length === 0 &&
   Object.keys(step.fields.after).length === 0;
 
@@ -134,6 +161,37 @@ function revertList<Value extends Entity>(
   return reverted;
 }
 
+/** Whether the activities the step reordered are still in the order it left them. */
+const isOrderUnchanged = (list: readonly Entity[], order: Order): boolean => {
+  if (order === undefined) return true;
+  const ids = new Set(order.after);
+  return isSameOrder(
+    list.map((entity) => entity.id).filter((id) => ids.has(id)),
+    order.after,
+  );
+};
+
+/**
+ * The list with the reordered activities back in their earlier order, in the places they hold
+ * now, so an activity another tab added since keeps its place.
+ */
+function revertOrder<Value extends Entity>(list: readonly Value[], order: Order): Value[] {
+  if (order === undefined) return [...list];
+  const ids = new Set(order.before);
+  const byId = new Map(list.map((entity) => [entity.id, entity]));
+  const earlier = order.before.flatMap((id) => {
+    const entity = byId.get(id);
+    return entity === undefined ? [] : [entity];
+  });
+  let next = 0;
+  return list.map((entity) => {
+    if (!ids.has(entity.id)) return entity;
+    const placed = earlier[next] ?? entity;
+    next += 1;
+    return placed;
+  });
+}
+
 /**
  * `plan` with `step` undone. "conflict" when something the step touched has changed since, as
  * another tab can change it, or when undoing it would bring back a block whose activity is gone:
@@ -146,12 +204,13 @@ export function revert(plan: Plan, step: Step): Result<Plan, "conflict"> {
   const isUnchanged =
     isFieldUnchanged &&
     isListUnchanged(plan.activities, step.activities) &&
+    isOrderUnchanged(plan.activities, step.order) &&
     isListUnchanged(plan.blocks, step.blocks);
   if (!isUnchanged) return "conflict";
   const reverted: Plan = {
     ...plan,
     ...step.fields.before,
-    activities: revertList(plan.activities, step.activities),
+    activities: revertOrder(revertList(plan.activities, step.activities), step.order),
     blocks: revertList(plan.blocks, step.blocks),
   };
   const activityIds = new Set(reverted.activities.map((activity) => activity.id));

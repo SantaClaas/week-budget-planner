@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { ISOLATED_URL, expectStatus } from "./app.ts";
 
@@ -170,6 +170,76 @@ test("opens the form on the Activities page from another page", async ({ page })
   await expect(page.getByRole("main")).toContainText(
     "14 hr, 30 min left to place across 5 activities",
   );
+});
+
+/** Where a locator is on screen, which the test expects it to be. */
+async function measure(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("The element isn't on screen.");
+  return box;
+}
+
+/** The activities' names, in the order the Activities list shows them. */
+const readOrder = (page: Page): Promise<string[]> =>
+  page
+    .locator(".activity-list .activity .title-medium")
+    .evaluateAll((names) => names.map((name) => name.textContent ?? ""));
+
+test("reorders activities by dragging a handle, keeps the order, and Undo puts it back", async ({
+  page,
+  context,
+}) => {
+  await openApp(page);
+  const before = ["Statistics lecture", "Linear algebra", "Self-study", "Work", "Gym"];
+  const after = ["Gym", "Statistics lecture", "Linear algebra", "Self-study", "Work"];
+  expect(await readOrder(page)).toEqual(before);
+  // Gym's handle, dragged above the first row.
+  const handle = await measure(page.getByRole("button", { name: "Reorder Gym" }));
+  const first = await measure(page.locator(".activity-list .activity").first());
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2, first.y + 4, { steps: 12 });
+  await page.mouse.up();
+  await expect(page.locator("output")).toHaveText("Gym moved to position 1 of 5");
+  expect(await readOrder(page)).toEqual(after);
+
+  // Another tab shows the new order, and a reload keeps it.
+  const other = await context.newPage();
+  await other.goto(ISOLATED_URL);
+  await expectStatus(other, "full");
+  await expect.poll(() => readOrder(other)).toEqual(after);
+
+  // Undo puts the old order back, in both tabs and after a reload.
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => readOrder(page)).toEqual(before);
+  await expect.poll(() => readOrder(other)).toEqual(before);
+  await page.reload();
+  await expectStatus(page, "full");
+  expect(await readOrder(page)).toEqual(before);
+});
+
+test("reorders an activity with the arrow keys on its handle, keeping focus there", async ({
+  page,
+}) => {
+  await openApp(page);
+  const handle = page.getByRole("button", { name: "Reorder Linear algebra" });
+  await expect(handle).toHaveAccessibleDescription("Up and Down arrows move it.");
+  await handle.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("output")).toHaveText("Linear algebra moved to position 3 of 5");
+  await expect(handle).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(page.locator("output")).toHaveText("Linear algebra moved to position 1 of 5");
+  await expect(handle).toBeFocused();
+  // At the top, Up does nothing.
+  await page.keyboard.press("ArrowUp");
+  expect((await readOrder(page))[0]).toBe("Linear algebra");
+  await page.reload();
+  await expectStatus(page, "full");
+  expect((await readOrder(page))[0]).toBe("Linear algebra");
 });
 
 test.describe("on a phone", () => {
