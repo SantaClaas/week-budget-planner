@@ -117,6 +117,32 @@ test("moves a block across midnight into an overnight block with the keys", asyn
   await expect(page.getByText("Gym, continued from Monday, until 01:30")).toBeAttached();
 });
 
+test("shows both parts of an overnight block as selected, from either part", async ({ page }) => {
+  await openApp(page);
+  await findBlock(page, "Gym, Monday 18:00").focus();
+  // Six hours longer: the end runs past midnight, into Tuesday morning.
+  for (let step = 0; step < 24; step++) await page.keyboard.press("Shift+ArrowDown");
+  // Once the last change shows: it takes focus back to the block, which selects it again.
+  await expect
+    .poll(() => readAnnouncement(page))
+    .toBe("Now Monday 18:00 to Tuesday 01:30, 7 hours, 30 minutes");
+  await page.keyboard.press("Escape");
+  const parts = page.locator("[data-block]", {
+    has: page.getByText(/^Gym, (Monday 18:00|continued from Monday)/u),
+  });
+  await expect(parts).toHaveCount(2);
+  await expect(parts.nth(0)).not.toHaveAttribute("data-selected");
+
+  // A click on the part on Tuesday selects the block, and both parts show it.
+  await parts.nth(1).click();
+  await expect(parts.nth(0)).toHaveAttribute("data-selected");
+  await expect(parts.nth(1)).toHaveAttribute("data-selected");
+  await expect(findBlock(page, "Gym, Monday 18:00")).toHaveAttribute("aria-pressed", "true");
+  // The second part draws the selected ring too, not only the first.
+  const ring = await parts.nth(1).evaluate((part) => getComputedStyle(part).boxShadow);
+  expect(ring).not.toBe("none");
+});
+
 test("drags a block to another day and resizes it from both edges", async ({ page }) => {
   await openApp(page);
   const hour = await measureHour(page);
