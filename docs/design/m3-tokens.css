@@ -2228,7 +2228,7 @@
       inline-size: 1.125rem;
       block-size: 1.125rem;
     }
-    &:is(:hover, :has(> .block-button[aria-pressed="true"])) {
+    &:is([data-hovered], [data-selected]) {
       & > .remove {
         display: grid;
       }
@@ -2241,10 +2241,13 @@
        docs/spec/interactions.md). */
     -webkit-user-select: none;
     user-select: none;
-    &:has(> .block-button[aria-pressed="true"]) > .block-button {
+    &[data-selected] {
       touch-action: none;
     }
-    &:has(> .block-button[aria-pressed="true"]) {
+    /* Selected: a ring and elevation, on both parts of an overnight block. The state is the block
+       button's aria-pressed, but the second part has no button, so the week sets data-selected
+       on every part, and data-hovered for the hover state, as they're one block. */
+    &[data-selected] {
       box-shadow:
         0 0 0 2px var(--surface-container-lowest),
         0 0 0 4px var(--primary),
@@ -2284,7 +2287,7 @@
         opacity: 0;
       }
     }
-    &:is(:hover, :has(> .block-button[aria-pressed="true"])) > .handle::after {
+    &:is([data-hovered], [data-selected]) > .handle::after {
       opacity: 0.55;
     }
     &:is([data-length="short"], [data-length="tiny"]) > .handle {

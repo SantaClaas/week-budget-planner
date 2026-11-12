@@ -188,10 +188,18 @@ function pressBlock(event: PointerEvent, drawn: DrawnBlock, planner: Planner): v
 }
 
 /**
+ * The block a mouse or pen is over, so both parts of an overnight block show it as one, though
+ * the pointer is over only one of them. Only the week sets and reads it.
+ */
+const [hovered, setHovered] = createSignal<BlockId>();
+
+/**
  * One block, or one part of an overnight block. The block's first (or only) part holds its button,
  * which is what has focus, is pressed while selected and is named for screen readers; what's drawn
  * is hidden from them, so nothing is read twice (see The week in docs/spec/accessibility.md). The
- * handles and the remove button show on hover and while the block is selected.
+ * handles and the remove button show on hover and while the block is selected, on both parts of
+ * an overnight block: only the first part's button can carry `aria-pressed`, so every part says
+ * so with `data-selected` and `data-hovered`, which the stylesheet draws from.
  */
 function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX.Element {
   const id = (): BlockId => properties.block.block.id;
@@ -204,6 +212,8 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
       data-color={findColor(properties.block.activity.hue).key}
       data-length={properties.block.size === "regular" ? undefined : properties.block.size}
       data-part={properties.block.part === "only" ? undefined : properties.block.part}
+      data-selected={isSelected()}
+      data-hovered={hovered() === id()}
       style={{
         "--start": properties.block.start,
         "--length": properties.block.length,
@@ -218,6 +228,13 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
       }}
       onPointerDown={(event) => {
         pressBlock(event, properties.block, properties.planner);
+      }}
+      onPointerEnter={(event) => {
+        // A touch has no hover; the first tap selects instead.
+        if (event.pointerType !== "touch") setHovered(id());
+      }}
+      onPointerLeave={() => {
+        if (hovered() === id()) setHovered(undefined);
       }}
       onClick={() => {
         if (!isClickAfterDrag()) selection.select(id());
