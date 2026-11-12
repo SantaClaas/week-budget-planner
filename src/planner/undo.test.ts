@@ -102,6 +102,40 @@ describe("an undo step", () => {
     expect(revert({ ...after, ...createDayHours(9, 22) }, step)).toBe("conflict");
   });
 
+  it("puts reordered activities back in their earlier order", () => {
+    const before = createPlan();
+    const { after, step } = change(before, (plan) => ({
+      ...plan,
+      activities: [lecture, work, gym],
+    }));
+    expect(revert(after, step)).toEqual(before);
+    // Deleting an activity keeps the others' order, so it records no reorder.
+    expect(record(before, { ...before, activities: [work, lecture] }).order).toBeUndefined();
+  });
+
+  it("keeps an activity another tab added since in its place, when undoing a reorder", () => {
+    const before = createPlan();
+    const { after, step } = change(before, (plan) => ({
+      ...plan,
+      activities: [lecture, work, gym],
+    }));
+    const added = createActivity({ id: "added", name: "Added" });
+    const elsewhere: Plan = { ...after, activities: [lecture, added, work, gym] };
+    expect(revert(elsewhere, step)).toEqual({
+      ...elsewhere,
+      activities: [work, added, gym, lecture],
+    });
+  });
+
+  it("can't undo a reorder once another tab reordered the same activities", () => {
+    const before = createPlan();
+    const { after, step } = change(before, (plan) => ({
+      ...plan,
+      activities: [lecture, work, gym],
+    }));
+    expect(revert({ ...after, activities: [work, lecture, gym] }, step)).toBe("conflict");
+  });
+
   it("is empty when nothing changed", () => {
     const plan = createPlan();
     expect(isEmpty(record(plan, { ...plan }))).toBe(true);

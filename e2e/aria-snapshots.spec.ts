@@ -40,18 +40,23 @@ test("the Week page", async ({ page }) => {
         - listitem:
           - button "Statistics lecture": Statistics lecture 3 hrs per week All placed 3 hrs
           - button "Edit Statistics lecture"
+          - button "Reorder Statistics lecture"
         - listitem:
           - button "Linear algebra": /Linear algebra 4 hrs, \\d+ mins per week 1 hr, \\d+ mins left to place/
           - button "Edit Linear algebra"
+          - button "Reorder Linear algebra"
         - listitem:
           - button "Self-study": Self-study 8 hrs per week 6 hrs left to place
           - button "Edit Self-study"
+          - button "Reorder Self-study"
         - listitem:
           - button "Work": /Work \\d+ hrs per week 4 hrs left to place/
           - button "Edit Work"
+          - button "Reorder Work"
         - listitem:
           - button "Gym": /Gym 1 hr, \\d+ mins per day, 3 days 3 hrs left to place/
           - button "Edit Gym"
+          - button "Reorder Gym"
       - paragraph: Drag an activity onto the week, or click an empty slot to add a block there.
   `);
   await expect(page.getByRole("region", { name: "Week" })).toMatchAriaSnapshot(`
@@ -151,18 +156,23 @@ test("the Activities page, with an activity's form open", async ({ page }) => {
         - listitem:
           - button "Statistics lecture": Statistics lecture 3 hrs per week All placed 3 hrs
           - button "Edit Statistics lecture"
+          - button "Reorder Statistics lecture"
         - listitem:
           - button "Linear algebra": /Linear algebra 4 hrs, \\d+ mins per week 1 hr, \\d+ mins left to place/
           - button "Edit Linear algebra"
+          - button "Reorder Linear algebra"
         - listitem:
           - button "Self-study": Self-study 8 hrs per week 6 hrs left to place
           - button "Edit Self-study"
+          - button "Reorder Self-study"
         - listitem:
           - button "Work": /Work \\d+ hrs per week 4 hrs left to place/
           - button "Edit Work"
+          - button "Reorder Work"
         - listitem:
           - button "Gym": /Gym 1 hr, \\d+ mins per day, 3 days 3 hrs left to place/
           - button "Edit Gym" [expanded]
+          - button "Reorder Gym"
           - form "Edit Gym":
             - heading "Edit Gym" [level=2]
             - paragraph: /1 hr, \\d+ mins placed/
