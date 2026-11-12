@@ -329,7 +329,7 @@ test("the Settings page", async ({ page }) => {
           - listitem:
             - button "Export database": /Export database Saves week-budget-planner-\\d+-\\d+-\\d+\\.db/
           - listitem:
-            - button "Import database": Import database Replaces the plan in this browser with a .db or .json file
+            - button "Import database": Import database Replaces the plan in this browser with an exported .db file, or a .json plan from a private window
           - listitem:
             - button "Delete all data": Delete all data Removes every activity and block from this browser
       - region "Storage":
