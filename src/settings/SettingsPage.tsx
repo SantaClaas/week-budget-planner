@@ -142,14 +142,15 @@ function Appearance(): JSX.Element {
   );
 }
 
-/** When the app was built, in the browser's language and time zone: "11 Nov 2026, 14:32". */
-const builtAt = Temporal.Instant.from(version.builtAt).toLocaleString(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
 /** The version this build is, as a link to the repository at its commit, and when it was built. */
 function About(): JSX.Element {
+  // When the app was built, in the browser's language and time zone: "11 Nov 2026, 14:32". Read in
+  // the component, not at the module's top level: modules evaluate before the Temporal polyfill
+  // has loaded in Safari (see src/index.tsx).
+  const builtAt = Temporal.Instant.from(version.builtAt).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
   return (
     <section class="settings-section" aria-labelledby="about-title">
       <h2 id="about-title" class="title-small emphasized">
