@@ -63,7 +63,8 @@ export const isAskDue = (situation: {
 export async function exportPlan(store: PlanStore): Promise<void> {
   let exported: Awaited<ReturnType<PlanStore["exportFile"]>>;
   try {
-    exported = await store.exportFile();
+    // The export's one `now`: its name says when it was made.
+    exported = await store.exportFile(Temporal.Now.plainDateTimeISO());
   } catch (error) {
     console.error("[keeping] couldn't export the plan", error);
     snackbar.show({ message: "Couldn't export your plan. Try again." });

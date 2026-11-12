@@ -9,10 +9,10 @@ import { createExportName, type ExportedFile, type ImportProblem } from "./plan-
 export const isJson = (file: File): boolean =>
   file.name.toLowerCase().endsWith(".json") || file.type === "application/json";
 
-export function create(plan: Plan, today: Temporal.PlainDate): ExportedFile {
+export function create(plan: Plan, at: Temporal.PlainDateTime): ExportedFile {
   return {
     blob: new Blob([planFile.serialize(plan)], { type: "application/json" }),
-    filename: createExportName(today, "json"),
+    filename: createExportName(at, "json"),
   };
 }
 

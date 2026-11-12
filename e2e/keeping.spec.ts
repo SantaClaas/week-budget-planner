@@ -63,7 +63,9 @@ test("says when nothing can be saved, until put away, and exports the plan", asy
     page.waitForEvent("download"),
     card.getByRole("button", { name: "Export" }).click(),
   ]);
-  expect(download.suggestedFilename()).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
+  expect(download.suggestedFilename()).toMatch(
+    /^week-budget-planner-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/u,
+  );
 
   await card.getByRole("button", { name: "Dismiss" }).click();
   await expect(card).toBeHidden();

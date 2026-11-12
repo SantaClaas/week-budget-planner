@@ -100,7 +100,7 @@ export function exportDatabase(page: Page): Promise<{ name: string; bytes: numbe
   return page.evaluate(async () => {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
-    const file = await store.exportFile();
+    const file = await store.exportFile(Temporal.Now.plainDateTimeISO());
     if (file === "newer-version") throw new Error("A newer version saved the plan.");
     return { name: file.filename, bytes: [...new Uint8Array(await file.blob.arrayBuffer())] };
   });

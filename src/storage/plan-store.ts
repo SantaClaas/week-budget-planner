@@ -12,13 +12,20 @@ export type StorageLevel = "full" | "limited" | "none";
 
 export type ExportedFile = { blob: Blob; filename: string };
 
+/** Two digits, as in a time: 5 is "05". */
+const formatTwoDigits = (value: number): string => String(value).padStart(2, "0");
+
 /**
- * The name an export is saved under, for example `week-budget-planner-2026-10-15.db` (see Export,
- * import and reset in docs/spec/persistence.md). The date is the user's, taken by the store when
- * the export starts.
+ * The name an export is saved under, for example `week-budget-planner-2026-10-15-14-32-05.db`
+ * (see Export, import and reset in docs/spec/persistence.md): the user's local date and time to
+ * the second, read once when the export starts, so two exports on one day get different names
+ * and sort by when they were made. Hyphens separate the time, since Windows allows no `:` in a
+ * file name.
  */
-export const createExportName = (today: Temporal.PlainDate, extension: "db" | "json"): string =>
-  `week-budget-planner-${today.toString()}.${extension}`;
+export const createExportName = (at: Temporal.PlainDateTime, extension: "db" | "json"): string => {
+  const time = [at.hour, at.minute, at.second].map((part) => formatTwoDigits(part)).join("-");
+  return `week-budget-planner-${at.toPlainDate().toString()}-${time}.${extension}`;
+};
 
 /**
  * Why an imported file wasn't imported, with nothing changed (see Export, import and reset in
@@ -53,8 +60,11 @@ export interface PlanStore {
     after: Plan,
     now: Temporal.Instant,
   ): Promise<Result<"saved", "newer-version">>;
-  /** The `.db` file at the full level, the `.json` plan file otherwise. */
-  exportFile(): Promise<Result<ExportedFile, "newer-version">>;
+  /**
+   * The `.db` file at the full level, the `.json` plan file otherwise, named after `at`, the local
+   * date and time the export started.
+   */
+  exportFile(at: Temporal.PlainDateTime): Promise<Result<ExportedFile, "newer-version">>;
   /**
    * Replaces the stored plan with an imported `.db` (full level only) or `.json` file, or says why
    * it changed nothing.

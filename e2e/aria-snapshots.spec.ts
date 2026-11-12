@@ -327,7 +327,7 @@ test("the Settings page", async ({ page }) => {
             - text: Keeping your plan This browser may delete your plan when it runs low on space. Export now and then to keep a copy.
             - button "Keep my plan"
           - listitem:
-            - button "Export database": /Export database Saves week-budget-planner-\\d+-\\d+-\\d+\\.db/
+            - button "Export database": Export database Saves a .db file named with the date and time
           - listitem:
             - button "Import database": Import database Replaces the plan in this browser with an exported .db file, or a .json plan from a private window
           - listitem:

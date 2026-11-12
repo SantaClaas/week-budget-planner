@@ -10,7 +10,7 @@ import type { Planner } from "../planner/index.ts";
 import * as snackbar from "../snackbar/index.ts";
 import * as jsonFile from "../storage/json-file.ts";
 import * as persistence from "../storage/persistence.ts";
-import { createExportName, type ImportProblem, type PlanStore } from "../storage/plan-store.ts";
+import type { ImportProblem, PlanStore } from "../storage/plan-store.ts";
 import { formatSize } from "./size.ts";
 
 /** "5 activities and 8 blocks". */
@@ -188,8 +188,6 @@ export function YourData(properties: {
   let fileInput: HTMLInputElement | undefined;
   let importDialog: HTMLDialogElement | undefined;
   const isFull = (): boolean => properties.store.level === "full";
-  const exportName = (): string =>
-    createExportName(Temporal.Now.plainDateISO(), isFull() ? "db" : "json");
   const exportCurrent = (): void => {
     // exportPlan() reports its own failure.
     void keeping.exportPlan(properties.store);
@@ -334,7 +332,7 @@ export function YourData(properties: {
                 {isFull() ? "Export database" : "Export plan"}
               </span>
               <span id="export-text" class="body-medium muted">
-                Saves {exportName()}
+                Saves a {isFull() ? ".db" : ".json"} file named with the date and time
               </span>
             </span>
             <Icon name="chevron_right" />

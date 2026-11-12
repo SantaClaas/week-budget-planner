@@ -38,12 +38,12 @@ export function create(): PlanStore {
       broadcastMessage({ type: "plan-changed" });
       return "saved";
     },
-    async exportFile() {
+    async exportFile(at) {
       const bytes = await databaseService.exportFile();
       if (bytes === "newer-version") return bytes;
       return {
         blob: new Blob([bytes], { type: "application/vnd.sqlite3" }),
-        filename: createExportName(Temporal.Now.plainDateISO(), "db"),
+        filename: createExportName(at, "db"),
       };
     },
     async importFile(file) {
