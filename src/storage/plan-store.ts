@@ -12,9 +12,6 @@ export type StorageLevel = "full" | "limited" | "none";
 
 export type ExportedFile = { blob: Blob; filename: string };
 
-/** Two digits, as in a time: 5 is "05". */
-const formatTwoDigits = (value: number): string => String(value).padStart(2, "0");
-
 /**
  * The name an export is saved under, for example `week-budget-planner-2026-10-15-14-32-05.db`
  * (see Export, import and reset in docs/spec/persistence.md): the user's local date and time to
@@ -23,7 +20,8 @@ const formatTwoDigits = (value: number): string => String(value).padStart(2, "0"
  * file name.
  */
 export const createExportName = (at: Temporal.PlainDateTime, extension: "db" | "json"): string => {
-  const time = [at.hour, at.minute, at.second].map((part) => formatTwoDigits(part)).join("-");
+  // Temporal pads each part to two digits ("09:05:07"); the colons become hyphens.
+  const time = at.toPlainTime().toString({ smallestUnit: "second" }).replaceAll(":", "-");
   return `week-budget-planner-${at.toPlainDate().toString()}-${time}.${extension}`;
 };
 
