@@ -26,3 +26,5 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | **Export / Import** | Save the whole database as a `.db` file, or replace this browser's data with one. | backup / restore, download / upload, save file / load file | Settings › Your data |
 
 Words not to use in the app: **tile** (say "block"), **ledger** (it's the "Activities" list), **arm / armed** (say "placing"), and **event, appointment, task, session** (they suggest dates or to-dos, and this is one reusable week). Code may keep internal names that aren't user-facing, but prefer the glossary terms for new code.
+
+The technical terms for syncing between devices (**node**, **cluster**, **group**, **server**, **change**, **snapshot**) are in [Network](network.md).

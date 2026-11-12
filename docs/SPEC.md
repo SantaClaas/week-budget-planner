@@ -17,5 +17,6 @@ The behavior and the design of the app, split by topic in [`docs/spec/`](spec/).
 | [`accessibility.md`](spec/accessibility.md) | what screen readers hear and how the keyboard moves: the week, blocks, empty slots, activities, Add block, names and descriptions | `.tsx` and `.html` files |
 | [`dates-and-language.md`](spec/dates-and-language.md) | weekdays, times and lengths, formatted with `Intl` in the user's language | |
 | [`browser-support.md`](spec/browser-support.md) | what the app needs, the fallbacks and the known gaps | |
+| [`network.md`](spec/network.md) | syncing between devices: a direction, not built yet. Nodes, groups, the server that can't read the plan, the phases and the open questions | |
 
 Start with the overview and the glossary, then read the files for the feature at hand. Claude Code loads the glossary in every session, and the files in the last column the first time it touches a matching file, through [`.claude/rules/`](../.claude/rules/).
