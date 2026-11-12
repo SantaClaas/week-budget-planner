@@ -65,8 +65,10 @@ describe("localStorage store", () => {
     const storage = new MemoryStorage();
     const store = local.create(storage, events());
     expect(await store.save(undefined, example(), NOW)).toBe("saved");
-    const exported = readValue(await store.exportFile());
-    expect(exported.filename).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
+    const exported = readValue(
+      await store.exportFile(Temporal.PlainDateTime.from("2026-10-15T09:05")),
+    );
+    expect(exported.filename).toBe("week-budget-planner-2026-10-15-09-05-00.json");
     expect(await store.wipe()).toBe("wiped");
     expect(storage.getItem(PLAN_KEY)).toBeNull();
     expect(await store.importFile(file(await exported.blob.text(), "backup.json"))).toBe(
@@ -93,7 +95,7 @@ describe("localStorage store", () => {
     const store = local.create(storage, events());
     expect(await store.load()).toBe("newer-version");
     expect(await store.save(undefined, example(), NOW)).toBe("newer-version");
-    expect(await store.exportFile()).toBe("newer-version");
+    expect(await store.exportFile(Temporal.Now.plainDateTimeISO())).toBe("newer-version");
     expect(storage.getItem(PLAN_KEY)).toBe(newer);
   });
 

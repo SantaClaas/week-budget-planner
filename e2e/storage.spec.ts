@@ -107,7 +107,7 @@ test("exports the database and imports it again", async ({ page }) => {
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "full");
   const exported = await exportDatabase(page);
-  expect(exported.name).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.db$/u);
+  expect(exported.name).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.db$/u);
   expect(new TextDecoder().decode(new Uint8Array(exported.bytes.slice(0, 15)))).toBe(
     "SQLite format 3",
   );

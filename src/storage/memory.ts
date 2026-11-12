@@ -16,8 +16,8 @@ export function create(): PlanStore {
       plan = after;
       return "saved";
     },
-    async exportFile() {
-      return jsonFile.create(plan ?? createEmptyPlan(), Temporal.Now.plainDateISO());
+    async exportFile(at) {
+      return jsonFile.create(plan ?? createEmptyPlan(), at);
     },
     async importFile(file) {
       const imported = await jsonFile.read(file);

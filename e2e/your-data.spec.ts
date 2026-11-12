@@ -41,7 +41,7 @@ async function pickFile(
 test("exports the database and imports it again, after asking", async ({ page }) => {
   await openSettings(page);
   const exported = await exportWithButton(page, /^Export database$/u);
-  expect(exported.name).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.db$/u);
+  expect(exported.name).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.db$/u);
   expect(exported.bytes.subarray(0, 15).toString()).toBe("SQLite format 3");
 
   await removeFirstBlock(page);
@@ -114,7 +114,9 @@ test.describe("in limited storage", () => {
     await expect(page.getByRole("region", { name: "Storage" }).getByRole("term")).toHaveCount(2);
 
     const exported = await exportWithButton(page, /^Export plan$/u);
-    expect(exported.name).toMatch(/^week-budget-planner-\d{4}-\d{2}-\d{2}\.json$/u);
+    expect(exported.name).toMatch(
+      /^week-budget-planner-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json$/u,
+    );
 
     await removeFirstBlock(page);
     await page.reload();

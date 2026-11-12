@@ -50,10 +50,10 @@ export function create(
       current = after;
       return "saved";
     },
-    async exportFile() {
+    async exportFile(at) {
       const plan = readStored(storage, current);
       if (plan === "newer-version") return plan;
-      return jsonFile.create(plan, Temporal.Now.plainDateISO());
+      return jsonFile.create(plan, at);
     },
     async importFile(file) {
       const plan = await jsonFile.read(file);

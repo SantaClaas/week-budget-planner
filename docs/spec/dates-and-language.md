@@ -3,7 +3,7 @@
 Dates and times use **Temporal**, never `Date`. The plan itself has no dates: block times are integer minutes in a Monday-to-Sunday week. Dates only show up at the edges:
 
 - Times that are stored, such as `exampleLoadedAt` and an activity's `created_at` in the database, are `Temporal.Now.instant().toString()`, an ISO 8601 time in UTC. Reading them back uses `Temporal.Instant.from()`, and anything that doesn't parse becomes null.
-- Export file names use today's local date, `Temporal.Now.plainDateISO()` ("week-budget-planner-2026-10-17.json").
+- Export file names use the local date and time the export started, read once with `Temporal.Now.plainDateTimeISO()` and passed to the store ("week-budget-planner-2026-10-17-14-32-05.json").
 - Formatting a week minute goes through `Temporal.PlainTime` (and a reference Monday, `Temporal.PlainDate`, for weekdays), because `Intl.DateTimeFormat` formats Temporal values directly.
 
 Everything the user reads is **formatted by `Intl`**, never assembled by hand, so it follows the user's language and conventions. With no setting, that is the browser's language (`navigator.languages`). The copy in this spec writes lengths as "1 h 30 min" and times as "07:30" for readability. The app shows whatever `Intl` gives, for example:
