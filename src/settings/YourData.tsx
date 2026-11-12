@@ -356,7 +356,7 @@ export function YourData(properties: {
               </span>
               <span id="import-text" class="body-medium muted">
                 {isFull()
-                  ? "Replaces the plan in this browser with a .db or .json file"
+                  ? "Replaces the plan in this browser with an exported .db file, or a .json plan from a private window"
                   : "Replaces the plan in this browser with a .json file"}
               </span>
             </span>
