@@ -1336,6 +1336,31 @@
       text-align: start;
     }
   }
+  /* Narrower still, as on a 320px phone with text at 200%, the emblem and the buttons beside the
+     name would leave it a letter's width. The row stacks instead: the emblem and Edit share the
+     top line, and the name, the budget and what's left each get the row's full width below them
+     (an approved deviation, see Deviations in docs/spec/design.md). The button that starts placing
+     spans those three lines, and Edit sits in its top corner, like an action on a card. */
+  @container activities (width < 15rem) {
+    .activity-list > .activity {
+      & > .activity-button {
+        grid-area: 1 / 1 / 4 / -1;
+        grid-template-rows: subgrid;
+        & > .emblem {
+          grid-area: 1 / 1;
+        }
+        & > .name {
+          grid-area: 2 / 1 / 3 / -1;
+        }
+        & > .left-to-place {
+          grid-area: 3 / 1 / 4 / -1;
+        }
+      }
+      & > .icon-button {
+        grid-area: 1 / -2;
+      }
+    }
+  }
   .activity-list > .activity > .activity-form {
     grid-column: 1 / -1;
     padding: 0.5rem 0.5rem 0 0;

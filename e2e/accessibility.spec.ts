@@ -164,6 +164,37 @@ for (const textSize of ["100%", "200%"]) {
   });
 }
 
+/** Each activity's name and how much wider its column is than the emblem's, in the Activities list. */
+const measureNameRoom = (): string[] =>
+  [...document.querySelectorAll(".activity-list > .activity")].map((row) => {
+    const name = row.querySelector(".name")?.getBoundingClientRect().width ?? 0;
+    const emblem = row.querySelector(".emblem")?.getBoundingClientRect().width ?? 0;
+    return `${row.querySelector(".name")?.textContent ?? ""}: ${name > 3 * emblem ? "room" : `${String(Math.round(name))}px`}`;
+  });
+
+// Reflow alone passes when a column squeezes to a letter's width and its text wraps letter by
+// letter: nothing scrolls sideways, but nothing can be read either. At 200% the narrowest row
+// stacks its emblem and Edit above the name (see the activity list in docs/design/m3-tokens.css).
+test("gives activity names room to wrap by word at 320 CSS px with text at 200%", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto(`${ISOLATED_URL}activities`);
+  await expectStatus(page, "full");
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+  });
+  const rooms = await page.evaluate(measureNameRoom);
+  expect(rooms).toHaveLength(5);
+  expect(rooms.filter((room) => !room.endsWith(": room"))).toEqual([]);
+  // Edit, in the top corner of the button that starts placing, still takes the click.
+  await page.getByRole("button", { name: "Edit Gym" }).click();
+  await expect(page.getByRole("button", { name: "Edit Gym" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+});
+
 /** How far the window itself can scroll down: 0 when only the page's own regions scroll. */
 const measureWindowScroll = (): number =>
   document.documentElement.scrollHeight - document.documentElement.clientHeight;
