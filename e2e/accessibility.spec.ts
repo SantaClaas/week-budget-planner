@@ -164,17 +164,25 @@ for (const textSize of ["100%", "200%"]) {
   });
 }
 
-/** Each activity's name and how much wider its column is than the emblem's, in the Activities list. */
+/**
+ * Each activity's name, with "room" when its column is wider than three emblems and nothing in its
+ * row reaches past the row's end, as a list too narrow for its columns does without scrolling.
+ */
 const measureNameRoom = (): string[] =>
   [...document.querySelectorAll(".activity-list > .activity")].map((row) => {
     const name = row.querySelector(".name")?.getBoundingClientRect().width ?? 0;
     const emblem = row.querySelector(".emblem")?.getBoundingClientRect().width ?? 0;
-    return `${row.querySelector(".name")?.textContent ?? ""}: ${name > 3 * emblem ? "room" : `${String(Math.round(name))}px`}`;
+    const end = row.getBoundingClientRect().right;
+    const isOverflowing = [...row.querySelectorAll("*")].some(
+      (part) => part.getBoundingClientRect().right > end + 1,
+    );
+    const room = name > 3 * emblem ? "room" : `${String(Math.round(name))}px`;
+    return `${row.querySelector(".name")?.textContent ?? ""}: ${isOverflowing ? "overflows" : room}`;
   });
 
 // Reflow alone passes when a column squeezes to a letter's width and its text wraps letter by
 // letter: nothing scrolls sideways, but nothing can be read either. At 200% the narrowest row
-// stacks its emblem and Edit above the name (see the activity list in docs/design/m3-tokens.css).
+// stacks its emblem, Edit and the drag handle above the name (see the activity list in docs/design/m3-tokens.css).
 test("gives activity names room to wrap by word at 320 CSS px with text at 200%", async ({
   page,
 }) => {
