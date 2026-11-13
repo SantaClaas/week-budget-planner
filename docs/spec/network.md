@@ -50,6 +50,7 @@ flowchart LR
 - **The server only appends.** It can't read changes, so it can't merge or shrink them. It keeps an append-only log of encrypted changes per group, with a storage limit. A device makes room by uploading a snapshot and telling the server to drop everything before it. The limit is what makes devices do that.
 - **A simple group key first, MLS later.** At the start, the devices of a group share one key. Every message carries the key's epoch from the first version, so MLS can replace the key handling later without a new format.
 - **Who may use the server:** invite codes and passkeys. The server is run by the project's author.
+- **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see Hosting below).
 - **Putting state on the server is fine where it's needed.** An invite code that works once, a group's member list and a blocklist can't live on the client alone.
 - **Rust where there's a reason.** The server is Rust. In the app, a library that is Rust compiled to WebAssembly under a JavaScript wrapper is used as the Rust crate directly, in one WebAssembly module of our own. The app's own logic stays TypeScript until something needs it moved. The merge logic has no need to be shared with the server, because the server never merges.
 - **Deterministic simulation testing from the first line** (see Testing).
@@ -75,6 +76,16 @@ A device signs in, joins or creates a group, and syncs its changes through the s
 - **Encryption:** every change and snapshot is encrypted on the device with a key derived from the group key, with authenticated encryption. What a message is for (the group, the key epoch, the kind of message) is bound into it, so it can't be replayed in another place.
 - **The app's side:** the leader tab holds the node's keys and the one connection. The Content Security Policy has to allow that connection (`connect-src`, see [Security](security.md)). The app explains syncing in its own UI before it uses the network for it (see Browser permissions in [Security](security.md)). The save status in the top app bar needs states for syncing.
 
+### Hosting
+
+Serving the app from the server's origin changes more than the address:
+
+- **The headers come from the server.** The cross-origin isolation headers and the whole Content Security Policy, `frame-ancestors` included, are sent as headers. The service worker no longer has to add them, and the limited storage level it causes on a first visit or with service workers blocked goes away for that reason (see Hosting and Progressive enhancement in [Persistence](persistence.md)).
+- **The app must still open when the server is down or the device is offline**, or it isn't local-first. So the service worker stays, to keep the app's files (see installing as a PWA in the [overview](overview.md)).
+- **A new origin starts empty.** The database, the settings and a passkey's scope all belong to the origin, so a plan saved on GitHub Pages doesn't appear at the new address. Moving needs a path for the people already using it: an export there and an import here at least, with the old address pointing the way. Choose the domain once, since passkeys are tied to it.
+- **Whoever serves the app's code could change it.** A server that can't read the plan could still send a page that reads it and sends it away. That was true of GitHub Pages too, but now it's the same server that stores the encrypted changes. It goes in What the server learns.
+- **Open:** whether GitHub Pages keeps serving the app without syncing, or redirects.
+
 ### Later
 
 - **MLS** (Messaging Layer Security, RFC 9420), through [OpenMLS](https://openmls.tech/), in place of the simple group key. It adds forward secrecy, recovery after a key leaked, and removing a member without handing out a new key by hand. The server takes the role MLS calls the delivery service. MLS needs a group's commits in one order, which the server can give without reading them.
@@ -92,6 +103,8 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 | Which account (invite code, passkey) uses which group | to limit who may use the server | anonymous tokens: the account proves it may use the server and gets tokens that can't be linked back to it (later) |
 | How many changes, how big and when | it stores them | padding to fixed sizes; batching |
 | IP addresses and when a device is online | it's a network service | not solved here |
+
+**The server is trusted for the app's code.** It serves the page, so the promise that it can't read the plan holds only as long as it serves the code in this repository. The web has no good way yet for a user to check that. What helps: the code is public, the build can be made reproducible, and an installed app only changes when its service worker updates.
 
 ## Removing a device
 
@@ -128,8 +141,8 @@ Messages can carry a W3C Trace Context `traceparent`, so one action can be follo
 When a phase is built, these get revised with it:
 
 - [Persistence](persistence.md) and [Security](security.md) say there is no backend and no account.
-- [Security](security.md): the Content Security Policy's `connect-src`, and the second WebAssembly module.
-- [Persistence](persistence.md): Writes and undo, the save status, export and import, and Hosting (the server needs a host; the app stays on GitHub Pages).
+- [Security](security.md): the Content Security Policy becomes a header and allows the sync connection (`connect-src`, if the transport leaves the origin, as iroh's relays do), and the second WebAssembly module.
+- [Persistence](persistence.md): Writes and undo, the save status, export and import, and Hosting (the server serves the app from its own origin, see Hosting above).
 - [`docs/LOADING.md`](../LOADING.md): the WebAssembly module gets a tier. It should load only for users who sync.
 - [Browser support](browser-support.md): whatever the transport and the passkeys need.
 
