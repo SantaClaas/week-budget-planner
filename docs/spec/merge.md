@@ -1,16 +1,16 @@
 # Merging changes
 
-**Phase 1 of [Network](network.md), not built yet.** How the plan is kept so that two devices that made changes apart end up with the same plan once each has the other's changes, in whatever order they arrive. There is no network in this phase: it changes how the plan is stored and adds the function that merges. The terms node, change and snapshot are from [Network](network.md). The work is [SantaClaas/week-budget-planner#78](https://github.com/SantaClaas/week-budget-planner/issues/78) (this design) and [SantaClaas/week-budget-planner#79](https://github.com/SantaClaas/week-budget-planner/issues/79) (building it).
+**Phase 1 of [Network](network.md), designed and not built yet.** How the plan is kept so that two devices that made changes apart end up with the same plan once each has the other's changes, in whatever order they arrive. There is no network in this phase: it changes how the plan is stored and adds the function that merges. The terms node, change and snapshot are from [Network](network.md). The work is [SantaClaas/week-budget-planner#78](https://github.com/SantaClaas/week-budget-planner/issues/78) (this design) and [SantaClaas/week-budget-planner#79](https://github.com/SantaClaas/week-budget-planner/issues/79) (building it).
 
-## To confirm
+## Decided
 
-These are rules about what the user gets, so they are the user's to decide. Each has the choice this draft makes and where it is described. Until they are confirmed, the file is a draft.
+These are rules about what the user gets, so they were the user's to decide. Each is described in the section named.
 
 1. **A delete wins over an edit made at the same time** on another device (see Deleting).
 2. **Blocks added to an activity that another device deleted are hidden with it**, and come back if the deletion is undone (see Deleting).
 3. **A block moved on one device and resized on another ends up as one of the two left it**, not as a mix (see Registers).
 4. **The example week gets new ids each time it is loaded** (see The example week). Today its ids are the same everywhere.
-5. **Syncing needs the full storage level.** The limited levels keep the plan as they do now (see The limited storage levels).
+5. **Syncing doesn't depend on the storage level.** A window that can't keep the plan, such as a private one, can still load it from the group and sync for as long as it's open (see The limited storage levels).
 6. **Importing a file still replaces the plan.** Merging a file into the plan becomes possible, and is left as a feature of its own, since it needs a screen and copy (see Export and import).
 
 ## The idea
@@ -63,9 +63,26 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 
 - **One action, one stamp.** Every register an action writes gets the same stamp, made from the action's `now` (see "One action, one `now`" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 - **A new stamp is later than everything the node has seen.** The node keeps its clock: the latest stamp it has issued or merged. A new stamp takes the later of `now` and the clock's time, and where that time equals the clock's, the clock's counter plus one. So a change made after seeing another device's change is always later than it, whatever the two wall clocks say. Only changes made without knowing of each other are ordered by wall clock.
-- **A device whose clock runs ahead wins those conflicts** until the others have merged one of its changes, after which their own stamps are later again. It corrects itself, and a merge can't refuse a stamp for being in the future, since nodes would then disagree. This is a known limit.
+- **A device whose clock runs ahead wins those conflicts** until the others have merged one of its changes, after which their own stamps are later again. A merge can't refuse a stamp for being in the future, since nodes would then disagree. See A clock that is wrong, below.
 - **Equal stamps with different values** shouldn't happen, but can: after a browser profile was copied, or between rows that were stored before stamps existed. The merge then takes the value that sorts later as canonical JSON, so it still gives every node the same result.
 - **As text, a stamp sorts the way it compares:** the time as 13 digits, the counter as 6, then the node id, with hyphens between. A counter that would pass 999999 moves the time on by a millisecond instead. The lowest stamp, all zeros with an empty node id, is what rows get that were stored before stamps existed: any real change is later.
+
+### A clock that is wrong
+
+**No scheme can say which of two changes was really later when the devices that made them shared no clock.** "Later" only means something by a clock both trust. What a clock scheme can do is order the changes that knew of each other, which this one does without any wall clock, and pick a winner among the rest that every node agrees on. So a wrong clock can only ever decide a conflict between two changes to the same register made apart, and the cost is one such conflict going to the earlier change.
+
+- **What it costs here is small.** The devices are one person's, their clocks are set by the network to within seconds, the conflict needs the same register changed on two of them while apart, and Undo and the other device's value are both a few taps away.
+- **A clock far ahead also dulls the stamps for a while.** Once the others merge its change, their clocks hold that future time, and until real time catches up their stamps differ only by the counter. Changes that know of each other still order correctly; changes made apart are then decided by the counter and the node id, not by time.
+- **The fix, in phase 2, uses the server that is there anyway.** Every response from the server carries its time. A node works out how far its own clock is off and corrects the time it stamps with, also while offline, by the last offset it knew. The server isn't the source of truth for time and nothing waits on it: a node that never reaches it stamps with its own clock, as in this phase. No second server is needed.
+- **Nothing that must be right may depend on a stamp's time.** How old a deletion marker is, for dropping it, is counted from when the group received it, not from its stamp (see Deleting).
+
+What else was looked at:
+
+- **A counter alone** (a Lamport clock): no wall clock, so no clock can be wrong. Among changes made apart, the device that has made or seen more changes then wins, which has nothing to do with which was later. That is what the stamps fall back to above, and it's worse as the rule.
+- **Version vectors** and their relatives (dotted version vectors, interval tree clocks) tell exactly whether two changes knew of each other, without time. They don't pick a winner among those that didn't, so they need the same tie-break, or they keep both values.
+- **Keeping both values and asking** (a multi-value register): honest, and no clock decides anything. It needs a screen for conflicts, for something rare and cheap to fix by hand. It stays possible later for a register where a silent loss would hurt.
+- **The order in which changes reach the server:** no clocks at all, but then the last device to come back online wins, even with a change made a week before the other's, and two devices syncing directly would have no order.
+- **Refusing changes from a clock that is off:** the server can't read stamps, and a node that refused them would end up with a different plan from one that didn't.
 
 **The node id** is a random id like the others (see [Data model](data-model.md)), made the first time the database opens, and stored in it. All tabs of a browser are one node (see Terms in [Network](network.md)): the leader holds the clock and gives each save its stamp, in the save's own transaction. **An imported file brings its node id with it, which must not be kept:** two devices with one node id could issue the same stamp for different values. An import gives the node a new id and keeps the later of the two clocks.
 
@@ -77,7 +94,7 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 - **Undoing a delete** writes existence again, with a new stamp, and the row is back with whatever its registers hold by then.
 - **A block shows only while its activity exists.** When one device deletes an activity and another adds a block to it, the block's row merges in but isn't part of the plan. If the deletion is undone, it appears with the activity. Deleting an activity still marks the blocks it had as deleted too, as it removes them today; the rule is for the blocks the deleting device didn't know about.
 - **Ids are never used again**, so a deleted row can't be mistaken for a new one.
-- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces in [Network](network.md)), so the rule belongs to phase 2. The stamp already holds the time a marker was written, so "drop markers older than the lease" needs no new format. What phase 2 has to settle is written under Returning after a long time.
+- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces in [Network](network.md)), so the rule belongs to phase 2. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What phase 2 has to settle is written under Returning after a long time.
 
 ## Order
 
@@ -139,6 +156,7 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **`blocks`:** new: `is_deleted`, `time_stamp`, `existence_stamp`. The foreign key to `activities` holds, since a deleted activity's row stays.
 - **`settings`:** new: `day_start_stamp`, `day_end_stamp`, `example_loaded_at_stamp`.
 - **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged.
+- **The rows and the merge are also a type and a function in memory,** which the database reads into and writes from, so they work without it (see The limited storage levels).
 - A stamp column is text with a `CHECK` on its form.
 - **Reading the plan** takes the rows that aren't deleted, the blocks whose activity isn't either, and the activities in order of `order_key`, then id.
 - **Saving an action** compares before and after as it does now. A removed row becomes an update that marks it deleted; a changed register gets the action's stamp.
@@ -155,7 +173,11 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 
 ## The limited storage levels
 
-**The limited levels keep the plan as JSON, without stamps, and don't sync** (see Progressive enhancement in [Persistence](persistence.md)). Syncing needs the leader tab, which the full level has, and a private window isn't where a plan should be kept in step with other devices anyway. Once the server serves the app with real headers, the full level is what every normal window gets (see Hosting in [Network](network.md)). A plan made at a limited level reaches the full level by a `.json` import, as now.
+**The merge doesn't depend on where the rows are kept.** It works on rows in memory, and the database is one place to keep them. So a window without the database (see Progressive enhancement in [Persistence](persistence.md)), such as a private one, can sync in phase 2: it loads the group's snapshot when it opens, merges what arrives, and sends its own changes as they're made.
+
+- **What such a window can't do is keep changes it hasn't sent.** Closed while offline, they're gone, as everything is at the level with no storage. The save status has to say so.
+- **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one. Without the database there's no leader either, so each such tab is its own node with its own connection.
+- **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with phase 2.
 
 ## Returning after a long time
 
