@@ -1,0 +1,21 @@
+[package]
+name = "spike-protocol-check"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+# Only checks whether iroh's own protocols compile for the browser target
+# (question 7):
+#   cargo check -p spike-protocol-check --target wasm32-unknown-unknown --features gossip
+# and the same with `blobs` and `docs`.
+
+[dependencies]
+iroh.workspace = true
+iroh-gossip = { version = "=0.102.0", default-features = false, features = ["net"], optional = true }
+iroh-blobs = { version = "=0.105.0", default-features = false, optional = true }
+iroh-docs = { version = "=0.101.0", default-features = false, optional = true }
+
+[features]
+gossip = ["dep:iroh-gossip"]
+blobs = ["dep:iroh-blobs"]
+docs = ["dep:iroh-docs"]

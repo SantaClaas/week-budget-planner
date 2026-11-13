@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+members = ["browser", "server", "protocol-check"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+iroh = { version = "=1.4.1", default-features = false, features = ["tls-ring"] }
+
+# Size-optimized release build for the WebAssembly module (question 5).
+[profile.release]
+codegen-units = 1
+strip = "symbols"
+debug = false
+lto = true
+opt-level = "z"
+panic = "abort"

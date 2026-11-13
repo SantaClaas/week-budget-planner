@@ -1,0 +1,11 @@
+[package]
+name = "spike-server"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+iroh = { workspace = true, features = ["platform-verifier"] }
+iroh-relay = { version = "=1.4.1", default-features = false, features = ["server", "tls-ring"] }
+tokio = { version = "1", features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
