@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import exampleWeek from "../../examples/example-week.json";
 import { sanitizePlan } from "./sanitize.ts";
 import { createPredictableIds } from "./test-data.ts";
-import { SHAPES } from "./activity/look.ts";
+import { PALETTE, SHAPES } from "./activity/look.ts";
 
 describe("sanitize", () => {
   it("keeps the example week as it is", () => {
@@ -91,5 +91,53 @@ describe("sanitize", () => {
   it("returns an empty plan for anything that isn't a plan", () => {
     expect(sanitizePlan(null, createPredictableIds()).activities).toEqual([]);
     expect(sanitizePlan("text", createPredictableIds()).blocks).toEqual([]);
+  });
+
+  it("returns empty lists when the activities or the blocks aren't lists", () => {
+    const plan = sanitizePlan({ activities: "text", blocks: { id: "1" } }, createPredictableIds());
+    expect(plan.activities).toEqual([]);
+    expect(plan.blocks).toEqual([]);
+  });
+
+  it("skips entries that aren't objects", () => {
+    const plan = sanitizePlan(
+      {
+        activities: [null, "text", 5, { id: "keep", name: "Kept" }],
+        blocks: [null, "text", 5, { id: "1", activityId: "keep", day: 0, start: 600, length: 60 }],
+      },
+      createPredictableIds(),
+    );
+    expect(plan.activities.map((each) => each.id)).toEqual(["keep"]);
+    expect(plan.blocks.map((each) => each.id)).toEqual(["1"]);
+  });
+
+  it("reads numbers stored as text, and repairs what isn't a number or text", () => {
+    const plan = sanitizePlan(
+      {
+        activities: [{ id: "a", name: 42 }, { id: 7 }],
+        blocks: [
+          { id: "1", activityId: "a", day: "2", start: "600", length: "90" },
+          { id: "2", activityId: "a", day: true, start: [600], length: null },
+        ],
+      },
+      createPredictableIds(),
+    );
+    // A name or an id that isn't text counts as missing.
+    expect(plan.activities.map((each) => each.name)).toEqual(["Untitled", "Untitled"]);
+    expect(plan.activities.map((each) => each.id)).toEqual(["a", "new-activity-1"]);
+    expect(plan.blocks[0]).toMatchObject({ day: 2, start: 600, length: 90 });
+    // true, a list and null would each convert to a number; they get the fallbacks instead.
+    expect(plan.blocks[1]).toMatchObject({ day: 0, start: 540, length: 60 });
+  });
+
+  it("keeps every color and shape an activity can have", () => {
+    for (const shape of SHAPES) {
+      const plan = sanitizePlan({ activities: [{ id: "a", shape }] }, createPredictableIds());
+      expect(plan.activities[0]?.shape).toBe(shape);
+    }
+    for (const { hue } of PALETTE) {
+      const plan = sanitizePlan({ activities: [{ id: "a", hue }] }, createPredictableIds());
+      expect(plan.activities[0]?.hue).toBe(hue);
+    }
   });
 });

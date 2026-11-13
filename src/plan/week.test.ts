@@ -96,4 +96,43 @@ describe("week", () => {
     expect(changeLength(createBlock({ length: 15 }), -15)).toMatchObject({ length: 15 });
     expect(changeLength(createBlock({ length: 1440 }), 15)).toMatchObject({ length: 1440 });
   });
+
+  it("keeps a block that ends at midnight a one-day block", () => {
+    const untilMidnight = createBlock({ day: 1, start: 1380, length: 60 });
+    expect(
+      splitIntoParts(untilMidnight).map(({ day, start, end, kind }) => ({ day, start, end, kind })),
+    ).toEqual([{ day: 1, start: 1380, end: 1440, kind: "only" }]);
+    expect(describeTime(untilMidnight, { locale: "en-GB" })).toBe("23:00–00:00 · 1h");
+    // Its bottom edge stops at midnight, and can come back up to a slot below the start.
+    expect(resizeEnd(untilMidnight, 1500)).toMatchObject({ length: 60 });
+    expect(resizeEnd(untilMidnight, 1300)).toMatchObject({ length: 15 });
+  });
+
+  it("detects an overlap across the week's wrap whichever block comes first", () => {
+    const sunday = createBlock({ id: "s", day: 6, start: 1380, length: 120 });
+    const monday = createBlock({ id: "m", day: 0, start: 30, length: 60 });
+    expect(isBlockOverlapping(monday, sunday)).toBe(true);
+    // Blocks that only touch don't overlap.
+    const afterwards = createBlock({ id: "a", day: 0, start: 60, length: 60 });
+    expect(isBlockOverlapping(afterwards, sunday)).toBe(false);
+  });
+
+  it("sorts a day's parts by start, the longer one first when they start together", () => {
+    const parts = findPartsOnDay(
+      [
+        createBlock({ id: "later", start: 660, length: 60 }),
+        createBlock({ id: "short", start: 600, length: 30 }),
+        createBlock({ id: "long", start: 600, length: 90 }),
+      ],
+      sanitizeDayIndex(0),
+    );
+    expect(parts.map((part) => part.block.id)).toEqual(["long", "short", "later"]);
+  });
+
+  it("resizes an overnight block from the top to a day at most", () => {
+    expect(resizeStart(createBlock({ start: 1320, length: 240 }), 0)).toMatchObject({
+      start: 120,
+      length: 1440,
+    });
+  });
 });

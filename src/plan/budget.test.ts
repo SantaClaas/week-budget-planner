@@ -8,7 +8,7 @@ import {
   sumPlacedByActivity,
 } from "./budget.ts";
 import { createActivityId, createActivity, createBlock } from "./test-data.ts";
-import { sanitizePlaced, sanitizeWeeklyBudget } from "./time.ts";
+import { sanitizePlaced, sanitizeTotalBudget, sanitizeWeeklyBudget } from "./time.ts";
 
 describe("budget", () => {
   it("counts per-day budgets times their days", () => {
@@ -49,5 +49,11 @@ describe("budget", () => {
     const overBudget = splitProgress(twelveHours, sanitizePlaced(750));
     expect(overBudget.withinBudget).toBeCloseTo(0.96);
     expect(overBudget.overBudget).toBeCloseTo(0.04);
+  });
+
+  it("splits the progress bar without a budget: empty, or all over budget once something is placed", () => {
+    const noBudget = sanitizeTotalBudget(0);
+    expect(splitProgress(noBudget, sanitizePlaced(0))).toEqual({ withinBudget: 0, overBudget: 0 });
+    expect(splitProgress(noBudget, sanitizePlaced(60))).toEqual({ withinBudget: 0, overBudget: 1 });
   });
 });
