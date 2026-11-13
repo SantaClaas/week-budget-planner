@@ -109,6 +109,11 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 
 - **A device removes another device**, as in a chat app's list of signed-in devices. The server doesn't decide; it keeps the group's current member list and refuses a node that's no longer on it. The remaining devices get a new group key.
 - **The race to solve:** someone who holds a stolen, unlocked device could remove the owner's other devices first. MLS doesn't prevent this either: any member can remove another, and the policy is the application's. A member change therefore needs proof that the owner is present. Two candidates: a fresh passkey check with user verification, or a recovery key shown once when the group is created.
+- **A node that keeps nothing says so when it joins.** A window without the database, such as a private one, can sync while it's open (see The limited storage levels in [Merging changes](merge.md)), and it's a new node each time. Declared as temporary, it can be let go without anyone deciding:
+  - **It gets a short lease** (see Leases and nonces below), and the server takes it off the member list when the lease runs out or the window closes. The list of devices shows it as temporary, and removing it earlier is one tap that needs no thought.
+  - **It never comes back with old rows,** so it doesn't count toward how long deletion markers have to be kept.
+  - **It only says it of itself.** A node that claims to be temporary and keeps the group key anyway can't be stopped by the claim. Letting a temporary node go therefore doesn't hand out a new group key by itself; removing a device that may be in the wrong hands still does. With MLS, removing a member is routine, and every departure can renew the key.
+  - **The server learns that a node is temporary,** since it enforces the short lease. That goes with What the server learns.
 - **Other cases that need state on the server:** blocking an account, a passkey the user removed, and the storage used (the server holds the data anyway).
 
 ## Ideas for the infrastructure
