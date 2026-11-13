@@ -8,3 +8,5 @@ dist/
 .cache/
 test-results/
 playwright-report/
+.stryker-tmp/
+reports/
