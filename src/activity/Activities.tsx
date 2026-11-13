@@ -22,6 +22,7 @@ import { isClickAfterDrag } from "../week/drag-controller.ts";
 import { animate } from "../week/transition.ts";
 import { ActivityForm } from "./ActivityForm.tsx";
 import * as edit from "./edit.ts";
+import { createHandleId, moveByKey, startReorder } from "./reorder.ts";
 import { describeOverview, listRows, type ActivityRow } from "./row.ts";
 
 /** Where the list is: the pane beside the week, or the Activities page. */
@@ -275,6 +276,24 @@ function Row(properties: {
         <Icon name="edit" size={20} />
         <span class="visually-hidden">Edit {properties.row.activity.name}</span>
       </button>
+      {/* Reorders the activity: dragged with a pointer or by touch, or with Up and Down (see
+          Reorder in docs/spec/interactions.md). */}
+      <button
+        type="button"
+        class="icon-button drag-handle"
+        id={createHandleId(id())}
+        aria-describedby="reorder-keys"
+        aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
+        onPointerDown={(event) => {
+          startReorder(event, id(), properties.planner);
+        }}
+        onKeyDown={(event) => {
+          moveByKey(event, id(), properties.planner);
+        }}
+      >
+        <Icon name="drag_indicator" size={20} />
+        <span class="visually-hidden">Reorder {properties.row.activity.name}</span>
+      </button>
       <Progress
         budget={properties.row.weeklyBudget}
         placed={properties.row.placedMinutes}
@@ -449,6 +468,9 @@ export function Activities(properties: {
             isFocusedOnOpen
           />
         </Show>
+        <p id="reorder-keys" hidden>
+          Up and Down arrows move it.
+        </p>
         {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles -- Safari drops a list's semantics once the reset removes its markers (see Accessibility in docs/spec/design.md). */}
         <ul class="segmented-list activity-list" role="list">
           <For each={rows()} keyed={(row) => row.activity.id}>

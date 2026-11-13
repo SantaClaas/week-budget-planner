@@ -19,6 +19,7 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 | **Placed** | The total length of an activity's blocks. | scheduled, used, booked, planned | Code: type `Placed` |
 | **Left to place** | Budget minus placed. At zero it reads "All placed". Below zero it is "Over budget". | remaining, hours left, still to plan, overbooked (for over budget) | |
 | **Placing** | The mode you are in after picking an activity: every click or tap on an empty slot adds a block of it, until you press Done or nothing is left. | armed, arm, placement mode, paint mode, brush | |
+| **Reorder** | Move an activity to another position in the Activities list, with its drag handle or the arrow keys on it. The order is the same everywhere the list shows. | sort, rearrange, rank, move up / move down | Code: `list.move` in `src/plan/activity/list.ts` |
 | **Add block** | Click or tap an empty slot when you are not placing, then choose the activity. | quick add, new block, slot menu | Phone: a bottom sheet. Desktop: a menu |
 | **First free slot** | The earliest gap that fits the default length, scanning Monday to Sunday. | next free slot, auto-place, auto-fill | |
 | **Day hours** | The hours you are usually awake and planning, by default 07:00 to 22:00. The week opens scrolled to them, and "First free slot" only looks inside them. The week always shows all 24 hours. | hours shown, visible hours, waking hours, working hours | Code: `dayStart`, `dayEnd` |

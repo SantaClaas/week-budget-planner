@@ -19,6 +19,8 @@ stateDiagram-v2
   Moving --> Selected : release
   Selected --> Resizing : drag a handle
   Resizing --> Selected : release
+  Idle --> Reordering : drag an activity's handle
+  Reordering --> Idle : release, or Escape
   AddBlock : Add block
   FromList : Dragging from the list
   note right of Placing
@@ -67,6 +69,10 @@ Picking means a click, a tap, or Enter or Space on the focused slot or activity.
   - Hours accept the user's decimal separator ("1.5" and "1,5" in German), read with the separators from `Intl.NumberFormat(…).formatToParts()`.
 - Edit inline in the list item: Edit opens the same form below the activity's row, plus Save, Cancel and Delete, and closes it again. Escape cancels.
 - Deleting an activity also deletes its blocks. Show a snackbar with Undo: "Deleted Gym and its 3 blocks."
+- **Reorder** an activity with the drag handle (Material Symbols `drag_indicator`) at the end of its row, after Edit, in the pane beside the week and on the Activities page alike. Only the handle reorders: the rest of the row still drags the activity onto the week, and a tap on a phone still starts placing.
+  - **Pointer and touch:** pressing the handle picks the row up at once (the handle has `touch-action: none`, so the list still scrolls everywhere else). The row follows the pointer up and down, drawn in Google's dragged list item state (`ListTokens`: elevation level 4, the Large corner, an on-surface state layer at 16%), and the other rows move out of its way with the default spatial spring. Near the top or bottom of the list's scroll area, the list scrolls. Releasing saves the new order; Escape, or a cancelled pointer, puts the row back.
+  - **Keyboard:** the handle is a button in Tab order, named "Reorder Gym" and described "Up and Down arrows move it". Up and Down move the activity one position, and focus stays on its handle, as a focused block moves with the arrows on the week. At the top or bottom, the key does nothing.
+  - Each move is one undo step. The live region says where the activity is now: "Gym moved to position 2 of 5". The new order is saved like any other change, so other tabs and a reload keep it, and export and import carry it.
 - A new activity gets a default color and shape, ideally ones no other activity uses yet (see Activity shapes in [Design](design.md)). The user can change both.
 
 **History**

@@ -50,3 +50,17 @@ export function remove(plan: Plan, id: ActivityId): { plan: Plan; removedBlocks:
     removedBlocks: plan.blocks.length - blocks.length,
   };
 }
+
+/**
+ * The plan with the activity `id` moved to `index` in the list, the others keeping their order
+ * (see Reorder in docs/spec/interactions.md). `index` is clamped to the list. The same plan when
+ * there's no such activity, or it's already there.
+ */
+export function move(plan: Plan, id: ActivityId, index: number): Plan {
+  const from = plan.activities.findIndex((activity) => activity.id === id);
+  const to = Math.min(Math.max(0, Math.round(index)), plan.activities.length - 1);
+  const moved = plan.activities[from];
+  if (moved === undefined || from === to) return plan;
+  const others = plan.activities.toSpliced(from, 1);
+  return { ...plan, activities: others.toSpliced(to, 0, moved) };
+}
