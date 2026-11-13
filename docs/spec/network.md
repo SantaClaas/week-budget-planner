@@ -59,12 +59,12 @@ flowchart LR
 
 ### Phase 1: changes that merge
 
-No network. The plan's changes get a form in which two devices that saw the same changes end up with the same plan, in whatever order the changes arrived (a CRDT, a conflict-free replicated data type).
+No network. The plan is kept so that two devices that saw the same changes end up with the same plan, in whatever order the changes arrived (a CRDT, a conflict-free replicated data type). **The design is in [Merging changes](merge.md).** In short:
 
-- **A starting point, to be confirmed by the phase's own design:** the plan is a small set of activities and blocks with a few fields each, so a last-writer-wins value per field, with a marker left behind for each deleted row, is likely enough. That needs a clock that orders changes across devices without trusting their wall clocks (a hybrid logical clock), and no CRDT library.
-- **The groundwork exists.** Undo already records what each change did instead of the whole plan before it ([`src/planner/undo.ts`](../../src/planner/undo.ts), see Writes and undo in [Persistence](persistence.md)). `sanitizePlan` already repairs what a merge can break, such as a block whose activity was deleted on another device (see [Data model](data-model.md)).
-- **A pure core.** Merging is a pure function, and the protocol is a state machine that takes messages and the time and returns messages and changes to apply (see "A pure core, with side effects at the edges" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
-- **Open:** how the changes are stored in SQLite and migrated; what export and import do with them; how the order of the Activities list merges (undo records a list index today); when deletion markers can be dropped (see Leases and nonces); whether undo and merge share one record of a change; and whether import could merge a file instead of replacing the plan.
+- **Rows, registers and stamps.** Each activity, block and the settings is a row, split into registers that hold a value and a stamp. Merging takes the later stamp, register by register. A change is the rows an action touched, a snapshot is all of them, and one function merges either.
+- **No library, and no log of operations.** The plan is tens of rows, and the current rows with their stamps are all there is to keep and to send.
+- **A pure core.** Merging is a pure function, and the protocol in phase 2 is a state machine that takes messages and the time and returns messages and changes to apply (see "A pure core, with side effects at the edges" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+- **Nothing the user sees changes,** except that the example week gets new ids when it's loaded.
 
 ### Phase 2: the server
 
