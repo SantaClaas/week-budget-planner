@@ -176,7 +176,7 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 **The merge doesn't depend on where the rows are kept.** It works on rows in memory, and the database is one place to keep them. So a window without the database (see Progressive enhancement in [Persistence](persistence.md)), such as a private one, can sync in phase 2: it loads the group's snapshot when it opens, merges what arrives, and sends its own changes as they're made.
 
 - **What such a window can't do is keep changes it hasn't sent.** Closed while offline, they're gone, as everything is at the level with no storage. The save status has to say so.
-- **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one. Without the database there's no leader either, so each such tab is its own node with its own connection.
+- **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one, and it tells the group that it's temporary, so it can be let go when it closes (see Removing a device in [Network](network.md)). Without the database there's no leader either, so each such tab is its own node with its own connection.
 - **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with phase 2.
 
 ## Returning after a long time
