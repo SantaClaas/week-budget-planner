@@ -18,6 +18,18 @@ What gets a test and how the tests run. It adds to [`docs/guidelines/principles.
 
 **Browser tests** run with Playwright, in [`e2e/`](../../e2e/) (`pnpm test:browser` builds the app and runs them), for the paths where a failure would cost the user their plan, and for the automatic accessibility checks below. CI installs the matching Chromium. In a cloud container, use the preinstalled one: `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium pnpm test:browser`. Add one when a new path could lose the user's data. Node loads the tests itself: `pnpm test:browser` and CI set `PW_DISABLE_TS_ESM=1`, which turns off Playwright's own TypeScript loader (see [`docs/guidelines/typescript.md`](typescript.md)).
 
+## Mutation testing
+
+**Mutation testing checks the tests.** [StrykerJS](https://stryker-mutator.io/) (`pnpm mutate`, config in [`stryker.config.mjs`](../../stryker.config.mjs)) changes the code a little at a time, such as a `<` to `<=`, a `+` to `-` or a condition to `true`, and runs the unit tests against each change (a mutant). A mutant that fails a test is killed. One that passes them all survived: the code could be wrong in that way and no test would notice. It asks the question that coverage can't: not whether a line ran, but whether a test depends on what it does.
+
+- **It covers the pure core**, [`src/plan/`](../../src/plan/) today: the code where a test is input and expected output (see "A pure core, with side effects at the edges" in [`principles.md`](principles.md)). Add a module to `mutate` in the config when it's of that kind, as the merge for syncing will be. Components and the code at the edges stay out: mutating them mostly gives noise.
+- **The survivors are read, not counted.** There is no score to reach, and CI doesn't run it: a score would become a target as coverage does (see above). Run it by hand, after writing or changing a module's tests and now and then over everything, and open `reports/mutation/index.html`. A run takes about two minutes.
+- **A survivor is one of three things:**
+  - **A rule no test pins down.** Usually an edge: the value exactly at a limit, the empty list, the block that ends at midnight. Write the test. This is what the run is for, and it's how "an exception to the type checks owes a test" (see "Where rules are enforced" in [`principles.md`](principles.md)) gets checked.
+  - **Code that does nothing**, such as a condition that can't be false. Remove it.
+  - **A change that makes no difference** (an equivalent mutant): a cache that's skipped, so the value is computed again, or a sort order nothing depends on. Leave it. Don't write a test of how the code works inside just to kill it.
+- **A test written for a survivor names the rule, not the mutant**: "keeps an id of exactly 40 characters", not "kills the `<=` mutant".
+
 ## Automatic accessibility checks
 
 **Machines check what they can, at the earliest stage that can.** They find part of the problems, never all: they can't tell whether a name makes sense, whether the reading order tells the story, or whether the week works for someone who can't see it. The screen reader checks below, the keyboard by hand and asking users stay the main check.
