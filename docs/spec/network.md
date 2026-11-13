@@ -82,9 +82,8 @@ Serving the app from the server's origin changes more than the address:
 
 - **The headers come from the server.** The cross-origin isolation headers and the whole Content Security Policy, `frame-ancestors` included, are sent as headers. The service worker no longer has to add them, and the limited storage level it causes on a first visit or with service workers blocked goes away for that reason (see Hosting and Progressive enhancement in [Persistence](persistence.md)).
 - **The app must still open when the server is down or the device is offline**, or it isn't local-first. So the service worker stays, to keep the app's files (see installing as a PWA in the [overview](overview.md)).
-- **A new origin starts empty.** The database, the settings and a passkey's scope all belong to the origin, so a plan saved on GitHub Pages doesn't appear at the new address. Moving needs a path for the people already using it: an export there and an import here at least, with the old address pointing the way. Choose the domain once, since passkeys are tied to it.
+- **A new origin starts empty, and that's fine.** The database, the settings and a passkey's scope all belong to the origin, so a plan saved on GitHub Pages doesn't appear at the new address. Only the author uses the app there, so nothing is migrated and GitHub Pages is dropped: an export and an import carry a plan over. Choose the domain once, since passkeys are tied to it.
 - **Whoever serves the app's code could change it.** A server that can't read the plan could still send a page that reads it and sends it away. That was true of GitHub Pages too, but now it's the same server that stores the encrypted changes. It goes in What the server learns.
-- **Open:** whether GitHub Pages keeps serving the app without syncing, or redirects.
 
 ### Later
 
