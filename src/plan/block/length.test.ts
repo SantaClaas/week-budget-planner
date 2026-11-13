@@ -26,4 +26,11 @@ describe("block length", () => {
     expect(fitToDayHours(1320, sanitizeLength(240), dayHours)).toBe(240);
     expect(fitToDayHours(600, sanitizeLength(90), dayHours)).toBe(90);
   });
+
+  it("keeps the length of a block that starts outside the day hours, and caps one that starts with them", () => {
+    const dayHours = createDayHours(7, 22);
+    const twentyHours = sanitizeLength(1200);
+    expect(fitToDayHours(300, twentyHours, dayHours)).toBe(1200);
+    expect(fitToDayHours(420, twentyHours, dayHours)).toBe(900);
+  });
 });

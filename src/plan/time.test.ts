@@ -5,6 +5,7 @@ import {
   parseDayCount,
   parseDayEnd,
   parseDayStart,
+  sanitizeBudgetMinutes,
   sanitizePlaced,
   sanitizeTotalBudget,
   sanitizeWeeklyBudget,
@@ -68,5 +69,23 @@ describe("strict parsers", () => {
     expect(parseDayStart(13)).toBe("out-of-range");
     expect(parseDayEnd(24)).toBe(24);
     expect(parseDayEnd(12)).toBe("out-of-range");
+  });
+
+  it("accept the values exactly at a limit", () => {
+    expect(parseBudgetMinutes(1440, "day")).toBe(1440);
+    expect(parseBudgetMinutes(10_080, "week")).toBe(10_080);
+    expect(parseBudgetMinutes(10_081, "week")).toBe("too-large");
+    expect(parseDayCount(1)).toBe(1);
+    expect(parseDayCount(8)).toBe("out-of-range");
+    expect(parseDayStart(0)).toBe(0);
+    expect(parseDayEnd(13)).toBe(13);
+  });
+});
+
+describe("budgets", () => {
+  it("caps a budget per day at a day and a budget per week at a week", () => {
+    expect(sanitizeBudgetMinutes(6000, "day")).toBe(1440);
+    expect(sanitizeBudgetMinutes(6000, "week")).toBe(6000);
+    expect(sanitizeBudgetMinutes(20_160, "week")).toBe(10_080);
   });
 });

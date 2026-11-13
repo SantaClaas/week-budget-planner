@@ -64,6 +64,7 @@ describe("activity list", () => {
     expect(removed.blocks.map((block) => block.id)).toEqual(["1"]);
     expect(removedBlocks).toBe(2);
     expect(list.remove(plan, createActivityId("gone"))).toEqual({ plan, removedBlocks: 0 });
+    expect(list.remove(plan, createActivityId("gone")).plan).toBe(plan);
   });
 
   it("moves an activity to another place, the others keeping their order", () => {
@@ -80,6 +81,8 @@ describe("activity list", () => {
 
   it("gives back the same plan when an activity moves to where it is, or doesn't exist", () => {
     expect(list.move(plan, gym.id, 1)).toBe(plan);
+    // An index past the end means the end, where the last activity already is.
+    expect(list.move(plan, gym.id, 9)).toBe(plan);
     expect(list.move(plan, createActivityId("none"), 0)).toBe(plan);
   });
 });
