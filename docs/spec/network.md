@@ -40,12 +40,12 @@ flowchart LR
   server["Server: a node outside the group<br/>encrypted changes and snapshots,<br/>member list, quota"]
   leader <-- "encrypted changes" --> server
   phone <-- "encrypted changes" --> server
-  leader <-. "direct, later" .-> phone
+  leader <-. "through a relay, later" .-> phone
 ```
 
 ## Decided
 
-- **The server is a progressive enhancement.** Without it, the app is what it is today. Syncing directly between two devices that are both online stays possible in the design, but it isn't built first, since it's the worse experience.
+- **The server is a progressive enhancement.** Without it, the app is what it is today. Syncing between two devices that are both online, without the server holding anything, stays possible in the design, but it isn't built first, since it's the worse experience.
 - **The server is a peer, not a member.** It speaks the same protocol as a device and is addressed the same way, which keeps the architecture to one kind of participant. It never gets a group's key.
 - **The server only appends.** It can't read changes, so it can't merge or shrink them. It keeps an append-only log of encrypted changes per group, with a storage limit. A device makes room by uploading a snapshot and telling the server to drop everything before it. The limit is what makes devices do that.
 - **A simple group key first, MLS later.** At the start, the devices of a group share one key. Every message carries the key's epoch from the first version, so MLS can replace the key handling later without a new format.
@@ -53,6 +53,7 @@ flowchart LR
 - **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see Hosting below).
 - **Putting state on the server is fine where it's needed.** An invite code that works once, a group's member list and a blocklist can't live on the client alone.
 - **Rust where there's a reason.** The server is Rust. In the app, a library that is Rust compiled to WebAssembly under a JavaScript wrapper is used as the Rust crate directly, in one WebAssembly module of our own. The app's own logic stays TypeScript until something needs it moved. The merge logic has no need to be shared with the server, because the server never merges.
+- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under Phase 2).
 - **Deterministic simulation testing from the first line** (see Testing).
 
 ## Phases
@@ -72,7 +73,16 @@ A device signs in, joins or creates a group, and syncs its changes through the s
 
 - **Server:** Rust with [axum](https://github.com/tokio-rs/axum), built from actors as in Alice Ryhl's [Actors with Tokio](https://ryhl.io/blog/actors-with-tokio/). [`docs/guidelines/`](../guidelines/) gets a `rust.md` with the first Rust code, and [`docs/guidelines/principles.md`](../guidelines/principles.md) is checked against it.
 - **Access:** an invite code is needed to register a passkey. Passkeys sign a device in.
-- **Transport, to be decided by a spike:** [iroh](https://www.iroh.computer/) if it works in a browser. Then the server is just another iroh node, and direct sync between devices comes almost for free later. A browser has no raw UDP, so expect connections through relays only; a public relay is acceptable, since iroh encrypts between the two nodes' keys and a relay sees only who talks to whom. If iroh doesn't work in a browser, a WebSocket to the server does. The protocol doesn't know its transport, so this can change.
+- **Transport: iroh** (1.4.1 in the spike), built from the Rust crate into our own WebAssembly module.
+  - **A browser node only ever connects through a relay.** It has no raw UDP, so there are no direct connections, to the server or between two browsers. Per relay it makes a `fetch` to `/ping` and a WebSocket to `/relay`.
+  - **The relay is ours and is part of the server,** on the app's origin. The Content Security Policy then needs no new entry, and the relay can admit only the nodes on a group's member list. The relay takes whole connections, not routes, so the server has to hand it the two paths.
+  - **Not n0's public relays,** which are for development and hobby use, with no promise of uptime, and **no address lookup through n0's DNS,** which would learn every node's key, relay and IP address. The app gives a node the server's address itself.
+  - **iroh hangs silently when it's blocked,** so the app sets its own timeouts and says when it can't sync.
+  - **Cost:** about 0.7 MB compressed, loaded only for users who sync (see [`docs/LOADING.md`](../LOADING.md)). iroh has been 1.0 since June 2026 and releases a minor every two to four weeks, so its version is pinned and updated on purpose.
+  - **The other iroh pieces aren't used.** iroh-docs shows keys, authors and timestamps in plain text to every peer that syncs, the server included, and iroh-gossip only reaches peers that are online together. The sync protocol is our own, over one iroh stream.
+  - **The fallback:** the same messages over a WebSocket to the server. It loses addressing by key and needs a challenge and signature of our own; it saves the download and the relay.
+  - **The module is loaded by its hash:** the build writes each WebAssembly module's hash into the code that fetches it (`fetch` with `integrity`), so the browser refuses bytes that aren't the ones the build made. That guards the way from the server to the page, not against the server itself (see What the server learns).
+  - Tested in Chromium only. Firefox and Safari, and a relay that drops and comes back, are still to check.
 - **Encryption:** every change and snapshot is encrypted on the device with a key derived from the group key, with authenticated encryption. What a message is for (the group, the key epoch, the kind of message) is bound into it, so it can't be replayed in another place.
 - **The app's side:** the leader tab holds the node's keys and the one connection. The Content Security Policy has to allow that connection (`connect-src`, see [Security](security.md)). The app explains syncing in its own UI before it uses the network for it (see Browser permissions in [Security](security.md)). The save status in the top app bar needs states for syncing.
 
@@ -89,7 +99,7 @@ Serving the app from the server's origin changes more than the address:
 
 - **MLS** (Messaging Layer Security, RFC 9420), through [OpenMLS](https://openmls.tech/), in place of the simple group key. It adds forward secrecy, recovery after a key leaked, and removing a member without handing out a new key by hand. The server takes the role MLS calls the delivery service. MLS needs a group's commits in one order, which the server can give without reading them.
 - **Sharing a plan with other people**, which is what MLS is really needed for.
-- **Direct sync between devices** that are online together.
+- **Sync between devices that are online together,** without the server holding anything. Between browsers that still goes through a relay; native clients could connect directly.
 - **Hiding more from the server** (see What the server learns).
 
 ## What the server learns
@@ -102,6 +112,7 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 | Which account (invite code, passkey) uses which group | to limit who may use the server | anonymous tokens: the account proves it may use the server and gets tokens that can't be linked back to it (later) |
 | How many changes, how big and when | it stores them | padding to fixed sizes; batching |
 | IP addresses and when a device is online | it's a network service | not solved here |
+| Which node talks to which, through the relay | the relay is part of the server, and every packet names the node it's for | nothing new: between a person's devices that is the member list it has anyway |
 
 **The server is trusted for the app's code.** It serves the page, so the promise that it can't read the plan holds only as long as it serves the code in this repository. The web has no good way yet for a user to check that. What helps: the code is public, the build can be made reproducible, and an installed app only changes when its service worker updates.
 
@@ -159,7 +170,7 @@ Messages can carry a W3C Trace Context `traceparent`, so one action can be follo
 When a phase is built, these get revised with it:
 
 - [Persistence](persistence.md) and [Security](security.md) say there is no backend and no account.
-- [Security](security.md): the Content Security Policy becomes a header and allows the sync connection (`connect-src`, if the transport leaves the origin, as iroh's relays do), and the second WebAssembly module.
+- [Security](security.md): the Content Security Policy becomes a header, and the second WebAssembly module loads under `'wasm-unsafe-eval'`, which is already there. With the relay on the app's origin, `connect-src` needs nothing new.
 - [Persistence](persistence.md): Writes and undo, the save status, export and import, and Hosting (the server serves the app from its own origin, see Hosting above).
 - [`docs/LOADING.md`](../LOADING.md): the WebAssembly module gets a tier. It should load only for users who sync.
 - [Browser support](browser-support.md): whatever the transport and the passkeys need.
