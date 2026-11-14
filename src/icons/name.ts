@@ -8,6 +8,7 @@ export type IconName =
   | "add"
   | "animation"
   | "arrow_back"
+  | "arrow_drop_down"
   | "auto_awesome"
   | "calendar_add_on"
   | "calendar_view_week"

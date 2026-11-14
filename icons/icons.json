@@ -9,6 +9,7 @@
     { "name": "add" },
     { "name": "animation" },
     { "name": "arrow_back" },
+    { "name": "arrow_drop_down" },
     { "name": "auto_awesome" },
     { "name": "calendar_add_on" },
     { "name": "calendar_view_week", "fill": true },

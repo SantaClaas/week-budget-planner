@@ -2519,6 +2519,108 @@
       border-radius: var(--corner-extra-small);
       background: transparent;
     }
+    /* Where the browser lets a select be styled (customizable select), each one is Google's
+       exposed dropdown menu: the field as an outlined text field (androidx
+       OutlinedAutocompleteTokens: a 1dp outline, on-surface on hover and a 2dp primary one with
+       focus, Body Large text, the arrow_drop_down trailing icon in on-surface-variant, turning while
+       open), and its options in the app's menu (.menu above): surface container, the Large corner,
+       elevation level 2, and the chosen hour on the secondary container. Elsewhere the select
+       stays the browser's own, which works the same. The markup stays a plain <select> with its
+       options: a <button> or <selectedcontent> inside would be dropped by an older parser, and the
+       template would no longer match. */
+    @supports (appearance: base-select) {
+      & select,
+      & select::picker(select) {
+        appearance: base-select;
+      }
+      & select {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        /* A customizable select isn't as wide as its longest option, so it doesn't change width
+           with the hour chosen. */
+        min-inline-size: 8.5rem;
+        padding-inline: 0.75rem 0.5rem;
+        color: var(--on-surface);
+        font-size: 1rem;
+        letter-spacing: 0.0312rem;
+        cursor: pointer;
+        &:hover {
+          border-color: var(--on-surface);
+        }
+        &:is(:focus-visible, :open) {
+          border-color: var(--primary);
+          box-shadow: inset 0 0 0 1px var(--primary);
+        }
+        &::picker-icon {
+          content: "";
+          inline-size: 1.5rem;
+          block-size: 1.5rem;
+          margin-inline-start: auto;
+          background-color: var(--on-surface-variant);
+          mask: url("../../icons/material-symbols/arrow_drop_down_24px.svg") center / contain
+            no-repeat;
+          transition: rotate calc(var(--spring-default-spatial-duration) * var(--spatial-motion))
+            var(--spring-default-spatial);
+          @media (forced-colors: active) {
+            background-color: CanvasText;
+          }
+        }
+        &:open::picker-icon {
+          rotate: 180deg;
+        }
+        &::picker(select) {
+          margin-block: 0.25rem;
+          min-inline-size: anchor-size(inline);
+          max-block-size: min(21rem, 60vh);
+          padding: 0.25rem;
+          border: 0;
+          border-radius: var(--corner-large);
+          background: var(--surface-container);
+          color: var(--on-surface);
+          box-shadow: var(--elevation-level-2);
+          /* fades in and out with the effects spring, which reduced motion keeps */
+          opacity: 0;
+          transition:
+            opacity var(--spring-default-effects-duration) var(--spring-default-effects),
+            display var(--spring-default-effects-duration) allow-discrete,
+            overlay var(--spring-default-effects-duration) allow-discrete;
+          @media (forced-colors: active) {
+            border: 1px solid CanvasText;
+          }
+        }
+        &:open::picker(select) {
+          opacity: 1;
+          @starting-style {
+            opacity: 0;
+          }
+        }
+      }
+      & option {
+        display: flex;
+        align-items: center;
+        min-block-size: 3rem;
+        padding-inline: 0.75rem;
+        border-radius: var(--corner-medium);
+        cursor: pointer;
+        /* the chosen hour shows by its container, as the app's menu marks its item */
+        &::checkmark {
+          display: none;
+        }
+        &:hover {
+          background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+        }
+        &:checked {
+          background: var(--secondary-container);
+          color: var(--on-secondary-container);
+          @media (forced-colors: active) {
+            forced-color-adjust: none;
+            background: Highlight;
+            color: HighlightText;
+          }
+        }
+      }
+    }
   }
   /* Add block on wide screens: a menu in a popover beside the empty slot, on its inline-end side, or
      on its start side when there's no room (flip-inline), and above when there's no room below.
