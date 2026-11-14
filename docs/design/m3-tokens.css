@@ -2526,8 +2526,8 @@
        open), and its options in the app's menu (.menu above): surface container, the Large corner,
        elevation level 2, and the chosen hour on the secondary container. Elsewhere the select
        stays the browser's own, which works the same. The markup stays a plain <select> with its
-       options: a <button> or <selectedcontent> inside would be dropped by an older parser, and the
-       template would no longer match. */
+       options: the select's own button already shows the chosen hour, so a <button> with
+       <selectedcontent> would add nothing. */
     @supports (appearance: base-select) {
       & select,
       & select::picker(select) {
