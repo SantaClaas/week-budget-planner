@@ -8,7 +8,7 @@ The planner is also the proving ground for infrastructure meant for other apps l
 
 - **A person's plan is the same on all their devices**, including when they edited on two of them while offline.
 - **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to. That keeps the plan in its owner's hands, which is what data protection is for (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
-- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see What the server learns). The first reason is that whoever runs the server then holds no data of other people's to be responsible for; that it's secure comes close behind (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
+- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see What the server learns). Whoever runs the server then holds no data of other people's to answer for, which is what makes it possible to offer the service, and the people using it keep their plan in their own hands (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
 - **Syncing works when every other device is offline.** Devices are rarely online at the same moment, so something with better availability has to hold the changes in between. That is the server's job.
 - **Later, not now:** sharing a plan with other people.
 
