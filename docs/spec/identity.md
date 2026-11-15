@@ -22,7 +22,7 @@ Where this design already sits on that line, and how it stays on the right side:
 
 - **The cryptography has not been reviewed.** That is the owner's limit, and the risk of a flaw falls on the users. So it is said plainly, and the app must not promise more than is true: it can say that the server can't read the plan by design, and not that the design was audited. This is a design by people who build apps, not by cryptographers. It only combines standard, published constructions and says which, so that it can be checked later.
 - **The storage limit and the leases** (see [The sync protocol](sync.md)) save the owner cost. They never cost a user their plan, since every device keeps all of it, and the app warns before anything on the server is deleted.
-- **What the server still learns** (see What the server learns in [Network](network.md)) is written down, not left out, including what isn't solved.
+- **What the server still learns** (see [What the server learns](network.md#what-the-server-learns) in [Network](network.md)) is written down, not left out, including what isn't solved.
 
 What would cross it: a disclaimer used where the design could have removed the risk, logs kept because they're convenient, or a cheaper way to run the server that lets someone else see more.
 
@@ -37,13 +37,13 @@ Where this file says "to check", a fact about browsers or libraries has to be co
 
 Rules about what the user gets, or choices that are the owner's.
 
-1. **A new device is added with a pairing code** shown by a device that's already in, as a QR code and as text (see Adding a device).
-2. **"Any device with my passkey can open my week" is offered as a choice** when syncing is set up (see The passkey shortcut). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
-3. **A recovery code is shown once** when the group is created (see Losing everything).
-4. **Removing a device, adding one and deleting the server's data each need a passkey check.** Syncing itself never asks (see Signing in).
-5. **The passkeys belong to the app's exact address,** not to the whole domain (see The domain).
-6. **Keeping the passkey's record inside the passkey is not built now** (see What isn't adopted).
-7. **A person is known to the server by nothing personal:** no email address and no name (see The account).
+1. **A new device is added with a pairing code** shown by a device that's already in, as a QR code and as text (see [Adding a device](#adding-a-device)).
+2. **"Any device with my passkey can open my week" is offered as a choice** when syncing is set up (see [The passkey shortcut](#the-passkey-shortcut)). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
+3. **A recovery code is shown once** when the group is created (see [Losing everything](#losing-everything)).
+4. **Removing a device, adding one and deleting the server's data each need a passkey check.** Syncing itself never asks (see [Signing in](#signing-in)).
+5. **The passkeys belong to the app's exact address,** not to the whole domain (see [The domain](#the-domain)).
+6. **Keeping the passkey's record inside the passkey is not built now** (see [What isn't adopted](#what-isnt-adopted)).
+7. **A person is known to the server by nothing personal:** no email address and no name (see [The account](#the-account)).
 
 ## Who is who
 
@@ -51,7 +51,7 @@ Rules about what the user gets, or choices that are the owner's.
 | --- | --- | --- |
 | **Account** | what the server knows a person by: a random id, their passkeys and their group | nothing by itself |
 | **Passkey** | the person's credential, kept by their device or password manager | that the person is there and agrees, with user verification |
-| **Node** | one browser on one device, with its own keys (see Terms in [Network](network.md)) | that a message comes from that device |
+| **Node** | one browser on one device, with its own keys (see [Terms](network.md#terms) in [Network](network.md)) | that a message comes from that device |
 | **Group** | the nodes that share the plan and the key to read it | by holding the key, that a node was let in by another |
 
 **The passkey is the person's authority, and the node's key is the device's.** A passkey check lets a device in and approves what could lock the owner out. After that, the device's own key is what the server and the relay recognise, so syncing never prompts.
@@ -112,15 +112,15 @@ sequenceDiagram
 
 - **WebAuthn as specified, checked by a maintained library** on the server, never by hand: a fresh challenge per attempt that works once and expires in minutes, the origin and the RP ID checked, user verification required, discoverable credentials so nothing has to be typed.
 - **The node signs the challenge too,** which proves it holds the key it registers.
-- **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account. It can then reach the relay, and is waiting to be let into the group (see Adding a device).
+- **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account. It can then reach the relay, and is waiting to be let into the group (see [Adding a device](#adding-a-device)).
 - **After that, the node's key is the sign-in.** The transport proves it on every connection, and the server checks it against the account's nodes. There is no session to expire and no token to keep.
 - **A passkey check is asked again** only for what could lock the owner out or can't be undone: adding a device, removing one, turning the passkey shortcut on, and deleting the server's data. The server requires it and checks it.
-- **Ask before the browser asks:** the passkey prompt comes after the app has said what it's for, on a button (see Browser permissions in [Security](security.md)).
+- **Ask before the browser asks:** the passkey prompt comes after the app has said what it's for, on a button (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
 
 ## Encrypting changes and snapshots
 
 - **A key per message.** Each change or snapshot gets 32 random bytes of its own, sent with it in the clear, and its key is derived from the epoch secret and those bytes with HKDF-SHA256. A key used once can't repeat a nonce, so the cipher's nonce is fixed.
-- **ChaCha20-Poly1305** encrypts it, with the protocol version, the group, the key epoch and the kind (change or snapshot) as associated data, so it only decrypts as what it was sent as (see The envelope in [The sync protocol](sync.md)).
+- **ChaCha20-Poly1305** encrypts it, with the protocol version, the group, the key epoch and the kind (change or snapshot) as associated data, so it only decrypts as what it was sent as (see [The envelope](sync.md#the-envelope) in [The sync protocol](sync.md)).
 - **Anything that doesn't decrypt is refused,** as a value the app can report, and nothing of it is merged.
 
 ## The group's device list
@@ -154,11 +154,11 @@ sequenceDiagram
   New->>Server: Hello (see The sync protocol)
 ```
 
-- **The code is 128 random bits,** made by the old device, valid for ten minutes and for one use. As text it's 26 letters and digits in groups; as a QR code it's scanned with the camera, after the app has asked (see Browser permissions).
+- **The code is 128 random bits,** made by the old device, valid for ten minutes and for one use. As text it's 26 letters and digits in groups; as a QR code it's scanned with the camera, after the app has asked (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
 - **What the code does:** both devices derive a key from it and authenticate what they send each other with it (HMAC-SHA256). The server passes the messages on and can't forge either, since it never sees the code. So it can't put its own keys in the new device's place, or the old one's.
 - **Why not six digits to compare.** A short code is only safe with a protocol that survives guessing (a PAKE, or a commitment before the reveal), and those are easy to get wrong. A long code needs neither, and adding a device is rare.
 - **The secret is sealed to the new device's encryption key** with HPKE, so even with the code, someone who only watched couldn't open it.
-- **What happens to the new device's own plan** is in Joining in [The sync protocol](sync.md).
+- **What happens to the new device's own plan** is in [Joining](sync.md#joining) in [The sync protocol](sync.md).
 
 ### The passkey shortcut
 
@@ -188,11 +188,11 @@ sequenceDiagram
   Server-->>Others: the sealed secret, when they next connect
 ```
 
-- **The server refuses the removed node at once,** on the relay and in the protocol. It answers "not a member", and the device turns syncing off and keeps the plan it has (see What a node does when refused in [The sync protocol](sync.md)).
+- **The server refuses the removed node at once,** on the relay and in the protocol. It answers "not a member", and the device turns syncing off and keeps the plan it has (see [What a node does when refused](sync.md#what-a-node-does-when-refused) in [The sync protocol](sync.md)).
 - **The new secret is what really shuts it out.** It is sealed only to the devices that remain, so the removed device can read nothing written after, even if the server went on serving it.
 - **What it already had, it keeps.** Removing a device can't take back a plan it has read.
 - **The race, solved by the passkey check:** someone holding a stolen, unlocked device can't remove the owner's other devices, because removing needs the passkey with user verification, which is a fingerprint, a face or the device's code. Someone who also knows the device's code has the passkeys too, and then has everything the owner has. No design here stops that.
-- **A temporary node that's let go** is taken off the list without a new secret (see Removing a device in [Network](network.md)).
+- **A temporary node that's let go** is taken off the list without a new secret (see [Removing a device](network.md#removing-a-device) in [Network](network.md)).
 
 ## Losing everything
 
@@ -215,7 +215,7 @@ sequenceDiagram
 | | Read the plan | Change the plan | Stop syncing | Lock the owner out |
 | --- | --- | --- | --- | --- |
 | **The server, curious** | no | no | yes | no |
-| **The server, taken over** | not from what it stores. Yes, by serving changed app code (see What the server learns in [Network](network.md)) | the same | yes, and it can delete what it holds; the devices keep the plan | from syncing, not from the plan on a device |
+| **The server, taken over** | not from what it stores. Yes, by serving changed app code (see [What the server learns](network.md#what-the-server-learns) in [Network](network.md)) | the same | yes, and it can delete what it holds; the devices keep the plan | from syncing, not from the plan on a device |
 | **The relay** (part of the server) | no | no | yes | no |
 | **Someone on the network** | no: TLS, then the transport's own encryption, then the group's | no | by blocking the connection | no |
 | **Someone with a stolen device, locked** | no, as far as the device's own lock holds | no | no | no |
@@ -235,14 +235,14 @@ sequenceDiagram
 
 ## What this adds to the sync protocol
 
-The messages for pairing, for the sealed secrets, for removing a node and for starting a new epoch are in What the identity design adds in [The sync protocol](sync.md).
+The messages for pairing, for the sealed secrets, for removing a node and for starting a new epoch are in [What the identity design adds](sync.md#what-the-identity-design-adds) in [The sync protocol](sync.md).
 
 ## What isn't adopted
 
-From Ideas for the infrastructure in [Network](network.md):
+From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md):
 
 - **The passkey's record kept in the passkey** (`largeBlob`). The server keeps accounts and member lists anyway, so it would save about a hundred bytes per passkey, and only iCloud Keychain clearly supports it today; Chrome's team has favored PRF over it ([Corbado's tests](https://www.corbado.com/blog/webauthn-l3-credential-manager-support)). It stays an idea for the wider infrastructure.
-- **Signed leases the node carries.** The server holds each account's nodes to decide who may use the relay, so it looks them up and needs no token. A lease as a stored date is used for temporary nodes and for how long a group's data is kept (see Leases in [The sync protocol](sync.md)).
+- **Signed leases the node carries.** The server holds each account's nodes to decide who may use the relay, so it looks them up and needs no token. A lease as a stored date is used for temporary nodes and for how long a group's data is kept (see [Leases](sync.md#leases) in [The sync protocol](sync.md)).
 
 ## What the person does
 

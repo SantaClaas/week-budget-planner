@@ -6,17 +6,17 @@
 
 These are rules about what the user gets, or numbers that are the owner's to set.
 
-1. **A device that joins a group with a plan of its own asks what to do with it:** replace it with the group's, or add its activities to the group's (see Joining). An example week nobody kept, or an empty plan, is dropped without asking.
-2. **While syncing is on, an import changes the plan on every device** (see Importing while syncing).
-3. **A deletion marker is dropped 180 days after the group received it**, and a device that was away longer than that doesn't merge its old rows (see Dropping deletion markers).
-4. **The server keeps a group's data for 13 months after its last connection** (see Leases).
-5. **A group may hold 5 MB on the server** (see Snapshots and the storage limit).
+1. **A device that joins a group with a plan of its own asks what to do with it:** replace it with the group's, or add its activities to the group's (see [Joining](#joining)). An example week nobody kept, or an empty plan, is dropped without asking.
+2. **While syncing is on, an import changes the plan on every device** (see [Importing while syncing](#importing-while-syncing)).
+3. **A deletion marker is dropped 180 days after the group received it**, and a device that was away longer than that doesn't merge its old rows (see [Dropping deletion markers](#dropping-deletion-markers)).
+4. **The server keeps a group's data for 13 months after its last connection** (see [Leases](#leases)).
+5. **A group may hold 5 MB on the server** (see [Snapshots and the storage limit](#snapshots-and-the-storage-limit)).
 
 ## The idea
 
 **The devices hold the truth, and the server is a mailbox.** Every device has all the rows. The server keeps what one device wrote until the others have read it, and can't read it itself. If the server loses everything, the next device to connect puts it all back.
 
-The merge is what makes the protocol small. A change can be merged in any order and any number of times (see The idea in [Merging changes](merge.md)), so the protocol never has to deliver exactly once or in order. It only has to make sure every change reaches every member at some point.
+The merge is what makes the protocol small. A change can be merged in any order and any number of times (see [The idea](merge.md#the-idea) in [Merging changes](merge.md)), so the protocol never has to deliver exactly once or in order. It only has to make sure every change reaches every member at some point.
 
 - **The log:** per group, the server numbers each change it receives, from 1 up. That number is the change's **sequence number**.
 - **The cursor:** each node remembers the highest sequence number up to which it has merged everything.
@@ -34,7 +34,7 @@ The merge is what makes the protocol small. A change can be merged in any order 
 | the bytes it holds for the group, and the limit | the storage limit |
 | when a member last connected | deleting a group nobody uses any more |
 
-**A node,** in the `node` table beside its id and clock (see Storage in [Merging changes](merge.md)), so it survives a reload and a new leader tab:
+**A node,** in the `node` table beside its id and clock (see [Storage](merge.md#storage) in [Merging changes](merge.md)), so it survives a reload and a new leader tab:
 
 | It keeps | For |
 | --- | --- |
@@ -42,21 +42,21 @@ The merge is what makes the protocol small. A change can be merged in any order 
 | the cursor | asking for what's new |
 | **the sent stamp:** the latest of its own stamps that the server has acknowledged | knowing what it still has to send |
 | when it last had everything, by the server's time | knowing whether it was away too long |
-| how far its clock is off the server's | correcting its stamps (see The clock) |
+| how far its clock is off the server's | correcting its stamps (see [The clock](#the-clock)) |
 
 **There is no queue of unsent changes.** What a node hasn't sent is every row with a register that it stamped itself after the sent stamp. It sends those rows as one change, however many actions made them, and moves the sent stamp on when the server acknowledges it. A week of changes made offline goes up as one message with each touched row as it is now.
 
-A deleted row also keeps the time the group received its marker (see Dropping deletion markers).
+A deleted row also keeps the time the group received its marker (see [Dropping deletion markers](#dropping-deletion-markers)).
 
 ## The messages
 
-A connection is one stream of the transport (see Transport in [Network](network.md)), which is ordered and reliable and has already proven each side's node id. The protocol doesn't know more about it than that, so the same messages work over a WebSocket.
+A connection is one stream of the transport (see Transport under [Phase 2](network.md#phase-2-the-server) in [Network](network.md)), which is ordered and reliable and has already proven each side's node id. The protocol doesn't know more about it than that, so the same messages work over a WebSocket.
 
 | Message | From | Holds | The other side |
 | --- | --- | --- | --- |
 | **Hello** | node | the protocol version, the group, the cursor, whether it's temporary | answers Welcome or Refused |
 | **Welcome** | server | the server's time, the log's latest sequence number, the sequence number the snapshot covers, the bytes held and the limit, the date the group is kept until | the node asks for what's new and sends what it has |
-| **Refused** | server | why: not a member, a newer version is needed, the storage is full, a newer snapshot exists, the message is too big | see What a node does when refused |
+| **Refused** | server | why: not a member, a newer version is needed, the storage is full, a newer snapshot exists, the message is too big | see [What a node does when refused](#what-a-node-does-when-refused) |
 | **Append** | node | an id for this message, the key epoch, an encrypted change | the server gives it the next sequence number, stores it, answers Appended, and sends it to the group's other connected nodes |
 | **Appended** | server | the message's id, its sequence number, the time it arrived, the bytes held | the node moves its sent stamp on |
 | **Since** | node | a cursor | the server sends the snapshot first if the cursor is before what it covers, then every change after, then Up to date, and from then on each new change as it arrives |
@@ -99,7 +99,7 @@ sequenceDiagram
 
 - **Bound into the encryption:** the protocol version, the group, the key epoch, and whether it's a change or a snapshot. A message taken from one group, epoch or kind doesn't decrypt as another. The cipher and the keys are the identity design's.
 - **Padding:** the content is padded to the next of a few fixed sizes before it's encrypted, so the server sees roughly how much changed and not exactly.
-- **Versions:** Hello carries the protocol's version, and the server refuses one it doesn't speak, naming what's needed. A change whose inner format is newer than the node knows stops that node's merging until the app is updated (see What is received is checked in [Merging changes](merge.md)).
+- **Versions:** Hello carries the protocol's version, and the server refuses one it doesn't speak, naming what's needed. A change whose inner format is newer than the node knows stops that node's merging until the app is updated (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)).
 - **The bytes on the wire** are a fixed layout written down field by field, not a general encoding: the messages are few and their fields are numbers and byte strings. The node's side is TypeScript and the server's is Rust, and both are tested against the same file of test vectors, each a message with its exact bytes.
 
 ## Snapshots and the storage limit
@@ -147,16 +147,16 @@ Nothing depends on order, and receiving something twice is harmless. When a conn
 - **An example week nobody kept, or an empty plan, is dropped,** and the device takes the group's. Nobody chose those rows.
 - **Otherwise the device asks,** before it sends anything:
   - **"Use the synced week":** this device's rows are dropped and replaced by the group's. The dialog offers an export first.
-  - **"Add this device's activities":** its rows merge into the group's. With ids that are never shared (see The example week in [Merging changes](merge.md)), that gives all activities and blocks of both, and the person removes what's double.
+  - **"Add this device's activities":** its rows merge into the group's. With ids that are never shared (see [The example week](merge.md#the-example-week) in [Merging changes](merge.md)), that gives all activities and blocks of both, and the person removes what's double.
 - **Leaving a group,** by turning syncing off, keeps the plan on the device and stops there.
 
 ## Importing while syncing
 
-**An import on a syncing device is an action like any other:** the plan before, the file's plan after, with a new stamp, sent to every device (see Export and import in [Merging changes](merge.md)). Replacing only this device's rows wouldn't hold: the next sync would merge the group's rows back in, and the result would be neither the file nor the group's plan. The import dialog says that every device gets the imported plan. A person who wants the file on one device only turns syncing off there first.
+**An import on a syncing device is an action like any other:** the plan before, the file's plan after, with a new stamp, sent to every device (see [Export and import](merge.md#export-and-import) in [Merging changes](merge.md)). Replacing only this device's rows wouldn't hold: the next sync would merge the group's rows back in, and the result would be neither the file nor the group's plan. The import dialog says that every device gets the imported plan. A person who wants the file on one device only turns syncing off there first.
 
 ## Temporary nodes
 
-A window that keeps nothing says so in Hello (see Removing a device in [Network](network.md)).
+A window that keeps nothing says so in Hello (see [Removing a device](network.md#removing-a-device) in [Network](network.md)).
 
 - **Its lease is short:** it stays on the member list for an hour after its last message, and is renewed by being connected.
 - **It starts with no cursor,** so it gets the snapshot and what follows, every time.
@@ -166,7 +166,7 @@ A window that keeps nothing says so in Hello (see Removing a device in [Network]
 
 **A marker is dropped 180 days after the group received it.** That time is the server's: Appended and Change carry when the change arrived, and a node writes it on each row it marks or sees marked. A snapshot carries it for its deleted rows. It is never the stamp's time, which a wrong clock could set.
 
-**A node that last had everything more than 180 days ago was away too long.** It knows from Up to date, which it noted by the server's time. It then doesn't merge its state, because it may hold rows whose markers are gone and would bring them back. It does this instead (see Returning after a long time in [Merging changes](merge.md)):
+**A node that last had everything more than 180 days ago was away too long.** It knows from Up to date, which it noted by the server's time. It then doesn't merge its state, because it may hold rows whose markers are gone and would bring them back. It does this instead (see [Returning after a long time](merge.md#returning-after-a-long-time) in [Merging changes](merge.md)):
 
 1. It takes the group's snapshot and the changes after it into an empty set of rows.
 2. From its old rows, it carries over what it never sent:
@@ -188,7 +188,7 @@ A window that keeps nothing says so in Hello (see Removing a device in [Network]
 
 ## The clock
 
-Welcome and Up to date carry the server's time. A node notes how far its own clock is off and stamps with its clock plus that offset, also offline (see "A clock that is wrong" in [Merging changes](merge.md)). The time a message took to arrive is ignored: it's a second at most, and stamps only have to order what people do.
+Welcome and Up to date carry the server's time. A node notes how far its own clock is off and stamps with its clock plus that offset, also offline (see [A clock that is wrong](merge.md#a-clock-that-is-wrong) in [Merging changes](merge.md)). The time a message took to arrive is ignored: it's a second at most, and stamps only have to order what people do.
 
 ## What the server learns
 
@@ -224,15 +224,15 @@ It doesn't learn what changed, how many activities or blocks there are, or anyth
 
 ## The two state machines
 
-**Each side of the protocol is a pure state machine:** it takes what happened (a message, the time passing, a connection opening or closing; for the node also "an action was saved", for the server also "a member was removed") and returns what to do (messages to send, changes to merge, rows to store). The transport, the database and the clock are at the edges (see "A pure core, with side effects at the edges" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+**Each side of the protocol is a pure state machine:** it takes what happened (a message, the time passing, a connection opening or closing; for the node also "an action was saved", for the server also "a member was removed") and returns what to do (messages to send, changes to merge, rows to store). The transport, the database and the clock are at the edges (see [A pure core, with side effects at the edges](../guidelines/principles.md#a-pure-core-with-side-effects-at-the-edges) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 
 - **The node's** is TypeScript, beside the merge. **The server's** is Rust.
-- **Simulation** runs several nodes and the server's machine in one process, with a seeded scheduler over the messages (see Testing in [Network](network.md)). The node's tests use a small model of the server written in TypeScript, and the server's tests use scripted nodes. The shared test vectors keep the bytes the same, and an end-to-end test in a browser against the real server checks the two together.
+- **Simulation** runs several nodes and the server's machine in one process, with a seeded scheduler over the messages (see [Testing](network.md#testing) in [Network](network.md)). The node's tests use a small model of the server written in TypeScript, and the server's tests use scripted nodes. The shared test vectors keep the bytes the same, and an end-to-end test in a browser against the real server checks the two together.
 - **What the simulation must show:** all nodes that have synced show the same plan; nothing a node saved is lost, also when connections drop at every possible point; a removed node gets nothing new; the limit holds; a server that restarts or loses data is filled again; and a node away for more than 180 days brings back no deleted row.
 
 ## Terms
 
-Technical terms, for code and docs (see Terms in [Network](network.md)):
+Technical terms, for code and docs (see [Terms](network.md#terms) in [Network](network.md)):
 
 | Term | Meaning |
 | --- | --- |

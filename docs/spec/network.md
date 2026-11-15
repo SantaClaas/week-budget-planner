@@ -7,22 +7,22 @@ The planner is also the proving ground for infrastructure meant for other apps l
 ## Goals
 
 - **A person's plan is the same on all their devices**, including when they edited on two of them while offline.
-- **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to. That keeps the plan in its owner's hands, which is what data protection is for (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
-- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see What the server learns). Whoever runs the server then holds no data of other people's to answer for, which is what makes it possible to offer the service, and the people using it keep their plan in their own hands (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
+- **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to. That keeps the plan in its owner's hands, which is what data protection is for (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
+- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see [What the server learns](#what-the-server-learns)). Whoever runs the server then holds no data of other people's to answer for, which is what makes it possible to offer the service, and the people using it keep their plan in their own hands (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
 - **Syncing works when every other device is offline.** Devices are rarely online at the same moment, so something with better availability has to hold the changes in between. That is the server's job.
 - **Later, not now:** sharing a plan with other people.
 
 ## Terms
 
-These are technical terms for code and docs. The copy will say "device", and what else it says is decided with the screens (see Names in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+These are technical terms for code and docs. The copy will say "device", and what else it says is decided with the screens (see [Names](../guidelines/principles.md#names) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 
 | Term | Meaning |
 | --- | --- |
 | **Node** | One participant with its own key pair: a browser profile on a device, or a server. Everything that takes part is a node. |
-| **Cluster** | The processes of one node. They share the node's keys and trust each other fully, so there is no cryptography between them. The open tabs of one browser are a cluster: one of them is the leader, holds the database (see The database in [Persistence](persistence.md)), and will hold the node's keys and its one connection to the outside. |
+| **Cluster** | The processes of one node. They share the node's keys and trust each other fully, so there is no cryptography between them. The open tabs of one browser are a cluster: one of them is the leader, holds the database (see [Database engine](persistence.md#database-engine-same-as-flashcut) in [Persistence](persistence.md)), and will hold the node's keys and its one connection to the outside. |
 | **Group** | The nodes that share one plan and the key to read it: a person's devices. Later this can be an MLS group. |
 | **Server** | A node that is a peer on the transport, but not a member of any group. It keeps each group's encrypted changes and hands them to the group's members. |
-| **Change** | What one user action did to the plan, in a form that merges (see Phase 1). |
+| **Change** | What one user action did to the plan, in a form that merges (see [Phase 1](#phase-1-changes-that-merge)). |
 | **Snapshot** | The whole plan at one point, encrypted like a change. It replaces all the changes before it. |
 
 Don't say "ring": it suggests a hash ring, which this design doesn't have.
@@ -50,11 +50,11 @@ flowchart LR
 - **The server only appends.** It can't read changes, so it can't merge or shrink them. It keeps an append-only log of encrypted changes per group, with a storage limit. A device makes room by uploading a snapshot and telling the server to drop everything before it. The limit is what makes devices do that.
 - **A simple group key first, MLS later.** At the start, the devices of a group share one key. Every message carries the key's epoch from the first version, so MLS can replace the key handling later without a new format.
 - **Who may use the server:** invite codes and passkeys. The server is run by the project's author.
-- **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see Hosting below).
+- **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see [Hosting](#hosting) below).
 - **Putting state on the server is fine where it's needed.** An invite code that works once, a group's member list and a blocklist can't live on the client alone.
 - **Rust where there's a reason.** The server is Rust. In the app, a library that is Rust compiled to WebAssembly under a JavaScript wrapper is used as the Rust crate directly, in one WebAssembly module of our own. The app's own logic stays TypeScript until something needs it moved. The merge logic has no need to be shared with the server, because the server never merges.
-- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under Phase 2).
-- **Deterministic simulation testing from the first line** (see Testing).
+- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under [Phase 2](#phase-2-the-server)).
+- **Deterministic simulation testing from the first line** (see [Testing](#testing)).
 
 ## Phases
 
@@ -64,7 +64,7 @@ No network. The plan is kept so that two devices that saw the same changes end u
 
 - **Rows, registers and stamps.** Each activity, block and the settings is a row, split into registers that hold a value and a stamp. Merging takes the later stamp, register by register. A change is the rows an action touched, a snapshot is all of them, and one function merges either.
 - **No library, and no log of operations.** The plan is tens of rows, and the current rows with their stamps are all there is to keep and to send.
-- **A pure core.** Merging is a pure function, and the protocol in phase 2 is a state machine that takes messages and the time and returns messages and changes to apply (see "A pure core, with side effects at the edges" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+- **A pure core.** Merging is a pure function, and the protocol in phase 2 is a state machine that takes messages and the time and returns messages and changes to apply (see [A pure core, with side effects at the edges](../guidelines/principles.md#a-pure-core-with-side-effects-at-the-edges) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 - **Nothing the user sees changes,** except that the example week gets new ids when it's loaded.
 
 ### Phase 2: the server
@@ -83,26 +83,26 @@ A device signs in, joins or creates a group, and syncs its changes through the s
   - **Cost:** about 0.7 MB compressed, loaded only for users who sync (see [`docs/LOADING.md`](../LOADING.md)). iroh has been 1.0 since June 2026 and releases a minor every two to four weeks, so its version is pinned and updated on purpose.
   - **The other iroh pieces aren't used.** iroh-docs shows keys, authors and timestamps in plain text to every peer that syncs, the server included, and iroh-gossip only reaches peers that are online together. The sync protocol is our own, over one iroh stream.
   - **The fallback:** the same messages over a WebSocket to the server. It loses addressing by key and needs a challenge and signature of our own; it saves the download and the relay.
-  - **The module is loaded by its hash:** the build writes each WebAssembly module's hash into the code that fetches it (`fetch` with `integrity`), so the browser refuses bytes that aren't the ones the build made. That guards the way from the server to the page, not against the server itself (see What the server learns).
+  - **The module is loaded by its hash:** the build writes each WebAssembly module's hash into the code that fetches it (`fetch` with `integrity`), so the browser refuses bytes that aren't the ones the build made. That guards the way from the server to the page, not against the server itself (see [What the server learns](#what-the-server-learns)).
   - Tested in Chromium only. Firefox and Safari, and a relay that drops and comes back, are still to check.
 - **Encryption:** every change and snapshot is encrypted on the device with a key derived from the group key, with authenticated encryption. What a message is for (the group, the key epoch, the kind of message) is bound into it, so it can't be replayed in another place.
-- **The app's side:** the leader tab holds the node's keys and the one connection. The Content Security Policy has to allow that connection (`connect-src`, see [Security](security.md)). The app explains syncing in its own UI before it uses the network for it (see Browser permissions in [Security](security.md)). The save status in the top app bar needs states for syncing.
+- **The app's side:** the leader tab holds the node's keys and the one connection. The Content Security Policy has to allow that connection (`connect-src`, see [Security](security.md)). The app explains syncing in its own UI before it uses the network for it (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)). The save status in the top app bar needs states for syncing.
 
 ### Hosting
 
 Serving the app from the server's origin changes more than the address:
 
-- **The headers come from the server.** The cross-origin isolation headers and the whole Content Security Policy, `frame-ancestors` included, are sent as headers. The service worker no longer has to add them, and the limited storage level it causes on a first visit or with service workers blocked goes away for that reason (see Hosting and Progressive enhancement in [Persistence](persistence.md)).
+- **The headers come from the server.** The cross-origin isolation headers and the whole Content Security Policy, `frame-ancestors` included, are sent as headers. The service worker no longer has to add them, and the limited storage level it causes on a first visit or with service workers blocked goes away for that reason (see [Hosting](#hosting) and [Progressive enhancement](persistence.md#progressive-enhancement) in [Persistence](persistence.md)).
 - **The app must still open when the server is down or the device is offline**, or it isn't local-first. So the service worker stays, to keep the app's files (see installing as a PWA in the [overview](overview.md)).
 - **A new origin starts empty, and that's fine.** The database, the settings and a passkey's scope all belong to the origin, so a plan saved on GitHub Pages doesn't appear at the new address. Only the author uses the app there, so nothing is migrated and GitHub Pages is dropped: an export and an import carry a plan over. Choose the domain once, since passkeys are tied to it.
-- **Whoever serves the app's code could change it.** A server that can't read the plan could still send a page that reads it and sends it away. That was true of GitHub Pages too, but now it's the same server that stores the encrypted changes. It goes in What the server learns.
+- **Whoever serves the app's code could change it.** A server that can't read the plan could still send a page that reads it and sends it away. That was true of GitHub Pages too, but now it's the same server that stores the encrypted changes. It goes in [What the server learns](#what-the-server-learns).
 
 ### Later
 
 - **MLS** (Messaging Layer Security, RFC 9420), through [OpenMLS](https://openmls.tech/), in place of the simple group key. It adds forward secrecy, recovery after a key leaked, and removing a member without handing out a new key by hand. The server takes the role MLS calls the delivery service. MLS needs a group's commits in one order, which the server can give without reading them.
 - **Sharing a plan with other people**, which is what MLS is really needed for.
 - **Sync between devices that are online together,** without the server holding anything. Between browsers that still goes through a relay; native clients could connect directly.
-- **Hiding more from the server** (see What the server learns).
+- **Hiding more from the server** (see [What the server learns](#what-the-server-learns)).
 
 ## What the server learns
 
@@ -122,8 +122,8 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 
 - **A device removes another device**, as in a chat app's list of signed-in devices. The server doesn't decide; it keeps the group's current member list and refuses a node that's no longer on it. The remaining devices get a new group key.
 - **The race to solve:** someone who holds a stolen, unlocked device could remove the owner's other devices first. MLS doesn't prevent this either: any member can remove another, and the policy is the application's. A member change therefore needs proof that the owner is present. Two candidates: a fresh passkey check with user verification, or a recovery key shown once when the group is created.
-- **A node that keeps nothing says so when it joins.** A window without the database, such as a private one, can sync while it's open (see The limited storage levels in [Merging changes](merge.md)), and it's a new node each time. Declared as temporary, it can be let go without anyone deciding:
-  - **It gets a short lease** (see Leases and nonces below), and the server takes it off the member list when the lease runs out or the window closes. The list of devices shows it as temporary, and removing it earlier is one tap that needs no thought.
+- **A node that keeps nothing says so when it joins.** A window without the database, such as a private one, can sync while it's open (see [The limited storage levels](merge.md#the-limited-storage-levels) in [Merging changes](merge.md)), and it's a new node each time. Declared as temporary, it can be let go without anyone deciding:
+  - **It gets a short lease** (see Leases and nonces under [Ideas for the infrastructure](#ideas-for-the-infrastructure)), and the server takes it off the member list when the lease runs out or the window closes. The list of devices shows it as temporary, and removing it earlier is one tap that needs no thought.
   - **It never comes back with old rows,** so it doesn't count toward how long deletion markers have to be kept.
   - **It only says it of itself.** A node that claims to be temporary and keeps the group key anyway can't be stopped by the claim. Letting a temporary node go therefore doesn't hand out a new group key by itself; removing a device that may be in the wrong hands still does. With MLS, removing a member is routine, and every departure can renew the key.
   - **The server learns that a node is temporary,** since it enforces the short lease. That goes with What the server learns.
@@ -134,7 +134,7 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 These come from the wider goal of infrastructure for several apps. The planner needs little of it, since almost nothing in a plan needs a server's approval. They are recorded so they aren't lost, and none of them blocks the phases above.
 
 - **Server data that lives on the client.** What the server must approve, it signs and hands back to the client, which presents it when needed. What must stay secret from the client, the server encrypts and stores on the client. A data export is then nearly free, because the data is already with the user. Known limits:
-  - A client can present an old version that was valid once. A lease bounds that (see Leases and nonces below).
+  - A client can present an old version that was valid once. A lease bounds that (see Leases and nonces under [Ideas for the infrastructure](#ideas-for-the-infrastructure)).
   - Anything that may happen only once needs state on the server.
   - A signature if other nodes have to check the approval, as with a certificate authority. A MAC (message authentication code) only if the server alone checks it.
   - Data the server encrypts so that the user can't read it is still data about the user.
@@ -167,7 +167,7 @@ These come from the wider goal of infrastructure for several apps. The planner n
 
 ## Observability
 
-Messages can carry a W3C Trace Context `traceparent`, so one action can be followed from a tab through the leader and the server to another device, with OpenTelemetry. It travels inside the encrypted part, or the server could link messages by it. Sending traces anywhere needs the user's consent first (see Monitoring under "Where rules are enforced" in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+Messages can carry a W3C Trace Context `traceparent`, so one action can be followed from a tab through the leader and the server to another device, with OpenTelemetry. It travels inside the encrypted part, or the server could link messages by it. Sending traces anywhere needs the user's consent first (see Monitoring under [Where rules are enforced](../guidelines/principles.md#where-rules-are-enforced) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 
 ## What changes in the rest of the spec
 
@@ -175,7 +175,7 @@ When a phase is built, these get revised with it:
 
 - [Persistence](persistence.md) and [Security](security.md) say there is no backend and no account.
 - [Security](security.md): the Content Security Policy becomes a header, and the second WebAssembly module loads under `'wasm-unsafe-eval'`, which is already there. With the relay on the app's origin, `connect-src` needs nothing new.
-- [Persistence](persistence.md): Writes and undo, the save status, export and import, and Hosting (the server serves the app from its own origin, see Hosting above).
+- [Persistence](persistence.md): Writes and undo, the save status, export and import, and Hosting (the server serves the app from its own origin, see [Hosting](#hosting) above).
 - [`docs/LOADING.md`](../LOADING.md): the WebAssembly module gets a tier. It should load only for users who sync.
 - [Browser support](browser-support.md): whatever the transport and the passkeys need.
 
