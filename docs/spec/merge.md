@@ -95,7 +95,7 @@ What else was looked at:
 - **Undoing a delete** writes existence again, with a new stamp, and the row comes back as the device that undid it last showed it: every register that differs from that gets the new stamp too. An edit another device made to the row while it was deleted is replaced by it. The person who presses Undo gets back what they saw, and an import of an older file shows the file's values for rows that had been deleted since.
 - **A block shows only while its activity exists.** When one device deletes an activity and another adds a block to it, the block's row merges in but isn't part of the plan. If the deletion is undone, it appears with the activity. Deleting an activity still marks the blocks it had as deleted too, as it removes them today; the rule is for the blocks the deleting device didn't know about.
 - **Ids are never used again**, so a deleted row can't be mistaken for a new one.
-- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces under [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md)), so the rule belongs to the later phases. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What the later phases have to settle is written under [Returning after a long time](#returning-after-a-long-time).
+- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Once devices sync, a marker is dropped when every device in the group has it (see [Deletion markers](self-service.md#deletion-markers) in [Self-service](self-service.md)). That needs no clock and no new format.
 
 ## Order
 
@@ -181,18 +181,6 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **What such a window can't do is keep changes it hasn't sent.** Closed while offline, they're gone, as everything is at the level with no storage. The save status has to say so.
 - **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one, and it tells the group that it's temporary, so it can be let go when it closes (see [Removing a device](network.md#removing-a-device) in [Network](network.md)). Without the database there's no leader either, so each such tab is its own node with its own connection.
 - **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with the later phases.
-
-## Returning after a long time
-
-This is for the later phases, since it depends on the lease. It's written down because it decides whether markers can ever be dropped, and the format above has to allow it.
-
-The danger: once the other devices have dropped a marker, a device that was away since before the deletion still has the row, and merging its row would bring it back. So a device that returns after its lease doesn't merge its state. It takes the group's snapshot and carries over only what it never sent, by the stamps later than its last sync:
-
-- **A row it created itself and never sent** is added, with a new existence stamp.
-- **A row that is in the snapshot** merges as usual.
-- **A row it edited that isn't in the snapshot** was deleted while it was away. The edit is dropped, which matches "a delete wins".
-
-An old `.db` file imported and then merged, should that feature come, is the same case, and gets the same rule.
 
 ## Tests
 

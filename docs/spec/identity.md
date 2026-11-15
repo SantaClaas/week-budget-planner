@@ -1,6 +1,6 @@
 # Identity, sign-in and groups
 
-**Phase 3 of [Network](network.md), table service, designed and not built yet.** It was written before self-service was put first, so accounts and the server's checks run through it; much of it (nodes, keys, the group, pairing) holds without a server, and the self-service design will say what changes (see [Self-service and table service](network.md#self-service-and-table-service) in [Network](network.md)). Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
+**Phase 3 of [Network](network.md), table service, designed and not built yet.** What an account and a server add to [self-service](self-service.md): how a person signs in, the group's key for what the mailbox stores, and ways into the group that need no second device at hand. The group itself, its device list, and adding and removing a device with a code are in [Self-service](self-service.md), and need no account. How changes travel to the mailbox is in [The sync protocol](sync.md). The work was [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91), reshaped by [SantaClaas/week-budget-planner#105](https://github.com/SantaClaas/week-budget-planner/issues/105).
 
 ## What the cryptography is for
 
@@ -35,15 +35,16 @@ Where this file says "to check", a fact about browsers or libraries has to be co
 
 ## Decided
 
-Rules about what the user gets, or choices that are the project's author's.
+Rules about what the person gets, or choices that are the project's author's.
 
-1. **A new device is added with a pairing code** shown by a device that's already in, as a QR code and as text (see [Adding a device](#adding-a-device)).
-2. **"Any device with my passkey can open my week" is offered as a choice** when syncing is set up (see [The passkey shortcut](#the-passkey-shortcut)). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
-3. **A recovery code is shown once** when the group is created (see [Losing everything](#losing-everything)).
-4. **Removing a device, adding one and deleting the server's data each need a passkey check.** Syncing itself never asks (see [Signing in](#signing-in)).
+1. **Table service needs an account:** an invite code and a passkey. Self-service needs neither (see [The account](#the-account)).
+2. **"Any device with my passkey can open my week" is offered as a choice** when table service is set up (see [The passkey shortcut](#the-passkey-shortcut)). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
+3. **A recovery code is shown once** when table service is set up (see [Losing everything](#losing-everything)).
+4. **What touches the account or the server's data needs a passkey check:** removing a device from the mailbox, turning the passkey shortcut on, and deleting the server's data. Syncing itself never asks (see [Signing in](#signing-in)).
 5. **The passkeys belong to the app's exact address,** not to the whole domain (see [The domain](#the-domain)).
 6. **Keeping the passkey's record inside the passkey is not built now** (see [What isn't adopted](#what-isnt-adopted)).
 7. **A person is known to the server by nothing personal:** no email address and no name (see [The account](#the-account)).
+8. **A device can also be added without a second one present:** approved later by a device that's in, or by the passkey alone (see [Adding a device](#adding-a-device)).
 
 ## Who is who
 
@@ -52,7 +53,7 @@ Rules about what the user gets, or choices that are the project's author's.
 | **Account** | what the server knows a person by: a random id, their passkeys and their group | nothing by itself |
 | **Passkey** | the person's credential, kept by their device or password manager | that the person is there and agrees, with user verification |
 | **Node** | one browser on one device, with its own keys (see [Terms](network.md#terms) in [Network](network.md)) | that a message comes from that device |
-| **Group** | the nodes that share the plan and the key to read it | by holding the key, that a node was let in by another |
+| **Group** | the nodes that share the plan. It exists without an account, in self-service; table service gives it a key for what the mailbox stores | by being on the device list, that a node was let in by another |
 
 **The passkey is the person's authority, and the node's key is the device's.** A passkey check lets a device in and approves what could lock the person out. After that, the device's own key is what the server and the relay recognise, so syncing never prompts.
 
@@ -62,7 +63,7 @@ Rules about what the user gets, or choices that are the project's author's.
 | --- | --- | --- | --- | --- |
 | **Node signing key** | Ed25519 | on the device, the first time syncing is set up | on the device, wrapped (see below) | the node's id on the transport: it is the iroh endpoint key ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)) |
 | **Node encryption key** | X25519 | with it | the same | receiving the group's secret |
-| **Epoch secret** | 32 random bytes | by the device that creates the group, and again by the one that removes a device | on each member, wrapped | encrypting changes and snapshots; "the group key" |
+| **Epoch secret** | 32 random bytes | by the device that turns table service on, and again by the one that removes a device | on each member, wrapped | encrypting changes and snapshots; "the group key" |
 | **Storage key** | AES-256-GCM, not extractable | on the device | in IndexedDB, as a key the page can use and not read | wrapping the three above where they're stored |
 | **Recovery key** | X25519, its private half derived from the recovery code | when the group is created | the public half in the group; the private half only as the code the person keeps | opening the group when no device is left |
 | **Passkey key** | X25519, its private half derived from the passkey's PRF output | when the shortcut is turned on | the public half in the group; the private half nowhere | the passkey shortcut |
@@ -105,14 +106,14 @@ sequenceDiagram
   App->>Server: the new passkey, the node's public keys,<br/>the challenge signed by the node
   Server->>Server: checks all of it, marks the code used,<br/>stores the account, passkey and node
   Server-->>App: registered: the node may use the relay
-  App->>App: creates the group and its first epoch secret
+  App->>App: makes the group's first epoch secret
   App->>Person: shows the recovery code, once
   App->>Server: the first snapshot, encrypted
 ```
 
 - **WebAuthn as specified, checked by a maintained library** on the server, never by hand: a fresh challenge per attempt that works once and expires in minutes, the origin and the RP ID checked, user verification required, discoverable credentials so nothing has to be typed.
 - **The node signs the challenge too,** which proves it holds the key it registers.
-- **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account, waiting to be let into the group. A device that doesn't have the passkey can still join, by pairing alone (see [Adding a device](#adding-a-device)).
+- **Signing in on another device** is the same without the invite code: a passkey check, and the node is on the account. A device that is already in the group, by self-service, then needs only the group's secret, which another device gives it or the mailbox holds sealed for it. One that isn't in the group yet is added as in [Adding a device](#adding-a-device).
 - **After that, the node's key is the sign-in.** The transport proves it on every connection, and the server checks it against the account's nodes. There is no session to expire and no token to keep.
 - **A passkey check is asked again** only for what could lock the person out or can't be undone: adding a device, removing one, turning the passkey shortcut on, and deleting the server's data. The server requires it and checks it.
 - **Ask before the browser asks:** the passkey prompt comes after the app has said what it's for, on a button (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
@@ -125,56 +126,25 @@ sequenceDiagram
 
 ## The group's device list
 
-**Who is in the group is written inside the group, where the server can't change it:** a list of the devices, each with its name, its two public keys, when it joined and whether it's temporary or removed. It syncs like the plan's rows, encrypted like them.
+**Who is in the group is written inside the group,** as rows that sync like the plan's (see [The device list](self-service.md#the-device-list) in [Self-service](self-service.md)). With the mailbox, those rows are encrypted like everything else it's given.
 
-**Why it can't be the server's list.** A device that hands out the epoch secret seals it to the public keys of the group's members. If it took those keys from the server, a server that added a key of its own would be sent the secret. The server keeps a list too, of node ids, to decide who may connect; nothing secret is ever sent on the strength of it.
+**Why it can't be the server's list.** A device that hands out the epoch secret seals it to the keys of the group's members. If it took those keys from the server, a server that added a key of its own would be sent the secret. The server keeps a list too, of node ids, to decide who may connect; nothing secret is ever sent on the strength of it.
 
 ## Adding a device
 
-**A device that's already in lets the new one in, with a pairing code that doesn't pass through the server.**
+**A device is added with a code, between the two devices, as in self-service** (see [Adding a device](self-service.md#adding-a-device) in [Self-service](self-service.md)). No account and no server take part. Table service adds two things to it, and two more ways in.
 
-```mermaid
-sequenceDiagram
-  actor Person
-  participant New as New device
-  participant Server
-  participant Old as Device already in
-  Person->>Old: "Add a device", passkey check
-  Old->>Server: a waiting room for this pairing, named by a hash of the code
-  Old->>Person: shows a pairing code, as a QR code and as text
-  Person->>New: scans or types the code
-  opt the new device has the passkey
-    Person->>New: passkey check
-  end
-  New->>Server: "let me in", with its public keys,<br/>authenticated with the code
-  Server-->>Old: passes it on
-  Old->>Old: checks it with the code
-  Old->>Person: "Let this device in?", with what it is
-  Person-->>Old: confirms
-  Old->>Server: admit this node, and the epoch secret sealed to it,<br/>authenticated with the code
-  Server-->>New: passes it on
-  New->>New: checks it, opens it
-  Old->>Server: the device list with the new device, as a change
-  New->>Server: Hello (see The sync protocol)
-```
-
-- **The code is 128 random bits,** made by the old device, valid for ten minutes and for one use. As text it's 26 letters and digits in groups; as a QR code it's scanned with the camera, after the app has asked (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
-- **What the code does:** both devices derive a key from it and authenticate what they send each other with it (HMAC-SHA256). The server passes the messages on and can't forge either, since it never sees the code. So it can't put its own keys in the new device's place, or the old one's.
-- **Why not six digits to compare.** A short code is only safe with a protocol that survives guessing (a PAKE, or a commitment before the reveal), and those are easy to get wrong. A long code needs neither, and adding a device is rare.
-- **The secret is sealed to the new device's encryption key** with HPKE, so even with the code, someone who only watched couldn't open it.
-- **The device that's in vouches for the new one.** It passed a passkey check to start the pairing, so the server admits the new node on its word. The new device doesn't have to sign in first, which also lets in a device that doesn't have the passkey, such as one outside the ecosystem the passkey syncs in. It can add a passkey of its own afterwards.
-- **Where the new device does have the passkey, it passes a check too.** Then the code alone isn't enough to get in.
-- **Where it doesn't, the code is all that's needed,** so the code has to stay between the two screens. Someone who saw it and used it within its ten minutes, before the person did, would be asking to join. That is why the old device shows what is asking, and hands over nothing until the person confirms; why the code works once; and why the person's own device failing to join is a sign that something else did. The device list shows every device, and removing one takes a passkey check.
-- **Why the old device shows the code and the new one reads it,** and not the other way round. If the trusted device scanned a code, an attacker could get someone to scan theirs, as has been done against messengers that link devices that way. Here the secret starts on the trusted device, and an attacker has to see its screen.
-- **The new device reaches the server by ordinary requests until it's admitted,** since the relay only lets known nodes through: the old device opens a waiting room named by a hash of the code, and the new one finds it with the code.
-- **What happens to the new device's own plan** is in [Joining](sync.md#joining) in [The sync protocol](sync.md).
+- **The group's secret goes with it.** When a device is let in, the device that lets it in gives it the epoch secret over their connection, and tells the server the new node belongs to the group (see [What the identity design adds](sync.md#what-the-identity-design-adds) in [The sync protocol](sync.md)).
+- **Where the new device has the passkey, it signs in with it,** which puts it on the account, so the mailbox serves it.
+- **Why the device that's in shows the code and the new one reads it,** and not the other way round. If the trusted device scanned a code, an attacker could get someone to scan theirs, as has been done against messengers that link devices that way. Here the secret starts on the trusted device, and an attacker has to see its screen.
+- **Two ways that need no second device at hand,** which only a server that keeps things makes possible: [approved later](#approved-later-by-a-device-thats-in), and [the passkey shortcut](#the-passkey-shortcut).
 
 ### Approved later, by a device that's in
 
 **A new device can ask to join with the passkey alone, and be let in whenever one of the person's devices is next online.** No code, and the two devices needn't be present together.
 
 1. The new device makes its keys and passes a passkey check whose challenge is made from those keys. The passkey's answer then says: the person holding this passkey vouches for these keys.
-2. It leaves the answer with the group: on the server in table service, or with the first device it reaches through the relay in self-service.
+2. It leaves the answer with the mailbox, which keeps it for the group (see [What the identity design adds](sync.md#what-the-identity-design-adds) in [The sync protocol](sync.md)).
 3. A device that's in checks the answer against the passkey's record, which the group keeps in its own data (see [What isn't adopted](#what-isnt-adopted)), shows what is asking, and waits for the person to confirm.
 4. It seals the epoch secret to the new device, and adds it to the device list.
 
@@ -267,7 +237,7 @@ From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in 
 
 - **The passkey's record kept away from the server.** The idea: the server signs a passkey's record (its id and public key), the person's devices keep it, and a device sends it along with a passkey's answer. Two carriers were looked at:
   - **In the passkey itself** (`largeBlob`): only iCloud Keychain clearly supports it today, and Chrome's team has favored PRF over it ([Corbado's tests](https://www.corbado.com/blog/webauthn-l3-credential-manager-support)).
-  - **In the group:** the records as rows in the group's encrypted data, beside the device list, handed to a new device when it joins. **This part is adopted,** since [approving a device later](#approved-later-by-a-device-thats-in) checks a passkey against it, and self-service has no server to ask.
+  - **In the group:** the records as rows in the group's encrypted data, beside the device list, handed to a new device when it joins. **This part is adopted,** since [approving a device later](#approved-later-by-a-device-thats-in) checks a passkey against it, and a group in self-service guards its device list with it (see [Who may change the group](self-service.md#who-may-change-the-group) in [Self-service](self-service.md)).
   - **Where neither reaches:** the passkey shortcut and recovery after losing every device, where a new device has the passkey and nothing else. For those the server has to keep the public key.
   - **Why not now:** both of those ways in are offered, so the server keeps the record anyway. It also keeps each account's nodes, removed passkeys and blocks regardless, and a public key isn't sensitive, so what would be saved is state, not exposure. A later version could keep the records in the group, and on the server only for accounts that turn the passkey shortcut on.
 - **Signed leases the node carries.** The server holds each account's nodes to decide who may use the relay, so it looks them up and needs no token. A lease as a stored date is used for temporary nodes and for how long a group's data is kept (see [Leases](sync.md#leases) in [The sync protocol](sync.md)).
@@ -276,8 +246,8 @@ From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in 
 
 Only the steps; the screens are their own issue ([SantaClaas/week-budget-planner#99](https://github.com/SantaClaas/week-budget-planner/issues/99)).
 
-- **Setting up syncing:** read what it does, enter an invite code, create a passkey, choose whether the passkey alone may open the week, write down the recovery code.
-- **Adding a device:** on a device that's in, choose "Add a device" and pass the passkey check; scan or type the code on the new one; pass a passkey check there if it has the passkey; confirm on the first device what is asking to join. With the passkey shortcut on, signing in with the passkey on the new device is enough. Then choose what to do with a plan already on the new device. Or, with no code: sign in with the passkey on the new device, and confirm it on a device that's in whenever that one is next used.
+- **Setting up table service:** read what it adds and what the server stores, enter an invite code, create a passkey, choose whether the passkey alone may open the week, write down the recovery code.
+- **Adding a device:** as in self-service, with a code (see [What the person does](self-service.md#what-the-person-does) in [Self-service](self-service.md)). Or, with no second device at hand: sign in with the passkey on the new one, and confirm it on a device that's in whenever that one is next used; with the passkey shortcut on, signing in is enough.
 - **Removing a device:** pick it in the list, pass the passkey check.
 - **A private window:** sign in with the passkey, and the same as adding a device. It's listed as temporary and goes when it closes.
 - **After losing every device:** sign in with the passkey on a new one, and enter the recovery code, or nothing with the passkey shortcut.

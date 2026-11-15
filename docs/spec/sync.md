@@ -1,6 +1,6 @@
 # The sync protocol
 
-**Phase 3 of [Network](network.md), table service, designed and not built yet.** It was written before self-service was put first, so it describes syncing with the server; the design for two devices syncing with each other comes before it and will reshape it (see [Self-service and table service](network.md#self-service-and-table-service) in [Network](network.md)). How changes and snapshots travel between a node and the server, and what each side keeps. What a change and a snapshot are, and how they merge, is in [Merging changes](merge.md). Who a node is, how a person signs in and how a group's devices share a key is its own design ([SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91)); this file takes "a node that is a member of a group and holds its key" as given. The work is [SantaClaas/week-budget-planner#90](https://github.com/SantaClaas/week-budget-planner/issues/90).
+**Phase 3 of [Network](network.md), table service, designed and not built yet.** What the server's mailbox adds to [self-service](self-service.md), where a person's devices sync with each other: it keeps changes for devices that are offline, and holds a backup. How rows merge is in [Merging changes](merge.md), and accounts and the group's key are in [Identity, sign-in and groups](identity.md). This file takes "a device that is in a group, with an account and the group's key" as given. The work was [SantaClaas/week-budget-planner#90](https://github.com/SantaClaas/week-budget-planner/issues/90), reshaped by [SantaClaas/week-budget-planner#105](https://github.com/SantaClaas/week-budget-planner/issues/105).
 
 ## Decided
 
@@ -8,7 +8,7 @@ These are rules about what the user gets, or numbers that are the project's auth
 
 1. **A device that joins a group with a plan of its own asks what to do with it:** replace it with the group's, or add its activities to the group's (see [Joining](#joining)). An example week nobody kept, or an empty plan, is dropped without asking.
 2. **While syncing is on, an import changes the plan on every device** (see [Importing while syncing](#importing-while-syncing)).
-3. **A deletion marker is dropped 180 days after the group received it**, and a device that was away longer than that doesn't merge its old rows (see [Dropping deletion markers](#dropping-deletion-markers)).
+3. **A deletion marker is dropped once every device in the group has it,** as in self-service. The mailbox knows how far each device has read, and says so (see [Dropping deletion markers](#dropping-deletion-markers)).
 4. **The server keeps a group's data for 13 months after its last connection** (see [Leases](#leases)).
 5. **A group may hold 5 MB on the server** (see [Snapshots and the storage limit](#snapshots-and-the-storage-limit)).
 
@@ -42,13 +42,13 @@ It is the shape of a video stream: a snapshot is a keyframe, a whole picture tha
 | --- | --- |
 | the group's id | knowing it syncs, and with whom |
 | the cursor | asking for what's new |
-| **the sent stamp:** the latest of its own stamps that the server has acknowledged | knowing what it still has to send |
-| when it last had everything, by the server's time | knowing whether it was away too long |
+| how far the mailbox has this device's changes: the value of the device's counter up to which the mailbox has acknowledged them (see [What a device keeps for syncing](self-service.md#what-a-device-keeps-for-syncing) in [Self-service](self-service.md)) | knowing what it still has to send |
+| the lowest cursor among the group's devices, as the mailbox last said it | knowing which deletion markers every device has |
 | how far its clock is off the server's | correcting its stamps (see [The clock](#the-clock)) |
 
-**There is no queue of unsent changes.** What a node hasn't sent is every row with a register that it stamped itself after the sent stamp. It sends those rows as one change, however many actions made them, and moves the sent stamp on when the server acknowledges it. A week of changes made offline goes up as one message with each touched row as it is now.
+**There is no queue of unsent changes.** What a device owes the mailbox is every row that changed on it after the point the mailbox has acknowledged, except rows whose last change came from the mailbox itself. That includes rows it merged from another device directly, which the mailbox may not have yet. It sends those rows as one change, however many actions made them. A week of changes made offline goes up as one message with each touched row as it is now.
 
-A deleted row also keeps the time the group received its marker (see [Dropping deletion markers](#dropping-deletion-markers)).
+A deleted row also keeps the sequence number its marker got in the log (see [Dropping deletion markers](#dropping-deletion-markers)).
 
 ## The messages
 
@@ -60,11 +60,11 @@ A connection is one stream of the transport (see Transport under [Phase 3](netwo
 | **Welcome** | server | the server's time, the log's latest sequence number, the sequence number the snapshot covers, the bytes held and the limit, the date the group is kept until | the node asks for what's new and sends what it has |
 | **Refused** | server | why: not a member, a newer version is needed, the storage is full, a newer snapshot exists, the message is too big | see [What a node does when refused](#what-a-node-does-when-refused) |
 | **Append** | node | an id for this message, the key epoch, an encrypted change | the server gives it the next sequence number, stores it, answers Appended, and sends it to the group's other connected nodes |
-| **Appended** | server | the message's id, its sequence number, the time it arrived, the bytes held | the node moves its sent stamp on |
+| **Appended** | server | the message's id, its sequence number, the time it arrived, the bytes held | the node notes that the mailbox has its changes up to there |
 | **Since** | node | a cursor | the server sends the snapshot first if the cursor is before what it covers, then every change after, then Up to date, and from then on each new change as it arrives |
 | **Change** | server | the sequence number, the key epoch, the sender, the time it arrived, the encrypted change | the node decrypts, checks and merges it, and moves its cursor on |
 | **Snapshot** | server | the sequence number it covers, the key epoch, the encrypted snapshot | the node merges it and sets its cursor to what it covers |
-| **Up to date** | server | the log's latest sequence number, the server's time | the node notes when it last had everything |
+| **Up to date** | server | the log's latest sequence number, the lowest cursor among the group's devices, the server's time | the node notes the lowest cursor (see [Dropping deletion markers](#dropping-deletion-markers)) |
 | **Put snapshot** | node | the sequence number it covers, the key epoch, an encrypted snapshot | the server stores it, drops the changes up to that number and the older snapshot, and answers Snapshot stored |
 | **Snapshot stored** | server | the sequence number it covers, the bytes held | |
 
@@ -103,7 +103,7 @@ sequenceDiagram
 - **Padding:** the content is padded to the next of a few fixed sizes before it's encrypted, so the server sees roughly how much changed and not exactly.
 - **Versions:** Hello carries the protocol's version, and the server refuses one it doesn't speak, naming what's needed. A change whose inner format is newer than the node knows stops that node's merging until the app is updated (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)).
 - **Everything is encoded as [postcard](https://postcard.jamesmunns.com/wire-format)'s wire format,** the messages and what's encrypted inside them: a binary encoding that doesn't describe itself. Fields come in a fixed order with no names, whole numbers take as few bytes as they need, and bytes and text carry their length. Both sides have to know the layout, which is written down here field by field when the protocol is built.
-  - **Why not JSON.** A snapshot carries every deletion marker of the last 180 days, and a row has up to six stamps of 33 characters, so as text a snapshot is mostly the same stamps again and again: several hundred kilobytes for someone who rearranges often.
+  - **Why not JSON.** A snapshot carries every deletion marker that some device may not have yet, and a row has up to six stamps of 33 characters, so as text a snapshot is mostly the same stamps again and again: several hundred kilobytes for someone who rearranges often.
   - **Why not a format that describes itself or tolerates the unknown** (CBOR, MessagePack, Protocol Buffers): they spend bytes on it, and a node here must never merge what it can't read all of (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)). A new format version is a new layout, and an older app refuses it. Protocol Buffers would keep fields it doesn't know without a word, which is the opposite.
   - **Stamps aren't repeated.** One action gives everything it writes the same stamp. A change or snapshot starts with a table of the node ids and the stamps it uses, and each register refers to its stamp by number. A stamp then costs about 13 bytes once, and a byte or two wherever it's used again.
   - **No compression on top.** With this encoding and messages this small it would save little, and compressing before encrypting lets sizes say more than they should.
@@ -118,7 +118,7 @@ sequenceDiagram
 
 1. It is up to date: its cursor is the log's latest sequence number.
 2. It sends all its rows, with "covers" set to that number. Its own unsent rows are in there too, which is fine: they'd be sent next anyway.
-3. The server stores the snapshot and drops every change up to that number. The node moves its sent stamp on, since the snapshot held its unsent rows.
+3. The server stores the snapshot and drops every change up to that number. The node notes that the mailbox has all its changes, since the snapshot held its unsent rows.
 
 - **A node puts a snapshot** when the bytes held pass half the limit, or when its Append is refused for space. So the limit is what makes devices tidy up, and in normal use the log never grows long.
 - **Two nodes at once:** the server keeps the snapshot that covers more and refuses the other as outdated. Equal ones: the first wins. Nothing is lost either way, since a refused snapshot's rows are still in its node.
@@ -132,7 +132,7 @@ What the protocol guarantees, and all the merge needs:
 
 - **Every change the server acknowledged stays** until a snapshot that covers it replaces it.
 - **A node that asks from its cursor gets everything after it,** as changes or as a snapshot.
-- **A node sends everything it stamped after its sent stamp,** again after every reconnect, until it's acknowledged.
+- **A node sends everything that changed on it after what the mailbox has acknowledged,** again after every reconnect, until it's acknowledged.
 
 Nothing depends on order, and receiving something twice is harmless. When a connection drops in the middle of anything, the node reconnects, says Hello with the cursor it has, and carries on.
 
@@ -150,7 +150,7 @@ Nothing depends on order, and receiving something twice is harmless. When a conn
 
 ## Joining
 
-**Creating a group:** the first device's plan becomes the group's. It puts a snapshot.
+**Turning table service on** for a group that syncs by self-service: one device makes the group's first secret, gives it to the others (see [Adding a device](identity.md#adding-a-device) in [Identity, sign-in and groups](identity.md)), and puts a snapshot. A group of one device does the same without the handing over.
 
 **Joining one** with a second device, which has a plan of its own from its first run or from before:
 
@@ -174,21 +174,14 @@ A window that keeps nothing says so in Hello (see [Removing a device](network.md
 
 ## Dropping deletion markers
 
-**A marker is dropped 180 days after the group received it.** That time is the server's: Appended and Change carry when the change arrived, and a node writes it on each row it marks or sees marked. A snapshot carries it for its deleted rows. It is never the stamp's time, which a wrong clock could set.
+**A marker is dropped once every device in the group has it,** as in self-service (see [Deletion markers](self-service.md#deletion-markers) in [Self-service](self-service.md)). With the mailbox, a device learns that sooner and for devices it never meets:
 
-**A node that last had everything more than 180 days ago was away too long.** It knows from Up to date, which it noted by the server's time. It then doesn't merge its state, because it may hold rows whose markers are gone and would bring them back. It does this instead (see [Returning after a long time](merge.md#returning-after-a-long-time) in [Merging changes](merge.md)):
-
-1. It takes the group's snapshot and the changes after it into an empty set of rows.
-2. From its old rows, it carries over what it never sent:
-   - a row it created itself after its sent stamp is added, with a new existence stamp;
-   - a row that is in the group's rows gets its unsent registers merged in;
-   - a row that isn't was deleted meanwhile, and its changes are dropped.
-
-**Why this is safe.** A marker is only dropped 180 days after it arrived. A node that merges normally had everything less than 180 days ago, so it already had that marker, and its own copy of the row is marked. No node that still has the row unmarked ever merges normally.
-
-- **Every node drops by the same rule on its own,** whenever it likes after the 180 days. Nodes needn't agree on the moment.
-- **Temporary nodes never hold old rows,** so they don't come into it.
-- **Why drop at all:** a marker is a row that stays, and a person who rearranges their week often makes thousands a year. Snapshots would grow by a few hundred kilobytes each year, forever.
+- **The mailbox knows how far each device has read:** its cursor. In Up to date it gives the lowest cursor among the group's devices that aren't temporary.
+- **A marker has a sequence number,** the one its change got in the log, which Appended and Change carry. Once the lowest cursor has passed it, every device has it, and any device may drop it.
+- **A snapshot leaves out the markers that may be dropped,** so it stops growing with every deletion.
+- **No clock is involved, and nothing brings a deleted row back:** while one device could still hold the row unmarked, the marker stays.
+- **A device that is gone holds it up,** until it's removed from the group. The device list shows when each device last synced, and the app suggests removing one that hasn't for months.
+- **A device that only syncs with other devices and never with the mailbox** counts through what those devices know of it (see [Deletion markers](self-service.md#deletion-markers) in [Self-service](self-service.md)). A marker goes when either way says every device has it.
 
 ## Leases
 
@@ -198,7 +191,7 @@ A window that keeps nothing says so in Hello (see [Removing a device](network.md
 
 ## The clock
 
-Welcome and Up to date carry the server's time. A node notes how far its own clock is off and stamps with its clock plus that offset, also offline (see [A clock that is wrong](merge.md#a-clock-that-is-wrong) in [Merging changes](merge.md)). The time a message took to arrive is ignored: it's a second at most, and stamps only have to order what people do.
+A device corrects its clock by the time of the server that serves the app, as in self-service (see [The clock](self-service.md#the-clock) in [Self-service](self-service.md)). Welcome and Up to date carry the server's time too, which serves the same. The time a message took to arrive is ignored: it's a second at most, and stamps only have to order what people do.
 
 ## What the server learns
 
@@ -221,13 +214,13 @@ It doesn't learn what changed, how many activities or blocks there are, or anyth
 
 | Message | From | Holds | The other side |
 | --- | --- | --- | --- |
-| **Open pairing** | a member, after a passkey check | a hash of the pairing code | the server keeps a waiting room under it for ten minutes and one use |
-| **Let me in** | a node that isn't in the group yet, by an ordinary request to the pairing's waiting room | its public keys, authenticated with the pairing code | the server passes it to the group's connected members |
-| **Let in** | a member | the node to admit, and the epoch secret sealed to it, authenticated with the pairing code | the server puts the node on the account and the member list and passes the rest to the waiting node, which then says Hello |
-| **Put sealed secrets** | a member | a key epoch, and that epoch's secret sealed once per remaining device, for the recovery key and for the passkey key | the server stores them and refuses an epoch that isn't newer than the latest |
+| **Put sealed secrets** | a member | a key epoch, and that epoch's secret sealed once per device, for the recovery key and for the passkey key | the server stores them and refuses an epoch that isn't newer than the latest |
 | **Sealed secret** | server | a key epoch and the copy sealed for this node | sent after Welcome when the node's latest epoch is older; the node opens it |
 | **Remove node** | a member | the node to remove, and a passkey's answer to a fresh challenge | the server checks the answer, refuses that node from then on, and tells the group's connected members |
+| **Ask to join** | a node that has the passkey and isn't in the group | its keys, signed for by the passkey (see [Approved later](identity.md#approved-later-by-a-device-thats-in) in [Identity, sign-in and groups](identity.md)) | the server keeps the request for a few days and hands it to the group's members |
+| **Answer to join** | a member | the request it answers, and the epoch secret sealed to the new node | the server puts the node on its member list and passes the rest on |
 
+- **Adding a device with a code needs none of these.** It happens between the two devices (see [Adding a device](self-service.md#adding-a-device) in [Self-service](self-service.md)). The device that's in then tells the server the new node belongs to the group, with Answer to join.
 - **A new epoch starts with a snapshot.** After Put sealed secrets, the same member puts a snapshot under the new epoch. From then on the server refuses an Append under an older epoch, and drops what it held under it.
 - **A node that reads an epoch it has no secret for** asks for its sealed secret and waits. If none exists for it, it was removed.
 - **The server stores** the sealed secrets, per group, epoch and recipient. They are opaque to it.
@@ -239,7 +232,7 @@ It doesn't learn what changed, how many activities or blocks there are, or anyth
 
 - **The node's** is TypeScript, beside the merge. **The server's** is Rust.
 - **Simulation** runs several nodes and the server's machine in one process, with a seeded scheduler over the messages (see [Testing](network.md#testing) in [Network](network.md)). The node's tests use a small model of the server written in TypeScript, and the server's tests use scripted nodes. The shared test vectors keep the bytes the same, and an end-to-end test in a browser against the real server checks the two together.
-- **What the simulation must show:** all nodes that have synced show the same plan; nothing a node saved is lost, also when connections drop at every possible point; a removed node gets nothing new; the limit holds; a server that restarts or loses data is filled again; and a node away for more than 180 days brings back no deleted row.
+- **What the simulation must show:** all nodes that have synced show the same plan; nothing a node saved is lost, also when connections drop at every possible point; a removed node gets nothing new; the limit holds; a server that restarts or loses data is filled again; and no deleted row comes back, whenever markers are dropped.
 
 ## Terms
 
@@ -250,5 +243,5 @@ Technical terms, for code and docs (see [Terms](network.md#terms) in [Network](n
 | **Log** | A group's changes on the server, in the order they arrived. |
 | **Sequence number** | A change's place in the log, counted from 1. |
 | **Cursor** | The highest sequence number up to which a node has merged everything. |
-| **Sent stamp** | The latest of a node's own stamps that the server has acknowledged. What it stamped later is unsent. |
+| **Lowest cursor** | The lowest cursor among a group's devices that aren't temporary. Everything in the log up to it has reached every device. |
 | **Temporary node** | A node that keeps nothing, such as a private window, and is let go when it closes. |
