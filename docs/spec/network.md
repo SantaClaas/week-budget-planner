@@ -110,7 +110,7 @@ No network. The plan is kept so that two devices that saw the same changes end u
 
 ### Phase 2: self-service
 
-A person's devices sync with each other while they're online together, through a relay, with nothing stored on a server (see [Self-service and table service](#self-service-and-table-service)). **Not designed yet.** It needs the protocol between two devices, identity without an account, pairing, the transport and its relay, and the screens.
+A person's devices sync with each other while they're online together, through a relay, with nothing stored on a server (see [Self-service and table service](#self-service-and-table-service)). **The design is in [Self-service](self-service.md),** as a draft.
 
 ### Phase 3: table service, the server
 
