@@ -1,6 +1,6 @@
 # Identity, sign-in and groups
 
-**Phase 3 of [Network](network.md), full-service, designed and not built yet.** It was written before self-service was put first, so accounts and the server's checks run through it; much of it (nodes, keys, the group, pairing) holds without a server, and the self-service design will say what changes (see [Self-service and full-service](network.md#self-service-and-full-service) in [Network](network.md)). Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
+**Phase 3 of [Network](network.md), table service, designed and not built yet.** It was written before self-service was put first, so accounts and the server's checks run through it; much of it (nodes, keys, the group, pairing) holds without a server, and the self-service design will say what changes (see [Self-service and table service](network.md#self-service-and-table-service) in [Network](network.md)). Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
 
 ## What the cryptography is for
 
@@ -174,7 +174,7 @@ sequenceDiagram
 **A new device can ask to join with the passkey alone, and be let in whenever one of the person's devices is next online.** No code, and the two devices needn't be present together.
 
 1. The new device makes its keys and passes a passkey check whose challenge is made from those keys. The passkey's answer then says: the person holding this passkey vouches for these keys.
-2. It leaves the answer with the group: on the server in full-service, or with the first device it reaches through the relay in self-service.
+2. It leaves the answer with the group: on the server in table service, or with the first device it reaches through the relay in self-service.
 3. A device that's in checks the answer against the passkey's record, which the group keeps in its own data (see [What isn't adopted](#what-isnt-adopted)), shows what is asking, and waits for the person to confirm.
 4. It seals the epoch secret to the new device, and adds it to the device list.
 

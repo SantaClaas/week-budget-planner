@@ -22,9 +22,9 @@ These are technical terms for code and docs. The copy will say "device", and wha
 | **Cluster** | The processes of one node. They share the node's keys and trust each other fully, so there is no cryptography between them. The open tabs of one browser are a cluster: one of them is the leader, holds the database (see [Database engine](persistence.md#database-engine-same-as-flashcut) in [Persistence](persistence.md)), and will hold the node's keys and its one connection to the outside. |
 | **Group** | The nodes that share one plan and the key to read it: a person's devices. Later this can be an MLS group. |
 | **Server** | A machine of ours that runs one or both of two separate services: the relay and the mailbox. It is a peer on the transport, and never a member of a group. |
-| **Mailbox** | The service that keeps each group's encrypted changes and snapshots, and hands them to the group's members. It can't read them. It is what full-service adds. Where [The sync protocol](sync.md) says "the server", it means this. |
+| **Mailbox** | The service that keeps each group's encrypted changes and snapshots, and hands them to the group's members. It can't read them. It is what table service adds. Where [The sync protocol](sync.md) says "the server", it means this. |
 | **Self-service** | Syncing between a person's devices that are online together, with nothing stored anywhere but on them. Named after the restaurant where nobody serves. |
-| **Full-service** | Self-service plus the server: it keeps changes for devices that are offline, and holds a backup. |
+| **Table service** | Self-service plus the mailbox: a server keeps changes for devices that are offline, and holds a backup. Named after the restaurant where a server comes to the table. |
 | **Relay** | The service that carries a connection between two nodes when they can't reach each other directly. It passes bytes on and keeps nothing. Separate from the mailbox, though both may run on one server. |
 | **Change** | What one user action did to the plan, in a form that merges (see [Phase 1](#phase-1-changes-that-merge)). |
 | **Snapshot** | The whole plan at one point, encrypted like a change. It replaces all the changes before it. |
@@ -49,7 +49,7 @@ flowchart LR
 
 ## Decided
 
-- **Self-service first, full-service on top.** A person's devices sync with each other, with no server of ours storing anything. The server is an optional extension that offers only what devices can't do among themselves: keeping changes for a device that's offline, and a backup (see [Self-service and full-service](#self-service-and-full-service)). Without either, the app is what it is today.
+- **Self-service first, table service on top.** A person's devices sync with each other, with no server of ours storing anything. The server is an optional extension that offers only what devices can't do among themselves: keeping changes for a device that's offline, and a backup (see [Self-service and table service](#self-service-and-table-service)). Without either, the app is what it is today.
 - **The server is a peer, not a member.** It speaks the same protocol as a device and is addressed the same way, which keeps the architecture to one kind of participant. It never gets a group's key.
 - **The server only appends.** It can't read changes, so it can't merge or shrink them. It keeps an append-only log of encrypted changes per group, with a storage limit. A device makes room by uploading a snapshot and telling the server to drop everything before it. The limit is what makes devices do that.
 - **A simple group key first, MLS later.** At the start, the devices of a group share one key. Every message carries the key's epoch from the first version, so MLS can replace the key handling later without a new format.
@@ -57,14 +57,14 @@ flowchart LR
 - **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see [Hosting](#hosting) below).
 - **Putting state on the server is fine where it's needed.** An invite code that works once, a group's member list and a blocklist can't live on the client alone.
 - **Rust where there's a reason.** The server is Rust. In the app, a library that is Rust compiled to WebAssembly under a JavaScript wrapper is used as the Rust crate directly, in one WebAssembly module of our own. The app's own logic stays TypeScript until something needs it moved. The merge logic has no need to be shared with the server, because the server never merges.
-- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under [Phase 3](#phase-3-full-service-the-server)).
+- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under [Phase 3](#phase-3-table-service-the-server)).
 - **Deterministic simulation testing from the first line** (see [Testing](#testing)).
 
-## Self-service and full-service
+## Self-service and table service
 
-**The devices do everything they can among themselves, and the server adds only what they can't.** The names come from restaurants: in a self-service one, nobody serves; in a full-service one, a server does. Here the server is the one that keeps things for you while you're away.
+**The devices do everything they can among themselves, and the server adds only what they can't.** The names come from restaurants: in a self-service one, nobody serves; in one with table service, a server does. Here the server is the one that keeps things for you while you're away.
 
-| | Self-service | Full-service |
+| | Self-service | Table service |
 | --- | --- | --- |
 | Two devices online together | sync | sync |
 | A device that's offline | catches up when it's next online together with another | catches up from the server at any time |
@@ -72,16 +72,16 @@ flowchart LR
 | An account | none | an invite code and a passkey |
 | What a server of ours stores | nothing | the encrypted changes and snapshots |
 
-- **Full-service reuses self-service.** The server is a node that speaks the same protocol as a device, is always on, and can't read what it's given (see [Decided](#decided)). So syncing with it is syncing with a peer that only stores. Where the technology doesn't allow that, the app still presents it that way: full-service is self-service with a server added, not a different product.
+- **Table service reuses self-service.** The server is a node that speaks the same protocol as a device, is always on, and can't read what it's given (see [Decided](#decided)). So syncing with it is syncing with a peer that only stores. Where the technology doesn't allow that, the app still presents it that way: table service is self-service with a server added, not a different product.
 - **The design assumes two nodes can reach each other, and doesn't care how.** A node asks the transport for a connection to another node by its key. Whether that connection is direct or goes through a relay is the transport's business, and nothing above it may depend on which it is. A relay is the fallback for when there's no direct way.
-  - **Today the fallback is the rule:** no two browsers can connect directly, so in a browser every connection is relayed (see Transport under [Phase 3](#phase-3-full-service-the-server), and [SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). That is a detail of today's browsers, not of the design.
+  - **Today the fallback is the rule:** no two browsers can connect directly, so in a browser every connection is relayed (see Transport under [Phase 3](#phase-3-table-service-the-server), and [SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). That is a detail of today's browsers, not of the design.
   - **It changes without the design changing:** a native app, where the Rust core pays off again, connects directly where the network allows. iroh's own docs name WebTransport and WebRTC as possible later routes for browsers, and a WebRTC channel of our own could be added as one more path.
   - **The copy stays honest about today:** it says "nothing is stored on a server", and never "no server", since a relay sees which nodes talk and when (see [What the server learns](#what-the-server-learns)). In the restaurant's terms, it's the room, not the waiter.
 - **The relay and the mailbox are two services.** They may run on the same server, and they are separate in what they do, what they see, who may use them and what they cost: the relay carries and forgets, for everyone; the mailbox keeps, for accounts. Self-service uses only the relay.
 - **The relay is ours by default,** open to anyone running the app and limited per address, since self-service has no accounts. A plan's changes are a few kilobytes.
 - **Later, an advanced setting lets a person use another relay:** one they run themselves, or n0's public ones. That keeps the promise of self-service for people who want no server of ours in the path at all. One thing stands in the way and has to be solved with it: the Content Security Policy only lets the page connect to its own origin (see [Security](security.md)), and a page can't loosen its policy at run time. Either the policy allows connections more widely, which weakens what it protects against, or the setting is for people who serve the app themselves.
-- **Full-service is what costs money to run,** so it may become a paid plan, or be free for the people the owner chooses to carry. Invite codes are how they get it. Self-service stays free. This follows the bound in [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md): the cost is plain to see, and nobody loses their plan by not paying, since every device holds all of it.
-- **The designs so far were written server-first** and are right for full-service: [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md). Self-service needs its own design before they're built, and will reshape them:
+- **Table service is what costs money to run,** so it may become a paid plan, or be free for the people the owner chooses to carry. Invite codes are how they get it. Self-service stays free. This follows the bound in [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md): the cost is plain to see, and nobody loses their plan by not paying, since every device holds all of it.
+- **The designs so far were written server-first** and are right for table service: [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md). Self-service needs its own design before they're built, and will reshape them:
   - **The protocol between two devices** that both hold the key and both merge: what each sends the other, with a sent stamp kept per peer where the server's design keeps one.
   - **Identity without an account:** nodes, the group's key, the device list in the group and pairing work without a server. Passkey checks don't have to: a device can check a passkey's answer against the record the group holds (see [Approved later](identity.md#approved-later-by-a-device-thats-in)). What guards removing a device then has to be decided without a server to enforce it.
   - **What is no longer the server's job:** telling who is a member, and counting when a deletion marker may be dropped.
@@ -108,9 +108,9 @@ No network. The plan is kept so that two devices that saw the same changes end u
 
 ### Phase 2: self-service
 
-A person's devices sync with each other while they're online together, through a relay, with nothing stored on a server (see [Self-service and full-service](#self-service-and-full-service)). **Not designed yet.** It needs the protocol between two devices, identity without an account, pairing, the transport and its relay, and the screens.
+A person's devices sync with each other while they're online together, through a relay, with nothing stored on a server (see [Self-service and table service](#self-service-and-table-service)). **Not designed yet.** It needs the protocol between two devices, identity without an account, pairing, the transport and its relay, and the screens.
 
-### Phase 3: full-service, the server
+### Phase 3: table service, the server
 
 A device signs in, joins or creates a group, and syncs its changes through the server.
 
