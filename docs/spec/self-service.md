@@ -1,18 +1,19 @@
 # Self-service: syncing between a person's devices
 
-**Phase 2 of [Network](network.md), a draft, not built yet.** How a person's devices sync with each other while they're online together, with nothing stored on a server. It is the base that [table service](network.md#self-service-and-table-service) is added to. How rows merge is in [Merging changes](merge.md). The designs for the server's side, [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md), were written first and server-first; [What this changes in the other designs](#what-this-changes-in-the-other-designs) lists what this file replaces in them. The work is [SantaClaas/week-budget-planner#105](https://github.com/SantaClaas/week-budget-planner/issues/105).
+**Phase 2 of [Network](network.md), designed and not built yet.** How a person's devices sync with each other while they're online together, with nothing stored on a server. It is the base that [table service](network.md#self-service-and-table-service) is added to. How rows merge is in [Merging changes](merge.md). What the server's mailbox and an account add is in [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md). The work is [SantaClaas/week-budget-planner#105](https://github.com/SantaClaas/week-budget-planner/issues/105).
 
 The cryptography here has not been reviewed, like the rest (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
 
-## To confirm
+## Decided
 
-Rules about what the person gets, or choices that are the project's author's. Until they're confirmed, this file is a draft.
+Rules about what the person gets, or choices that are the project's author's.
 
 1. **A passkey is optional in self-service.** Without one, any device in the group can add or remove a device, and the device's own lock is the guard. With one, adding and removing need the passkey (see [Who may change the group](#who-may-change-the-group)).
 2. **A device is added by scanning a QR code, or by pasting a long code.** There is no short code to type, since that would need a service that looks codes up (see [Adding a device](#adding-a-device)).
-3. **A deletion marker is dropped once every device in the group has it,** not after 180 days. A device that never comes back holds that up until it's removed from the group, which the app suggests (see [Deletion markers](#deletion-markers)). This replaces the 180 days decided for the server's design.
+3. **A deletion marker is dropped once every device in the group has it.** A device that never comes back holds that up until it's removed from the group, which the app suggests (see [Deletion markers](#deletion-markers)).
 4. **Self-service has no group key.** The connection between two devices is already encrypted between their keys. The group's secret arrives with table service, where a server stores things (see [What is encrypted, and by what](#what-is-encrypted-and-by-what)).
 5. **There is no backup, and the app says so** (see [Losing a device, or all of them](#losing-a-device-or-all-of-them)).
+6. **What a stolen device can do is accepted** (see [Who may change the group](#who-may-change-the-group)).
 
 ## The idea
 
@@ -65,7 +66,7 @@ Beside its rows and its clock:
 
 **There is no queue of unsent changes.** What one device owes another is every row that changed after the point the other says it has, as it is now.
 
-This replaces the "sent stamp" of the server's design. A stamp says when a value was written. What a device has to send is what changed on it, in the order it changed there, and that includes rows it merged from a third device.
+A stamp wouldn't do for this. It says when a value was written. What a device has to send is what changed on it, in the order it changed there, and that includes rows it merged from a third device.
 
 ## The messages
 
@@ -118,6 +119,8 @@ Two devices speak over one connection of the transport, which has already proven
 - **Turning this on is itself a change that any device in the group can make. Turning it off, or changing the passkeys, needs the passkey.** So the passkey protects from the moment it's set, not before: whoever holds an unlocked device of a group without one could set their own. That is one more reason to offer it when syncing is set up.
 - **A passkey works without a server.** The browser makes it and signs with it for the app's address; checking a signature needs only the public key. The checking is done by a maintained library in the Rust module, not by code of our own. To check when it's built: that such a library accepts a challenge it didn't issue itself.
 - **Why it's a choice:** a passkey prompt is one more thing to understand before two devices can sync, and some devices have no passkey that syncs to them. A person who wants only their phone and laptop in step may not want it. The app offers it when syncing is set up, and says what it guards against.
+
+**The risk that's left is accepted.** A stolen, unlocked device can read and change the plan until it's removed, and in a group without a passkey it can change the group too. The person is presumably still in control of their other devices, which hold the whole plan: they remove the stolen one, and in the worst case leave the group and make a new one with the devices they have.
 
 **What a stolen, unlocked device can still do, with a passkey on the group:** read the plan it has, and change it, until it's removed. It can't remove the others or add its own. Its stamps can be written to win every conflict, which nothing stops inside a group of one person's devices (see [Keys](identity.md#keys) in [Identity, sign-in and groups](identity.md)).
 
@@ -178,7 +181,7 @@ sequenceDiagram
 - **A device only knows what the others told it directly.** Where two devices are never online together and only meet through a third, each keeps the other's markers longer than it would need to. Passing on what one knows about a third is possible later, and isn't needed to be correct.
 - **A removed device that joins again** comes as a new one, and "add this device's activities" then means what it says: rows it still has come back, also ones deleted since.
 
-This replaces the 180 days of the server's design, and with it the special path for a device that was away too long. With the mailbox the same rule works better still: the mailbox knows how far each device has read, and tells each one (see [What this changes in the other designs](#what-this-changes-in-the-other-designs)).
+With the mailbox the same rule works better still: it knows how far each device has read, and tells each one (see [Dropping deletion markers](sync.md#dropping-deletion-markers) in [The sync protocol](sync.md)).
 
 ## The clock
 
@@ -226,22 +229,6 @@ Only the steps; the screens are [SantaClaas/week-budget-planner#99](https://gith
   - a removed device gets nothing new from a device that has heard of the removal;
   - with a passkey on the group, a membership change without its proof changes no device's list.
 - **The proof's checks,** with what they accept and each thing they refuse.
-
-## What this changes in the other designs
-
-When this is confirmed, the two server-first files are rewritten so that each says what the mailbox adds to this:
-
-- **[The sync protocol](sync.md):**
-  - the sent stamp gives way to the counter and what each side has of the other's (see [What a device keeps for syncing](#what-a-device-keeps-for-syncing));
-  - a device also sends the mailbox rows it merged from other devices, sealed, unless they came from the mailbox;
-  - [Dropping deletion markers](sync.md#dropping-deletion-markers) and its 180 days give way to "every device has it", which the mailbox can tell from each device's cursor;
-  - the pairing messages go, since pairing needs no server;
-  - what stays the mailbox's own: the log, cursors, snapshots, the storage limit and the leases. It can't merge, so it can't be only "a device that stores", and the app still presents it as self-service with a server added.
-- **[Identity, sign-in and groups](identity.md):**
-  - the device list, adding and removing a device, and the passkey as the group's guard move here, and no longer need an account;
-  - what stays table service's: the account, invite codes, signing in to the server, the group's secret with its epochs and sealed copies, the recovery code, the passkey shortcut, and approving a device later;
-  - the waiting room for pairing goes.
-- **[Network](network.md):** the phases, and that self-service is designed.
 
 ## Terms
 
