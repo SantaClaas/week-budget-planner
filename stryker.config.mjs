@@ -8,7 +8,8 @@ export default {
   // Named, because Stryker's own search for plugins doesn't look inside pnpm's node_modules.
   plugins: ["@stryker-mutator/vitest-runner"],
   testRunner: "vitest",
-  vitest: { configFile: "vitest.config.ts" },
+  // Every unit test but the merge's simulation, which that config leaves out and says why.
+  vitest: { configFile: "vitest.mutation.config.ts" },
   // The pure core, where a test is input and expected output: the plan, and merging it between
   // devices. Components and the code at the edges are left out: mutating them gives noise, and
   // their tests are slower.
@@ -30,8 +31,7 @@ export default {
   htmlReporter: { fileName: "reports/mutation/index.html" },
   tempDirName: ".stryker-tmp",
   // The mutants in constants (SLOT, the palette) need every test run, which is most of the time
-  // a run takes. They stay in: those constants are rules too. A run over everything is about
-  // twenty minutes, most of it the merge's simulation (see the guideline).
+  // a run takes. They stay in: those constants are rules too, and a run is a few minutes.
   warnings: { slow: false },
   // No score to reach: the survivors are read, not counted (see the guideline).
   thresholds: { high: 100, low: 0, break: null },

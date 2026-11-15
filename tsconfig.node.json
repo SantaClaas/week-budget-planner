@@ -30,6 +30,7 @@
   "include": [
     "vite.config.ts",
     "vitest.config.ts",
+    "vitest.mutation.config.ts",
     "drizzle.config.ts",
     "vite-plugins",
     "scripts",
