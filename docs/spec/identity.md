@@ -11,7 +11,7 @@
 3. **Being free of that weight is what makes it possible to offer the service at all.** One that couldn't be run responsibly would help nobody. It's the oxygen mask rule: help yourself first, so that you're able to help others.
 4. **And the same property is what the people using it get.** A plan that lives on the devices of the person it belongs to, and that a server can only carry and never read, stays in that person's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption build that in, where a policy could only promise it.
 
-So what protects the owner and what serves the users is the same decision, seen from two sides. That is sturdier than good intentions alone: it doesn't depend on anyone staying willing to carry a burden.
+So what protects the operator and what serves the people using the service is the same decision, seen from two sides. That is sturdier than good intentions alone: it doesn't depend on anyone staying willing to carry a burden.
 
 **The bound: helping yourself is the means, and never at the others' expense.** The chain only holds while step 1 leads to step 4. A choice that eases the operator's load by moving a cost onto the people using the service breaks it, and this line is harder to draw than the rest. Two questions help to find it:
 
