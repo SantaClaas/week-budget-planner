@@ -64,6 +64,7 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 - **One action, one stamp.** Every register an action writes gets the same stamp, made from the action's `now` (see "One action, one `now`" under [A pure core, with side effects at the edges](../guidelines/principles.md#a-pure-core-with-side-effects-at-the-edges) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 - **A new stamp is later than everything the node has seen.** The node keeps its clock: the latest stamp it has issued or merged. A new stamp takes the later of `now` and the clock's time, and where that time equals the clock's, the clock's counter plus one. So a change made after seeing another device's change is always later than it, whatever the two wall clocks say. Only changes made without knowing of each other are ordered by wall clock.
 - **A device whose clock runs ahead wins those conflicts** until the others have merged one of its changes, after which their own stamps are later again. A merge can't refuse a stamp for being in the future, since nodes would then disagree. See [A clock that is wrong](#a-clock-that-is-wrong), below.
+- **The time has an end,** 13 digits of milliseconds, in the year 2286. A node that merged a stamp at the very end of it could make no later one. Only a broken or hostile device writes such a stamp; a group of one person's devices accepts that, and sharing with others will need an answer.
 - **Equal stamps with different values** shouldn't happen, but can: after a browser profile was copied, or between rows that were stored before stamps existed. The merge then takes the value that sorts later as canonical JSON, so it still gives every node the same result.
 - **As text, a stamp sorts the way it compares:** the time as 13 digits, the counter as 6, then the node id, with hyphens between. A counter that would pass 999999 moves the time on by a millisecond instead. The lowest stamp, all zeros with an empty node id, is what rows get that were stored before stamps existed: any real change is later.
 
@@ -84,14 +85,14 @@ What else was looked at:
 - **The order in which changes reach the server:** no clocks at all, but then the last device to come back online wins, even with a change made a week before the other's, and two devices syncing directly would have no order.
 - **Refusing changes from a clock that is off:** the server can't read stamps, and a node that refused them would end up with a different plan from one that didn't.
 
-**The node id** is a random id like the others (see [Data model](data-model.md)), made the first time the database opens, and stored in it. All tabs of a browser are one node (see [Terms](network.md#terms) in [Network](network.md)): the leader holds the clock and gives each save its stamp, in the save's own transaction. **An imported file brings its node id with it, which must not be kept:** two devices with one node id could issue the same stamp for different values. An import gives the node a new id and keeps the later of the two clocks.
+**The node id** is a random id like the others (see [Data model](data-model.md)), made the first time the database opens, and stored in it. All tabs of a browser are one node (see [Terms](network.md#terms) in [Network](network.md)): the leader holds the clock and gives each save its stamp, in the save's own transaction. **An imported file brings its node id with it, which must not be kept:** two devices with one node id could issue the same stamp for different values. An import gives the node a new id and keeps the later of the two clocks. In a stamp it is 1 to 40 letters and digits, so a stamp's text sorts the same in JavaScript and in SQLite.
 
 ## Deleting
 
 **A deleted row stays, with its existence register set to deleted.** That is the deletion marker. Without it, another device's copy of the row would bring it back.
 
 - **A delete wins over a concurrent edit.** An edit writes other registers and leaves existence alone, so the row stays deleted. The edit is kept in the row and never shown.
-- **Undoing a delete** writes existence again, with a new stamp, and the row is back with whatever its registers hold by then.
+- **Undoing a delete** writes existence again, with a new stamp, and the row comes back as the device that undid it last showed it: every register that differs from that gets the new stamp too. An edit another device made to the row while it was deleted is replaced by it. The person who presses Undo gets back what they saw, and an import of an older file shows the file's values for rows that had been deleted since.
 - **A block shows only while its activity exists.** When one device deletes an activity and another adds a block to it, the block's row merges in but isn't part of the plan. If the deletion is undone, it appears with the activity. Deleting an activity still marks the blocks it had as deleted too, as it removes them today; the rule is for the blocks the deleting device didn't know about.
 - **Ids are never used again**, so a deleted row can't be mistaken for a new one.
 - **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces under [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md)), so the rule belongs to phase 2. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What phase 2 has to settle is written under [Returning after a long time](#returning-after-a-long-time).
@@ -102,9 +103,10 @@ What else was looked at:
 
 - Two devices that move different activities both get their move.
 - Two that move the same activity: the later stamp wins, as with any register.
-- Two that put different activities into the same gap can make the same key. Equal keys sort by activity id, so every node shows the same order.
+- Two that put different activities into the same gap can make the same key. Equal keys sort by activity id, so every node shows the same order. Nothing fits between two equal keys, so the next action that changes the order gives one of them a new key.
 - **A change gives new keys to as few activities as possible:** the ones that aren't in order by their existing keys once the largest set that is has been left alone. For one activity dragged to a new place, that is the one.
 - A new activity gets a key after the last.
+- **A key is 1 to 100 letters and digits.** Keys grow when the same gap is filled again and again; if one would pass the limit, the whole list gets evenly spread keys.
 
 Today the order is a `position` number per activity, and reordering renumbers every row in between. Merged per row, two devices' renumberings would interleave into an order neither made.
 
@@ -131,6 +133,7 @@ Today the order is a `position` number per activity, and reordering renumbers ev
 
 A change, a snapshot or a file comes from outside the code, even when another of the user's own devices made it. It is parsed strictly, with the same rules as the strict parsers in [Data model](data-model.md): every value in range, every stamp well formed, every block's activity id an id.
 
+- **Also refused:** a field the format doesn't know, and a block whose activity's row isn't in the same change (see [The idea](#the-idea)).
 - **Something invalid is refused whole,** not repaired. Repairing would put a value nobody wrote under a stamp that says a node wrote it.
 - **The format has a version.** A change from a newer version is refused, and the node stops merging until the app is updated, as with a plan saved by a newer version (see [Export, import and reset](persistence.md#export-import-and-reset-required) in [Persistence](persistence.md)). It never merges what it can't read all of.
 
@@ -158,7 +161,7 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged.
 - **The rows and the merge are also a type and a function in memory,** which the database reads into and writes from, so they work without it (see [The limited storage levels](#the-limited-storage-levels)).
 - A stamp column is text with a `CHECK` on its form.
-- **Reading the plan** takes the rows that aren't deleted, the blocks whose activity isn't either, and the activities in order of `order_key`, then id.
+- **Reading the plan** takes the rows that aren't deleted, the blocks whose activity isn't either, and the activities in order of `order_key`, then id. The blocks come in order of their ids, so every node shows the same order.
 - **Saving an action** compares before and after as it does now. A removed row becomes an update that marks it deleted; a changed register gets the action's stamp.
 - **The migration** gives every existing row the lowest stamp in each register, turns `position` into evenly spread order keys, and leaves `node` to be filled when the database next opens.
 - **Size:** a stamp is about 33 characters, and an activity has six. A plan with 20 activities, 60 blocks and as many deleted rows again grows by a few tens of kilobytes.
