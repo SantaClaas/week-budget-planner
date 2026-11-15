@@ -4,18 +4,34 @@
 
 ## What the cryptography is for
 
-**First, to keep people's data off the server,** so that whoever runs it holds nothing they'd be responsible for: no plan, no name, no email address. What the server stores is bytes it can't read, and keys it can't use.
+**The reasons are one chain, not a ranking.** It starts with the person who runs the server and ends with the people who use it:
 
-**Second, and close behind, to be secure** against the others in the table under Who can do what.
+1. **Whoever runs the server can't carry other people's data.** Holding plans, names or email addresses means answering for them: keeping them safe, handing them out on request, deleting them properly. The owner has neither the means to have that verified nor the wish for that weight.
+2. **So the server is built to hold nothing it can read.** What it stores is bytes it can't open and keys it can't use, and it knows a person by a random id.
+3. **Being free of that weight is what makes it possible to offer the service at all.** One that couldn't be run responsibly would help nobody. It's the oxygen mask rule: help yourself first, so that you're able to help others.
+4. **And the same property is what the people using it get.** A plan that lives on its owner's devices, and that a server can only carry and never read, stays in its owner's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption build that in, where a policy could only promise it.
 
-**Behind both: people decide over their own data.** A plan that lives on its owner's devices, and that a server can only carry and never read, stays in its owner's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption are a way to build that in, where a policy could only promise it.
+So what protects the owner and what serves the users is the same decision, seen from two sides. That is sturdier than good intentions alone: it doesn't depend on anyone staying willing to carry a burden.
 
-**It has not been reviewed.** This is a design by people who build apps, not by cryptographers, and there are no means to have it verified for now. It only combines standard, published constructions and says which, so that it can be checked later. The app must not promise more than that: it can say that the server can't read the plan by design, and not that the design was audited. Where this file says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
+**The bound: helping yourself is the means, and never at the others' expense.** The chain only holds while step 1 leads to step 4. A choice that eases the owner's load by moving a cost onto the people using the service breaks it, and this line is harder to draw than the rest. Two questions help to find it:
+
+- **Can the people it falls on see the cost, and say no to it?** A limit that is stated plainly, before someone relies on the service, leaves the choice with them. One they'd only find out about afterwards doesn't.
+- **Would they choose it too, if they stood where the owner stands?** Not keeping their data readable: yes. Keeping more of it because that's easier to run: no.
+
+Where this design already sits on that line, and how it stays on the right side:
+
+- **The cryptography has not been reviewed.** That is the owner's limit, and the risk of a flaw falls on the users. So it is said plainly, and the app must not promise more than is true: it can say that the server can't read the plan by design, and not that the design was audited. This is a design by people who build apps, not by cryptographers. It only combines standard, published constructions and says which, so that it can be checked later.
+- **The storage limit and the leases** (see [The sync protocol](sync.md)) save the owner cost. They never cost a user their plan, since every device keeps all of it, and the app warns before anything on the server is deleted.
+- **What the server still learns** (see What the server learns in [Network](network.md)) is written down, not left out, including what isn't solved.
+
+What would cross it: a disclaimer used where the design could have removed the risk, logs kept because they're convenient, or a cheaper way to run the server that lets someone else see more.
+
+Where this file says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
 
 **The lack of a review has to be covered where promises are made.** Two places, and they aren't the same:
 
 - **The code's license** says the software comes without warranty and limits liability for it. The repository has none yet, and needs one before this is built.
-- **The service's terms.** A license covers people who take the code. People who use the server the owner runs are covered by that service's terms and its privacy notice, which say what it stores, that it can't read plans by design, that this wasn't audited, and that it comes as it is. They are part of deciding where the server runs ([SantaClaas/week-budget-planner#95](https://github.com/SantaClaas/week-budget-planner/issues/95)). How far liability can be excluded depends on the owner's country, and is a question for someone who knows its law.
+- **The service's terms.** A license covers people who take the code. People who use the server the owner runs are covered by that service's terms and its privacy notice, which say what it stores, that it can't read plans by design, that this wasn't audited, and that it comes as it is. They are part of deciding where the server runs ([SantaClaas/week-budget-planner#95](https://github.com/SantaClaas/week-budget-planner/issues/95)). How far liability can be excluded depends on the owner's country, and is a question for someone who knows its law. A disclaimer is the last resort, for what the design couldn't remove (see the bound above).
 
 ## Decided
 
