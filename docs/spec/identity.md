@@ -1,6 +1,6 @@
 # Identity, sign-in and groups
 
-**Phase 2 of [Network](network.md), designed and not built yet.** Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
+**Phase 3 of [Network](network.md), full-service, designed and not built yet.** It was written before self-service was put first, so accounts and the server's checks run through it; much of it (nodes, keys, the group, pairing) holds without a server, and the self-service design will say what changes (see [Self-service and full-service](network.md#self-service-and-full-service) in [Network](network.md)). Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
 
 ## What the cryptography is for
 
@@ -169,6 +169,21 @@ sequenceDiagram
 - **The new device reaches the server by ordinary requests until it's admitted,** since the relay only lets known nodes through: the old device opens a waiting room named by a hash of the code, and the new one finds it with the code.
 - **What happens to the new device's own plan** is in [Joining](sync.md#joining) in [The sync protocol](sync.md).
 
+### Approved later, by a device that's in
+
+**A new device can ask to join with the passkey alone, and be let in whenever one of the person's devices is next online.** No code, and the two devices needn't be present together.
+
+1. The new device makes its keys and passes a passkey check whose challenge is made from those keys. The passkey's answer then says: the person holding this passkey vouches for these keys.
+2. It leaves the answer with the group: on the server in full-service, or with the first device it reaches through the relay in self-service.
+3. A device that's in checks the answer against the passkey's record, which the group keeps in its own data (see [What isn't adopted](#what-isnt-adopted)), shows what is asking, and waits for the person to confirm.
+4. It seals the epoch secret to the new device, and adds it to the device list.
+
+- **Nobody in between can fake it.** The check is made by a device, against a record the group holds, so the server and the relay can't put their own keys in: they can't forge a passkey's answer.
+- **It works with any passkey,** unlike [the passkey shortcut](#the-passkey-shortcut), which needs the PRF extension. And unlike the shortcut, the passkey alone doesn't open the plan: a device that's in still has to say yes.
+- **What it costs:** the new device waits until another is online, and someone who has the passkey can ask. The person confirming has to recognise what is asking, so the prompt names the device and when it asked.
+- **A request expires** after a few days, and a device shows at most a few at once.
+- **A passkey's answer covers its challenge and nothing else,** so the challenge is a hash of the new device's two public keys, the group and a time. To check: that the verifying library accepts a challenge the verifier didn't issue itself, which is unusual, and what that means for replay. The time and the one-use device keys are what bound it.
+
 ### The passkey shortcut
 
 Where the passkey has the PRF extension, the passkey itself can open the group, on any device the passkey is on, with no other device at hand.
@@ -252,7 +267,7 @@ From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in 
 
 - **The passkey's record kept away from the server.** The idea: the server signs a passkey's record (its id and public key), the person's devices keep it, and a device sends it along with a passkey's answer. Two carriers were looked at:
   - **In the passkey itself** (`largeBlob`): only iCloud Keychain clearly supports it today, and Chrome's team has favored PRF over it ([Corbado's tests](https://www.corbado.com/blog/webauthn-l3-credential-manager-support)).
-  - **In the group:** the signed records as rows in the group's encrypted data, beside the device list, handed to a new device when it's paired. This works wherever a device that's in lets the new one in.
+  - **In the group:** the records as rows in the group's encrypted data, beside the device list, handed to a new device when it joins. **This part is adopted,** since [approving a device later](#approved-later-by-a-device-thats-in) checks a passkey against it, and self-service has no server to ask.
   - **Where neither reaches:** the passkey shortcut and recovery after losing every device, where a new device has the passkey and nothing else. For those the server has to keep the public key.
   - **Why not now:** both of those ways in are offered, so the server keeps the record anyway. It also keeps each account's nodes, removed passkeys and blocks regardless, and a public key isn't sensitive, so what would be saved is state, not exposure. A later version could keep the records in the group, and on the server only for accounts that turn the passkey shortcut on.
 - **Signed leases the node carries.** The server holds each account's nodes to decide who may use the relay, so it looks them up and needs no token. A lease as a stored date is used for temporary nodes and for how long a group's data is kept (see [Leases](sync.md#leases) in [The sync protocol](sync.md)).
@@ -262,7 +277,7 @@ From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in 
 Only the steps; the screens are their own issue ([SantaClaas/week-budget-planner#99](https://github.com/SantaClaas/week-budget-planner/issues/99)).
 
 - **Setting up syncing:** read what it does, enter an invite code, create a passkey, choose whether the passkey alone may open the week, write down the recovery code.
-- **Adding a device:** on a device that's in, choose "Add a device" and pass the passkey check; scan or type the code on the new one; pass a passkey check there if it has the passkey; confirm on the first device what is asking to join. With the passkey shortcut on, signing in with the passkey on the new device is enough. Then choose what to do with a plan already on the new device.
+- **Adding a device:** on a device that's in, choose "Add a device" and pass the passkey check; scan or type the code on the new one; pass a passkey check there if it has the passkey; confirm on the first device what is asking to join. With the passkey shortcut on, signing in with the passkey on the new device is enough. Then choose what to do with a plan already on the new device. Or, with no code: sign in with the passkey on the new device, and confirm it on a device that's in whenever that one is next used.
 - **Removing a device:** pick it in the list, pass the passkey check.
 - **A private window:** sign in with the passkey, and the same as adding a device. It's listed as temporary and goes when it closes.
 - **After losing every device:** sign in with the passkey on a new one, and enter the recovery code, or nothing with the passkey shortcut.

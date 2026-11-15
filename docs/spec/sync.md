@@ -1,6 +1,6 @@
 # The sync protocol
 
-**Phase 2 of [Network](network.md), designed and not built yet.** How changes and snapshots travel between a node and the server, and what each side keeps. What a change and a snapshot are, and how they merge, is in [Merging changes](merge.md). Who a node is, how a person signs in and how a group's devices share a key is its own design ([SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91)); this file takes "a node that is a member of a group and holds its key" as given. The work is [SantaClaas/week-budget-planner#90](https://github.com/SantaClaas/week-budget-planner/issues/90).
+**Phase 3 of [Network](network.md), full-service, designed and not built yet.** It was written before self-service was put first, so it describes syncing with the server; the design for two devices syncing with each other comes before it and will reshape it (see [Self-service and full-service](network.md#self-service-and-full-service) in [Network](network.md)). How changes and snapshots travel between a node and the server, and what each side keeps. What a change and a snapshot are, and how they merge, is in [Merging changes](merge.md). Who a node is, how a person signs in and how a group's devices share a key is its own design ([SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91)); this file takes "a node that is a member of a group and holds its key" as given. The work is [SantaClaas/week-budget-planner#90](https://github.com/SantaClaas/week-budget-planner/issues/90).
 
 ## Decided
 
@@ -50,7 +50,7 @@ A deleted row also keeps the time the group received its marker (see [Dropping d
 
 ## The messages
 
-A connection is one stream of the transport (see Transport under [Phase 2](network.md#phase-2-the-server) in [Network](network.md)), which is ordered and reliable and has already proven each side's node id. The protocol doesn't know more about it than that, so the same messages work over a WebSocket.
+A connection is one stream of the transport (see Transport under [Phase 3](network.md#phase-3-full-service-the-server) in [Network](network.md)), which is ordered and reliable and has already proven each side's node id. The protocol doesn't know more about it than that, so the same messages work over a WebSocket.
 
 | Message | From | Holds | The other side |
 | --- | --- | --- | --- |
