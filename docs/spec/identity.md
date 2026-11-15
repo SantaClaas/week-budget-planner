@@ -8,6 +8,8 @@
 
 **Second, and close behind, to be secure** against the others in the table under Who can do what.
 
+**Behind both: people decide over their own data.** A plan that lives on its owner's devices, and that a server can only carry and never read, stays in its owner's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption are a way to build that in, where a policy could only promise it.
+
 **It has not been reviewed.** This is a design by people who build apps, not by cryptographers, and there are no means to have it verified for now. It only combines standard, published constructions and says which, so that it can be checked later. The app must not promise more than that: it can say that the server can't read the plan by design, and not that the design was audited. Where this file says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
 
 **The lack of a review has to be covered where promises are made.** Two places, and they aren't the same:
