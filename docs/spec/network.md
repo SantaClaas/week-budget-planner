@@ -8,7 +8,7 @@ The planner is also the proving ground for infrastructure meant for other apps l
 
 - **A person's plan is the same on all their devices**, including when they edited on two of them while offline.
 - **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to.
-- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see What the server learns).
+- **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see What the server learns). The first reason is that whoever runs the server then holds no data of other people's to be responsible for; that it's secure comes close behind (see What the cryptography is for in [Identity, sign-in and groups](identity.md)).
 - **Syncing works when every other device is offline.** Devices are rarely online at the same moment, so something with better availability has to hold the changes in between. That is the server's job.
 - **Later, not now:** sharing a plan with other people.
 
@@ -160,6 +160,8 @@ These come from the wider goal of infrastructure for several apps. The planner n
 - **Not adopted:** a distributed hash table of our own to find nodes (a person's few devices need a meeting point, not a routing ring, and iroh brings its own discovery), and nested groups as a "tree of rings" (an MLS group's tree is how it updates keys, not a network layout, and a member is always one client).
 
 ## Testing
+
+**Real devices can't be replaced, and most of the way there can be automated.** The simulation below covers what devices do to each other, and Playwright runs the app in Chromium, Firefox and WebKit, which is Safari's engine. What stays for a real iPhone or Mac is what WebKit in Playwright doesn't have: Safari's own storage rules, real passkeys from iCloud Keychain, Apple's network stack, and what iOS does to a tab in the background ([SantaClaas/week-budget-planner#94](https://github.com/SantaClaas/week-budget-planner/issues/94)).
 
 **Deterministic simulation testing.** Because the protocol is a pure state machine, a test can run several nodes and a server in one process, with a seeded scheduler that delivers, delays, drops, duplicates and reorders messages and moves the clock. The same seed replays the same run. The tests check that all nodes end up with the same plan, that nothing a device saved is lost, and that a removed device gets nothing new. Time and identifiers are passed in, as everywhere else in the code.
 
