@@ -22,6 +22,7 @@ flowchart LR
   module_index["index"]
   module_keeping["keeping"]
   module_layout["layout"]
+  module_merge["merge"]
   module_navigation["navigation"]
   module_page["page"]
   module_placing["placing"]
@@ -74,6 +75,8 @@ flowchart LR
   module_keeping --> module_plan
   module_keeping --> module_snackbar
   module_keeping --> module_storage
+  module_merge --> module_brand
+  module_merge --> module_result
   module_navigation --> module_icons
   module_navigation --> module_page
   module_page --> module_activity

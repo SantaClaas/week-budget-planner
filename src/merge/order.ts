@@ -1,0 +1,173 @@
+// Order keys: the text an activity is sorted by in the Activities list (see Order in
+// docs/spec/merge.md). A key is a fraction written in base 62 without its "0.", so a new key can
+// always be made between two others (fractional indexing), and moving an activity changes its key
+// alone.
+import type { Brand } from "../brand.ts";
+import type { Result } from "../result.ts";
+
+/**
+ * An order key: 1 to 100 digits of base 62 (0-9, A-Z, a-z, which sort in that order as text),
+ * not ending in "0", so there is always room for a key before it.
+ */
+export type OrderKey = Brand<string, "OrderKey">;
+
+const DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE = DIGITS.length;
+/**
+ * The longest key. Keys grow by about a digit for every six moves into the same gap, so it takes
+ * hundreds of them to reach it; a list that would pass it gets evenly spread keys instead.
+ */
+const MAX_LENGTH = 100;
+const KEY = /^[0-9A-Za-z]{0,99}[1-9A-Za-z]$/u;
+
+/**
+ * Gives a checked or newly made key its brand. Only the functions below call it, with keys they've
+ * just checked or made, so this is the one type assertion in the module.
+ */
+function brand(value: string): OrderKey {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place a checked key becomes a brand (see Branded types in docs/guidelines/typescript.md).
+  return value as OrderKey;
+}
+
+/**
+ * A received key, checked strictly, or undefined when it isn't one: a problem as text couldn't be
+ * told apart from a key.
+ */
+export const parse = (value: unknown): Result<OrderKey, undefined> =>
+  typeof value === "string" && KEY.test(value) ? brand(value) : undefined;
+
+const readDigit = (text: string, index: number): number => DIGITS.indexOf(text[index] ?? "0");
+
+/**
+ * Digits that sort strictly between `low` and `high` and don't end in "0". `low` may be empty (the
+ * start) and `high` undefined (the end). Both are digit strings that don't end in "0", with `low`
+ * below `high`. (After David Greenspan's "Implementing Fractional Indexing".)
+ */
+function findMidpoint(low: string, high?: string): string {
+  if (high !== undefined) {
+    let shared = 0;
+    while ((low[shared] ?? "0") === high[shared]) shared += 1;
+    if (shared > 0)
+      return high.slice(0, shared) + findMidpoint(low.slice(shared), high.slice(shared));
+  }
+  const lowDigit = low === "" ? 0 : readDigit(low, 0);
+  const highDigit = high === undefined ? BASE : readDigit(high, 0);
+  if (highDigit - lowDigit > 1) return DIGITS[Math.round((lowDigit + highDigit) / 2)] ?? "";
+  // The first digits are next to each other. A longer `high` leaves room right at its first digit;
+  // otherwise keep the low digit and look for room after the rest of `low`.
+  if (high !== undefined && high.length > 1) return high.slice(0, 1);
+  return (DIGITS[lowDigit] ?? "") + findMidpoint(low.slice(1));
+}
+
+/**
+ * A key that sorts strictly between `before` and `after`: after the last when `after` is
+ * undefined, before the first when `before` is. Throws when `before` isn't below `after`, which a
+ * list sorted by its keys never asks for.
+ */
+export function between(before?: OrderKey, after?: OrderKey): OrderKey {
+  if (before !== undefined && after !== undefined && before >= after)
+    throw new RangeError(`No key fits between "${before}" and "${after}".`);
+  return brand(findMidpoint(before ?? "", after));
+}
+
+/** `count` keys between `before` and `after`, in order, split in halves so they stay short. */
+function listBetween(
+  before: OrderKey | undefined,
+  after: OrderKey | undefined,
+  count: number,
+): OrderKey[] {
+  if (count === 0) return [];
+  const middle = between(before, after);
+  const half = Math.floor((count - 1) / 2);
+  return [
+    ...listBetween(before, middle, half),
+    middle,
+    ...listBetween(middle, after, count - 1 - half),
+  ];
+}
+
+/** `count` keys spread evenly, in order, all of the same few digits: for an existing list. */
+export function spread(count: number): OrderKey[] {
+  let digits = 1;
+  while (BASE ** digits <= count) digits += 1;
+  const step = BASE ** digits / (count + 1);
+  return Array.from({ length: count }, (_, index) => {
+    let value = Math.floor(step * (index + 1));
+    let text = "";
+    for (let place = 0; place < digits; place += 1) {
+      text = (DIGITS[value % BASE] ?? "") + text;
+      value = Math.floor(value / BASE);
+    }
+    // Dropping the zeros at the end keeps the order: all keys have the same number of digits.
+    return brand(text.replace(/0+$/u, ""));
+  });
+}
+
+/** What the Activities list is sorted by: the order key, and the id where keys are equal. */
+type Ordered = { readonly key: OrderKey; readonly id: string };
+
+/** Below zero when `first` comes first in the list, above when `second` does. */
+export function compare(first: Ordered, second: Ordered): number {
+  if (first.key !== second.key) return first.key < second.key ? -1 : 1;
+  if (first.id === second.id) return 0;
+  return first.id < second.id ? -1 : 1;
+}
+
+/**
+ * The positions of a longest run of keys that, skipping the others, already ascend strictly. When
+ * there are several, the one that ends earliest and, from there, keeps the earliest keys.
+ */
+function findAscending(keys: readonly (OrderKey | undefined)[]): Set<number> {
+  const lengths: number[] = [];
+  const previous: (number | undefined)[] = [];
+  let best: number | undefined;
+  for (const [index, key] of keys.entries()) {
+    lengths.push(0);
+    previous.push(undefined);
+    if (key === undefined) continue;
+    let length = 1;
+    for (let earlier = 0; earlier < index; earlier += 1) {
+      const earlierKey = keys[earlier];
+      const earlierLength = lengths[earlier] ?? 0;
+      if (earlierKey === undefined || earlierKey >= key || earlierLength + 1 <= length) continue;
+      length = earlierLength + 1;
+      previous[index] = earlier;
+    }
+    lengths[index] = length;
+    if (best === undefined || length > (lengths[best] ?? 0)) best = index;
+  }
+  const kept = new Set<number>();
+  for (let index = best; index !== undefined; index = previous[index]) kept.add(index);
+  return kept;
+}
+
+/**
+ * Keys for a list in its new order, given each item's key so far (undefined for a new item). As
+ * many keys as possible stay as they are: those of a longest run already in order. The others get
+ * new keys between their neighbors, so one activity dragged to a new place is the one whose key
+ * changes, and a new activity at the end gets a key after the last. Two equal keys can't both stay,
+ * since nothing would fit between them. Should a new key grow past the longest a key can be, the
+ * whole list gets evenly spread keys instead.
+ */
+export function assign(keys: readonly (OrderKey | undefined)[]): OrderKey[] {
+  const kept = findAscending(keys);
+  const assigned: OrderKey[] = [];
+  let waiting = 0;
+  let before: OrderKey | undefined;
+  const fill = (after?: OrderKey): void => {
+    assigned.push(...listBetween(before, after, waiting));
+    waiting = 0;
+  };
+  for (const [index, key] of keys.entries()) {
+    if (key === undefined || !kept.has(index)) {
+      waiting += 1;
+      continue;
+    }
+    fill(key);
+    assigned.push(key);
+    before = key;
+  }
+  fill();
+  const isTooLong = assigned.some((key) => key.length > MAX_LENGTH);
+  return isTooLong ? spread(keys.length) : assigned;
+}
