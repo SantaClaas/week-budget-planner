@@ -74,7 +74,7 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 
 - **What it costs here is small.** The devices are one person's, their clocks are set by the network to within seconds, the conflict needs the same register changed on two of them while apart, and Undo and the other device's value are both a few taps away.
 - **A clock far ahead also dulls the stamps for a while.** Once the others merge its change, their clocks hold that future time, and until real time catches up their stamps differ only by the counter. Changes that know of each other still order correctly; changes made apart are then decided by the counter and the node id, not by time.
-- **The fix, in phase 2, uses the server that is there anyway.** Every response from the server carries its time. A node works out how far its own clock is off and corrects the time it stamps with, also while offline, by the last offset it knew. The server isn't the source of truth for time and nothing waits on it: a node that never reaches it stamps with its own clock, as in this phase. No second server is needed.
+- **The fix, in the later phases, uses the server that is there anyway.** Every response from the server carries its time. A node works out how far its own clock is off and corrects the time it stamps with, also while offline, by the last offset it knew. The server isn't the source of truth for time and nothing waits on it: a node that never reaches it stamps with its own clock, as in this phase. No second server is needed.
 - **Nothing that must be right may depend on a stamp's time.** How old a deletion marker is, for dropping it, is counted from when the group received it, not from its stamp (see [Deleting](#deleting)).
 
 What else was looked at:
@@ -95,7 +95,7 @@ What else was looked at:
 - **Undoing a delete** writes existence again, with a new stamp, and the row comes back as the device that undid it last showed it: every register that differs from that gets the new stamp too. An edit another device made to the row while it was deleted is replaced by it. The person who presses Undo gets back what they saw, and an import of an older file shows the file's values for rows that had been deleted since.
 - **A block shows only while its activity exists.** When one device deletes an activity and another adds a block to it, the block's row merges in but isn't part of the plan. If the deletion is undone, it appears with the activity. Deleting an activity still marks the blocks it had as deleted too, as it removes them today; the rule is for the blocks the deleting device didn't know about.
 - **Ids are never used again**, so a deleted row can't be mistaken for a new one.
-- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces under [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md)), so the rule belongs to phase 2. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What phase 2 has to settle is written under [Returning after a long time](#returning-after-a-long-time).
+- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces under [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md)), so the rule belongs to the later phases. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What the later phases have to settle is written under [Returning after a long time](#returning-after-a-long-time).
 
 ## Order
 
@@ -149,7 +149,7 @@ A change, a snapshot or a file comes from outside the code, even when another of
 
 **The example week gets new ids each time it's loaded.** Today its ids come from [`examples/example-week.json`](../../examples/example-week.json) as they are, so every device's example week has the same ids. Two devices that each kept theirs and went on to different plans would then merge register by register into a mix of both, as if they were one plan edited twice. A row's identity has to come from one act of creating it. With new ids, merging two such plans gives all the activities of both, which is plain to see and to clean up.
 
-`exampleLoadedAt` is a register like any other. What a device does with its own plan when it joins a group (drop an untouched example week, replace its plan, or merge it in) is phase 2's question.
+`exampleLoadedAt` is a register like any other. What a device does with its own plan when it joins a group (drop an untouched example week, replace its plan, or merge it in) is the later phases's question.
 
 ## Storage
 
@@ -176,15 +176,15 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 
 ## The limited storage levels
 
-**The merge doesn't depend on where the rows are kept.** It works on rows in memory, and the database is one place to keep them. So a window without the database (see [Progressive enhancement](persistence.md#progressive-enhancement) in [Persistence](persistence.md)), such as a private one, can sync in phase 2: it loads the group's snapshot when it opens, merges what arrives, and sends its own changes as they're made.
+**The merge doesn't depend on where the rows are kept.** It works on rows in memory, and the database is one place to keep them. So a window without the database (see [Progressive enhancement](persistence.md#progressive-enhancement) in [Persistence](persistence.md)), such as a private one, can sync in the later phases: it loads the group's snapshot when it opens, merges what arrives, and sends its own changes as they're made.
 
 - **What such a window can't do is keep changes it hasn't sent.** Closed while offline, they're gone, as everything is at the level with no storage. The save status has to say so.
 - **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one, and it tells the group that it's temporary, so it can be let go when it closes (see [Removing a device](network.md#removing-a-device) in [Network](network.md)). Without the database there's no leader either, so each such tab is its own node with its own connection.
-- **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with phase 2.
+- **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with the later phases.
 
 ## Returning after a long time
 
-This is for phase 2, since it depends on the lease. It's written down because it decides whether markers can ever be dropped, and the format above has to allow it.
+This is for the later phases, since it depends on the lease. It's written down because it decides whether markers can ever be dropped, and the format above has to allow it.
 
 The danger: once the other devices have dropped a marker, a device that was away since before the deletion still has the row, and merging its row would bring it back. So a device that returns after its lease doesn't merge its state. It takes the group's snapshot and carries over only what it never sent, by the stamps later than its last sync:
 

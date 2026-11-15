@@ -22,6 +22,9 @@ These are technical terms for code and docs. The copy will say "device", and wha
 | **Cluster** | The processes of one node. They share the node's keys and trust each other fully, so there is no cryptography between them. The open tabs of one browser are a cluster: one of them is the leader, holds the database (see [Database engine](persistence.md#database-engine-same-as-flashcut) in [Persistence](persistence.md)), and will hold the node's keys and its one connection to the outside. |
 | **Group** | The nodes that share one plan and the key to read it: a person's devices. Later this can be an MLS group. |
 | **Server** | A node that is a peer on the transport, but not a member of any group. It keeps each group's encrypted changes and hands them to the group's members. |
+| **Self-service** | Syncing between a person's devices that are online together, with nothing stored anywhere but on them. Named after the restaurant where nobody serves. |
+| **Full-service** | Self-service plus the server: it keeps changes for devices that are offline, and holds a backup. |
+| **Relay** | What carries a connection between two nodes that can't reach each other directly, which no two browsers can. It passes bytes on and keeps nothing. |
 | **Change** | What one user action did to the plan, in a form that merges (see [Phase 1](#phase-1-changes-that-merge)). |
 | **Snapshot** | The whole plan at one point, encrypted like a change. It replaces all the changes before it. |
 
@@ -40,12 +43,12 @@ flowchart LR
   server["Server: a node outside the group<br/>encrypted changes and snapshots,<br/>member list, quota"]
   leader <-- "encrypted changes" --> server
   phone <-- "encrypted changes" --> server
-  leader <-. "through a relay, later" .-> phone
+  leader <-. "self-service: through a relay" .-> phone
 ```
 
 ## Decided
 
-- **The server is a progressive enhancement.** Without it, the app is what it is today. Syncing between two devices that are both online, without the server holding anything, stays possible in the design, but it isn't built first, since it's the worse experience.
+- **Self-service first, full-service on top.** A person's devices sync with each other, with no server of ours storing anything. The server is an optional extension that offers only what devices can't do among themselves: keeping changes for a device that's offline, and a backup (see [Self-service and full-service](#self-service-and-full-service)). Without either, the app is what it is today.
 - **The server is a peer, not a member.** It speaks the same protocol as a device and is addressed the same way, which keeps the architecture to one kind of participant. It never gets a group's key.
 - **The server only appends.** It can't read changes, so it can't merge or shrink them. It keeps an append-only log of encrypted changes per group, with a storage limit. A device makes room by uploading a snapshot and telling the server to drop everything before it. The limit is what makes devices do that.
 - **A simple group key first, MLS later.** At the start, the devices of a group share one key. Every message carries the key's epoch from the first version, so MLS can replace the key handling later without a new format.
@@ -53,8 +56,38 @@ flowchart LR
 - **The server also serves the app**, from the same origin as its API, once it exists. That avoids cross-origin requests and their rules (CORS, cookies across sites), and the server can send real headers, which GitHub Pages can't (see [Hosting](#hosting) below).
 - **Putting state on the server is fine where it's needed.** An invite code that works once, a group's member list and a blocklist can't live on the client alone.
 - **Rust where there's a reason.** The server is Rust. In the app, a library that is Rust compiled to WebAssembly under a JavaScript wrapper is used as the Rust crate directly, in one WebAssembly module of our own. The app's own logic stays TypeScript until something needs it moved. The merge logic has no need to be shared with the server, because the server never merges.
-- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under [Phase 2](#phase-2-the-server)).
+- **The transport is [iroh](https://www.iroh.computer/), through a relay of our own on the server's origin.** A spike showed it works in a browser under this app's rules ([SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). For the planner alone a WebSocket would be simpler, since in a browser iroh ends up as a WebSocket to a relay anyway. iroh adds what the design is after: nodes addressed and authenticated by their key, by the transport itself, and the same stack for native clients later. The protocol doesn't know its transport, so a WebSocket stays a cheap fallback (see Transport under [Phase 3](#phase-3-full-service-the-server)).
 - **Deterministic simulation testing from the first line** (see [Testing](#testing)).
+
+## Self-service and full-service
+
+**The devices do everything they can among themselves, and the server adds only what they can't.** The names come from restaurants: in a self-service one, nobody serves; in a full-service one, a server does. Here the server is the one that keeps things for you while you're away.
+
+| | Self-service | Full-service |
+| --- | --- | --- |
+| Two devices online together | sync | sync |
+| A device that's offline | catches up when it's next online together with another | catches up from the server at any time |
+| Every device lost | the plan is gone, unless there's an export | the server's encrypted copy is opened with the recovery code or the passkey |
+| An account | none | an invite code and a passkey |
+| What a server of ours stores | nothing | the encrypted changes and snapshots |
+
+- **Full-service reuses self-service.** The server is a node that speaks the same protocol as a device, is always on, and can't read what it's given (see [Decided](#decided)). So syncing with it is syncing with a peer that only stores. Where the technology doesn't allow that, the app still presents it that way: full-service is self-service with a server added, not a different product.
+- **Self-service in a browser still needs a relay, and the app must say so.** No two browsers can connect to each other directly (see Transport under [Phase 3](#phase-3-full-service-the-server), and [SantaClaas/week-budget-planner#80](https://github.com/SantaClaas/week-budget-planner/issues/80)). A relay passes the encrypted bytes on and keeps nothing, but it is a server in the path, and it sees which nodes talk and when (see [What the server learns](#what-the-server-learns)). In the restaurant's terms, it's the room, not the waiter. So the copy says "nothing is stored on a server", and never "no server". Native clients, later, could connect directly.
+- **Whose relay self-service uses is open.** A relay costs its owner traffic, and self-service has no accounts to say who may use it. The choices: one of ours that anyone running the app may use, limited per address; n0's public relays, which are for development and hobby use; or connections the two devices set up by hand, by scanning each other's codes (WebRTC), which need no relay on one network and a public address helper across networks.
+- **Full-service is what costs money to run,** so it may become a paid plan, or be free for the people the owner chooses to carry. Invite codes are how they get it. Self-service stays free. This follows the bound in [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md): the cost is plain to see, and nobody loses their plan by not paying, since every device holds all of it.
+- **The designs so far were written server-first** and are right for full-service: [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md). Self-service needs its own design before they're built, and will reshape them:
+  - **The protocol between two devices** that both hold the key and both merge: what each sends the other, with a sent stamp kept per peer where the server's design keeps one.
+  - **Identity without an account:** nodes, the group's key, the device list in the group and pairing work without a server. Passkey checks don't have to: a device can check a passkey's answer against the record the group holds (see [Approved later](identity.md#approved-later-by-a-device-thats-in)). What guards removing a device then has to be decided without a server to enforce it.
+  - **What is no longer the server's job:** telling who is a member, and counting when a deletion marker may be dropped.
+
+## Groups of groups
+
+**A person is a group of devices, and a group of people is a group of those groups.** That is why the devices of one person form a group of their own here, and not a list under an account: the same layer serves later for sharing a plan, and for the end-to-end encrypted messenger this architecture is also meant to carry.
+
+- **A person's identity isn't any one device's key.** The passkey says who the person is; each device has a key that only says "this device". Devices come and go without the person's identity changing, and none is special. Messengers that began with one key on one phone had to add other devices afterwards, and the phone often stayed the one that counts.
+- **In MLS, a member of a group is one client.** A person's devices can still appear to a larger group as a single member: together they emulate one client. The IETF's MLS working group describes this as [virtual clients](https://www.ietf.org/archive/id/draft-ietf-mls-virtual-clients-01.html), a draft that grew out of [MLS subgroups](https://bren2010.github.io/draft-subgroups/draft-mcmillion-mls-subgroups.txt). The larger group then doesn't see how many devices a person has, which one sent a message, or when one is added or removed.
+- **What it costs,** by the draft's own account: for the others, end-to-end ends at the person, not at the device. And the devices have to keep the shared client's state in step among themselves, which is a syncing problem of the kind this design solves.
+- It is a draft and may change. Nothing here depends on it yet.
 
 ## Phases
 
@@ -64,10 +97,14 @@ No network. The plan is kept so that two devices that saw the same changes end u
 
 - **Rows, registers and stamps.** Each activity, block and the settings is a row, split into registers that hold a value and a stamp. Merging takes the later stamp, register by register. A change is the rows an action touched, a snapshot is all of them, and one function merges either.
 - **No library, and no log of operations.** The plan is tens of rows, and the current rows with their stamps are all there is to keep and to send.
-- **A pure core.** Merging is a pure function, and the protocol in phase 2 is a state machine that takes messages and the time and returns messages and changes to apply (see [A pure core, with side effects at the edges](../guidelines/principles.md#a-pure-core-with-side-effects-at-the-edges) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
+- **A pure core.** Merging is a pure function, and the protocol in the later phases is a state machine that takes messages and the time and returns messages and changes to apply (see [A pure core, with side effects at the edges](../guidelines/principles.md#a-pure-core-with-side-effects-at-the-edges) in [`docs/guidelines/principles.md`](../guidelines/principles.md)).
 - **Nothing the user sees changes,** except that the example week gets new ids when it's loaded.
 
-### Phase 2: the server
+### Phase 2: self-service
+
+A person's devices sync with each other while they're online together, through a relay, with nothing stored on a server (see [Self-service and full-service](#self-service-and-full-service)). **Not designed yet.** It needs the protocol between two devices, identity without an account, pairing, the transport and its relay, and the screens.
+
+### Phase 3: full-service, the server
 
 A device signs in, joins or creates a group, and syncs its changes through the server.
 
@@ -158,7 +195,7 @@ These come from the wider goal of infrastructure for several apps. The planner n
   - **A challenge nonce** (a number used once) proves a node is there now: the server sends a fresh random number, and the node signs it. A recorded answer holds an old number and fails. Passkey sign-in works this way. The server remembers the number until it's answered. The nonce proves presence once, at sign-in, and the lease carries that forward for a bounded time.
   - **An encryption nonce** is a different thing with the same name: a value that must never repeat under one key. It has nothing to do with replays. A key per operation, above, avoids the problem.
 - **Actors on every node.** The tab cluster already works like one: the leader's database service is a single activation that other tabs call without knowing where it runs, as with the virtual actors of Microsoft's [Orleans](https://www.microsoft.com/en-us/research/publication/orleans-distributed-virtual-actors-for-programmability-and-scalability/). Tabs could host more actors to share work.
-- **Not adopted:** a distributed hash table of our own to find nodes (a person's few devices need a meeting point, not a routing ring, and iroh brings its own discovery), and nested groups as a "tree of rings" (an MLS group's tree is how it updates keys, not a network layout, and a member is always one client).
+- **Not adopted:** a distributed hash table of our own to find nodes (a person's few devices need a meeting point, not a routing ring, and iroh brings its own discovery), and an MLS group's key tree as a network layout (the tree is how the group updates its keys). Groups inside groups are not part of MLS itself, but are how this design is meant to grow (see [Groups of groups](#groups-of-groups)).
 
 ## Testing
 
