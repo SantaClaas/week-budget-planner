@@ -91,18 +91,26 @@ sequenceDiagram
 - **A node's own change doesn't come back to it.** Appended carries its sequence number, and the node counts it as merged.
 - **The cursor only moves over a gap-free run.** A node that has 39 and 41 but not 40 keeps its cursor at 39.
 - **An Append that got no answer is sent again with the same id.** The server answers with the sequence number it already gave it, so a dropped connection doesn't store a change twice. Stored twice would still merge correctly; it would only waste space.
-- **A message has a size limit** of 1 MB. A plan's snapshot is tens of kilobytes.
+- **A message has a size limit** of 1 MB. A plan's snapshot is tens of kilobytes, most of it deletion markers.
 
 ## The envelope
 
 **In the clear, for the server:** the kind of message, the group (once, in Hello), the key epoch, the message's id, and the numbers above. That is what the server needs to route and store.
 
-**Encrypted, for the group:** the change or snapshot, in the format of [Merging changes](merge.md) with its own version, as canonical JSON, padded.
+**Encrypted, for the group:** the change or snapshot of [Merging changes](merge.md), with its own format version first, in the encoding below, padded.
 
 - **Bound into the encryption:** the protocol version, the group, the key epoch, and whether it's a change or a snapshot. A message taken from one group, epoch or kind doesn't decrypt as another. The cipher and the keys are the identity design's.
 - **Padding:** the content is padded to the next of a few fixed sizes before it's encrypted, so the server sees roughly how much changed and not exactly.
 - **Versions:** Hello carries the protocol's version, and the server refuses one it doesn't speak, naming what's needed. A change whose inner format is newer than the node knows stops that node's merging until the app is updated (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)).
-- **The bytes on the wire** are a fixed layout written down field by field, not a general encoding: the messages are few and their fields are numbers and byte strings. The node's side is TypeScript and the server's is Rust, and both are tested against the same file of test vectors, each a message with its exact bytes.
+- **Everything is encoded as [postcard](https://postcard.jamesmunns.com/wire-format)'s wire format,** the messages and what's encrypted inside them: a binary encoding that doesn't describe itself. Fields come in a fixed order with no names, whole numbers take as few bytes as they need, and bytes and text carry their length. Both sides have to know the layout, which is written down here field by field when the protocol is built.
+  - **Why not JSON.** A snapshot carries every deletion marker of the last 180 days, and a row has up to six stamps of 33 characters, so as text a snapshot is mostly the same stamps again and again: several hundred kilobytes for someone who rearranges often.
+  - **Why not a format that describes itself or tolerates the unknown** (CBOR, MessagePack, Protocol Buffers): they spend bytes on it, and a node here must never merge what it can't read all of (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)). A new format version is a new layout, and an older app refuses it. Protocol Buffers would keep fields it doesn't know without a word, which is the opposite.
+  - **Stamps aren't repeated.** One action gives everything it writes the same stamp. A change or snapshot starts with a table of the node ids and the stamps it uses, and each register refers to its stamp by number. A stamp then costs about 13 bytes once, and a byte or two wherever it's used again.
+  - **No compression on top.** With this encoding and messages this small it would save little, and compressing before encrypting lets sizes say more than they should.
+  - **One codec, in the Rust module:** it encodes and decodes, and hands the app plain values, which the merge still checks strictly. A native app later uses the same code. The server needs only the messages' outer fields.
+  - **Test vectors** keep every implementation the same: a file of messages with their exact bytes, which each side's tests encode and decode.
+  - **What the merge compares stays as it is:** equal stamps with different values are decided by the values as canonical JSON (see [Stamps and the clock](merge.md#stamps-and-the-clock) in [Merging changes](merge.md)). That is a rule about values, not about bytes on the wire.
+  - To check when it's built: the version of postcard's format, which is pinned, and that its specification covers every type used.
 
 ## Snapshots and the storage limit
 
