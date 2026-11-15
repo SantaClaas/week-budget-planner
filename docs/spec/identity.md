@@ -2,11 +2,17 @@
 
 **Phase 2 of [Network](network.md), designed and not built yet.** Who a node is, how a person signs in, how a group's devices come to share a key, and how one is removed. How changes travel once that's settled is in [The sync protocol](sync.md). The work is [SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91).
 
-**This is a design by people who build apps, not by cryptographers.** It only combines standard, published constructions and says which, so that it can be checked. Before real people's plans depend on it, someone who does this for a living should review it. Where it says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
+## What the cryptography is for
 
-## To confirm
+**First, to keep people's data off the server,** so that whoever runs it holds nothing they'd be responsible for: no plan, no name, no email address. What the server stores is bytes it can't read, and keys it can't use.
 
-Rules about what the user gets, or choices that are the owner's. Until they're confirmed, this file is a draft.
+**Second, and close behind, to be secure** against the others in the table under Who can do what.
+
+**It has not been reviewed.** This is a design by people who build apps, not by cryptographers, and there are no means to have it verified for now. It only combines standard, published constructions and says which, so that it can be checked later. The app must not promise more than that: it can say that the server can't read the plan by design, and not that the design was audited. Where this file says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
+
+## Decided
+
+Rules about what the user gets, or choices that are the owner's.
 
 1. **A new device is added with a pairing code** shown by a device that's already in, as a QR code and as text (see Adding a device).
 2. **"Any device with my passkey can open my week" is offered as a choice** when syncing is set up (see The passkey shortcut). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
@@ -206,12 +212,7 @@ sequenceDiagram
 
 ## What this adds to the sync protocol
 
-To be written into [The sync protocol](sync.md) when this is confirmed:
-
-- **Sealed secrets:** the server keeps, per group and epoch, one sealed epoch secret per device, one for the recovery key and one for the passkey key, and hands a device its own.
-- **Pairing messages:** "let me in" and its answer, passed between a waiting node and a member.
-- **Removing a node,** with a passkey's answer attached.
-- **A new epoch:** changes and snapshots under an older epoch are refused once a newer one has a snapshot.
+The messages for pairing, for the sealed secrets, for removing a node and for starting a new epoch are in What the identity design adds in [The sync protocol](sync.md).
 
 ## What isn't adopted
 

@@ -2,9 +2,9 @@
 
 **Phase 2 of [Network](network.md), designed and not built yet.** How changes and snapshots travel between a node and the server, and what each side keeps. What a change and a snapshot are, and how they merge, is in [Merging changes](merge.md). Who a node is, how a person signs in and how a group's devices share a key is its own design ([SantaClaas/week-budget-planner#91](https://github.com/SantaClaas/week-budget-planner/issues/91)); this file takes "a node that is a member of a group and holds its key" as given. The work is [SantaClaas/week-budget-planner#90](https://github.com/SantaClaas/week-budget-planner/issues/90).
 
-## To confirm
+## Decided
 
-These are rules about what the user gets, or numbers that are the owner's to set. Until they're confirmed, this file is a draft.
+These are rules about what the user gets, or numbers that are the owner's to set.
 
 1. **A device that joins a group with a plan of its own asks what to do with it:** replace it with the group's, or add its activities to the group's (see Joining). An example week nobody kept, or an empty plan, is dropped without asking.
 2. **While syncing is on, an import changes the plan on every device** (see Importing while syncing).
@@ -204,6 +204,23 @@ Added to the table in [Network](network.md):
 | when a group's rows were tidied | Put snapshot | nothing |
 
 It doesn't learn what changed, how many activities or blocks there are, or anything in them.
+
+## What the identity design adds
+
+[Identity, sign-in and groups](identity.md) says why. These travel on the same connection, with the same envelope:
+
+| Message | From | Holds | The other side |
+| --- | --- | --- | --- |
+| **Let me in** | a node that signed in and isn't in the group yet | its public keys, authenticated with the pairing code | the server passes it to the group's connected members |
+| **Let in** | a member | the epoch secret sealed to the new node, authenticated with the pairing code | the server passes it to the waiting node, which then says Hello |
+| **Put sealed secrets** | a member | a key epoch, and that epoch's secret sealed once per remaining device, for the recovery key and for the passkey key | the server stores them and refuses an epoch that isn't newer than the latest |
+| **Sealed secret** | server | a key epoch and the copy sealed for this node | sent after Welcome when the node's latest epoch is older; the node opens it |
+| **Remove node** | a member | the node to remove, and a passkey's answer to a fresh challenge | the server checks the answer, refuses that node from then on, and tells the group's connected members |
+
+- **A new epoch starts with a snapshot.** After Put sealed secrets, the same member puts a snapshot under the new epoch. From then on the server refuses an Append under an older epoch, and drops what it held under it.
+- **A node that reads an epoch it has no secret for** asks for its sealed secret and waits. If none exists for it, it was removed.
+- **The server stores** the sealed secrets, per group, epoch and recipient. They are opaque to it.
+- **It learns** when a device is added and removed, and that a new epoch began.
 
 ## The two state machines
 
