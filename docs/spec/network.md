@@ -71,7 +71,7 @@ No network. The plan is kept so that two devices that saw the same changes end u
 
 A device signs in, joins or creates a group, and syncs its changes through the server.
 
-**The protocol between a node and the server is designed in [The sync protocol](sync.md).**
+**The protocol between a node and the server is designed in [The sync protocol](sync.md).** **Who a node is, signing in, and how a group's devices share a key are designed in [Identity, sign-in and groups](identity.md).**
 
 - **Server:** Rust with [axum](https://github.com/tokio-rs/axum), built from actors as in Alice Ryhl's [Actors with Tokio](https://ryhl.io/blog/actors-with-tokio/). [`docs/guidelines/`](../guidelines/) gets a `rust.md` with the first Rust code, and [`docs/guidelines/principles.md`](../guidelines/principles.md) is checked against it.
 - **Access:** an invite code is needed to register a passkey. Passkeys sign a device in.
