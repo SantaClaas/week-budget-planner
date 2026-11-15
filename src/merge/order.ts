@@ -50,7 +50,7 @@ function findMidpoint(low: string, high?: string): string {
     if (shared > 0)
       return high.slice(0, shared) + findMidpoint(low.slice(shared), high.slice(shared));
   }
-  const lowDigit = low === "" ? 0 : readDigit(low, 0);
+  const lowDigit = readDigit(low, 0);
   const highDigit = high === undefined ? BASE : readDigit(high, 0);
   if (highDigit - lowDigit > 1) return DIGITS[Math.round((lowDigit + highDigit) / 2)] ?? "";
   // The first digits are next to each other. A longer `high` leaves room right at its first digit;
@@ -118,26 +118,25 @@ export function compare(first: Ordered, second: Ordered): number {
  * there are several, the one that ends earliest and, from there, keeps the earliest keys.
  */
 function findAscending(keys: readonly (OrderKey | undefined)[]): Set<number> {
-  const lengths: number[] = [];
-  const previous: (number | undefined)[] = [];
+  /** By position: the length of the longest run that ends there, and the position before it. */
+  const lengths = new Map<number, number>();
+  const previous = new Map<number, number>();
   let best: number | undefined;
   for (const [index, key] of keys.entries()) {
-    lengths.push(0);
-    previous.push(undefined);
     if (key === undefined) continue;
     let length = 1;
     for (let earlier = 0; earlier < index; earlier += 1) {
       const earlierKey = keys[earlier];
-      const earlierLength = lengths[earlier] ?? 0;
+      const earlierLength = lengths.get(earlier) ?? 0;
       if (earlierKey === undefined || earlierKey >= key || earlierLength + 1 <= length) continue;
       length = earlierLength + 1;
-      previous[index] = earlier;
+      previous.set(index, earlier);
     }
-    lengths[index] = length;
-    if (best === undefined || length > (lengths[best] ?? 0)) best = index;
+    lengths.set(index, length);
+    if (best === undefined || length > (lengths.get(best) ?? 0)) best = index;
   }
   const kept = new Set<number>();
-  for (let index = best; index !== undefined; index = previous[index]) kept.add(index);
+  for (let index = best; index !== undefined; index = previous.get(index)) kept.add(index);
   return kept;
 }
 

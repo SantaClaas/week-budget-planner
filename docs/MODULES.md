@@ -76,6 +76,7 @@ flowchart LR
   module_keeping --> module_snackbar
   module_keeping --> module_storage
   module_merge --> module_brand
+  module_merge --> module_plan
   module_merge --> module_result
   module_navigation --> module_icons
   module_navigation --> module_page
