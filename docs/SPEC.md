@@ -19,6 +19,7 @@ The behavior and the design of the app, split by topic in [`docs/spec/`](spec/).
 | [`browser-support.md`](spec/browser-support.md) | what the app needs, the fallbacks and the known gaps | |
 | [`network.md`](spec/network.md) | syncing between devices: a direction, not built yet. Nodes, groups, the server that can't read the plan, the phases and the open questions | |
 | [`merge.md`](spec/merge.md) | phase 1 of syncing, not built yet: how the plan's rows merge between devices. Registers, stamps, deletion markers, the order of activities, the conflict cases | |
+| [`self-service.md`](spec/self-service.md) | phase 2 of syncing, a draft, not built yet: a person's devices syncing with each other, with nothing stored on a server. The device list, what devices send each other, who may change the group, adding and removing a device, deletion markers | |
 | [`sync.md`](spec/sync.md) | phase 2 of syncing, not built yet: the protocol between a node and the server. The log, cursors, snapshots and the storage limit, joining, dropping deletion markers, what the server learns | |
 | [`identity.md`](spec/identity.md) | phase 2 of syncing, not built yet: accounts, invite codes and passkeys, a node's keys, the group's key, adding and removing a device, recovery, and who can do what | |
 
