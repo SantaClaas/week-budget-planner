@@ -196,6 +196,7 @@ describe("checking what is received", () => {
     ],
     ["a time that isn't text", ["settings", "exampleLoadedAt", "value"], 0, "invalid-value"],
     ["settings that aren't an object", ["settings"], "none", "not-a-change"],
+    ["a block that isn't an object", ["blocks", 0], 7, "not-a-change"],
   ];
 
   for (const [what, path, value, problem] of refusals) {
