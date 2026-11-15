@@ -72,7 +72,7 @@ describe("register", () => {
   });
 
   it("writes canonical JSON with every object's keys sorted", () => {
-    expect(formatCanonical({ e: 1, d: null, c: "x", b: false, a: 2 })).toBe(
+    expect(formatCanonical({ c: "x", a: 2, e: 1, b: false, d: null })).toBe(
       '{"a":2,"b":false,"c":"x","d":null,"e":1}',
     );
     expect(formatCanonical("Gym")).toBe('"Gym"');
@@ -95,6 +95,9 @@ describe("register", () => {
     [{ a: 1 }, '{"a":1}'],
     ['{"a":1}', { a: 1 }],
     [1, "1"],
+    [1, 2],
+    ["x", { 0: "x" }],
+    [{ 0: "x" }, "x"],
   ])("tells %j from %j", (first, second) => {
     expect(isSame(first, second)).toBe(false);
   });

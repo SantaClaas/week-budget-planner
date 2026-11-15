@@ -9,9 +9,16 @@ export default {
   plugins: ["@stryker-mutator/vitest-runner"],
   testRunner: "vitest",
   vitest: { configFile: "vitest.config.ts" },
-  // The pure core, where a test is input and expected output. Components and the code at the
-  // edges are left out: mutating them gives noise, and their tests are slower.
-  mutate: ["src/plan/**/*.ts", "!src/plan/**/*.test.ts", "!src/plan/test-data.ts"],
+  // The pure core, where a test is input and expected output: the plan, and merging it between
+  // devices. Components and the code at the edges are left out: mutating them gives noise, and
+  // their tests are slower.
+  mutate: [
+    "src/plan/**/*.ts",
+    "src/merge/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/plan/test-data.ts",
+    "!src/merge/test-data.ts",
+  ],
   // Stryker runs the tests in a copy of the repository. The skill folders hold a symlink to a
   // folder, which the copy fails on, and the others are build output.
   ignorePatterns: [".claude", ".agents", "dist", "playwright-report", "test-results"],
@@ -23,7 +30,8 @@ export default {
   htmlReporter: { fileName: "reports/mutation/index.html" },
   tempDirName: ".stryker-tmp",
   // The mutants in constants (SLOT, the palette) need every test run, which is most of the time
-  // a run takes. They stay in: those constants are rules too, and a run is about two minutes.
+  // a run takes. They stay in: those constants are rules too. A run over everything is about
+  // twenty minutes, most of it the merge's simulation (see the guideline).
   warnings: { slow: false },
   // No score to reach: the survivors are read, not counted (see the guideline).
   thresholds: { high: 100, low: 0, break: null },
