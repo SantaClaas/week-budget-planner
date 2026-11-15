@@ -19,5 +19,6 @@ The behavior and the design of the app, split by topic in [`docs/spec/`](spec/).
 | [`browser-support.md`](spec/browser-support.md) | what the app needs, the fallbacks and the known gaps | |
 | [`network.md`](spec/network.md) | syncing between devices: a direction, not built yet. Nodes, groups, the server that can't read the plan, the phases and the open questions | |
 | [`merge.md`](spec/merge.md) | phase 1 of syncing, not built yet: how the plan's rows merge between devices. Registers, stamps, deletion markers, the order of activities, the conflict cases | |
+| [`sync.md`](spec/sync.md) | phase 2 of syncing, not built yet: the protocol between a node and the server. The log, cursors, snapshots and the storage limit, joining, dropping deletion markers, what the server learns | |
 
 Start with the overview and the glossary, then read the files for the feature at hand. Claude Code loads the glossary in every session, and the files in the last column the first time it touches a matching file, through [`.claude/rules/`](../.claude/rules/).
