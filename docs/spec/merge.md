@@ -4,7 +4,7 @@
 
 ## Decided
 
-These are rules about what the user gets, so they were the user's to decide. Each is described in the section named.
+These are rules about what the user gets, so they were the project's author's to decide. Each is described in the section named.
 
 1. **A delete wins over an edit made at the same time** on another device (see [Deleting](#deleting)).
 2. **Blocks added to an activity that another device deleted are hidden with it**, and come back if the deletion is undone (see [Deleting](#deleting)).

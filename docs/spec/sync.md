@@ -4,7 +4,7 @@
 
 ## Decided
 
-These are rules about what the user gets, or numbers that are the owner's to set.
+These are rules about what the user gets, or numbers that are the project's author's to set.
 
 1. **A device that joins a group with a plan of its own asks what to do with it:** replace it with the group's, or add its activities to the group's (see [Joining](#joining)). An example week nobody kept, or an empty plan, is dropped without asking.
 2. **While syncing is on, an import changes the plan on every device** (see [Importing while syncing](#importing-while-syncing)).
@@ -21,6 +21,8 @@ The merge is what makes the protocol small. A change can be merged in any order 
 - **The log:** per group, the server numbers each change it receives, from 1 up. That number is the change's **sequence number**.
 - **The cursor:** each node remembers the highest sequence number up to which it has merged everything.
 - **The snapshot:** all of a node's rows, uploaded so the server can drop the changes before it.
+
+It is the shape of a video stream: a snapshot is a keyframe, a whole picture that needs nothing before it, and changes are the frames in between that only say what's different. A new viewer starts at a keyframe, and a keyframe now and then keeps the stream short. One thing is easier here than in video: a change doesn't build on the one before it, so a missing or repeated one spoils nothing.
 
 ## What each side keeps
 
