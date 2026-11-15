@@ -6,22 +6,22 @@
 
 **The reasons are one chain, not a ranking.** It starts with the person who runs the server and ends with the people who use it:
 
-1. **Whoever runs the server can't carry other people's data.** Holding plans, names or email addresses means answering for them: keeping them safe, handing them out on request, deleting them properly. The owner has neither the means to have that verified nor the wish for that weight.
+1. **Whoever runs the server can't carry other people's data.** Holding plans, names or email addresses means answering for them: keeping them safe, handing them out on request, deleting them properly. The operator has neither the means to have that verified nor the wish for that weight.
 2. **So the server is built to hold nothing it can read.** What it stores is bytes it can't open and keys it can't use, and it knows a person by a random id.
 3. **Being free of that weight is what makes it possible to offer the service at all.** One that couldn't be run responsibly would help nobody. It's the oxygen mask rule: help yourself first, so that you're able to help others.
-4. **And the same property is what the people using it get.** A plan that lives on its owner's devices, and that a server can only carry and never read, stays in its owner's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption build that in, where a policy could only promise it.
+4. **And the same property is what the people using it get.** A plan that lives on the devices of the person it belongs to, and that a server can only carry and never read, stays in that person's hands: they can see all of it, take it elsewhere and delete it, without asking anyone. That is the self-determination that data protection is there to protect. Germany's constitutional court named it in 1983 (*informationelle Selbstbestimmung*), and argued that a free, democratic society needs it, since people who can't know what is known about them stop acting freely. Local-first design and encryption build that in, where a policy could only promise it.
 
 So what protects the owner and what serves the users is the same decision, seen from two sides. That is sturdier than good intentions alone: it doesn't depend on anyone staying willing to carry a burden.
 
-**The bound: helping yourself is the means, and never at the others' expense.** The chain only holds while step 1 leads to step 4. A choice that eases the owner's load by moving a cost onto the people using the service breaks it, and this line is harder to draw than the rest. Two questions help to find it:
+**The bound: helping yourself is the means, and never at the others' expense.** The chain only holds while step 1 leads to step 4. A choice that eases the operator's load by moving a cost onto the people using the service breaks it, and this line is harder to draw than the rest. Two questions help to find it:
 
 - **Can the people it falls on see the cost, and say no to it?** A limit that is stated plainly, before someone relies on the service, leaves the choice with them. One they'd only find out about afterwards doesn't.
-- **Would they choose it too, if they stood where the owner stands?** Not keeping their data readable: yes. Keeping more of it because that's easier to run: no.
+- **Would they choose it too, if they stood where the operator stands?** Not keeping their data readable: yes. Keeping more of it because that's easier to run: no.
 
 Where this design already sits on that line, and how it stays on the right side:
 
-- **The cryptography has not been reviewed.** That is the owner's limit, and the risk of a flaw falls on the users. So it is said plainly, and the app must not promise more than is true: it can say that the server can't read the plan by design, and not that the design was audited. This is a design by people who build apps, not by cryptographers. It only combines standard, published constructions and says which, so that it can be checked later.
-- **The storage limit and the leases** (see [The sync protocol](sync.md)) save the owner cost. They never cost a user their plan, since every device keeps all of it, and the app warns before anything on the server is deleted.
+- **The cryptography has not been reviewed.** That is the operator's limit, and the risk of a flaw falls on the users. So it is said plainly, and the app must not promise more than is true: it can say that the server can't read the plan by design, and not that the design was audited. This is a design by people who build apps, not by cryptographers. It only combines standard, published constructions and says which, so that it can be checked later.
+- **The storage limit and the leases** (see [The sync protocol](sync.md)) save the operator cost. They never cost a user their plan, since every device keeps all of it, and the app warns before anything on the server is deleted.
 - **What the server still learns** (see [What the server learns](network.md#what-the-server-learns) in [Network](network.md)) is written down, not left out, including what isn't solved.
 
 What would cross it: a disclaimer used where the design could have removed the risk, logs kept because they're convenient, or a cheaper way to run the server that lets someone else see more.
@@ -31,11 +31,11 @@ Where this file says "to check", a fact about browsers or libraries has to be co
 **The lack of a review has to be covered where promises are made.** Two places, and they aren't the same:
 
 - **The code's license** says the software comes without warranty and limits liability for it. The repository has none yet, and needs one before this is built.
-- **The service's terms.** A license covers people who take the code. People who use the server the owner runs are covered by that service's terms and its privacy notice, which say what it stores, that it can't read plans by design, that this wasn't audited, and that it comes as it is. They are part of deciding where the server runs ([SantaClaas/week-budget-planner#95](https://github.com/SantaClaas/week-budget-planner/issues/95)). How far liability can be excluded depends on the owner's country, and is a question for someone who knows its law. A disclaimer is the last resort, for what the design couldn't remove (see the bound above).
+- **The service's terms.** A license covers people who take the code. People who use the server the operator runs are covered by that service's terms and its privacy notice, which say what it stores, that it can't read plans by design, that this wasn't audited, and that it comes as it is. They are part of deciding where the server runs ([SantaClaas/week-budget-planner#95](https://github.com/SantaClaas/week-budget-planner/issues/95)). How far liability can be excluded depends on the operator's country, and is a question for someone who knows its law. A disclaimer is the last resort, for what the design couldn't remove (see the bound above).
 
 ## Decided
 
-Rules about what the user gets, or choices that are the owner's.
+Rules about what the user gets, or choices that are the project's author's.
 
 1. **A new device is added with a pairing code** shown by a device that's already in, as a QR code and as text (see [Adding a device](#adding-a-device)).
 2. **"Any device with my passkey can open my week" is offered as a choice** when syncing is set up (see [The passkey shortcut](#the-passkey-shortcut)). It makes adding a device and recovery easy, and it means the plan is as safe as the passkey, and no safer.
@@ -54,7 +54,7 @@ Rules about what the user gets, or choices that are the owner's.
 | **Node** | one browser on one device, with its own keys (see [Terms](network.md#terms) in [Network](network.md)) | that a message comes from that device |
 | **Group** | the nodes that share the plan and the key to read it | by holding the key, that a node was let in by another |
 
-**The passkey is the person's authority, and the node's key is the device's.** A passkey check lets a device in and approves what could lock the owner out. After that, the device's own key is what the server and the relay recognise, so syncing never prompts.
+**The passkey is the person's authority, and the node's key is the device's.** A passkey check lets a device in and approves what could lock the person out. After that, the device's own key is what the server and the relay recognise, so syncing never prompts.
 
 ## Keys
 
@@ -83,7 +83,7 @@ Rules about what the user gets, or choices that are the owner's.
 
 ### Invite codes
 
-- **A code works once.** It is 128 random bits, shown as text in groups of letters and digits, made by the owner with a command on the server.
+- **A code works once.** It is 128 random bits, shown as text in groups of letters and digits, made by the operator with a command on the server.
 - **The server stores each code's hash,** when it expires and what used it, so a copy of the server's data holds no code that still works.
 - **Registering takes a code** and nothing else does. Attempts are limited per address.
 
@@ -114,7 +114,7 @@ sequenceDiagram
 - **The node signs the challenge too,** which proves it holds the key it registers.
 - **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account, waiting to be let into the group. A device that doesn't have the passkey can still join, by pairing alone (see [Adding a device](#adding-a-device)).
 - **After that, the node's key is the sign-in.** The transport proves it on every connection, and the server checks it against the account's nodes. There is no session to expire and no token to keep.
-- **A passkey check is asked again** only for what could lock the owner out or can't be undone: adding a device, removing one, turning the passkey shortcut on, and deleting the server's data. The server requires it and checks it.
+- **A passkey check is asked again** only for what could lock the person out or can't be undone: adding a device, removing one, turning the passkey shortcut on, and deleting the server's data. The server requires it and checks it.
 - **Ask before the browser asks:** the passkey prompt comes after the app has said what it's for, on a button (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
 
 ## Encrypting changes and snapshots
@@ -164,7 +164,7 @@ sequenceDiagram
 - **The secret is sealed to the new device's encryption key** with HPKE, so even with the code, someone who only watched couldn't open it.
 - **The device that's in vouches for the new one.** It passed a passkey check to start the pairing, so the server admits the new node on its word. The new device doesn't have to sign in first, which also lets in a device that doesn't have the passkey, such as one outside the ecosystem the passkey syncs in. It can add a passkey of its own afterwards.
 - **Where the new device does have the passkey, it passes a check too.** Then the code alone isn't enough to get in.
-- **Where it doesn't, the code is all that's needed,** so the code has to stay between the two screens. Someone who saw it and used it within its ten minutes, before the owner did, would be asking to join. That is why the old device shows what is asking, and hands over nothing until the person confirms; why the code works once; and why the owner's own device failing to join is a sign that something else did. The device list shows every device, and removing one takes a passkey check.
+- **Where it doesn't, the code is all that's needed,** so the code has to stay between the two screens. Someone who saw it and used it within its ten minutes, before the person did, would be asking to join. That is why the old device shows what is asking, and hands over nothing until the person confirms; why the code works once; and why the person's own device failing to join is a sign that something else did. The device list shows every device, and removing one takes a passkey check.
 - **Why the old device shows the code and the new one reads it,** and not the other way round. If the trusted device scanned a code, an attacker could get someone to scan theirs, as has been done against messengers that link devices that way. Here the secret starts on the trusted device, and an attacker has to see its screen.
 - **The new device reaches the server by ordinary requests until it's admitted,** since the relay only lets known nodes through: the old device opens a waiting room named by a hash of the code, and the new one finds it with the code.
 - **What happens to the new device's own plan** is in [Joining](sync.md#joining) in [The sync protocol](sync.md).
@@ -215,7 +215,7 @@ sequenceDiagram
 - **The server refuses the removed node at once,** on the relay and in the protocol. It answers "not a member", and the device turns syncing off and keeps the plan it has (see [What a node does when refused](sync.md#what-a-node-does-when-refused) in [The sync protocol](sync.md)).
 - **The new secret is what really shuts it out.** It is sealed only to the devices that remain, so the removed device can read nothing written after, even if the server went on serving it.
 - **What it already had, it keeps.** Removing a device can't take back a plan it has read.
-- **The race, solved by the passkey check:** someone holding a stolen, unlocked device can't remove the owner's other devices, because removing needs the passkey with user verification, which is a fingerprint, a face or the device's code. Someone who also knows the device's code has the passkeys too, and then has everything the owner has. No design here stops that.
+- **The race, solved by the passkey check:** someone holding a stolen, unlocked device can't remove the person's other devices, because removing needs the passkey with user verification, which is a fingerprint, a face or the device's code. Someone who also knows the device's code has the passkeys too, and then has everything the person has. No design here stops that.
 - **A temporary node that's let go** is taken off the list without a new secret (see [Removing a device](network.md#removing-a-device) in [Network](network.md)).
 
 ## Losing everything
@@ -224,7 +224,7 @@ sequenceDiagram
 - **No device keeps the code,** so a stolen device doesn't have it.
 - **The passkey shortcut does the same** where it's on.
 - **Without either, and with no device left,** what the server holds can't be read by anyone, and the plan is gone. The app says so plainly when the code is shown.
-- **A lost passkey with devices left:** a device that's in can register a new passkey for the account, after a check with a remaining one. **The last passkey lost, with devices left:** the plan is still on them, and syncing is set up again with a new invite code. To check: whether the owner wants a way to attach a new passkey to an old account by hand.
+- **A lost passkey with devices left:** a device that's in can register a new passkey for the account, after a check with a remaining one. **The last passkey lost, with devices left:** the plan is still on them, and syncing is set up again with a new invite code. To check: whether the operator wants a way to attach a new passkey to an old account by hand.
 
 ## The domain
 
@@ -236,7 +236,7 @@ sequenceDiagram
 
 ## Who can do what
 
-| | Read the plan | Change the plan | Stop syncing | Lock the owner out |
+| | Read the plan | Change the plan | Stop syncing | Lock the person out |
 | --- | --- | --- | --- | --- |
 | **The server, curious** | no | no | yes | no |
 | **The server, taken over** | not from what it stores. Yes, by serving changed app code (see [What the server learns](network.md#what-the-server-learns) in [Network](network.md)) | the same | yes, and it can delete what it holds; the devices keep the plan | from syncing, not from the plan on a device |
@@ -246,7 +246,7 @@ sequenceDiagram
 | **The same, unlocked, without its code** | yes, what's on it, and what syncs until it's removed | yes, until it's removed | no | no: removing needs a passkey check |
 | **The same, with its code** | yes | yes | yes | yes |
 | **Someone with an old export** | yes, that plan; it holds no keys | no | no | no |
-| **Someone who saw the pairing code** | only if they use it within ten minutes, before the owner does, and the owner confirms their device; never where the new device passes a passkey check | then yes, until removed | no | no: removing needs a passkey check |
+| **Someone who saw the pairing code** | only if they use it within ten minutes, before the person does, and the person confirms their device; never where the new device passes a passkey check | then yes, until removed | no | no: removing needs a passkey check |
 | **Someone in the account that syncs the passkeys** | only with the passkey shortcut on | then yes | yes, by removing devices | yes |
 | **A removed device** | what it had | no | no | no |
 

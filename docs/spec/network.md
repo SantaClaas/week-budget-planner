@@ -7,7 +7,7 @@ The planner is also the proving ground for infrastructure meant for other apps l
 ## Goals
 
 - **A person's plan is the same on all their devices**, including when they edited on two of them while offline.
-- **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to. That keeps the plan in its owner's hands, which is what data protection is for (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
+- **Local-first.** Every device holds the whole plan and works without a network. Data lives on the user's devices by default, and something goes on a server only when it has to. That keeps the plan in the hands of the person it belongs to, which is what data protection is for (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
 - **The server can't read the plan.** It stores and forwards encrypted changes it has no key for. It should also learn as little as possible about who syncs what and when (see [What the server learns](#what-the-server-learns)). Whoever runs the server then holds no data of other people's to answer for, which is what makes it possible to offer the service, and the people using it keep their plan in their own hands (see [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md)).
 - **Syncing works when every other device is offline.** Devices are rarely online at the same moment, so something with better availability has to hold the changes in between. That is the server's job.
 - **Later, not now:** sharing a plan with other people.
@@ -23,13 +23,15 @@ These are technical terms for code and docs. The copy will say "device", and wha
 | **Group** | The nodes that share one plan and the key to read it: a person's devices. Later this can be an MLS group. |
 | **Server** | A machine of ours that runs one or both of two separate services: the relay and the mailbox. It is a peer on the transport, and never a member of a group. |
 | **Mailbox** | The service that keeps each group's encrypted changes and snapshots, and hands them to the group's members. It can't read them. It is what table service adds. Where [The sync protocol](sync.md) says "the server", it means this. |
+| **Person** | Whose plan and devices they are. The copy says "you". |
+| **Operator** | Whoever runs a server: the relay, the mailbox, or both. Today that is the project's author. |
 | **Self-service** | Syncing between a person's devices that are online together, with nothing stored anywhere but on them. Named after the restaurant where nobody serves. |
 | **Table service** | Self-service plus the mailbox: a server keeps changes for devices that are offline, and holds a backup. Named after the restaurant where a server comes to the table. |
 | **Relay** | The service that carries a connection between two nodes when they can't reach each other directly. It passes bytes on and keeps nothing. Separate from the mailbox, though both may run on one server. |
 | **Change** | What one user action did to the plan, in a form that merges (see [Phase 1](#phase-1-changes-that-merge)). |
 | **Snapshot** | The whole plan at one point, encrypted like a change. It replaces all the changes before it. |
 
-Don't say "ring": it suggests a hash ring, which this design doesn't have.
+Don't say "ring": it suggests a hash ring, which this design doesn't have. And don't say "owner": it could mean the person whose plan it is, the operator of a server, or the project's author, and those are different people with different interests.
 
 ```mermaid
 flowchart LR
@@ -80,7 +82,7 @@ flowchart LR
 - **The relay and the mailbox are two services.** They may run on the same server, and they are separate in what they do, what they see, who may use them and what they cost: the relay carries and forgets, for everyone; the mailbox keeps, for accounts. Self-service uses only the relay.
 - **The relay is ours by default,** open to anyone running the app and limited per address, since self-service has no accounts. A plan's changes are a few kilobytes.
 - **Later, an advanced setting lets a person use another relay:** one they run themselves, or n0's public ones. That keeps the promise of self-service for people who want no server of ours in the path at all. One thing stands in the way and has to be solved with it: the Content Security Policy only lets the page connect to its own origin (see [Security](security.md)), and a page can't loosen its policy at run time. Either the policy allows connections more widely, which weakens what it protects against, or the setting is for people who serve the app themselves.
-- **Table service is what costs money to run,** so it may become a paid plan, or be free for the people the owner chooses to carry. Invite codes are how they get it. Self-service stays free. This follows the bound in [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md): the cost is plain to see, and nobody loses their plan by not paying, since every device holds all of it.
+- **Table service is what costs money to run,** so it may become a paid plan, or be free for the people the operator chooses to carry. Invite codes are how they get it. Self-service stays free. This follows the bound in [What the cryptography is for](identity.md#what-the-cryptography-is-for) in [Identity, sign-in and groups](identity.md): the cost is plain to see, and nobody loses their plan by not paying, since every device holds all of it.
 - **The designs so far were written server-first** and are right for table service: [The sync protocol](sync.md) and [Identity, sign-in and groups](identity.md). Self-service needs its own design before they're built, and will reshape them:
   - **The protocol between two devices** that both hold the key and both merge: what each sends the other, with a sent stamp kept per peer where the server's design keeps one.
   - **Identity without an account:** nodes, the group's key, the device list in the group and pairing work without a server. Passkey checks don't have to: a device can check a passkey's answer against the record the group holds (see [Approved later](identity.md#approved-later-by-a-device-thats-in)). What guards removing a device then has to be decided without a server to enforce it.
@@ -164,7 +166,7 @@ The server can't read a plan. This is what it still sees, and it's the threat mo
 ## Removing a device
 
 - **A device removes another device**, as in a chat app's list of signed-in devices. The server doesn't decide; it keeps the group's current member list and refuses a node that's no longer on it. The remaining devices get a new group key.
-- **The race to solve:** someone who holds a stolen, unlocked device could remove the owner's other devices first. MLS doesn't prevent this either: any member can remove another, and the policy is the application's. A member change therefore needs proof that the owner is present. Two candidates: a fresh passkey check with user verification, or a recovery key shown once when the group is created.
+- **The race to solve:** someone who holds a stolen, unlocked device could remove the person's other devices first. MLS doesn't prevent this either: any member can remove another, and the policy is the application's. A member change therefore needs proof that the person is present. Two candidates: a fresh passkey check with user verification, or a recovery key shown once when the group is created.
 - **A node that keeps nothing says so when it joins.** A window without the database, such as a private one, can sync while it's open (see [The limited storage levels](merge.md#the-limited-storage-levels) in [Merging changes](merge.md)), and it's a new node each time. Declared as temporary, it can be let go without anyone deciding:
   - **It gets a short lease** (see Leases and nonces under [Ideas for the infrastructure](#ideas-for-the-infrastructure)), and the server takes it off the member list when the lease runs out or the window closes. The list of devices shows it as temporary, and removing it earlier is one tap that needs no thought.
   - **It never comes back with old rows,** so it doesn't count toward how long deletion markers have to be kept.
