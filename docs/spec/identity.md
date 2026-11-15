@@ -10,6 +10,11 @@
 
 **It has not been reviewed.** This is a design by people who build apps, not by cryptographers, and there are no means to have it verified for now. It only combines standard, published constructions and says which, so that it can be checked later. The app must not promise more than that: it can say that the server can't read the plan by design, and not that the design was audited. Where this file says "to check", a fact about browsers or libraries has to be confirmed against its source when it's built.
 
+**The lack of a review has to be covered where promises are made.** Two places, and they aren't the same:
+
+- **The code's license** says the software comes without warranty and limits liability for it. The repository has none yet, and needs one before this is built.
+- **The service's terms.** A license covers people who take the code. People who use the server the owner runs are covered by that service's terms and its privacy notice, which say what it stores, that it can't read plans by design, that this wasn't audited, and that it comes as it is. They are part of deciding where the server runs ([SantaClaas/week-budget-planner#95](https://github.com/SantaClaas/week-budget-planner/issues/95)). How far liability can be excluded depends on the owner's country, and is a question for someone who knows its law.
+
 ## Decided
 
 Rules about what the user gets, or choices that are the owner's.
