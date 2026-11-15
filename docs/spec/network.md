@@ -145,6 +145,7 @@ These come from the wider goal of infrastructure for several apps. The planner n
   - Writing needs a sign-in step, not the creation step, so it happens at the first sign-in after registering, without a second prompt of its own.
   - The passkey doesn't sign the stored data. The server's signature on the record is what makes it safe.
   - The server still keeps what can't be left to the client: a passkey the user removed, a blocked account, a used invite code.
+  - **The group can carry the record too:** as rows in its encrypted data, handed to a new device when it's paired. That needs no extension, and stops where a device has the passkey and nothing else (see [What isn't adopted](identity.md#what-isnt-adopted) in [Identity, sign-in and groups](identity.md)).
   - If the stored record is lost or overwritten, that passkey can't sign in any more, and another device has to add it again. That is the price of the server not having a copy.
   - Together with the PRF secret above, the same place could hold the wrapped group key, so a new device would need nothing from the server to read the plan.
   - The gain for the planner is small: about a hundred bytes per passkey that say little about the person. It's here for the wider infrastructure.

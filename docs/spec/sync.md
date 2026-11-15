@@ -211,8 +211,9 @@ It doesn't learn what changed, how many activities or blocks there are, or anyth
 
 | Message | From | Holds | The other side |
 | --- | --- | --- | --- |
-| **Let me in** | a node that signed in and isn't in the group yet | its public keys, authenticated with the pairing code | the server passes it to the group's connected members |
-| **Let in** | a member | the epoch secret sealed to the new node, authenticated with the pairing code | the server passes it to the waiting node, which then says Hello |
+| **Open pairing** | a member, after a passkey check | a hash of the pairing code | the server keeps a waiting room under it for ten minutes and one use |
+| **Let me in** | a node that isn't in the group yet, by an ordinary request to the pairing's waiting room | its public keys, authenticated with the pairing code | the server passes it to the group's connected members |
+| **Let in** | a member | the node to admit, and the epoch secret sealed to it, authenticated with the pairing code | the server puts the node on the account and the member list and passes the rest to the waiting node, which then says Hello |
 | **Put sealed secrets** | a member | a key epoch, and that epoch's secret sealed once per remaining device, for the recovery key and for the passkey key | the server stores them and refuses an epoch that isn't newer than the latest |
 | **Sealed secret** | server | a key epoch and the copy sealed for this node | sent after Welcome when the node's latest epoch is older; the node opens it |
 | **Remove node** | a member | the node to remove, and a passkey's answer to a fresh challenge | the server checks the answer, refuses that node from then on, and tells the group's connected members |

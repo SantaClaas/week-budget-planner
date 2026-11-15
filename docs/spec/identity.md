@@ -112,7 +112,7 @@ sequenceDiagram
 
 - **WebAuthn as specified, checked by a maintained library** on the server, never by hand: a fresh challenge per attempt that works once and expires in minutes, the origin and the RP ID checked, user verification required, discoverable credentials so nothing has to be typed.
 - **The node signs the challenge too,** which proves it holds the key it registers.
-- **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account. It can then reach the relay, and is waiting to be let into the group (see [Adding a device](#adding-a-device)).
+- **Signing in on another device** is the same without the invite code: a passkey check, and the new node is on the account, waiting to be let into the group. A device that doesn't have the passkey can still join, by pairing alone (see [Adding a device](#adding-a-device)).
 - **After that, the node's key is the sign-in.** The transport proves it on every connection, and the server checks it against the account's nodes. There is no session to expire and no token to keep.
 - **A passkey check is asked again** only for what could lock the owner out or can't be undone: adding a device, removing one, turning the passkey shortcut on, and deleting the server's data. The server requires it and checks it.
 - **Ask before the browser asks:** the passkey prompt comes after the app has said what it's for, on a button (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)).
@@ -139,15 +139,19 @@ sequenceDiagram
   participant New as New device
   participant Server
   participant Old as Device already in
-  Person->>New: signs in with the passkey
-  New->>Server: its public keys (see Signing in)
   Person->>Old: "Add a device", passkey check
+  Old->>Server: a waiting room for this pairing, named by a hash of the code
   Old->>Person: shows a pairing code, as a QR code and as text
   Person->>New: scans or types the code
+  opt the new device has the passkey
+    Person->>New: passkey check
+  end
   New->>Server: "let me in", with its public keys,<br/>authenticated with the code
   Server-->>Old: passes it on
   Old->>Old: checks it with the code
-  Old->>Server: the epoch secret, sealed to the new device,<br/>authenticated with the code
+  Old->>Person: "Let this device in?", with what it is
+  Person-->>Old: confirms
+  Old->>Server: admit this node, and the epoch secret sealed to it,<br/>authenticated with the code
   Server-->>New: passes it on
   New->>New: checks it, opens it
   Old->>Server: the device list with the new device, as a change
@@ -158,6 +162,11 @@ sequenceDiagram
 - **What the code does:** both devices derive a key from it and authenticate what they send each other with it (HMAC-SHA256). The server passes the messages on and can't forge either, since it never sees the code. So it can't put its own keys in the new device's place, or the old one's.
 - **Why not six digits to compare.** A short code is only safe with a protocol that survives guessing (a PAKE, or a commitment before the reveal), and those are easy to get wrong. A long code needs neither, and adding a device is rare.
 - **The secret is sealed to the new device's encryption key** with HPKE, so even with the code, someone who only watched couldn't open it.
+- **The device that's in vouches for the new one.** It passed a passkey check to start the pairing, so the server admits the new node on its word. The new device doesn't have to sign in first, which also lets in a device that doesn't have the passkey, such as one outside the ecosystem the passkey syncs in. It can add a passkey of its own afterwards.
+- **Where the new device does have the passkey, it passes a check too.** Then the code alone isn't enough to get in.
+- **Where it doesn't, the code is all that's needed,** so the code has to stay between the two screens. Someone who saw it and used it within its ten minutes, before the owner did, would be asking to join. That is why the old device shows what is asking, and hands over nothing until the person confirms; why the code works once; and why the owner's own device failing to join is a sign that something else did. The device list shows every device, and removing one takes a passkey check.
+- **Why the old device shows the code and the new one reads it,** and not the other way round. If the trusted device scanned a code, an attacker could get someone to scan theirs, as has been done against messengers that link devices that way. Here the secret starts on the trusted device, and an attacker has to see its screen.
+- **The new device reaches the server by ordinary requests until it's admitted,** since the relay only lets known nodes through: the old device opens a waiting room named by a hash of the code, and the new one finds it with the code.
 - **What happens to the new device's own plan** is in [Joining](sync.md#joining) in [The sync protocol](sync.md).
 
 ### The passkey shortcut
@@ -222,7 +231,7 @@ sequenceDiagram
 | **The same, unlocked, without its code** | yes, what's on it, and what syncs until it's removed | yes, until it's removed | no | no: removing needs a passkey check |
 | **The same, with its code** | yes | yes | yes | yes |
 | **Someone with an old export** | yes, that plan; it holds no keys | no | no | no |
-| **Someone with the pairing code only** | no: they'd also need to be signed in as the person | no | no | no |
+| **Someone who saw the pairing code** | only if they use it within ten minutes, before the owner does, and the owner confirms their device; never where the new device passes a passkey check | then yes, until removed | no | no: removing needs a passkey check |
 | **Someone in the account that syncs the passkeys** | only with the passkey shortcut on | then yes | yes, by removing devices | yes |
 | **A removed device** | what it had | no | no | no |
 
@@ -241,7 +250,11 @@ The messages for pairing, for the sealed secrets, for removing a node and for st
 
 From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md):
 
-- **The passkey's record kept in the passkey** (`largeBlob`). The server keeps accounts and member lists anyway, so it would save about a hundred bytes per passkey, and only iCloud Keychain clearly supports it today; Chrome's team has favored PRF over it ([Corbado's tests](https://www.corbado.com/blog/webauthn-l3-credential-manager-support)). It stays an idea for the wider infrastructure.
+- **The passkey's record kept away from the server.** The idea: the server signs a passkey's record (its id and public key), the person's devices keep it, and a device sends it along with a passkey's answer. Two carriers were looked at:
+  - **In the passkey itself** (`largeBlob`): only iCloud Keychain clearly supports it today, and Chrome's team has favored PRF over it ([Corbado's tests](https://www.corbado.com/blog/webauthn-l3-credential-manager-support)).
+  - **In the group:** the signed records as rows in the group's encrypted data, beside the device list, handed to a new device when it's paired. This works wherever a device that's in lets the new one in.
+  - **Where neither reaches:** the passkey shortcut and recovery after losing every device, where a new device has the passkey and nothing else. For those the server has to keep the public key.
+  - **Why not now:** both of those ways in are offered, so the server keeps the record anyway. It also keeps each account's nodes, removed passkeys and blocks regardless, and a public key isn't sensitive, so what would be saved is state, not exposure. A later version could keep the records in the group, and on the server only for accounts that turn the passkey shortcut on.
 - **Signed leases the node carries.** The server holds each account's nodes to decide who may use the relay, so it looks them up and needs no token. A lease as a stored date is used for temporary nodes and for how long a group's data is kept (see [Leases](sync.md#leases) in [The sync protocol](sync.md)).
 
 ## What the person does
@@ -249,7 +262,7 @@ From [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in 
 Only the steps; the screens are their own issue ([SantaClaas/week-budget-planner#99](https://github.com/SantaClaas/week-budget-planner/issues/99)).
 
 - **Setting up syncing:** read what it does, enter an invite code, create a passkey, choose whether the passkey alone may open the week, write down the recovery code.
-- **Adding a device:** on the new one, sign in with the passkey. Then either nothing more (the passkey shortcut), or: on a device that's in, choose "Add a device", pass the passkey check, and scan or type the code on the new one. Choose what to do with a plan already on the new device.
+- **Adding a device:** on a device that's in, choose "Add a device" and pass the passkey check; scan or type the code on the new one; pass a passkey check there if it has the passkey; confirm on the first device what is asking to join. With the passkey shortcut on, signing in with the passkey on the new device is enough. Then choose what to do with a plan already on the new device.
 - **Removing a device:** pick it in the list, pass the passkey check.
 - **A private window:** sign in with the passkey, and the same as adding a device. It's listed as temporary and goes when it closes.
 - **After losing every device:** sign in with the passkey on a new one, and enter the recovery code, or nothing with the passkey shortcut.
