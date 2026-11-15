@@ -90,6 +90,11 @@ describe("order key", () => {
     expect(isAscending([low, between(createKey(low), createKey(high)), high])).toBe(true);
   });
 
+  it("makes the shortest key where the longer neighbor leaves room at its first digit", () => {
+    expect(between(createKey("1"), createKey("2z"))).toBe("2");
+    expect(between(createKey("Vz"), createKey("W1"))).toBe("W");
+  });
+
   it("makes keys before keys that start with zeros", () => {
     expect(isAscending([between(undefined, createKey("0001")), "0001"])).toBe(true);
   });
@@ -131,6 +136,9 @@ describe("order key", () => {
     const c = { key: createKey("2"), id: "c" };
     expect([c, b, a].toSorted(compare)).toEqual([a, b, c]);
     expect(compare(a, a)).toBe(0);
+    expect(compare(b, c)).toBeLessThan(0);
+    expect(compare(c, b)).toBeGreaterThan(0);
+    expect(compare(b, a)).toBeGreaterThan(0);
   });
 
   it("parses keys of up to 100 digits", () => {
@@ -192,6 +200,21 @@ describe("order key", () => {
       const assigned = assign(list);
       expect(isAscending(assigned)).toBe(true);
       expect(listChanged(list, assigned)).toEqual([0, 1]);
+    });
+
+    it("keeps the earliest keys of two runs in order that are as long", () => {
+      const [a, b, c] = keys;
+      expect(listChanged([b, a, c], assign([b, a, c]))).toEqual([1]);
+    });
+
+    it("keeps a new key of exactly the longest a key can be", () => {
+      // The gap needs one digit more than these 99, which makes a key of 100.
+      const low = createKey(`V${"z".repeat(97)}y`);
+      const high = createKey(`V${"z".repeat(98)}`);
+      const assigned = assign([low, undefined, high]);
+      expect(assigned[0]).toBe(low);
+      expect(assigned[2]).toBe(high);
+      expect(assigned[1]).toHaveLength(100);
     });
 
     it("gives one of two equal keys a new one, since nothing fits between them", () => {
