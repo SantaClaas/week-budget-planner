@@ -3,7 +3,8 @@
   // Finds unused files, exports and dependencies (https://knip.dev). Its plugins read the entry
   // points from the Vite, Vitest, Playwright, drizzle-kit and oxlint configs.
   // index.html registers the service worker by its URL, which knip can't follow.
-  "entry": ["scripts/*.ts", "public/service-worker.js"],
+  // stryker.config.mjs names vitest.mutation.config.ts as text, which knip can't follow either.
+  "entry": ["scripts/*.ts", "public/service-worker.js", "vitest.mutation.config.ts"],
   // A system tool, not a package: build-shapes.ts compiles Google's Kotlin sources with it.
   "ignoreBinaries": ["java"],
 }
