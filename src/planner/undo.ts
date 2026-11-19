@@ -70,8 +70,8 @@ function compareLists<Value extends Entity>(
   before: readonly Value[],
   after: readonly Value[],
 ): EntityChange<Value>[] {
-  const afterById = new Map(after.map((entity) => [entity.id, entity]));
-  const beforeIds = new Set(before.map((entity) => entity.id));
+  const afterById = new Map(after.values().map((entity) => [entity.id, entity]));
+  const beforeIds = new Set(before.values().map((entity) => entity.id));
   const changes: EntityChange<Value>[] = [];
   for (const [index, entity] of before.entries()) {
     const changed = afterById.get(entity.id);
@@ -91,8 +91,12 @@ const isSameOrder = (first: readonly string[], second: readonly string[]): boole
 
 /** The ids of `list` that are also in `other`, in the order of `list`. */
 const listSharedIds = (list: readonly Entity[], other: readonly Entity[]): string[] => {
-  const otherIds = new Set(other.map((entity) => entity.id));
-  return list.map((entity) => entity.id).filter((id) => otherIds.has(id));
+  const otherIds = new Set(other.values().map((entity) => entity.id));
+  return list
+    .values()
+    .map((entity) => entity.id)
+    .filter((id) => otherIds.has(id))
+    .toArray();
 };
 
 /** The activities' order before and after, when the change moved some of them. */
@@ -148,9 +152,11 @@ function revertList<Value extends Entity>(
   changes: readonly EntityChange<Value>[],
 ): Value[] {
   const earlier = new Map(
-    changes.flatMap((change) =>
-      change.after === undefined ? [] : [[change.after.id, change.before] as const],
-    ),
+    changes
+      .values()
+      .flatMap((change) =>
+        change.after === undefined ? [] : [[change.after.id, change.before] as const],
+      ),
   );
   const reverted = list.flatMap((entity) => {
     if (!earlier.has(entity.id)) return [entity];
@@ -174,7 +180,11 @@ const isOrderUnchanged = (list: readonly Entity[], order: Order): boolean => {
 
   const ids = new Set(order.after);
   return isSameOrder(
-    list.map((entity) => entity.id).filter((id) => ids.has(id)),
+    list
+      .values()
+      .map((entity) => entity.id)
+      .filter((id) => ids.has(id))
+      .toArray(),
     order.after,
   );
 };
@@ -187,7 +197,7 @@ function revertOrder<Value extends Entity>(list: readonly Value[], order: Order)
   if (order === undefined) return [...list];
 
   const ids = new Set(order.before);
-  const byId = new Map(list.map((entity) => [entity.id, entity]));
+  const byId = new Map(list.values().map((entity) => [entity.id, entity]));
   const earlier = order.before.flatMap((id) => {
     const entity = byId.get(id);
     return entity === undefined ? [] : [entity];
@@ -224,7 +234,7 @@ export function revert(plan: Plan, step: Step): Result<Plan, "conflict"> {
     activities: revertOrder(revertList(plan.activities, step.activities), step.order),
     blocks: revertList(plan.blocks, step.blocks),
   };
-  const activityIds = new Set(reverted.activities.map((activity) => activity.id));
+  const activityIds = new Set(reverted.activities.values().map((activity) => activity.id));
   const isEveryBlockOwned = reverted.blocks.every((block) => activityIds.has(block.activityId));
   return isEveryBlockOwned ? reverted : "conflict";
 }

@@ -36,7 +36,9 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
     .raw(true)
     .all();
   return new Set(
-    rows.flatMap((row) => (Array.isArray(row) && typeof row[0] === "string" ? [row[0]] : [])),
+    rows
+      .values()
+      .flatMap((row) => (Array.isArray(row) && typeof row[0] === "string" ? [row[0]] : [])),
   );
 }
 

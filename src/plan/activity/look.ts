@@ -93,7 +93,7 @@ export type Shape = (typeof SHAPES)[number];
 
 /** Each hue's palette color. */
 const COLORS_BY_HUE = new Map<Hue, (typeof PALETTE)[number]>(
-  PALETTE.map((color) => [color.hue, color]),
+  PALETTE.values().map((color) => [color.hue, color]),
 );
 
 /**

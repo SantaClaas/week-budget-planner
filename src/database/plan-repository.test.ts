@@ -98,7 +98,7 @@ describe("plan repository", () => {
     const rows = await database
       .select({ createdAt: activitiesTable.createdAt })
       .from(activitiesTable);
-    expect(new Set(rows.map((row) => row.createdAt))).toEqual(new Set([NOW.toString()]));
+    expect(new Set(rows.values().map((row) => row.createdAt))).toEqual(new Set([NOW.toString()]));
   });
 
   it("writes only what changed", async () => {

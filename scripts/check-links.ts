@@ -189,13 +189,15 @@ export function checkRepository(): DeadLink[] {
   };
   return listMarkdownFiles(root)
     .toSorted()
+    .values()
     .flatMap((path) => findDeadLinks(path, readFileSync(path, "utf8"), files))
     .map(({ file, line, target, problem }) => ({
       file: relative(root, file),
       line,
       target,
       problem,
-    }));
+    }))
+    .toArray();
 }
 
 /** A dead link as one line, in the form editors open: `file:line`. */

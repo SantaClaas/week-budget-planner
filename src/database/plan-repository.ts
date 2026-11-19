@@ -76,9 +76,9 @@ export function buildPlanStatements(
   const beforeActivities = new Map(
     before?.activities.map((activity, index) => [activity.id, { activity, index }]),
   );
-  const afterActivityIds = new Set(after.activities.map((activity) => activity.id));
+  const afterActivityIds = new Set(after.activities.values().map((activity) => activity.id));
   const beforeBlocks = new Map(before?.blocks.map((block) => [block.id, block]));
-  const afterBlockIds = new Set(after.blocks.map((block) => block.id));
+  const afterBlockIds = new Set(after.blocks.values().map((block) => block.id));
 
   const removedActivities = beforeActivities
     .keys()

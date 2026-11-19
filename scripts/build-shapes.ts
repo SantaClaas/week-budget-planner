@@ -190,8 +190,10 @@ await writeFile(
 // 4. Compile and print the curves
 const jar = new URL("shapes.jar", build).pathname;
 const kotlinFiles = (await readdir(build))
+  .values()
   .filter((file) => file.endsWith(".kt"))
-  .map((file) => new URL(file, build).pathname);
+  .map((file) => new URL(file, build).pathname)
+  .toArray();
 execFileSync(kotlinc.pathname, [...kotlinFiles, "-nowarn", "-include-runtime", "-d", jar], {
   stdio: "inherit",
 });

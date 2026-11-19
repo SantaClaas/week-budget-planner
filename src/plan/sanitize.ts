@@ -21,7 +21,7 @@ import { createEmptyPlan, type Plan } from "./index.ts";
 import { type Activity } from "./activity/index.ts";
 import { type Block } from "./block/index.ts";
 
-const PALETTE_HUES = new Set<number>(PALETTE.map((color) => color.hue));
+const PALETTE_HUES = new Set<number>(PALETTE.values().map((color) => color.hue));
 const SHAPE_NAMES = new Set<string>(SHAPES);
 
 const isHue = (value: number): value is Hue => PALETTE_HUES.has(value);
