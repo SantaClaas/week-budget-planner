@@ -5,6 +5,7 @@ import type { QueryService } from "./connection.ts";
 function readNumber(rows: unknown[]): number {
   const [value] = rows;
   if (typeof value === "number") return value;
+
   return typeof value === "bigint" ? Number(value) : 0;
 }
 
@@ -15,7 +16,9 @@ function readNumber(rows: unknown[]): number {
 export async function measure(service: QueryService): Promise<Result<number, "newer-version">> {
   const pages = await service.query("PRAGMA page_count", [], "get");
   if (pages === "newer-version") return pages;
+
   const pageSize = await service.query("PRAGMA page_size", [], "get");
   if (pageSize === "newer-version") return pageSize;
+
   return readNumber(pages.rows) * readNumber(pageSize.rows);
 }

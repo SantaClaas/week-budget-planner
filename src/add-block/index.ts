@@ -32,7 +32,9 @@ export type Choice = {
 /** What's left of an activity, as its description in the chooser says it. */
 function describeLeft(activity: Activity, left: number, format: Format): string {
   if (left === 0) return "All placed · this would go over budget";
+
   if (left < 0) return `${formatLength(left, "short", format)} over budget`;
+
   const usually =
     activity.mode === "day"
       ? ` · usually ${formatLength(activity.budgetMinutes, "short", format)}`

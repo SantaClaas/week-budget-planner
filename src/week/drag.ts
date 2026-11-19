@@ -42,7 +42,9 @@ export function drag(
   const { block } = part;
   const isSecond = part.kind === "second";
   if (grip === "top") return resizeStart(block, snap(place.minute));
+
   if (grip === "bottom") return resizeEnd(block, snap(place.minute) + (isSecond ? DAY : 0));
+
   const start = place.minute + (isSecond ? DAY : 0) - grab;
   return moveTo(block, place.day - (isSecond ? 1 : 0), clamp(snap(start), 0, DAY - SLOT));
 }

@@ -53,7 +53,9 @@ export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" 
   } catch {
     return "not-a-plan";
   }
+
   if (isFromNewerVersion(data)) return "newer-version";
+
   const isVersionOne =
     typeof data === "object" && data !== null && "version" in data && data.version === 1;
   return isVersionOne ? sanitizePlan(data, ids) : "not-a-plan";
@@ -70,6 +72,7 @@ export function isWrittenByNewerVersion(text: string): boolean {
   } catch {
     return false;
   }
+
   return isFromNewerVersion(data);
 }
 
@@ -85,6 +88,8 @@ export function parse(text: string, ids: IdGenerator): Result<Plan, "newer-versi
   } catch {
     return createEmptyPlan();
   }
+
   if (isFromNewerVersion(data)) return "newer-version";
+
   return sanitizePlan(data, ids);
 }

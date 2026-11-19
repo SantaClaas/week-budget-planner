@@ -60,6 +60,7 @@ function isSameRecord<Value extends Entity>(
   second: Value | undefined,
 ): boolean {
   if (first === undefined || second === undefined) return first === second;
+
   const keys = new Set([...Object.keys(first), ...Object.keys(second)]);
   return keys.values().every((key) => Reflect.get(first, key) === Reflect.get(second, key));
 }
@@ -76,9 +77,11 @@ function compareLists<Value extends Entity>(
     const changed = afterById.get(entity.id);
     if (!isSameRecord(entity, changed)) changes.push({ before: entity, after: changed, index });
   }
+
   for (const [index, entity] of after.entries()) {
     if (!beforeIds.has(entity.id)) changes.push({ before: undefined, after: entity, index });
   }
+
   return changes;
 }
 
@@ -103,9 +106,11 @@ export function record(before: Plan, after: Plan): Step {
   const fields: Step["fields"] = { before: {}, after: {} };
   for (const name of FIELD_NAMES) {
     if (before[name] === after[name]) continue;
+
     Object.assign(fields.before, { [name]: before[name] });
     Object.assign(fields.after, { [name]: after[name] });
   }
+
   return {
     activities: compareLists(before.activities, after.activities),
     order: compareOrder(before.activities, after.activities),
@@ -149,6 +154,7 @@ function revertList<Value extends Entity>(
   );
   const reverted = list.flatMap((entity) => {
     if (!earlier.has(entity.id)) return [entity];
+
     const before = earlier.get(entity.id);
     return before === undefined ? [] : [before];
   });
@@ -158,12 +164,14 @@ function revertList<Value extends Entity>(
   for (const change of removed) {
     if (change.before !== undefined) reverted.splice(change.index, 0, change.before);
   }
+
   return reverted;
 }
 
 /** Whether the activities the step reordered are still in the order it left them. */
 const isOrderUnchanged = (list: readonly Entity[], order: Order): boolean => {
   if (order === undefined) return true;
+
   const ids = new Set(order.after);
   return isSameOrder(
     list.map((entity) => entity.id).filter((id) => ids.has(id)),
@@ -177,6 +185,7 @@ const isOrderUnchanged = (list: readonly Entity[], order: Order): boolean => {
  */
 function revertOrder<Value extends Entity>(list: readonly Value[], order: Order): Value[] {
   if (order === undefined) return [...list];
+
   const ids = new Set(order.before);
   const byId = new Map(list.map((entity) => [entity.id, entity]));
   const earlier = order.before.flatMap((id) => {
@@ -186,6 +195,7 @@ function revertOrder<Value extends Entity>(list: readonly Value[], order: Order)
   let next = 0;
   return list.map((entity) => {
     if (!ids.has(entity.id)) return entity;
+
     const placed = earlier[next] ?? entity;
     next += 1;
     return placed;
@@ -207,6 +217,7 @@ export function revert(plan: Plan, step: Step): Result<Plan, "conflict"> {
     isOrderUnchanged(plan.activities, step.order) &&
     isListUnchanged(plan.blocks, step.blocks);
   if (!isUnchanged) return "conflict";
+
   const reverted: Plan = {
     ...plan,
     ...step.fields.before,

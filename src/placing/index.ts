@@ -83,8 +83,10 @@ export function addBlock(
     return added.plan;
   });
   if (added === undefined) return undefined;
+
   selection.select(added.block.id);
   announce(announceChange("added", added.block, activity));
   if (current() === activity.id && isAllPlaced(added.plan, activity)) stop();
+
   return added.block;
 }

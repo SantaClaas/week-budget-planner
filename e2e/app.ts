@@ -40,6 +40,7 @@ export async function expectStatus(
         .evaluate(() => {
           const opened = window.weekBudgetPlanner;
           if (opened === undefined) return "not open";
+
           const { activities, blocks } = opened.planner.plan();
           return `${opened.store.level} · ${activities.length.toString()} activities · ${blocks.length.toString()} blocks`;
         })
@@ -54,8 +55,10 @@ export async function removeFirstBlock(page: Page): Promise<void> {
   await page.evaluate(async () => {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
+
     const loaded = await store.load();
     if (loaded === "newer-version") throw new Error("A newer version saved the plan.");
+
     const { plan } = loaded;
     const saved = await store.save(
       plan,
@@ -83,6 +86,7 @@ export async function importFile(
       ({ name: fileName, bytes: content, type: fileType }) => {
         const store = window.weekBudgetPlanner?.store;
         if (store === undefined) throw new Error("The app hasn't opened its storage.");
+
         return store.importFile(new File([new Uint8Array(content)], fileName, { type: fileType }));
       },
       { name, bytes: [...bytes], type },
@@ -90,6 +94,7 @@ export async function importFile(
     // A database import reloads every tab, which ends this page's script before it can answer.
     .catch(() => "imported");
   if (result === "imported") await reloaded;
+
   return result;
 }
 
@@ -100,8 +105,10 @@ export function exportDatabase(page: Page): Promise<{ name: string; bytes: numbe
   return page.evaluate(async () => {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
+
     const file = await store.exportFile(Temporal.Now.plainDateTimeISO());
     if (file === "newer-version") throw new Error("A newer version saved the plan.");
+
     return { name: file.filename, bytes: [...new Uint8Array(await file.blob.arrayBuffer())] };
   });
 }
@@ -111,12 +118,14 @@ export function tryLoading(page: Page): Promise<"answered" | "gave up"> {
   return page.evaluate(async () => {
     const store = window.weekBudgetPlanner?.store;
     if (store === undefined) throw new Error("The app hasn't opened its storage.");
+
     try {
       // Whether the plan came back or a newer version has it, the call was answered.
       void (await store.load());
     } catch {
       return "gave up";
     }
+
     return "answered";
   });
 }

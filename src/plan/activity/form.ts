@@ -37,6 +37,7 @@ function findDecimalSeparator(locale: string | undefined): string {
     separator = parts.find((part) => part.type === "decimal")?.value ?? ".";
     decimalSeparators.set(key, separator);
   }
+
   return separator;
 }
 
@@ -63,12 +64,15 @@ function readHours(
   if (hours === "" || budgetMinutes === "too-small") {
     return "Enter the hours it needs, for example 1.5.";
   }
+
   if (budgetMinutes === "unreadable") return "Enter the hours as a number, for example 1.5.";
+
   if (budgetMinutes === "too-large") {
     return mode === "day"
       ? "A day has 24 hours. Enter 24 or less."
       : "A week has 168 hours. Enter 168 or less.";
   }
+
   return budgetMinutes;
 }
 
@@ -83,11 +87,15 @@ export function readActivityForm(input: ActivityFormInput, locale?: string): Act
   const days = parseDayCount(input.mode === "day" ? Number(input.days.trim() || NaN) : 5);
   const problems: Problems = {};
   if (name === "empty") problems.name = "Give the activity a name.";
+
   if (typeof budgetMinutes === "string") problems.hours = budgetMinutes;
+
   if (days === "out-of-range") problems.days = "Enter how many days per week, from 1 to 7.";
+
   if (name === "empty" || typeof budgetMinutes === "string" || days === "out-of-range") {
     return { isOk: false, problems };
   }
+
   return { isOk: true, value: { name, budgetMinutes, mode: input.mode, days } };
 }
 

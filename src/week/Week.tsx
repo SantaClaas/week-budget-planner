@@ -66,6 +66,7 @@ function removeBlock(planner: Planner, drawn: DrawnBlock, scroller: Element | nu
   animate(() => {
     const isInPlan = planner.plan().blocks.some((block) => block.id === drawn.block.id);
     if (!isInPlan) return;
+
     const buttons = [...(scroller?.querySelectorAll(".block-button") ?? [])].map(
       (button) => button.id,
     );
@@ -113,10 +114,12 @@ function changeByKey(
 ): void {
   const block = planner.plan().blocks.find((each) => each.id === drawn.block.id);
   if (block === undefined) return;
+
   const changed = keyChange.apply(block);
   const isUnchanged =
     changed.day === block.day && changed.start === block.start && changed.length === block.length;
   if (isUnchanged) return;
+
   planner.change((plan) => list.update(plan, changed));
   announce(announceChange(keyChange.change, changed, drawn.activity));
   // A move to another day draws the block in that day's list, as a new button.
@@ -131,8 +134,10 @@ function changeByKey(
  */
 function handleKey(event: KeyboardEvent, drawn: DrawnBlock, planner: Planner): void {
   if (event.altKey || event.ctrlKey || event.metaKey) return;
+
   // A tab on a newer version took over: the plan can be read, not changed, so keys only deselect.
   if (planner.isOutdated() && event.key !== "Escape") return;
+
   const scroller =
     event.currentTarget instanceof Element ? event.currentTarget.closest(".week-scroller") : null;
   switch (event.key) {
@@ -147,8 +152,10 @@ function handleKey(event: KeyboardEvent, drawn: DrawnBlock, planner: Planner): v
     default:
       break;
   }
+
   const keyChange = readKeyChange(event);
   if (keyChange === undefined) return;
+
   event.preventDefault();
   animate(() => {
     changeByKey(planner, drawn, keyChange, scroller);
@@ -160,6 +167,7 @@ function readGrip(target: Element): Grip {
   const handle = target.closest("[data-edge]");
   const edge = handle instanceof HTMLElement ? handle.dataset["edge"] : undefined;
   if (edge === "top" || edge === "bottom") return edge;
+
   return "body";
 }
 
@@ -169,12 +177,17 @@ function readGrip(target: Element): Grip {
  */
 function pressBlock(event: PointerEvent, drawn: DrawnBlock, planner: Planner): void {
   if (event.pointerType === "mouse" && event.button !== 0) return;
+
   if (planner.isOutdated()) return;
+
   if (!(event.target instanceof Element) || event.target.closest(".remove") !== null) return;
+
   const isSelected = selection.current() === drawn.block.id;
   if (event.pointerType === "touch" && !isSelected) return;
+
   const scroller = event.target.closest(".week-scroller");
   if (!(scroller instanceof HTMLElement)) return;
+
   selection.select(drawn.block.id);
   startDrag(event, {
     part: { block: drawn.block, kind: drawn.part },
@@ -285,6 +298,7 @@ function BlockPartItem(properties: { block: DrawnBlock; planner: Planner }): JSX
           onClick={(event) => {
             event.stopPropagation();
             if (properties.planner.isOutdated()) return;
+
             removeBlock(
               properties.planner,
               properties.block,
@@ -394,15 +408,18 @@ function EmptySlot(properties: {
         // The week's own click handler would pick the slot again, from the pointer's place.
         event.stopPropagation();
         if (properties.isReadOnly) return;
+
         // A click from Enter or Space has no pointer, and so no click count.
         properties.onPick(properties.slot, event.detail === 0 ? "keyboard" : "pointer");
       }}
       onKeyDown={(event) => {
         const move = SLOT_MOVES[event.key];
         if (move === undefined || event.altKey || event.ctrlKey || event.metaKey) return;
+
         const next = moveEmptySlot(properties.blocks, properties.slot, move);
         // At the week's ends the key does nothing here, and the page scrolls as usual.
         if (next === undefined) return;
+
         event.preventDefault();
         properties.onMove(next);
       }}
@@ -458,6 +475,7 @@ export function Week(properties: {
    */
   const pickSlot = (slot: Slot, picker: Picker): void => {
     if (properties.planner.isOutdated()) return;
+
     const isFocused = document.activeElement?.id === EMPTY_SLOT_ID;
     const isPlacing = properties.isPlacing;
     setRemembered(slot);
@@ -469,12 +487,14 @@ export function Week(properties: {
       animate(place);
       return;
     }
+
     place();
   };
   /** The preview, drawn on its day, up to midnight. */
   const drawnPreview = (): { day: DayIndex; drawn: DrawnPreview } | undefined => {
     const shown = properties.preview;
     if (shown === undefined) return undefined;
+
     const end = shown.start + shown.length;
     return {
       day: shown.day,
@@ -492,6 +512,7 @@ export function Week(properties: {
     () => {
       const column = scroller?.querySelector<HTMLElement>(".day-column");
       if (scroller === undefined || column === null || column === undefined) return;
+
       const hour = untrack(() => findOpeningHour(properties.plan));
       // A quarter hour above it, so the hour's label, centered on its line, isn't half hidden
       // under the sticky day headers.
@@ -515,6 +536,7 @@ export function Week(properties: {
         const isOnBlock =
           event.target instanceof Element && event.target.closest(".block") !== null;
         if (isOnBlock || isClickAfterDrag()) return;
+
         const slot = findSlot(event.currentTarget, event.clientX, event.clientY);
         selection.clear();
         // A click on an empty slot adds a block there while placing, or opens Add block on it.
@@ -522,6 +544,7 @@ export function Week(properties: {
       }}
       onPointerMove={(event) => {
         if (event.pointerType !== "mouse" || !properties.isPlacing) return;
+
         const isOnBlock =
           event.target instanceof Element && event.target.closest(".block:not(.preview)") !== null;
         const slot = isOnBlock
@@ -531,6 +554,7 @@ export function Week(properties: {
           properties.onLeaveSlots();
           return;
         }
+
         properties.onHoverSlot(slot);
       }}
       onPointerLeave={() => {

@@ -28,6 +28,7 @@ export function readVersion(repositoryUrl: string, run: RunGit, now: Temporal.In
     const today = now.toZonedDateTimeISO("UTC").toPlainDate().toString();
     return { date: today, url: `${repositoryUrl}/tree/main`, builtAt };
   }
+
   return { date, commit: hash, url: `${repositoryUrl}/tree/${hash}`, builtAt };
 }
 

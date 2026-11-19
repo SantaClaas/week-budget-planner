@@ -19,6 +19,7 @@ export const motion = preference.create<Motion, Root>({
       delete root.dataset["motion"];
       return;
     }
+
     root.dataset["motion"] = choice;
   },
 });

@@ -89,6 +89,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
    */
   function stopForNewerVersion(): void {
     if (isStopped) return;
+
     isStopped = true;
     showChange(saved, []);
     setIsOutdated(true);
@@ -101,6 +102,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
    */
   function offerRetry(retry: () => void): void {
     if (isFailing) return;
+
     isFailing = true;
     options.showSnackbar({
       message: "Couldn't save your last change. It's still on screen.",
@@ -128,11 +130,13 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
       offerRetry(retry);
       return;
     }
+
     openSaves -= 1;
     if (result === "newer-version") {
       stopForNewerVersion();
       return;
     }
+
     saved = after;
     isFailing = false;
     if (openSaves === 0) setSaveState("saved");
@@ -162,6 +166,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
       stopForNewerVersion();
       return;
     }
+
     if (load === latestLoad) showSaved(loaded.plan);
   }
   const stopWatching = store.onExternalChange(() => {
@@ -182,6 +187,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
         setPlan(current);
         return;
       }
+
       const now = Temporal.Now.instant();
       const before = current;
       const after = update(before, now);
@@ -190,12 +196,14 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
         setPlan(current);
         return;
       }
+
       const step = undo.record(before, after);
       showChange(after, undo.isEmpty(step) ? steps : undo.push(steps, step));
       save(after, now);
     },
     preview(update: (before: Plan) => Plan): void {
       if (isStopped) return;
+
       setPlan(update(current));
     },
     endPreview(): void {
@@ -204,6 +212,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     undo(): void {
       const step = steps.at(-1);
       if (step === undefined || isStopped) return;
+
       const earlier = steps.slice(0, -1);
       const reverted = undo.revert(current, step);
       if (reverted === "conflict") {
@@ -212,6 +221,7 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
         options.showSnackbar({ message: "Couldn't undo: that changed in another tab." });
         return;
       }
+
       showChange(reverted, earlier);
       save(reverted, Temporal.Now.instant());
     },
@@ -229,12 +239,16 @@ export async function open(
 ): Promise<Result<{ store: PlanStore; planner: Planner }, "newer-version">> {
   const store = await openStorage();
   if (store === "newer-version") return store;
+
   const stored = await store.load();
   if (stored === "newer-version") return stored;
+
   if (stored.isStored) return { store, planner: create(store, stored.plan, options) };
+
   // The example week is marked as loaded at the same moment its rows are saved.
   const now = Temporal.Now.instant();
   const example = createExampleWeek(now, randomIds);
   if ((await store.save(undefined, example, now)) === "newer-version") return "newer-version";
+
   return { store, planner: create(store, example, options) };
 }

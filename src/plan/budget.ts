@@ -24,6 +24,7 @@ export function sumPlacedByActivity(blocks: readonly Block[]): Map<ActivityId, P
   const totals = new Map<ActivityId, number>();
   for (const block of blocks)
     totals.set(block.activityId, (totals.get(block.activityId) ?? 0) + block.length);
+
   return new Map(totals.entries().map(([id, minutes]) => [id, sanitizePlaced(minutes)]));
 }
 
@@ -56,6 +57,7 @@ export function summarize(plan: Pick<Plan, "activities" | "blocks">): Summary {
     leftToPlace += Math.max(0, activityBudget - activityPlaced);
     overBudget += Math.max(0, activityPlaced - activityBudget);
   }
+
   return {
     budget: sanitizeTotalBudget(budget),
     placed: sanitizePlaced(placed),
@@ -75,6 +77,8 @@ export function splitProgress(
   placed: Placed,
 ): { withinBudget: number; overBudget: number } {
   if (budget <= 0) return { withinBudget: 0, overBudget: placed > 0 ? 1 : 0 };
+
   if (placed <= budget) return { withinBudget: placed / budget, overBudget: 0 };
+
   return { withinBudget: budget / placed, overBudget: (placed - budget) / placed };
 }

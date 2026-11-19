@@ -54,9 +54,11 @@ function PreferenceRow<Choice extends string, Target>(properties: {
   );
   const choose = (event: Event): void => {
     if (!(event.target instanceof HTMLInputElement)) return;
+
     const { value } = event.target;
     const choice = properties.preference.choices.find((each) => each === value);
     if (choice === undefined) return;
+
     properties.preference.save(choice);
     setCurrent(() => choice);
   };
@@ -104,6 +106,7 @@ function Appearance(): JSX.Element {
   const isReducedMotion = watchMediaQuery("(prefers-reduced-motion: reduce)");
   const systemContrast = (): string => {
     if (isMoreContrast()) return "more";
+
     return isLessContrast() ? "less" : "standard";
   };
   return (

@@ -56,6 +56,7 @@ export function startListDrag(
   const findTarget = (): { day: DayIndex; start: DayMinute } | undefined => {
     const scroller = document.querySelector(".week-scroller");
     if (!(scroller instanceof HTMLElement)) return undefined;
+
     return findSlot(scroller, pointer.x, pointer.y);
   };
 
@@ -65,6 +66,7 @@ export function startListDrag(
     if (scroller instanceof HTMLElement && scrollNearEdge(scroller, pointer.y)) {
       frame = requestAnimationFrame(showFrame);
     }
+
     const length = pickDefaultLength(activity, options.plan().blocks);
     placing.showChip({ activityId: activity.id, length, x: pointer.x, y: pointer.y });
     const slot = findTarget();
@@ -73,6 +75,7 @@ export function startListDrag(
       changing.stop();
       return;
     }
+
     // Over the week, a release would add placed time, so the activity's bar waves.
     changing.start(activity.id);
     const plan = options.plan();
@@ -85,21 +88,27 @@ export function startListDrag(
 
   const onMove = (moved: PointerEvent): void => {
     if (moved.pointerId !== pointerId) return;
+
     pointer = { x: moved.clientX, y: moved.clientY };
     if (!isDragged) {
       if (Math.hypot(pointer.x - start.x, pointer.y - start.y) < DRAG_THRESHOLD_PIXELS) return;
+
       isDragged = true;
       document.documentElement.dataset["dragging"] = "move";
     }
+
     if (frame === 0) frame = requestAnimationFrame(showFrame);
   };
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
+
     using _ending = cleanup.move();
     if (!isDragged) return;
+
     ignoreClicksAfterDrag();
     if (ended.type === "pointercancel") return;
+
     pointer = { x: ended.clientX, y: ended.clientY };
     const slot = findTarget();
     if (slot !== undefined) placing.addBlock(planner, activity, slot);

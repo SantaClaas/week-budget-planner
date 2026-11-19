@@ -37,6 +37,7 @@ function swapFontAfterLoad(): void {
     swapFont();
     return;
   }
+
   window.addEventListener("load", swapFont, { once: true });
 }
 swapFontAfterLoad();

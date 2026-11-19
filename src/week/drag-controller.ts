@@ -43,7 +43,9 @@ function readPlace(scroller: HTMLElement, x: number, y: number): PointerPlace | 
       nearest = { index, distance, rectangle };
     }
   }
+
   if (nearest === undefined) return undefined;
+
   return {
     day: sanitizeDayIndex(nearest.index),
     minute: readMinute(y - nearest.rectangle.top, nearest.rectangle.height),
@@ -57,6 +59,7 @@ function readPlace(scroller: HTMLElement, x: number, y: number): PointerPlace | 
 export function findSlot(scroller: HTMLElement, x: number, y: number): Slot | undefined {
   const headers = scroller.querySelector(".day-header")?.getBoundingClientRect().bottom ?? 0;
   if (y < headers) return undefined;
+
   for (const [index, column] of [...scroller.querySelectorAll(".day-column")].entries()) {
     const rectangle = column.getBoundingClientRect();
     const isInside = x >= rectangle.left && x < rectangle.right;
@@ -65,6 +68,7 @@ export function findSlot(scroller: HTMLElement, x: number, y: number): Slot | un
       return { day: sanitizeDayIndex(index), start: sanitizeDayMinute(snapDown(minute)) };
     }
   }
+
   return undefined;
 }
 
@@ -81,10 +85,12 @@ export function scrollNearEdge(scroller: HTMLElement, y: number): boolean {
     scroller.scrollTop += SCROLL_STEP_PIXELS;
     return true;
   }
+
   if (y < top + SCROLL_EDGE_PIXELS) {
     scroller.scrollTop -= SCROLL_STEP_PIXELS;
     return true;
   }
+
   return false;
 }
 
@@ -107,6 +113,7 @@ export function startDrag(
   const start = { x: event.clientX, y: event.clientY };
   const first = readPlace(scroller, start.x, start.y);
   if (first === undefined) return;
+
   const grab = measureGrab(part, first.minute);
   let pointer = start;
   let isDragged = false;
@@ -135,36 +142,43 @@ export function startDrag(
     frame = 0;
     // Near an edge the week keeps scrolling, frame after frame, while the pointer stays there.
     if (scrollNearEdge(scroller, pointer.y)) frame = requestAnimationFrame(showFrame);
+
     planner.preview(update());
   };
 
   const onMove = (moved: PointerEvent): void => {
     if (moved.pointerId !== pointerId) return;
+
     pointer = { x: moved.clientX, y: moved.clientY };
     if (!isDragged) {
       if (Math.hypot(pointer.x - start.x, pointer.y - start.y) < DRAG_THRESHOLD_PIXELS) return;
+
       isDragged = true;
       document.documentElement.dataset["dragging"] = grip === "body" ? "move" : "resize";
       // A resize changes the activity's placed time; a move doesn't.
       if (grip !== "body") changing.start(part.block.activityId);
     }
+
     if (frame === 0) frame = requestAnimationFrame(showFrame);
   };
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
+
     using ending = cleanup.move();
     // Once the change is saved, or however else the release ends, and before the cleanup.
     ending.defer(() => {
       options.onDone(isDragged);
     });
     if (!isDragged) return;
+
     ignoreClicksAfterDrag();
     // A cancelled drag (the browser took the pointer, say for a scroll) puts the block back.
     if (ended.type === "pointercancel") {
       planner.endPreview();
       return;
     }
+
     pointer = { x: ended.clientX, y: ended.clientY };
     planner.change(update());
   };

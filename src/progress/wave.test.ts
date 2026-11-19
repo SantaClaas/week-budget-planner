@@ -16,6 +16,7 @@ function readShape(): string {
     css.slice(css.indexOf("&[data-wave] :is(.indicator, .over-budget) {")),
   )?.[1];
   if (shape === undefined) throw new Error("No wave shape in the tokens.");
+
   return shape;
 }
 

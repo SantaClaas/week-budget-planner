@@ -56,9 +56,11 @@ type Cubic = {
 function readCubics(value: unknown): Map<string, Cubic[]> {
   if (typeof value !== "object" || value === null)
     throw new Error("The shape program printed no shapes.");
+
   const shapes = new Map<string, Cubic[]>();
   for (const [name, curves] of Object.entries(value)) {
     if (!Array.isArray(curves)) throw new Error(`The shape ${name} isn't a list of curves.`);
+
     shapes.set(
       name,
       curves.map((curve: unknown) => {
@@ -67,6 +69,7 @@ function readCubics(value: unknown): Map<string, Cubic[]> {
             Array.isArray(curve) && curve.length === 8 ? curve[index] : undefined;
           if (typeof item !== "number")
             throw new Error(`A curve of ${name} isn't 8 numbers: ${JSON.stringify(curve)}`);
+
           return item;
         };
         return {
@@ -82,6 +85,7 @@ function readCubics(value: unknown): Map<string, Cubic[]> {
       }),
     );
   }
+
   return shapes;
 }
 
@@ -91,6 +95,7 @@ function extractMaterialShapes(source: string): string {
   const end = source.lastIndexOf("}", source.lastIndexOf("}") - 1);
   if (start < 0 || end < start)
     throw new Error("MaterialShapes.kt changed shape; update extractMaterialShapes()");
+
   const body = source.slice(source.indexOf("{", start) + 1, end);
   return `package androidx.compose.material3
 import androidx.compose.ui.geometry.Offset
@@ -118,6 +123,7 @@ ${body.replaceAll("@ExperimentalMaterial3ExpressiveApi", "").replaceAll("public 
 async function download(url: string, target: URL, mode: "text" | "binary" = "text"): Promise<void> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Couldn't download ${url}: ${response.status.toString()}`);
+
   await writeFile(
     target,
     mode === "binary" ? Buffer.from(await response.arrayBuffer()) : await response.text(),
@@ -131,6 +137,7 @@ async function exists(url: URL): Promise<boolean> {
   } catch {
     return false;
   }
+
   return true;
 }
 
@@ -160,17 +167,21 @@ for (const name of GRAPHICS_SHAPES) {
   const target = new URL(`${name}.kt`, sources);
   if (!(await exists(target))) await download(raw(`${SHAPES_DIR}/${name}.kt`), target);
 }
+
 const materialShapes = new URL("MaterialShapes.kt", sources);
 if (!(await exists(materialShapes))) await download(raw(MATERIAL_SHAPES), materialShapes);
 
 // 3. Assemble: graphics-shapes as is, MaterialShapes reduced to its companion object's shape builders
 for (const file of await readdir(build))
   if (file.endsWith(".kt")) await writeFile(new URL(file, build), "");
+
 for (const name of GRAPHICS_SHAPES)
   await copyFile(new URL(`${name}.kt`, sources), new URL(`${name}.kt`, build));
+
 for (const file of await readdir(new URL("scripts/material-shapes/", root))) {
   await copyFile(new URL(`scripts/material-shapes/${file}`, root), new URL(file, build));
 }
+
 await writeFile(
   new URL("MaterialShapes.kt", build),
   extractMaterialShapes(await readFile(materialShapes, "utf8")),
@@ -196,6 +207,7 @@ const point = (x: number, y: number): string => `${percent(x)} ${percent(y)}`;
 const lines = [...cubics].map(([name, curves]) => {
   const [first] = curves;
   if (first === undefined) throw new Error(`The shape ${name} has no curves.`);
+
   const segments = curves.map(
     ({ control0X, control0Y, control1X, control1Y, endX, endY }) =>
       `curve to ${point(endX, endY)} with ${point(control0X, control0Y)} / ${point(control1X, control1Y)}`,

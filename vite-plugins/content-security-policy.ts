@@ -44,12 +44,14 @@ const hashScript = (script: string) =>
 /** The static HTML of every Solid `template()` call in compiled code, as the runtime receives it. */
 export function findTemplates(code: string): string[] {
   if (!code.includes("@solidjs/web")) return [];
+
   const { program } = parseSync("module.js", code, { lang: "js" });
   const templates: string[] = [];
   let templateName: string | undefined;
   new Visitor({
     ImportDeclaration(node) {
       if (node.source.value !== "@solidjs/web") return;
+
       for (const specifier of node.specifiers) {
         if (
           specifier.type === "ImportSpecifier" &&
@@ -62,16 +64,19 @@ export function findTemplates(code: string): string[] {
     },
     CallExpression(node) {
       if (node.callee.type !== "Identifier" || node.callee.name !== templateName) return;
+
       const html = node.arguments[0];
       if (html?.type === "Literal" && typeof html.value === "string") {
         templates.push(html.value);
         return;
       }
+
       if (html?.type !== "TemplateLiteral" || html.expressions.length > 0) {
         throw new Error(
           "A Solid template() call without a static string can't be put on the Trusted Types allowlist.",
         );
       }
+
       const cooked = html.quasis[0]?.value.cooked;
       if (typeof cooked === "string") templates.push(cooked);
     },
@@ -101,8 +106,10 @@ export function contentSecurityPolicy({
       },
       transform(code, id) {
         if (!isOwnCode(id)) return;
+
         const file = relative(id);
         if (file === TRUSTED_HTML_MODULE || file === ENTRY_MODULE) return;
+
         if (IMPORT_PATTERN.test(code)) {
           this.error(
             `${file} imports ${TRUSTED_HTML_MODULE}. Only the build may allow HTML (see docs/spec/security.md). Show user text as text instead.`,
@@ -120,12 +127,14 @@ export function contentSecurityPolicy({
       transform(code, id) {
         // Libraries count too: a prebuilt Solid component library ships template() calls as well.
         if (id.startsWith("\0")) return null;
+
         const file = relative(id);
         const isTrustedFile = id.includes("?raw") && trustedHtmlFiles.includes(file);
         const html = isTrustedFile
           ? [readFileSync(path.join(root, file), "utf8")]
           : findTemplates(code);
         if (html.length === 0) return null;
+
         // On the first line, so the source map of every other line stays right.
         const allow = `import { allowHtml } from "/${TRUSTED_HTML_MODULE}"; allowHtml(${JSON.stringify(html)}); `;
         return { code: allow + code, map: null };
@@ -135,6 +144,7 @@ export function contentSecurityPolicy({
         handler(html, context) {
           // Development has the report-only header instead: Vite's own scripts aren't hashed.
           if (context.server) return html;
+
           const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script = ""]) =>
             hashScript(script),
           );

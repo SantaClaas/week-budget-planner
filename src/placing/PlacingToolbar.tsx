@@ -30,9 +30,11 @@ function useFirstFreeSlot(plan: Plan, planner: Planner, activity: Activity): voi
     snackbar.show({ message: `No free ${formatLength(length)} slot between ${from} and ${to}.` });
     return;
   }
+
   animate(() => {
     const block = placing.addBlock(planner, activity, slot);
     if (block === undefined) return;
+
     flush();
     document
       .querySelector(`[data-block="${CSS.escape(block.id)}"]`)

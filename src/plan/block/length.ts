@@ -16,6 +16,7 @@ export function pickDefaultLength(activity: Activity, blocks: readonly Block[]):
     calculateWeeklyBudget(activity) - readPlaced(sumPlacedByActivity(blocks), activity.id);
   let length: number = activity.mode === "day" ? activity.budgetMinutes : WEEKLY_DEFAULT_LENGTH;
   if (left > 0) length = Math.min(length, left);
+
   return sanitizeLength(clamp(length, SLOT, MAX_LENGTH));
 }
 
@@ -31,5 +32,6 @@ export function fitToDayHours(
   const dayStart = plan.dayStart * 60;
   const dayEnd = plan.dayEnd * 60;
   if (start < dayStart || start >= dayEnd) return length;
+
   return sanitizeLength(clamp(Math.min(length, dayEnd - start), SLOT, DAY));
 }

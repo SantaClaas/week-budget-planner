@@ -60,6 +60,7 @@ function blankFences(markdown: string): string[] {
       isInFence = !isInFence;
       return "";
     }
+
     return isInFence ? "" : line;
   });
 }
@@ -90,13 +91,16 @@ export function listAnchors(markdown: string): Set<string> {
   const counts = new Map<string, number>();
   for (const line of blankFences(markdown)) {
     for (const match of line.matchAll(HTML_ANCHOR)) anchors.add(match[1] ?? "");
+
     const heading = HEADING.exec(line)?.[1];
     if (heading === undefined) continue;
+
     const anchor = createAnchor(heading);
     const count = counts.get(anchor) ?? 0;
     counts.set(anchor, count + 1);
     anchors.add(count === 0 ? anchor : `${anchor}-${count.toString()}`);
   }
+
   return anchors;
 }
 
@@ -128,20 +132,26 @@ function decode(part: string): string {
   } catch {
     return part;
   }
+
   return decoded;
 }
 
 /** What's wrong with one link from the file at `path`, or nothing. */
 function findProblem(path: string, target: string, files: Files): DeadLink["problem"] | undefined {
   if (target === "" || HAS_SCHEME.test(target) || target.startsWith("//")) return undefined;
+
   const [linkedPath = "", anchor] = target.split("#", 2);
   // A path from the site's root can't be checked against the folders here.
   if (linkedPath.startsWith("/")) return undefined;
+
   const linked = linkedPath === "" ? path : resolve(dirname(path), decode(linkedPath));
   if (!files.exists(linked)) return "no such file";
+
   if (anchor === undefined || anchor === "") return undefined;
+
   const anchors = files.listAnchors(linked);
   if (anchors === undefined) return undefined;
+
   return anchors.has(decode(anchor).toLowerCase()) ? undefined : "no such section";
 }
 
@@ -158,6 +168,7 @@ function listMarkdownFiles(folder: string): string[] {
   return readdirSync(folder, { withFileTypes: true }).flatMap((entry) => {
     const path = join(folder, entry.name);
     if (entry.isDirectory()) return SKIPPED_FOLDERS.has(entry.name) ? [] : listMarkdownFiles(path);
+
     return entry.isFile() && entry.name.endsWith(".md") ? [path] : [];
   });
 }
@@ -170,6 +181,7 @@ export function checkRepository(): DeadLink[] {
     listAnchors(path) {
       const known = anchorsByPath.get(path);
       if (known || !path.endsWith(".md")) return known;
+
       const anchors = listAnchors(readFileSync(path, "utf8"));
       anchorsByPath.set(path, anchors);
       return anchors;
@@ -193,6 +205,7 @@ export const describe = (link: DeadLink): string =>
 if (import.meta.main) {
   const dead = checkRepository();
   for (const link of dead) console.error(describe(link));
+
   console.log(
     dead.length === 0 ? "Every link leads somewhere." : `${dead.length.toString()} dead links.`,
   );

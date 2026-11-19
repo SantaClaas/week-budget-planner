@@ -18,6 +18,7 @@ export function animate(update: () => void): void {
     update();
     return;
   }
+
   const transition = scope.startViewTransition(() => {
     update();
     // Solid applies changes in a microtask; the new state has to be on the page when this returns.

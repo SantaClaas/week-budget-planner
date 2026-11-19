@@ -13,6 +13,7 @@ const [firstPart, secondPart] = splitIntoParts(shift);
 
 function required<Value>(value: Value | undefined): Value {
   if (value === undefined) throw new Error("The test block has no such part.");
+
   return value;
 }
 

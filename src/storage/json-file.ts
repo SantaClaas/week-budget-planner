@@ -19,6 +19,7 @@ export function create(plan: Plan, at: Temporal.PlainDateTime): ExportedFile {
 /** Reads an imported `.json` plan file, or says why it isn't one this app can import. */
 export async function read(file: File): Promise<Result<Plan, ImportProblem>> {
   if (!isJson(file)) return "needs-database";
+
   const plan = planFile.read(await file.text(), randomIds);
   return plan === "not-a-plan" ? "invalid-file" : plan;
 }

@@ -40,8 +40,10 @@ function cut(text: string): string {
     // oxlint-disable-next-line typescript/no-misused-spread -- code points are what is counted here, the way the database's length() counts them; the graphemes come from the Segmenter.
     characters += [...segment].length;
     if (characters > MAX_NAME_CHARACTERS) break;
+
     name += segment;
   }
+
   return name.trimEnd();
 }
 

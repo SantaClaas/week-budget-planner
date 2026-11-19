@@ -24,6 +24,7 @@ import { type Plan } from "./index.ts";
 // sanitizers the app uses, which also keeps the test data valid.
 function required<Value>(value: Value | undefined, what: string): Value {
   if (value === undefined) throw new Error(`The test data has an invalid ${what}.`);
+
   return value;
 }
 export const createActivityId = (id: string): ActivityId =>

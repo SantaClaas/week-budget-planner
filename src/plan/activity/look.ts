@@ -113,6 +113,7 @@ export function hashFnv1a32(text: string): number {
     hash ^= byte;
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
+
   return hash >>> 0;
 }
 
@@ -122,9 +123,11 @@ function findFirstUnused<T>(items: readonly T[], start: number, used: ReadonlySe
     const item = items[(start + step) % items.length];
     if (item !== undefined && !used.has(item)) return item;
   }
+
   const fallback = items[start];
   if (fallback === undefined)
     throw new RangeError(`No item at ${start.toString()} to fall back to.`);
+
   return fallback;
 }
 

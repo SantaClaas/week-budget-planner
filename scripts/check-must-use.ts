@@ -37,10 +37,12 @@ function readConfigs(folder: string): string[] {
       ? parsed.references
       : undefined;
   if (!Array.isArray(references)) throw new Error("tsconfig.json has no references.");
+
   return references.map((reference: unknown) => {
     if (typeof reference !== "object" || reference === null || !("path" in reference)) {
       throw new Error("A reference in tsconfig.json has no path.");
     }
+
     return join(folder, String(reference.path));
   });
 }
@@ -52,6 +54,7 @@ function findCall(expression: Expression): Expression | undefined {
   if (isParenthesizedExpression(expression) || isAwaitExpression(expression)) {
     return findCall(expression.expression);
   }
+
   return isCallExpression(expression) || isNewExpression(expression) ? expression : undefined;
 }
 
@@ -60,11 +63,13 @@ const isResult = (type: Type | undefined): boolean => type?.getAliasSymbol()?.na
 /** Whether the function called has `@mustUse` in its JSDoc. */
 function isMarkedMustUse(checker: Checker, call: Expression): boolean {
   if (!isCallExpression(call) && !isNewExpression(call)) return false;
+
   const callee = isPropertyAccessExpression(call.expression)
     ? call.expression.name
     : call.expression;
   const found = checker.getSymbolAtLocation(callee);
   if (found === undefined) return false;
+
   // An imported function's symbol is the import, which has no JSDoc: follow it to the declaration.
   const symbol = (found.flags & SymbolFlags.Alias) === 0 ? found : checker.getAliasedSymbol(found);
   return symbol.getJsDocTags(checker).some((tag) => tag.name === "mustUse");
@@ -84,6 +89,7 @@ function findReason(
   type: Type | undefined,
 ): string | undefined {
   if (isResult(type)) return `its Result (${type ? checker.typeToString(type) : "unknown"})`;
+
   return isMarkedMustUse(checker, call) ? "a value marked @mustUse" : undefined;
 }
 
@@ -108,6 +114,7 @@ function checkFile(checker: Checker, file: SourceFile, folder: string): Finding[
         }
       }
     }
+
     node.forEachChild(visit);
   };
   visit(file);
@@ -127,13 +134,16 @@ export function check(folder = root): Finding[] {
   for (const config of configs) {
     const project = snapshot.getProject(config);
     if (!project) throw new Error(`TypeScript couldn't open ${relative(folder, config)}.`);
+
     for (const name of project.program.getSourceFileNames()) {
       if (name.includes("/node_modules/") || checked.has(name)) continue;
+
       checked.add(name);
       const file = project.program.getSourceFile(name);
       if (file) findings.push(...checkFile(project.checker, file, folder));
     }
   }
+
   return findings;
 }
 
@@ -142,5 +152,6 @@ if (import.meta.main) {
   for (const { file, line, column, message } of findings) {
     console.error(`${file}:${line}:${column}: ${message}`);
   }
+
   if (findings.length > 0) process.exitCode = 1;
 }

@@ -28,8 +28,10 @@ export default defineRule({
       Program() {
         for (const comment of context.sourceCode.getAllComments()) {
           if (!DISABLE_DIRECTIVE.test(comment.value)) continue;
+
           const [, reason = ""] = comment.value.split(REASON_SEPARATOR, 2);
           if (reason.trim().length >= MINIMUM_REASON_LENGTH) continue;
+
           context.report({
             node: comment,
             message: `Say why the rule doesn't apply here, after "--", in ${MINIMUM_REASON_LENGTH.toString()} characters or more.`,

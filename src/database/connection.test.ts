@@ -12,6 +12,7 @@ describe("query parameters", () => {
   it("accepts exactly the values SQLite can store", () => {
     for (const value of ["text", 1.5, 2n, null, new Uint8Array([1])])
       expect(isSqlValue(value)).toBe(true);
+
     for (const value of [undefined, true, {}, [], new Date(0), () => 0])
       expect(isSqlValue(value)).toBe(false);
   });

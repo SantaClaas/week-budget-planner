@@ -25,11 +25,13 @@ worker.addEventListener("fetch", (event) => {
   const request = event.request;
   // Chrome throws for this combination when the request is forwarded.
   if (request.cache === "only-if-cached" && request.mode !== "same-origin") return;
+
   event.respondWith(
     (async () => {
       const response = await fetch(request);
       // Opaque responses can't be read or changed; with require-corp they won't load anyway.
       if (response.status === 0) return response;
+
       const headers = new Headers(response.headers);
       headers.set("Cross-Origin-Opener-Policy", "same-origin");
       headers.set("Cross-Origin-Embedder-Policy", "require-corp");
@@ -40,9 +42,11 @@ worker.addEventListener("fetch", (event) => {
         headers.set("Content-Security-Policy", "frame-ancestors 'none'");
         headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
       }
+
       if (new URL(request.url).origin === worker.location.origin) {
         headers.set("Cross-Origin-Resource-Policy", "same-origin");
       }
+
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,

@@ -22,7 +22,9 @@ const NOT_SAVED: SaveStatus = { text: "Not saved", icon: "cloud_off", variant: "
  */
 export function describe(level: StorageLevel, state: SaveState, isOutdated: boolean): SaveStatus {
   if (isOutdated || state === "failed" || level === "none") return NOT_SAVED;
+
   if (state === "saving") return { text: "Saving…", icon: "sync", variant: "limited" };
+
   return level === "full"
     ? { text: "Saved in this browser", icon: "cloud_done", variant: "saved" }
     : { text: "Saved in limited storage", icon: "cloud_done", variant: "limited" };

@@ -66,6 +66,7 @@ async function execute(
     await statement.run(...parameters);
     return { rows: [] };
   }
+
   statement.raw(true);
   if (method === "get") {
     // One row, or undefined when nothing matched. Drizzle handles both, though its type only
@@ -73,6 +74,7 @@ async function execute(
     // oxlint-disable-next-line typescript/consistent-type-assertions -- Drizzle's type names only the row, but it takes undefined for no row.
     return { rows: (await statement.get(...parameters)) as unknown[] };
   }
+
   return { rows: await statement.all(...parameters) };
 }
 
@@ -93,6 +95,7 @@ async function startTransaction(connection: TursoConnection): Promise<Transactio
     },
     async [Symbol.asyncDispose]() {
       if (isCommitted) return;
+
       await connection.exec("ROLLBACK");
     },
   };
@@ -109,11 +112,13 @@ export function createLocalQueryService(
     async query(sql, parameters, method) {
       const connection = await getConnection();
       if (connection === "newer-version") return connection;
+
       return execute(connection, sql, parameters, method);
     },
     async batch(statements) {
       const connection = await getConnection();
       if (connection === "newer-version") return connection;
+
       await using transaction = await startTransaction(connection);
       const results: QueryResult[] = [];
       for (const { sql, params: parameters, method } of statements) {
@@ -121,6 +126,7 @@ export function createLocalQueryService(
         // oxlint-disable-next-line no-await-in-loop -- a transaction runs its statements in order.
         results.push(await execute(connection, sql, parameters, method));
       }
+
       await transaction.commit();
       return results;
     },

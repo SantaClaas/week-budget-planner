@@ -43,6 +43,7 @@ const example = () => createExampleWeek(NOW, createPredictableIds());
 /** The value of a Result the test expects to have one. */
 function readValue<Value>(result: Value | "newer-version"): Value {
   if (result === "newer-version") throw new Error("The store answered newer-version.");
+
   return result;
 }
 

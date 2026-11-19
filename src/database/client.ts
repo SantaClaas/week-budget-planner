@@ -96,6 +96,7 @@ async function removeImportLeftovers(): Promise<void> {
   const root = await navigator.storage.getDirectory();
   for await (const name of root.keys()) {
     if (!name.startsWith(IMPORT_FILE_PREFIX)) continue;
+
     await root.removeEntry(name).catch((error: unknown) => {
       console.debug("[database] kept a locked import copy", name, error);
     });
@@ -125,9 +126,11 @@ async function open(): Promise<Result<TursoConnection, "newer-version">> {
     await removeDatabaseFiles();
     localStorage.removeItem(REMOVAL_KEY);
   }
+
   await removeImportLeftovers();
   const connection = await connectFile(DATABASE_FILE);
   if ((await runMigrations(connection)) === "migrated") return connection;
+
   await connection.close();
   return "newer-version";
 }
@@ -148,6 +151,7 @@ async function closeForNewerVersion(): Promise<void> {
   const opening = localDatabase;
   localDatabase = waitForReload;
   if (opening === undefined) return;
+
   let database: Result<TursoConnection, "newer-version">;
   try {
     database = await opening;
@@ -155,8 +159,10 @@ async function closeForNewerVersion(): Promise<void> {
     // It never opened, so there's nothing to close.
     return;
   }
+
   // A database from a newer version was closed as soon as it opened.
   if (database === "newer-version") return;
+
   // Folds the WAL into the file, so the newer tab reads everything this one wrote.
   await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   await database.close();
@@ -165,6 +171,7 @@ async function closeForNewerVersion(): Promise<void> {
 /** Steps down for a tab on a newer version, once, and tells whoever listens. */
 function giveWayToNewerVersion(): void {
   if (isOutdated) return;
+
   isOutdated = true;
   console.info("[database] a newer version of the app runs in another tab, so this one steps down");
   election.abort();
@@ -175,6 +182,7 @@ function giveWayToNewerVersion(): void {
 function waitForAbort(signal: AbortSignal): Promise<void> {
   const { promise, resolve } = Promise.withResolvers<void>();
   if (signal.aborted) resolve();
+
   signal.addEventListener(
     "abort",
     () => {
@@ -204,6 +212,7 @@ export function onNewerVersion(listener: () => void): () => void {
 async function closeForReload(): Promise<Result<"closed", "newer-version">> {
   const database = await getLocalConnection();
   if (database === "newer-version") return database;
+
   localDatabase = waitForReload;
   // Folds the WAL into the file, so removing the WAL loses nothing if the action fails later.
   await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -233,6 +242,7 @@ async function startWriting(handle: FileSystemFileHandle): Promise<Writing> {
     },
     async [Symbol.asyncDispose]() {
       if (isCommitted) return;
+
       await writable.abort();
     },
   };
@@ -272,6 +282,7 @@ async function readCopy(name: string): Promise<Result<"readable", "newer-version
   await using resources = new AsyncDisposableStack();
   const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
   if ((await runMigrations(connection)) === "newer-version") return "newer-version";
+
   const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
   await loadPlan(database, randomIds);
   return "readable";
@@ -285,6 +296,7 @@ async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
 ): Promise<Result<"importable", ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
+
   await using cleanup = new AsyncDisposableStack();
   cleanup.defer(removeImportLeftovers);
   const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
@@ -296,6 +308,7 @@ async function checkImport(
     console.warn("[database] the imported file can't be opened", error);
     return "invalid-file";
   }
+
   return copy === "readable" ? "importable" : copy;
 }
 
@@ -324,6 +337,7 @@ const localService: DatabaseService = {
   async exportFile() {
     const database = await getLocalConnection();
     if (database === "newer-version") return database;
+
     await database.exec("PRAGMA wal_checkpoint(TRUNCATE)");
     const bytesAfterClose = (async () => {
       await database.close();
@@ -338,25 +352,30 @@ const localService: DatabaseService = {
   async importFile(bytes) {
     const check = await checkImport(bytes);
     if (check !== "importable") return check;
+
     if ((await closeForReload()) === "newer-version") return "newer-version";
+
     try {
       await replaceDatabaseFile(bytes);
     } catch (error) {
       localDatabase = open();
       throw error;
     }
+
     broadcastReload();
     return "imported";
   },
 
   async wipe() {
     if ((await closeForReload()) === "newer-version") return "newer-version";
+
     try {
       await removeDatabaseFiles();
     } catch (error) {
       localDatabase = open();
       throw error;
     }
+
     broadcastReload();
     return "wiped";
   },
@@ -371,11 +390,13 @@ export async function hasDatabaseFile(): Promise<boolean> {
     // The browser refused OPFS, as in some private windows, so there's no file either.
     return false;
   }
+
   try {
     await root.getFileHandle(DATABASE_FILE);
   } catch {
     return false;
   }
+
   return true;
 }
 
@@ -395,14 +416,17 @@ function setUp(): { channel: BroadcastChannel; consumer: Consumer<DatabaseServic
     channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
       const message = event.data;
       if (message.protocolVersion !== PROTOCOL_VERSION || message.scope !== SCOPE) return;
+
       if (message.type === "reload") location.reload();
     });
   }
+
   return { channel, consumer };
 }
 
 function startElection(): void {
   if (isElectionStarted) return;
+
   isElectionStarted = true;
   const connected = setUp();
   navigator.locks
@@ -426,6 +450,7 @@ function startElection(): void {
     .catch((error: unknown) => {
       // Stepping down while still waiting for the lock leaves the queue, which rejects the request.
       if (error instanceof DOMException && error.name === "AbortError") return;
+
       console.error("[database] the leader election failed", error);
     });
 }
@@ -438,16 +463,19 @@ async function callService<T>(
   operation: (service: DatabaseService) => Promise<T>,
 ): Promise<T | "newer-version"> {
   if (isOutdated) return "newer-version";
+
   startElection();
   const leader = setUp().consumer;
   while (true) {
     if (isLeader) return operation(localService);
+
     try {
       // oxlint-disable-next-line no-await-in-loop -- tried again only after a promotion, so this runs at most twice.
       return await operation(leader.proxy);
     } catch (error) {
       // Promoted mid-wait: the call was never sent, safe to redispatch locally.
       if (error instanceof ProviderChangedError) continue;
+
       throw error;
     }
   }

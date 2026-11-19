@@ -22,6 +22,7 @@ async function replacePlan(
     await savePlan(database, current, imported, now);
   });
   if (replaced === "newer-version") return replaced;
+
   broadcastMessage({ type: "plan-changed" });
   return "imported";
 }
@@ -35,12 +36,14 @@ export function create(): PlanStore {
     async save(before, after, now) {
       const saved = await runOnDatabase(() => savePlan(database, before, after, now));
       if (saved === "newer-version") return saved;
+
       broadcastMessage({ type: "plan-changed" });
       return "saved";
     },
     async exportFile(at) {
       const bytes = await databaseService.exportFile();
       if (bytes === "newer-version") return bytes;
+
       return {
         blob: new Blob([bytes], { type: "application/vnd.sqlite3" }),
         filename: createExportName(at, "db"),
@@ -51,9 +54,11 @@ export function create(): PlanStore {
       if (!jsonFile.isJson(file)) {
         return databaseService.importFile(new Uint8Array(await file.arrayBuffer()));
       }
+
       // A plan exported at a limited level: replace the stored plan with it.
       const imported = await jsonFile.read(file);
       if (typeof imported === "string") return imported;
+
       return replacePlan(database, imported);
     },
     measureSize: () => size.measure(databaseService),

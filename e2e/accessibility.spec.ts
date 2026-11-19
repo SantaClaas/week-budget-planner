@@ -25,20 +25,24 @@ function findClippedText(): string[] {
     const isClippingY = overflowY === "hidden" || overflowY === "clip";
     // the visually hidden text clips on purpose
     if (element.closest(".visually-hidden") !== null) continue;
+
     // So does a block's name, cut to the room left above its time (see docs/spec/grid-geometry.md).
     // The block's spoken name has it in full.
     if (element.matches(".block > .name")) continue;
+
     if (isClippingX && element.scrollWidth > element.clientWidth + 1) {
       clipped.push(
         `${element.tagName.toLowerCase()} hides ${element.scrollWidth - element.clientWidth}px across`,
       );
     }
+
     if (isClippingY && element.scrollHeight > element.clientHeight + 1) {
       clipped.push(
         `${element.tagName.toLowerCase()} hides ${element.scrollHeight - element.clientHeight}px down`,
       );
     }
   }
+
   return clipped;
 }
 
@@ -50,6 +54,7 @@ async function collectTabStops(page: Page): Promise<{ name: string; isRingVisibl
     const stop = await page.evaluate(() => {
       const focused = document.activeElement;
       if (focused === null || focused === document.body) return null;
+
       const { outlineStyle, outlineWidth } = getComputedStyle(focused);
       const name = (focused.getAttribute("aria-label") ?? focused.textContent ?? "").trim();
       return {
@@ -63,8 +68,10 @@ async function collectTabStops(page: Page): Promise<{ name: string; isRingVisibl
     });
     // back at the start, or out of the page
     if (stop === null || stops.some(({ name }) => name === stop.name)) break;
+
     stops.push(stop);
   }
+
   return stops;
 }
 
@@ -114,6 +121,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name }).click();
         results.push(await checkWithAxe(page));
       }
+
       await page.setViewportSize({ width: 390, height: 760 });
       await page.getByRole("link", { name: "Week" }).click();
       results.push(await checkWithAxe(page));
@@ -160,6 +168,7 @@ for (const textSize of ["100%", "200%"]) {
       }, textSize);
       overflows.push(`/${path}: ${String(await page.evaluate(measureOverflow))}px`);
     }
+
     expect(overflows).toEqual(paths.map((path) => `/${path}: 0px`));
   });
 }
@@ -224,6 +233,7 @@ for (const { device, width, height } of [
       await expectStatus(page, "full");
       scrolls.push(`/${path}: ${String(await page.evaluate(measureWindowScroll))}px`);
     }
+
     expect(scrolls).toEqual(paths.map((path) => `/${path}: 0px`));
   });
 }

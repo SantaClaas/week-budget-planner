@@ -91,6 +91,7 @@ const countNameLines = (length: Length): number =>
 
 function sizeOf(length: Length): BlockSize {
   if (length <= 15) return "tiny";
+
   return length <= 30 ? "short" : "regular";
 }
 
@@ -116,9 +117,11 @@ function describeRange(part: BlockPart, format: Format): TimeText[] {
   if (part.kind === "only") {
     return formatClockRangeToParts(block.start, end, format).map(({ text, source }) => {
       if (source === "shared") return { text };
+
       return { text, datetime: formatClockDatetime(source === "startRange" ? block.start : end) };
     });
   }
+
   const startDay = formatWeekday(block.day, "short", format);
   const endDay = formatWeekday(wrapDayIndex(block.day + 1), "short", format);
   return [
@@ -148,6 +151,7 @@ function speak(part: BlockPart, activity: Activity, format: Format): string {
   const { block } = part;
   const length = formatLength(block.length, "long", format);
   if (part.kind !== "second") return `${activity.name}, ${speakRange(block, format)}, ${length}`;
+
   const startDay = formatWeekday(block.day, "long", format);
   const end = formatClock(block.start + block.length, format);
   return `${activity.name}, continued from ${startDay}, until ${end}`;
@@ -199,6 +203,7 @@ function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Form
 /** The header's total: "3h placed", or "free" for a day with nothing on it. */
 function describeTotal(minutes: number, format: Format): TimeText[] {
   if (minutes === 0) return [{ text: "free" }];
+
   return [createLengthText(minutes, format), { text: " placed" }];
 }
 
@@ -232,6 +237,7 @@ export function layoutWeek(
       blocks: parts.flatMap((part) => {
         const activity = activities.get(part.block.activityId);
         if (activity === undefined) return [];
+
         const lane = lanes.get(part.block.id) ?? { index: 0, count: 1 };
         return [drawBlock(part, activity, lane, format)];
       }),

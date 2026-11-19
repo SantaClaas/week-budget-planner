@@ -24,9 +24,12 @@ function findLightValue(value: string): string {
   for (let index = 0; index < inner.length; index++) {
     const character = inner[index];
     if (character === "," && depth === 0) return inner.slice(0, index).trim();
+
     if (character === "(") depth++;
+
     if (character === ")") depth--;
   }
+
   throw new Error(`Not a light-dark() value: ${value}`);
 }
 
@@ -41,6 +44,7 @@ function splitBlocks(text: string, opening: string): { rest: string; blocks: str
     blocks += text.slice(start, end);
     position = end;
   }
+
   return { rest: rest + text.slice(position), blocks };
 }
 
@@ -58,8 +62,10 @@ function readRules(text: string): Map<string, Map<string, string>> {
     for (const [, name = "", value = ""] of body.matchAll(/(--[\w-]+):\s*([^;]+);/gu)) {
       declarations.set(name, value.trim());
     }
+
     rules.set(key, declarations);
   }
+
   return rules;
 }
 
@@ -79,8 +85,10 @@ function readBase(selector: string): Map<string, string> {
   for (const key of keys) {
     const rule = base.get(key);
     if (!rule) throw new Error(`No rule for ${key}`);
+
     for (const [name, value] of rule) declarations.set(name, value);
   }
+
   return declarations;
 }
 
@@ -105,6 +113,7 @@ function findExpectedFallbacks(): Map<string, string> {
     for (const [name, declared] of declarations) {
       // the level variables themselves are only read through the tokens
       if (name.endsWith("-contrast")) continue;
+
       // a token that points at its standard level takes that level's value
       const pointedAt = /^var\((--[\w-]+-standard-contrast)\)$/u.exec(declared)?.[1];
       const value = pointedAt === undefined ? declared : (declarations.get(pointedAt) ?? declared);
@@ -113,6 +122,7 @@ function findExpectedFallbacks(): Map<string, string> {
       }
     }
   }
+
   return expected;
 }
 
@@ -124,6 +134,7 @@ function findLevelRules(level: string): Map<string, string>[] {
     [root, `${root} ${EVERY_COLOR}`].map((key) => {
       const rule = levelRules.get(key);
       if (!rule) throw new Error(`No rule for ${key}`);
+
       return rule;
     }),
   );
@@ -157,6 +168,7 @@ describe("design tokens", () => {
       expect(rule.size).toBeGreaterThan(0);
       for (const [name, value] of rule) expect(value).toBe(`var(${name}-${level}-contrast)`);
     }
+
     expect(countOwnValues(level)).toBeGreaterThan(20);
   });
 });
@@ -168,6 +180,7 @@ describe("design tokens", () => {
 function moveSpring(damping: number, stiffness: number, seconds: number): number {
   const natural = Math.sqrt(stiffness);
   if (damping >= 1) return 1 - Math.exp(-natural * seconds) * (1 + natural * seconds);
+
   const damped = natural * Math.sqrt(1 - damping * damping);
   return (
     1 -
@@ -189,6 +202,7 @@ function readSpring(name: string): { duration: number; points: number[] } {
   const duration = /^(\d+)ms$/u.exec(root.get(`--spring-${name}-duration`) ?? "")?.[1];
   const curve = /^linear\(([^)]*)\)$/u.exec(root.get(`--spring-${name}`) ?? "")?.[1];
   if (duration === undefined || curve === undefined) throw new Error(`No spring ${name}`);
+
   return { duration: Number(duration) / 1000, points: curve.split(",").map(Number) };
 }
 
@@ -238,13 +252,16 @@ function readLevel(selector: string, level: Level): Map<string, ColorPair> {
     const key = selector === ":root" ? root : `${root} ${EVERY_COLOR}`;
     const rule = levelRules.get(key);
     if (!rule) throw new Error(`No rule for ${key}`);
+
     for (const [name, value] of rule) declarations.set(name, value);
   }
+
   const colors = new Map<string, ColorPair>();
   for (const [name, value] of resolve(declarations)) {
     const [, light, dark] = /^light-dark\((#[\da-f]{6}),\s*(#[\da-f]{6})\)$/u.exec(value) ?? [];
     if (light !== undefined && dark !== undefined) colors.set(name, { light, dark });
   }
+
   return colors;
 }
 
@@ -252,6 +269,7 @@ function readLevel(selector: string, level: Level): Map<string, ColorPair> {
 function pickColor(colors: Map<string, ColorPair>, name: string, scheme: keyof ColorPair): string {
   const pair = colors.get(name);
   if (!pair) throw new Error(`No light-dark() color ${name}`);
+
   return pair[scheme];
 }
 

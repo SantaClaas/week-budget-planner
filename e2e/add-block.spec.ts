@@ -17,6 +17,7 @@ async function openApp(page: Page): Promise<void> {
 async function findSlot(page: Page, day: number, hour: number): Promise<{ x: number; y: number }> {
   const column = await page.locator(".day-column").nth(day).boundingBox();
   if (column === null) throw new Error("The week has no such day column.");
+
   return { x: column.x + column.width / 2, y: column.y + (column.height / 24) * hour + 5 };
 }
 

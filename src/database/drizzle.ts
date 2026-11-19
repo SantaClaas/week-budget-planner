@@ -9,6 +9,7 @@ export type Database = SqliteRemoteDatabase;
 function checkParameters(parameters: unknown[]): SqlValue[] {
   return parameters.map((parameter) => {
     if (!isSqlValue(parameter)) throw new TypeError(`Can't store ${typeof parameter} in SQLite.`);
+
     return parameter;
   });
 }
@@ -25,6 +26,7 @@ function isNewerVersion(error: unknown): boolean {
   for (let cause = error; cause instanceof Error; cause = cause.cause) {
     if (cause instanceof NewerVersionThroughDrizzle) return true;
   }
+
   return false;
 }
 
@@ -33,6 +35,7 @@ function readRows<Rows>(answer: Result<Rows, "newer-version">): Rows {
   if (answer === "newer-version") {
     throw new NewerVersionThroughDrizzle("A newer version of the app has the database.");
   }
+
   return answer;
 }
 
@@ -48,6 +51,7 @@ export async function runOnDatabase<Value>(
     return await queries();
   } catch (error) {
     if (isNewerVersion(error)) return "newer-version";
+
     throw error;
   }
 }

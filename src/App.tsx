@@ -38,6 +38,7 @@ const isInField = (target: EventTarget | null): boolean =>
 /** Escape stops placing, wherever focus is, except in a field, where it belongs to the field. */
 function stopPlacingOnEscape(event: KeyboardEvent): void {
   if (event.key !== "Escape" || placing.current() === undefined || isInField(event.target)) return;
+
   placing.stop();
 }
 
@@ -51,6 +52,7 @@ function leaveForNewerVersion(signal: AbortSignal): void {
     location.reload();
     return;
   }
+
   snackbar.show({
     message:
       "Week Budget Planner was updated in another tab. This tab can't save until it reloads.",
@@ -118,6 +120,7 @@ export function App(): JSX.Element {
     const openedPlanner = current();
     const openedStore = store();
     if (openedPlanner === undefined || openedStore === undefined) return undefined;
+
     return { planner: openedPlanner, store: openedStore };
   };
   /**
@@ -132,10 +135,12 @@ export function App(): JSX.Element {
     setPage(shown);
     document.title = createTitle(shown);
     if (cause === "history") return;
+
     // The new page renders now, so its heading and the section the address names are in place.
     flush();
     heading?.focus();
     if (location.hash === "") return;
+
     document.querySelector(`#${CSS.escape(location.hash.slice(1))}`)?.scrollIntoView();
   }
 
@@ -145,10 +150,12 @@ export function App(): JSX.Element {
    */
   function openNewActivity(): void {
     if (current()?.isOutdated() === true) return;
+
     if (page() !== "week" && page() !== "activities") {
       history.pushState(null, "", createPath("activities", BASE));
       showPage("activities", "link");
     }
+
     edit.openNew();
   }
 
@@ -173,12 +180,14 @@ export function App(): JSX.Element {
       history.pushState(null, "", createPath("activities", BASE));
       showPage("activities", "link");
     }
+
     edit.openNewThen((activity) => {
       edit.close();
       if (isPaneHidden) {
         history.pushState(null, "", createPath("week", BASE));
         showPage("week", "link");
       }
+
       onCreated(activity);
     });
   }
@@ -186,6 +195,7 @@ export function App(): JSX.Element {
   const undoOnShortcut = (event: KeyboardEvent): void => {
     const isShortcut = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey;
     if (!isShortcut || event.key.toLowerCase() !== "z" || isInField(event.target)) return;
+
     event.preventDefault();
     animate(() => {
       current()?.undo();
@@ -199,6 +209,7 @@ export function App(): JSX.Element {
     () => current()?.isOutdated() === true,
     (isOutdated) => {
       if (!isOutdated) return;
+
       placing.stop();
       edit.close();
     },
@@ -232,11 +243,13 @@ export function App(): JSX.Element {
         setIsFromNewerVersion(true);
         return;
       }
+
       // The app went away while the plan was opening.
       if (signal.aborted) {
         result.planner.stop();
         return;
       }
+
       signal.addEventListener(
         "abort",
         () => {

@@ -14,6 +14,7 @@ async function measureScroll(week: Locator): Promise<{ scrollTop: number; height
     height: element.querySelector<HTMLElement>(".day-column")?.offsetHeight,
   }));
   if (measured.height === undefined) throw new Error("The week has no day column.");
+
   return { scrollTop: measured.scrollTop, height: measured.height };
 }
 
@@ -24,6 +25,7 @@ async function measureWidths(week: Locator): Promise<{ week: number; day: number
     day: element.querySelector(".day")?.getBoundingClientRect().width,
   }));
   if (measured.day === undefined) throw new Error("The week has no day.");
+
   return { week: measured.week, day: measured.day };
 }
 
@@ -33,6 +35,7 @@ async function measure(
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   const box = await locator.boundingBox();
   if (box === null) throw new Error("The element isn't on screen.");
+
   return box;
 }
 

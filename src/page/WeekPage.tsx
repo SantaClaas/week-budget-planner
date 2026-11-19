@@ -90,6 +90,7 @@ function addBlockNow(planner: Planner, activity: Activity, slot: Slot, length?: 
     return list.add(plan, added);
   });
   if (added === undefined) return;
+
   selection.select(id);
   snackbar.show({
     message: describeAdded(activity, added),
@@ -143,6 +144,7 @@ export function WeekPage(properties: {
     const shown = placing.preview();
     const activity = properties.plan.activities.find((each) => each.id === shown?.activityId);
     if (shown === undefined || activity === undefined) return undefined;
+
     return { activity, day: shown.day, start: shown.start, length: shown.length };
   };
   /** Placing adds a block at the slot picked; otherwise Add block opens on it. */
@@ -152,6 +154,7 @@ export function WeekPage(properties: {
       placing.addBlock(properties.planner, activity, slot);
       return;
     }
+
     setAdding({ slot, variant: matchMedia(PHONE_QUERY).matches ? "sheet" : "menu" });
   };
   /** "New activity…": the form opens, and its activity gets the block, with its default length. */
@@ -166,6 +169,7 @@ export function WeekPage(properties: {
   const showPreview = (slot: Slot): void => {
     const activity = findPlacingActivity();
     if (activity === undefined) return;
+
     const length = pickDefaultLength(activity, properties.plan.blocks);
     placing.showPreview({
       activityId: activity.id,
