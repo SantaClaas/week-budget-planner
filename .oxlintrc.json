@@ -42,6 +42,9 @@
     // around it ends right after (see Formatting and linting in docs/guidelines/typescript.md). oxfmt keeps
     // blank lines but never adds them, so the rule's fix does.
     "week-budget-planner/blank-line-after-scope": "error",
+    // Chain lazily with the iterator helpers where array methods would build arrays only to throw
+    // them away (see Iterators in docs/guidelines/typescript.md).
+    "week-budget-planner/no-intermediate-array": "error",
     // Everything is declared above its first use, as in F#, so a file reads bottom-up: types and
     // helpers first, the module's entry point last (see Functions in
     // docs/guidelines/principles.md). Type references count too.
