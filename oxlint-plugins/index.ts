@@ -1,5 +1,6 @@
 import { definePlugin } from "@oxlint/plugins";
 
+import blankLineAfterScope from "./blank-line-after-scope.ts";
 import noElse from "./no-else.ts";
 import oneOperationPerTry from "./one-operation-per-try.ts";
 import preferUsing from "./prefer-using.ts";
@@ -10,6 +11,7 @@ import requireReason from "./require-reason.ts";
 export default definePlugin({
   meta: { name: "week-budget-planner" },
   rules: {
+    "blank-line-after-scope": blankLineAfterScope,
     "no-else": noElse,
     "one-operation-per-try": oneOperationPerTry,
     "prefer-using": preferUsing,

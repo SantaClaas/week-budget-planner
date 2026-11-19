@@ -38,6 +38,10 @@
     // The shorter of two branches goes inside the if (see Functions in
     // docs/guidelines/principles.md).
     "week-budget-planner/shorter-branch-first": "error",
+    // A blank line after every statement that opens a scope, braces or not, unless the scope
+    // around it ends right after (see Formatting and linting in docs/guidelines/typescript.md). oxfmt keeps
+    // blank lines but never adds them, so the rule's fix does.
+    "week-budget-planner/blank-line-after-scope": "error",
     // Everything is declared above its first use, as in F#, so a file reads bottom-up: types and
     // helpers first, the module's entry point last (see Functions in
     // docs/guidelines/principles.md). Type references count too.
