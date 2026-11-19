@@ -15,6 +15,7 @@ export default defineRule({
     return {
       TryStatement(node) {
         if (node.finalizer === null) return;
+
         context.report({
           node: node.finalizer,
           message:

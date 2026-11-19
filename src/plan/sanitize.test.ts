@@ -135,6 +135,7 @@ describe("sanitize", () => {
       const plan = sanitizePlan({ activities: [{ id: "a", shape }] }, createPredictableIds());
       expect(plan.activities[0]?.shape).toBe(shape);
     }
+
     for (const { hue } of PALETTE) {
       const plan = sanitizePlan({ activities: [{ id: "a", hue }] }, createPredictableIds());
       expect(plan.activities[0]?.hue).toBe(hue);

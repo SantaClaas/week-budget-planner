@@ -61,6 +61,7 @@ export function create<Choice extends string, Target>(
     } catch {
       return options.system;
     }
+
     return isChoice(stored) ? stored : options.system;
   }
 
@@ -73,6 +74,7 @@ export function create<Choice extends string, Target>(
       storage?.removeItem(options.key);
       return;
     }
+
     storage?.setItem(options.key, choice);
   }
 
@@ -82,6 +84,7 @@ export function create<Choice extends string, Target>(
     } catch {
       // Blocked storage: the choice lasts until the tab closes.
     }
+
     apply(choice, target);
   }
 
@@ -93,6 +96,7 @@ export function create<Choice extends string, Target>(
   ): () => void {
     const listener = (event: StorageEvent) => {
       if (event.key !== null && event.key !== options.key) return;
+
       const choice = read(storage);
       apply(choice, target);
       callback(choice);

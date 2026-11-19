@@ -26,6 +26,7 @@ export default defineRule({
         const statements = node.block.body;
         const [statement] = statements;
         if (statements.length === 1 && statement && SINGLE_OPERATIONS.has(statement.type)) return;
+
         context.report({
           node: node.block,
           message:

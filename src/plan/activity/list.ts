@@ -17,6 +17,7 @@ export const add = (plan: Plan, activity: Activity): Plan => ({
 export function update(plan: Plan, id: ActivityId, changes: Omit<Activity, "id">): Plan {
   const before = plan.activities.find((activity) => activity.id === id);
   if (before === undefined) return plan;
+
   // Every field but the id, by name: a new field on Activity has to be added here, or a change to
   // it would count as no change and be dropped. A test in ./list.test.ts fails until it is.
   const isUnchanged =
@@ -27,6 +28,7 @@ export function update(plan: Plan, id: ActivityId, changes: Omit<Activity, "id">
     changes.budgetMinutes === before.budgetMinutes &&
     changes.days === before.days;
   if (isUnchanged) return plan;
+
   const after: Activity = { ...changes, id };
   return {
     ...plan,
@@ -40,6 +42,7 @@ export function update(plan: Plan, id: ActivityId, changes: Omit<Activity, "id">
  */
 export function remove(plan: Plan, id: ActivityId): { plan: Plan; removedBlocks: number } {
   if (!plan.activities.some((activity) => activity.id === id)) return { plan, removedBlocks: 0 };
+
   const blocks = plan.blocks.filter((block) => block.activityId !== id);
   return {
     plan: {
@@ -61,6 +64,7 @@ export function move(plan: Plan, id: ActivityId, index: number): Plan {
   const to = Math.min(Math.max(0, Math.round(index)), plan.activities.length - 1);
   const moved = plan.activities[from];
   if (moved === undefined || from === to) return plan;
+
   const others = plan.activities.toSpliced(from, 1);
   return { ...plan, activities: others.toSpliced(to, 0, moved) };
 }

@@ -36,11 +36,13 @@ async function isDenied(): Promise<boolean> {
   } catch {
     return false;
   }
+
   return status?.state === "denied";
 }
 
 /** What the browser does with this site's storage now. */
 export async function findState(): Promise<KeepingState> {
   if (await isPersisted()) return "persisted";
+
   return (await isDenied()) ? "denied" : "not-persisted";
 }

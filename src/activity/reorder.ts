@@ -38,6 +38,7 @@ function findScroller(element: HTMLElement): HTMLElement | undefined {
     const isScrolling = overflowY === "auto" || overflowY === "scroll";
     if (isScrolling && parent.scrollHeight > parent.clientHeight) return parent;
   }
+
   return undefined;
 }
 
@@ -54,6 +55,7 @@ function slideRows(rows: HTMLElement, update: () => void): void {
   update();
   flush();
   if (!isMotionAllowed()) return;
+
   const style = getComputedStyle(document.documentElement);
   const easing = style.getPropertyValue("--spring-default-spatial").trim() || "ease-out";
   // The token is in milliseconds, as "450ms".
@@ -65,6 +67,7 @@ function slideRows(rows: HTMLElement, update: () => void): void {
     if (top === undefined || row.dataset["dragged"] !== undefined || top === row.offsetTop) {
       continue;
     }
+
     row.animate([{ translate: `0 ${String(top - row.offsetTop)}px` }, { translate: "0 0" }], {
       duration: Number.isFinite(duration) ? duration : 450,
       easing,
@@ -77,6 +80,7 @@ function announcePosition(plan: Plan, id: ActivityId): void {
   const index = plan.activities.findIndex((activity) => activity.id === id);
   const activity = plan.activities[index];
   if (activity === undefined) return;
+
   announce(
     `${activity.name} moved to position ${String(index + 1)} of ${String(plan.activities.length)}`,
   );
@@ -88,13 +92,17 @@ function announcePosition(plan: Plan, id: ActivityId): void {
  */
 export function moveByKey(event: KeyboardEvent, id: ActivityId, planner: Planner): void {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
   const step = KEY_STEPS[event.key];
   if (step === undefined || planner.isOutdated()) return;
+
   const index = planner.plan().activities.findIndex((activity) => activity.id === id);
   const target = index + step;
   if (index < 0 || target < 0 || target >= planner.plan().activities.length) return;
+
   const rows = event.currentTarget instanceof Element ? event.currentTarget.closest("ul") : null;
   if (!(rows instanceof HTMLElement)) return;
+
   event.preventDefault();
   slideRows(rows, () => {
     planner.change((plan) => list.move(plan, id, target));
@@ -111,10 +119,13 @@ export function moveByKey(event: KeyboardEvent, id: ActivityId, planner: Planner
  */
 export function startReorder(event: PointerEvent, id: ActivityId, planner: Planner): void {
   if (event.pointerType === "mouse" && event.button !== 0) return;
+
   if (planner.isOutdated() || !(event.currentTarget instanceof Element)) return;
+
   const row = event.currentTarget.closest(".activity");
   const rows = row?.parentElement;
   if (!(row instanceof HTMLElement) || !(rows instanceof HTMLElement)) return;
+
   event.preventDefault();
   const { pointerId } = event;
   const scroller = findScroller(rows);
@@ -146,6 +157,7 @@ export function startReorder(event: PointerEvent, id: ActivityId, planner: Plann
     const above = shown[at - 1];
     const below = shown[at + 1];
     if (above !== undefined && middle < findMiddle(above)) return -1;
+
     return below !== undefined && middle > findMiddle(below) ? 1 : 0;
   };
 
@@ -156,10 +168,13 @@ export function startReorder(event: PointerEvent, id: ActivityId, planner: Plann
       const isNearTop = pointerY < top + SCROLL_EDGE_PIXELS;
       const isNearBottom = pointerY > bottom - SCROLL_EDGE_PIXELS;
       if (isNearTop) scroller.scrollTop -= SCROLL_STEP_PIXELS;
+
       if (isNearBottom) scroller.scrollTop += SCROLL_STEP_PIXELS;
+
       // The list keeps scrolling, frame after frame, while the pointer stays at an edge.
       if (isNearTop || isNearBottom) frame = requestAnimationFrame(showFrame);
     }
+
     const top = pointerY - rows.getBoundingClientRect().top - grab;
     const showTarget = (): void => {
       slideRows(rows, () => {
@@ -173,12 +188,14 @@ export function startReorder(event: PointerEvent, id: ActivityId, planner: Plann
       showTarget();
       step = findStep(top + row.offsetHeight / 2);
     }
+
     // Where the row is drawn, against where its place in the list puts it.
     row.style.translate = `0 ${String(top - row.offsetTop)}px`;
   };
 
   const onMove = (moved: PointerEvent): void => {
     if (moved.pointerId !== pointerId) return;
+
     pointerY = moved.clientY;
     if (frame === 0) frame = requestAnimationFrame(showFrame);
   };
@@ -189,17 +206,20 @@ export function startReorder(event: PointerEvent, id: ActivityId, planner: Plann
 
   const stop = (ended: PointerEvent): void => {
     if (ended.pointerId !== pointerId) return;
+
     using _ending = cleanup.move();
     if (ended.type === "pointercancel" || target === start) {
       putBack();
       return;
     }
+
     planner.change((plan) => list.move(plan, id, target));
     announcePosition(planner.plan(), id);
   };
 
   const cancelOnEscape = (key: KeyboardEvent): void => {
     if (key.key !== "Escape") return;
+
     key.preventDefault();
     using _ending = cleanup.move();
     putBack();

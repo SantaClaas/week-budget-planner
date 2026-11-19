@@ -70,6 +70,7 @@ export class RemoteCallError extends Error {}
 /** The provider's error as a RemoteCallError, with the name that structured cloning dropped. */
 function readRemoteError(error: unknown, name: string | undefined): RemoteCallError {
   if (error instanceof Error && name !== undefined) error.name = name;
+
   return new RemoteCallError("The leader tab failed to execute the call.", { cause: error });
 }
 
@@ -121,6 +122,7 @@ export function provide(
       postError(call.id, new TypeError(`Unknown service method: ${call.property}`));
       return;
     }
+
     let result: unknown;
     try {
       result = await Reflect.apply(method, target, call.parameters);
@@ -128,6 +130,7 @@ export function provide(
       postError(call.id, error);
       return;
     }
+
     try {
       channel.postMessage({
         protocolVersion: PROTOCOL_VERSION,
@@ -145,16 +148,19 @@ export function provide(
   const listener = (event: MessageEvent<ServiceMessage>): void => {
     const message = event.data;
     if (message.scope !== scope) return;
+
     // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
     if (message.protocolVersion > PROTOCOL_VERSION) {
       onNewerVersion();
       return;
     }
+
     if (message.protocolVersion < PROTOCOL_VERSION) {
       // An older tab can't read anything else from this one, but this version tells it it's outdated.
       channel.postMessage(ready);
       return;
     }
+
     switch (message.type) {
       case "provider-query":
         channel.postMessage(ready);
@@ -250,6 +256,7 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
 
   function stopQueryingWhenIdle() {
     if (queryTimer === undefined || readyWaiters.length > 0 || sent.size > 0) return;
+
     clearInterval(queryTimer);
     queryTimer = undefined;
   }
@@ -257,6 +264,7 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
   /** Asks for the provider every half second while anything waits, and gives up after silence. */
   function startQuerying() {
     if (queryTimer !== undefined) return;
+
     lastHeardAt = performance.now();
     query();
     queryTimer = setInterval(() => {
@@ -264,6 +272,7 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
         query();
         return;
       }
+
       // Forget the silent provider, so the next call looks for one again.
       providerId = undefined;
       settleWaiters((waiter) => {
@@ -291,6 +300,7 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
     if (providerId !== undefined && providerId !== announcedId) {
       failSent(new CallLostError("The database leader changed while a call was in flight."));
     }
+
     providerId = announcedId;
     lastHeardAt = performance.now();
     settleWaiters((waiter) => {
@@ -303,6 +313,7 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
   function takeCall(id: string): PendingCall | undefined {
     const call = sent.get(id);
     if (!call) return undefined;
+
     lastHeardAt = performance.now();
     sent.delete(id);
     stopQueryingWhenIdle();
@@ -312,12 +323,15 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
     if (message.scope !== scope) return;
+
     // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
     if (message.protocolVersion > PROTOCOL_VERSION) {
       giveWayToNewerVersion();
       return;
     }
+
     if (message.protocolVersion < PROTOCOL_VERSION) return;
+
     switch (message.type) {
       case "provider-ready":
         acceptProvider(message.providerId);
@@ -341,7 +355,9 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
   /** Waits until a provider announced itself, or gives back "newer-version" once it can't come. */
   function waitForProvider(): Promise<"ready" | NewerVersion> {
     if (isOutdated) return Promise.resolve("newer-version");
+
     if (providerId !== undefined) return Promise.resolve("ready");
+
     const waiter = Promise.withResolvers<"ready" | NewerVersion>();
     readyWaiters.push(waiter);
     startQuerying();
@@ -356,8 +372,10 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
         const own: unknown = Reflect.get(target, property);
         return own;
       }
+
       return async (...parameters: unknown[]) => {
         if ((await waitForProvider()) === "newer-version") return "newer-version";
+
         const id = crypto.randomUUID();
         const { promise: response, resolve, reject } = Promise.withResolvers<unknown>();
         sent.set(id, { resolve, reject });

@@ -6,22 +6,29 @@
 export async function loadPolyfills(): Promise<void> {
   const loading: Promise<unknown>[] = [];
   if (!("Temporal" in globalThis)) loading.push(import("temporal-polyfill/global"));
+
   if (!("DurationFormat" in Intl))
     loading.push(import("@formatjs/intl-durationformat/polyfill.js"));
+
   // the iterator helpers (Chrome 122, Firefox 131, Safari 18.4), which the plan logic chains
   if (!("Iterator" in globalThis && "toArray" in Iterator.prototype))
     loading.push(import("core-js/es/iterator/index.js"));
+
   // Promise.withResolvers (Chrome 119, Firefox 121, Safari 17.4), which the tab leader uses
   if (!("withResolvers" in Promise)) loading.push(import("core-js/es/promise/with-resolvers.js"));
+
   // `using` and AsyncDisposableStack, for cleanup (Chrome 134, Firefox 141, not yet in Safari).
   // The build lowers the `using` syntax itself, but not these symbols and classes.
   if (!("AsyncDisposableStack" in globalThis)) loading.push(import("./disposal.ts"));
+
   // the Popover API (Chrome 114, Firefox 125, Safari 17), which the snackbar shows itself with.
   // The unit tests load these too, in Node, which has no DOM to add it to.
   if ("HTMLElement" in globalThis && !("popover" in HTMLElement.prototype))
     loading.push(import("@oddbird/popover-polyfill"));
+
   // Invoker commands (Chrome 135, Firefox 144, Safari 26.2), which open the Settings dialogs.
   if ("HTMLButtonElement" in globalThis && !("commandForElement" in HTMLButtonElement.prototype))
     loading.push(import("invokers-polyfill"));
+
   await Promise.all(loading);
 }

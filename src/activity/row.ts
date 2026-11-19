@@ -38,12 +38,14 @@ export type ActivityRow = {
 function describeBudget(activity: Activity, format: Format): string {
   const length = formatLength(activity.budgetMinutes, "short", format);
   if (activity.mode === "week") return `${length} per week`;
+
   return `${length} per day, ${formatDayCount(activity.days, format)}`;
 }
 
 /** Whether `left` minutes are still to place, none, or fewer than none. */
 function readLeftState(left: number): LeftState {
   if (left > 0) return "left";
+
   return left === 0 ? "all-placed" : "over-budget";
 }
 
@@ -92,6 +94,7 @@ export function describeOverview(
   for (const activity of plan.activities) {
     if (readPlaced(placed, activity.id) > calculateWeeklyBudget(activity)) overBudget += 1;
   }
+
   const count = plan.activities.length;
   const activities = formatCount(count, { one: "activity", other: "activities" }, format);
   return {

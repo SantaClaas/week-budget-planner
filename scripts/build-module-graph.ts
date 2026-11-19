@@ -56,11 +56,14 @@ export function readGraph(folder = sourceFolder): Graph {
       const target = relative(folder, resolve(dirname(file), path.replace(/\?.*$/u, "")));
       // Files outside src/, such as the example week's JSON, aren't modules of the app.
       if (target.startsWith("..")) continue;
+
       const to = findModule(target.replaceAll("\\", "/"));
       if (to === from) continue;
+
       edges.set(to, { isDynamic: (edges.get(to)?.isDynamic ?? true) && isDynamic });
     }
   }
+
   return graph;
 }
 
@@ -80,20 +83,25 @@ export function findCycles(graph: Graph): string[][] {
         lowest.set(module, Math.min(lowest.get(module) ?? 0, lowest.get(next) ?? 0));
         continue;
       }
+
       if (stack.includes(next)) {
         lowest.set(module, Math.min(lowest.get(module) ?? 0, order.get(next) ?? 0));
       }
     }
+
     if (lowest.get(module) !== order.get(module)) return;
+
     const group: string[] = [];
     let member: string | undefined;
     do {
       member = stack.pop();
       if (member !== undefined) group.push(member);
     } while (member !== undefined && member !== module);
+
     if (group.length > 1) cycles.push(group.toSorted());
   };
   for (const module of graph.keys()) if (!order.has(module)) visit(module);
+
   return cycles;
 }
 

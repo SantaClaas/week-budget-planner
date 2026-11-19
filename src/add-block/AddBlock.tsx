@@ -169,6 +169,7 @@ function Sheet(properties: ChooserProperties): JSX.Element {
         if (event.target !== event.currentTarget || "closedBy" in HTMLDialogElement.prototype) {
           return;
         }
+
         const box = event.currentTarget.getBoundingClientRect();
         const isInside =
           event.clientX >= box.left &&
@@ -179,6 +180,7 @@ function Sheet(properties: ChooserProperties): JSX.Element {
       }}
       onFocusIn={(event) => {
         if (isLengthChanged() || !(event.target instanceof HTMLElement)) return;
+
         const index = Number(event.target.closest<HTMLElement>("[data-index]")?.dataset["index"]);
         const focused = choices()[index];
         if (focused !== undefined) setLength(focused.length);

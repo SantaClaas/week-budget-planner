@@ -19,6 +19,7 @@ export const contrast = preference.create<Contrast, Root>({
       delete root.dataset["contrast"];
       return;
     }
+
     root.dataset["contrast"] = choice;
   },
 });

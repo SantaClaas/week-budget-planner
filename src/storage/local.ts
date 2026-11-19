@@ -22,6 +22,7 @@ function isNewerStored(storage: Storage): boolean {
 function readStored(storage: Storage, current?: Plan): Result<Plan, "newer-version"> {
   const text = storage.getItem(PLAN_KEY);
   if (text === null) return current ?? createEmptyPlan();
+
   return planFile.parse(text, randomIds);
 }
 
@@ -41,11 +42,13 @@ export function create(
       const isStored = storage.getItem(PLAN_KEY) !== null;
       const plan = readStored(storage);
       if (plan === "newer-version") return plan;
+
       current = isStored ? plan : undefined;
       return { plan, isStored };
     },
     async save(_before, after) {
       if (isNewerStored(storage)) return "newer-version";
+
       storage.setItem(PLAN_KEY, planFile.serialize(after));
       current = after;
       return "saved";
@@ -53,12 +56,15 @@ export function create(
     async exportFile(at) {
       const plan = readStored(storage, current);
       if (plan === "newer-version") return plan;
+
       return jsonFile.create(plan, at);
     },
     async importFile(file) {
       const plan = await jsonFile.read(file);
       if (typeof plan === "string") return plan;
+
       if (isNewerStored(storage)) return "newer-version";
+
       storage.setItem(PLAN_KEY, planFile.serialize(plan));
       current = plan;
       return "imported";
@@ -97,10 +103,12 @@ export function findWritableStorage(): Storage | undefined {
   } catch {
     return undefined;
   }
+
   try {
     writeProbe(storage);
   } catch {
     return undefined;
   }
+
   return storage;
 }

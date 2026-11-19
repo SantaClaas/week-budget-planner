@@ -33,18 +33,23 @@ export default defineRule({
     return {
       IfStatement(node) {
         if (node.alternate !== null || node.consequent.type !== "BlockStatement") return;
+
         const inside: Statement[] = node.consequent.body;
         const ending = inside.at(-1);
         if (ending === undefined || !ENDINGS.has(ending.type)) return;
+
         // The statements after the if in the block or file that holds it.
         const parent = node.parent;
         if (parent.type !== "BlockStatement" && parent.type !== "Program") return;
+
         const siblings: readonly Statement[] = parent.body;
         const after = siblings.slice(siblings.indexOf(node) + 1);
         if (after.length === 0) return;
+
         const insideLines = countLines(inside.slice(0, -1));
         const afterLines = countLines(after);
         if (insideLines <= afterLines) return;
+
         context.report({
           node: node.test,
           message: `The if holds the longer branch (${String(insideLines)} lines against ${String(afterLines)} after it). Turn the condition around, so the shorter branch goes inside and the longer one runs unindented.`,

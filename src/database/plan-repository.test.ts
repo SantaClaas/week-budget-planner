@@ -31,6 +31,7 @@ async function openTestDatabase(): Promise<{ database: Database; connection: Tur
 
 function required<Value>(value: Value | undefined, what: string): Value {
   if (value === undefined) throw new Error(`The test has no ${what}.`);
+
   return value;
 }
 

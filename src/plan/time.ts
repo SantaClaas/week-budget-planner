@@ -138,8 +138,11 @@ export function parseBudgetMinutes(
   mode: "week" | "day",
 ): Result<BudgetMinutes, "unreadable" | "too-small" | "too-large"> {
   if (Number.isNaN(minutes)) return "unreadable";
+
   if (minutes <= 0) return "too-small";
+
   if (minutes > (mode === "day" ? DAY : WEEK)) return "too-large";
+
   return brand<BudgetMinutes>(Math.max(SLOT, snap(minutes)));
 }
 

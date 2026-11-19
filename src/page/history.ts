@@ -31,15 +31,19 @@ export function follow(base: string, show: (page: Page, cause: Cause) => void): 
     if (page !== "not-found" && location.pathname !== createPath(page, base)) {
       history.replaceState(null, "", `${createPath(page, base)}${location.search}${location.hash}`);
     }
+
     show(page, cause);
   }
 
   const onClick = (event: MouseEvent): void => {
     const link = event.target instanceof Element ? event.target.closest("a") : null;
     if (link === null || isLeftToBrowser(event, link)) return;
+
     if (read(link.pathname, base) === undefined) return;
+
     event.preventDefault();
     if (link.href === location.href) return;
+
     history.pushState(null, "", link.href);
     showCurrent("link");
   };

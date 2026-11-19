@@ -41,7 +41,9 @@ function createRecordingStore(): Recording {
       },
       save(before, after, now) {
         if (recording.isFromNewerVersion) return Promise.resolve("newer-version");
+
         if (recording.isFailing) return Promise.reject(new Error("The disk is full."));
+
         saves.push({ before, after });
         return store.save(before, after, now);
       },

@@ -12,6 +12,7 @@ const gym = createActivity({ id: "gym", name: "Gym", hue: 152, shape: "arch" });
 function at<Item>(items: readonly Item[], index: number): Item {
   const item = items[index];
   if (item === undefined) throw new Error(`The test expected an item at ${index.toString()}.`);
+
   return item;
 }
 

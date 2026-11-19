@@ -30,6 +30,7 @@ const isShape = (value: string): value is Shape => SHAPE_NAMES.has(value);
 /** A valid instant as a normalized ISO 8601 time in UTC, or null. */
 function readTime(value: unknown): string | null {
   if (typeof value !== "string") return null;
+
   try {
     return Temporal.Instant.from(value).toString();
   } catch {
@@ -62,11 +63,13 @@ function sanitizeActivities(
 
   for (const raw of input) {
     if (!isRecord(raw)) continue;
+
     const storedId = readString(raw["id"]);
     const kept = sanitizeActivityId(storedId);
     const isFirst = kept !== undefined && !idsByStoredId.has(storedId);
     const id = isFirst ? kept : ids.createActivityId();
     if (isFirst) idsByStoredId.set(storedId, id);
+
     const mode = raw["mode"] === "day" ? "day" : "week";
     const look = pickDefaultLook(id, activities);
     const hue = readNumber(raw["hue"]);
@@ -81,6 +84,7 @@ function sanitizeActivities(
       days: sanitizeDayCount(readNumber(raw["days"])),
     });
   }
+
   return { activities, idsByStoredId };
 }
 
@@ -96,8 +100,10 @@ function sanitizeBlocks(
   const taken = new Set<BlockId>();
   for (const raw of input) {
     if (!isRecord(raw)) continue;
+
     const activityId = activityIdsByStoredId.get(readString(raw["activityId"]));
     if (!activityId) continue;
+
     const storedId = sanitizeBlockId(readString(raw["id"]));
     const id = storedId && !taken.has(storedId) ? storedId : ids.createBlockId();
     taken.add(id);
@@ -109,6 +115,7 @@ function sanitizeBlocks(
       length: sanitizeLength(readNumber(raw["length"])),
     });
   }
+
   return blocks;
 }
 

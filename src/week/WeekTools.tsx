@@ -56,6 +56,7 @@ export function DayHours(properties: {
 }): JSX.Element {
   const change = (update: (plan: Plan, hour: number) => Plan) => (event: Event) => {
     if (!(event.target instanceof HTMLSelectElement)) return;
+
     const hour = Number(event.target.value);
     properties.planner.change((plan) => update(plan, hour));
   };
@@ -128,6 +129,7 @@ export function DayHours(properties: {
 function clearWeek(planner: Planner): void {
   const count = planner.plan().blocks.length;
   if (count === 0 || planner.isOutdated()) return;
+
   selection.clear();
   animate(() => {
     planner.change(list.clear);

@@ -29,6 +29,7 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
     .raw(true)
     .all();
   if (tables.length === 0) return new Set();
+
   const rows = await (
     await connection.prepare(`SELECT name FROM ${MIGRATIONS_TABLE}`)
   )
@@ -51,6 +52,7 @@ export async function runMigrations(
 ): Promise<Result<"migrated", "newer-version">> {
   const applied = await readAppliedNames(connection);
   if (applied.values().some((name) => !loaderByName.has(name))) return "newer-version";
+
   const pending = loaderByName
     .entries()
     .filter(([name]) => !applied.has(name))
@@ -73,5 +75,6 @@ export async function runMigrations(
   const migrations = Object.fromEntries(files);
   const result = await migrate(driver.construct(connection), { migrations });
   if (result) throw new Error(`Database migration failed: ${JSON.stringify(result)}`);
+
   return "migrated";
 }

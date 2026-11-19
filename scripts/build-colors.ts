@@ -77,6 +77,7 @@ type ContrastCurve = NonNullable<DynamicColor["contrastCurve"]>;
 
 function requireCurve(role: DynamicColor): ContrastCurve {
   if (!role.contrastCurve) throw new Error(`${role.name} has no contrast curve.`);
+
   return role.contrastCurve;
 }
 
@@ -143,6 +144,7 @@ function readPair(
 function readSchemeColors(contrastLevel: number): Colors {
   const green = PALETTE.find((color) => color.key === "green");
   if (!green) throw new Error("The palette has no green.");
+
   return [
     ...SCHEME_ROLES.map(([token, role]): [string, Pair] => [
       token,
@@ -210,6 +212,7 @@ function findChangingTokens(sets: Levels[]): string[] {
       }
     }
   }
+
   return sets[0]?.standard.map(([token]) => token).filter((token) => changing.has(token)) ?? [];
 }
 
@@ -217,6 +220,7 @@ function findChangingTokens(sets: Levels[]): string[] {
 function writeValues({ standard, levels }: Levels, changing: string[]): string[] {
   return standard.flatMap(([token, pair]) => {
     if (!changing.includes(token)) return [`--${token}: ${writeValue(pair)};`];
+
     const atLevels = levels.map(({ name, colors }) => {
       const value = colors.find(([other]) => other === token)?.[1] ?? pair;
       return `${levelToken(token, name)}: ${writeValue(value)};`;
@@ -253,6 +257,7 @@ function writeLevelRules(
       ),
     );
   }
+
   return lines;
 }
 
@@ -355,8 +360,10 @@ export function writeTokens(text: string): string {
     const start = result.indexOf(startMarker(name));
     const end = result.indexOf(endMarker(name));
     if (start < 0 || end < start) throw new Error(`The tokens file has no markers for ${name}.`);
+
     result = `${result.slice(0, start + startMarker(name).length)}${write()}\n${result.slice(end)}`;
   }
+
   return result;
 }
 

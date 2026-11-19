@@ -58,6 +58,7 @@ export function findFirstFreeSlot(
       if (isFree(plan.blocks, day, start, length)) return { day, start };
     }
   }
+
   return undefined;
 }
 
@@ -69,6 +70,7 @@ export function findFirstFreeSlot(
 export function findOpeningMinute(plan: Pick<Plan, "blocks" | "dayStart">): number {
   let earliest = plan.dayStart * 60;
   for (const block of plan.blocks) earliest = Math.min(earliest, block.start);
+
   return Math.floor(earliest / 60) * 60;
 }
 
@@ -96,14 +98,17 @@ export function findEmptySlot(
       const minute = (start + step) % WEEK;
       if (isEmpty(plan.blocks, minute)) return convertFromWeekMinutes(minute);
     }
+
     return undefined;
   }
+
   for (const day of DAYS) {
     for (let minute = plan.dayStart * 60; minute < plan.dayEnd * 60; minute += SLOT) {
       if (isEmpty(plan.blocks, day * DAY + minute))
         return convertFromWeekMinutes(day * DAY + minute);
     }
   }
+
   return findEmptySlot(plan, { day: sanitizeDayIndex(0), start: sanitizeDayMinute(0) });
 }
 
@@ -144,5 +149,6 @@ export function moveEmptySlot(
   ) {
     if (isEmpty(blocks, minute)) return convertFromWeekMinutes(minute);
   }
+
   return undefined;
 }

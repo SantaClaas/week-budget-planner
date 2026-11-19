@@ -54,6 +54,7 @@ function readLook(form: HTMLFormElement): Pick<Activity, "hue" | "shape"> | unde
   const color = PALETTE.find((option) => option.key === data.get("color"));
   const shape = SHAPES.find((option) => option === data.get("shape"));
   if (color === undefined || shape === undefined) return undefined;
+
   return { hue: color.hue, shape };
 }
 
@@ -165,9 +166,11 @@ export function ActivityForm(properties: {
     // without a word.
     const days = findField(form, "days");
     if (days !== undefined) days.disabled = readInput(form).mode === "week";
+
     const result = readActivityForm(readInput(form));
     const found = result.isOk ? {} : result.problems;
     for (const field of FIELDS) findField(form, field)?.setCustomValidity(found[field] ?? "");
+
     setProblems(found);
   }
 
@@ -177,6 +180,7 @@ export function ActivityForm(properties: {
     for (const field of FIELDS) {
       if (findField(form, field)?.matches(":user-invalid") === true) shown.add(field);
     }
+
     setInvalid(shown);
   }
 
@@ -187,8 +191,10 @@ export function ActivityForm(properties: {
   const onInvalid = (event: Event): void => {
     event.preventDefault();
     if (!isFirstInvalid || !(event.target instanceof HTMLInputElement)) return;
+
     const { form } = event.target;
     if (form === null) return;
+
     isFirstInvalid = false;
     event.target.focus();
     // The browser sends one event per invalid field, each its own task's worth of microtasks, so
@@ -201,6 +207,7 @@ export function ActivityForm(properties: {
 
   onSettled(() => {
     if (created === undefined) return;
+
     validate(created);
     if (properties.isFocusedOnOpen) findField(created, "name")?.focus();
   });
@@ -229,6 +236,7 @@ export function ActivityForm(properties: {
       }}
       onKeyDown={(event) => {
         if (event.key !== "Escape" || properties.onCancel === undefined) return;
+
         event.preventDefault();
         event.stopPropagation();
         properties.onCancel();
@@ -239,6 +247,7 @@ export function ActivityForm(properties: {
         // What's saved is what the inputs hold; the hue and shape signals only draw the choice.
         const look = readLook(event.currentTarget);
         if (!result.isOk || look === undefined || properties.isReadOnly === true) return;
+
         properties.onSave({ ...result.value, ...look });
       }}
     >

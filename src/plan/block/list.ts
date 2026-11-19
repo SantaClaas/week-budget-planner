@@ -14,6 +14,7 @@ import { fitToDayHours, pickDefaultLength } from "./length.ts";
 export function update(plan: Plan, block: Block): Plan {
   const before = plan.blocks.find((existing) => existing.id === block.id);
   if (before === undefined) return plan;
+
   // Every field but the id, by name: a new field on Block has to be added here too. A test in
   // ./list.test.ts fails until it is.
   const isUnchanged =
@@ -22,6 +23,7 @@ export function update(plan: Plan, block: Block): Plan {
     block.start === before.start &&
     block.length === before.length;
   if (isUnchanged) return plan;
+
   return {
     ...plan,
     blocks: plan.blocks.map((existing) => (existing.id === block.id ? block : existing)),
@@ -31,6 +33,7 @@ export function update(plan: Plan, block: Block): Plan {
 /** The plan without the block `id`. The same plan when there's no such block. */
 export function remove(plan: Plan, id: BlockId): Plan {
   if (!plan.blocks.some((block) => block.id === id)) return plan;
+
   return { ...plan, blocks: plan.blocks.filter((block) => block.id !== id) };
 }
 

@@ -178,6 +178,7 @@ async function measure(
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   const box = await locator.boundingBox();
   if (box === null) throw new Error("The element isn't on screen.");
+
   return box;
 }
 

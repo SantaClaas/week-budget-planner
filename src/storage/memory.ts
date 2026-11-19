@@ -22,6 +22,7 @@ export function create(): PlanStore {
     async importFile(file) {
       const imported = await jsonFile.read(file);
       if (typeof imported === "string") return imported;
+
       plan = imported;
       return "imported";
     },

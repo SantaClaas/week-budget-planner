@@ -14,6 +14,7 @@ export function notFoundPage(): Plugin {
     generateBundle(_options, bundle) {
       const page = bundle["index.html"];
       if (page?.type !== "asset") throw new Error("The build has no index.html to copy.");
+
       this.emitFile({ type: "asset", fileName: "404.html", source: page.source });
     },
   };

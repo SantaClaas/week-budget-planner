@@ -22,6 +22,7 @@ function openChannel(): BroadcastChannel {
 
 export function broadcastMessage(message: Omit<BroadcastMessage, "protocolVersion">): void {
   if (typeof BroadcastChannel === "undefined") return;
+
   openChannel().postMessage({
     protocolVersion: PROTOCOL_VERSION,
     ...message,
@@ -33,9 +34,11 @@ const doNothing = (): void => {};
 /** Listens for change events from other tabs. Returns a function that stops listening. */
 export function listenForBroadcasts(callback: (message: BroadcastMessage) => void): () => void {
   if (typeof BroadcastChannel === "undefined") return doNothing;
+
   const onMessage = (event: MessageEvent<BroadcastMessage>): void => {
     // A tab never interprets a message of another version (see ./protocol/index.ts).
     if (event.data.protocolVersion !== PROTOCOL_VERSION) return;
+
     callback(event.data);
   };
   const receiver = openChannel();

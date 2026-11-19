@@ -32,12 +32,14 @@ function showImportProblem(problem: ImportProblem, file: File): void {
     });
     return;
   }
+
   if (problem === "needs-database") {
     snackbar.show({
       message: "This browser can only import a .json plan here, so nothing was changed.",
     });
     return;
   }
+
   snackbar.show({
     message: jsonFile.isJson(file)
       ? "This file isn't a Week Budget Planner plan, so nothing was changed."
@@ -58,10 +60,12 @@ async function importPlan(store: PlanStore, file: File): Promise<void> {
     snackbar.show({ message: "Couldn't import the file, so nothing was changed." });
     return;
   }
+
   if (imported !== "imported") {
     showImportProblem(imported, file);
     return;
   }
+
   location.reload();
 }
 
@@ -75,7 +79,9 @@ async function deleteAllData(store: PlanStore): Promise<void> {
     snackbar.show({ message: "Couldn't delete your data. Try again." });
     return;
   }
+
   if (wiped === "newer-version") return;
+
   location.reload();
 }
 
@@ -114,6 +120,7 @@ function ConfirmDialog(properties: {
         const isConfirmed = event.currentTarget.returnValue === "confirm";
         event.currentTarget.returnValue = "";
         if (isConfirmed) properties.onConfirm();
+
         properties.onClose?.();
       }}
     >
@@ -199,6 +206,7 @@ export function YourData(properties: {
   const deleteDialogTarget = (): string | undefined => (isReadOnly() ? undefined : "delete-dialog");
   const pickFile = (): void => {
     if (isReadOnly()) return;
+
     fileInput?.click();
   };
   const refreshKeeping = async (): Promise<void> => {
@@ -376,6 +384,7 @@ export function YourData(properties: {
               // The same file can be picked again after a cancelled import.
               event.currentTarget.value = "";
               if (file === undefined) return;
+
               // The picked file is only known now, so the code opens the dialog, once it names it.
               setImporting(file);
               flush();
@@ -462,6 +471,7 @@ export function Storage(properties: { plan: Plan; store: PlanStore }): JSX.Eleme
       console.error("[settings] couldn't measure the database", error);
       return;
     }
+
     setSize(typeof measured === "number" ? measured : undefined);
   };
   // Measured again after each change, which may have grown it.

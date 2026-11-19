@@ -90,6 +90,7 @@ export function buildPlanStatements(
     .toArray();
   if (removedBlocks.length > 0)
     statements.push(database.delete(blocks).where(inArray(blocks.id, removedBlocks)));
+
   if (removedActivities.length > 0) {
     // Blocks of a deleted activity go with it, whether or not `after` still lists them.
     statements.push(
@@ -101,6 +102,7 @@ export function buildPlanStatements(
   after.activities.forEach((activity, position) => {
     const previous = beforeActivities.get(activity.id);
     if (previous && isSameActivity(previous.activity, activity, previous.index, position)) return;
+
     const values = {
       name: activity.name,
       hue: activity.hue,
@@ -121,6 +123,7 @@ export function buildPlanStatements(
   for (const block of after.blocks) {
     const previous = beforeBlocks.get(block.id);
     if (previous && isSameBlock(previous, block)) continue;
+
     const values = {
       activityId: block.activityId,
       day: block.day,
@@ -153,6 +156,7 @@ export function buildPlanStatements(
         .onConflictDoUpdate({ target: settings.id, set: values }),
     );
   }
+
   return statements;
 }
 

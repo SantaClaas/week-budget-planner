@@ -29,6 +29,7 @@ async function measure(
 ): Promise<{ x: number; y: number; width: number; height: number }> {
   const box = await locator.boundingBox();
   if (box === null) throw new Error("The element isn't on screen.");
+
   return box;
 }
 
@@ -37,6 +38,7 @@ const measureHour = (page: Page): Promise<number> =>
   page.evaluate(() => {
     const column = document.querySelector<HTMLElement>(".day-column");
     if (column === null) throw new Error("The week has no day column.");
+
     return column.offsetHeight / 24;
   });
 
@@ -101,6 +103,7 @@ test("animates a key move within the week, and a key pressed meanwhile builds on
   await expect(page.locator("body")).toHaveAttribute("data-transitions", "week true, page false");
   // Each key moves the block as the last one left it, even before that change shows.
   for (let step = 0; step < 4; step++) await page.keyboard.press("ArrowDown");
+
   await expect.poll(() => readAnnouncement(page)).toBe("Moved to Tuesday 19:00 to 20:30");
   await expect(findBlock(page, "Gym, Tuesday 19:00 to 20:30")).toBeFocused();
 });
@@ -110,6 +113,7 @@ test("moves a block across midnight into an overnight block with the keys", asyn
   await findBlock(page, "Gym, Monday 18:00").focus();
   // Six hours longer, 15 minutes at a time: the end runs past midnight, from 19:30 to 01:30.
   for (let step = 0; step < 24; step++) await page.keyboard.press("Shift+ArrowDown");
+
   await expect
     .poll(() => readAnnouncement(page))
     .toBe("Now Monday 18:00 to Tuesday 01:30, 7 hours, 30 minutes");
@@ -122,6 +126,7 @@ test("shows both parts of an overnight block as selected, from either part", asy
   await findBlock(page, "Gym, Monday 18:00").focus();
   // Six hours longer: the end runs past midnight, into Tuesday morning.
   for (let step = 0; step < 24; step++) await page.keyboard.press("Shift+ArrowDown");
+
   // Once the last change shows: it takes focus back to the block, which selects it again.
   await expect
     .poll(() => readAnnouncement(page))
@@ -309,6 +314,7 @@ test.describe("on a touch screen", () => {
         touchPoints: [{ x, y: y + (hour * step) / 8 }],
       });
     }
+
     await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await expect(findBlock(page, "Statistics lecture, Monday 11:00 to 12:30")).toBeAttached();
   });

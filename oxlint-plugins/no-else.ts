@@ -15,6 +15,7 @@ export default defineRule({
       IfStatement(node) {
         // `else if` is an `if` in the alternate, so each `else` is reported once.
         if (node.alternate === null) return;
+
         context.report({
           node: node.alternate,
           message:

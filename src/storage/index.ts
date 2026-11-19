@@ -28,6 +28,7 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
   const fallback = openFallback();
   // No file means the browser refused the database, as in a private window: nothing to report.
   if (!(await database.hasDatabaseFile())) return fallback;
+
   const { removeBrokenDatabase } = database;
   return {
     ...fallback,
@@ -35,6 +36,7 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
     async wipe() {
       const wiped = await fallback.wipe();
       if (wiped === "newer-version") return wiped;
+
       removeBrokenDatabase();
       return "wiped";
     },
@@ -51,6 +53,7 @@ async function openFallbackAfter(error: unknown, database: DatabaseModule): Prom
  */
 export async function open(): Promise<Result<PlanStore, "newer-version">> {
   if (!isDatabaseUsable()) return openFallback();
+
   let database: DatabaseModule;
   try {
     database = await import("./database.ts");
@@ -59,6 +62,7 @@ export async function open(): Promise<Result<PlanStore, "newer-version">> {
     console.warn("[storage] the database code didn't load, using limited storage", error);
     return openFallback();
   }
+
   const store = database.create();
   let loaded: Awaited<ReturnType<PlanStore["load"]>>;
   try {
@@ -66,5 +70,6 @@ export async function open(): Promise<Result<PlanStore, "newer-version">> {
   } catch (error) {
     return openFallbackAfter(error, database);
   }
+
   return loaded === "newer-version" ? loaded : store;
 }

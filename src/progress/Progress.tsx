@@ -29,6 +29,7 @@ async function takeOffWhenFlat(bar: HTMLElement, flattening: CSSTransition): Pro
     // Cancelled: the wave is back on, and the next settle takes it off.
     return;
   }
+
   if (bar.dataset["wave"] === "settling") delete bar.dataset["wave"];
 }
 
@@ -43,6 +44,7 @@ function settle(bar: HTMLElement): void {
     delete bar.dataset["wave"];
     return;
   }
+
   // takeOffWhenFlat() handles its own failure: a cancelled transition.
   void takeOffWhenFlat(bar, flattening);
 }
@@ -66,6 +68,7 @@ export function Progress(properties: {
   const state = () => {
     const { withinBudget, overBudget } = split();
     if (overBudget > 0) return "over-budget";
+
     return withinBudget >= 1 ? "full" : "partial";
   };
 
@@ -74,10 +77,13 @@ export function Progress(properties: {
     () => properties.isWavy === true,
     (isWavy) => {
       if (bar === undefined) return;
+
       if (!isWavy) {
         if (bar.dataset["wave"] === "on") settle(bar);
+
         return;
       }
+
       // With reduced motion, or without shape(), only the width changes.
       if (isWaveSupported() && isMotionAllowed()) bar.dataset["wave"] = "on";
     },

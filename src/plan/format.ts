@@ -36,6 +36,7 @@ function reuseDurationFormat(locale: string | undefined, options: Intl.DurationF
   const key = JSON.stringify([locale, options]);
   let format = durationFormats.get(key);
   if (!format) durationFormats.set(key, (format = new Intl.DurationFormat(locale, options)));
+
   return format;
 }
 
@@ -43,6 +44,7 @@ function reuseDateTimeFormat(locale: string | undefined, options: Intl.DateTimeF
   const key = JSON.stringify([locale, options]);
   let format = dateTimeFormats.get(key);
   if (!format) dateTimeFormats.set(key, (format = new Intl.DateTimeFormat(locale, options)));
+
   return format;
 }
 
@@ -78,6 +80,7 @@ export function formatLength(
     return reuseDurationFormat(format.locale, { style, minutesDisplay: "always" }).format({
       minutes: 0,
     });
+
   return reuseDurationFormat(format.locale, { style }).format({
     hours: Math.floor(total / 60),
     minutes: total % 60,
@@ -117,8 +120,10 @@ export function formatClockRangeToParts(
       last.text += part.value;
       continue;
     }
+
     pieces.push({ text: part.value, source: part.source });
   }
+
   return pieces;
 }
 
@@ -143,6 +148,7 @@ function reuseNumberFormat(locale: string | undefined, options: Intl.NumberForma
   const key = JSON.stringify([locale, options]);
   let format = numberFormats.get(key);
   if (!format) numberFormats.set(key, (format = new Intl.NumberFormat(locale, options)));
+
   return format;
 }
 

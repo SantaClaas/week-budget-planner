@@ -49,6 +49,7 @@ const createFormId = (id: ActivityId): string => `edit-form-${id}`;
 /** "Deleted Gym and its 3 blocks.", or "Deleted Gym." when it had none. */
 function describeRemoval(name: string, removedBlocks: number): string {
   if (removedBlocks === 0) return `Deleted ${name}.`;
+
   return `Deleted ${name} and its ${formatCount(removedBlocks, { one: "block", other: "blocks" })}.`;
 }
 
@@ -103,6 +104,7 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onClick={() => {
             if (properties.planner.isOutdated()) return;
+
             properties.planner.change(keepExampleWeek);
             // The note goes with the button, so focus moves to the list's heading: the pane's, or
             // on the Activities page the page's own.
@@ -120,6 +122,7 @@ function ExampleWeekCard(properties: { planner: Planner }): JSX.Element {
           aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
           onClick={() => {
             if (properties.planner.isOutdated()) return;
+
             // The form for a new activity takes focus, as the next thing to do.
             edit.openNew();
             properties.planner.change(startEmpty);
@@ -178,6 +181,7 @@ function EditForm(properties: {
         // Focus goes to the next activity before this one goes, or with none left, to the form
         // for a new one.
         if (neighbor !== undefined) focusEditButton(neighbor.id);
+
         // Counted on the plan the change applies to, so the snackbar says what was removed.
         let removedBlocks = 0;
         properties.planner.change((plan) => {
@@ -190,6 +194,7 @@ function EditForm(properties: {
           edit.openNew();
           return;
         }
+
         edit.close();
       }}
     />
@@ -226,7 +231,9 @@ function Row(properties: {
         onPointerDown={(event) => {
           // A pointer drags the activity onto the week; touch taps it to start placing instead.
           if (event.pointerType === "touch" || event.button !== 0) return;
+
           if (properties.planner.isOutdated()) return;
+
           startListDrag(event, {
             activity: properties.row.activity,
             plan: () => properties.plan,
@@ -235,10 +242,12 @@ function Row(properties: {
         }}
         onClick={() => {
           if (isClickAfterDrag() || properties.planner.isOutdated()) return;
+
           if (placing.current() === id()) {
             placing.stop();
             return;
           }
+
           placing.start(id());
           properties.onStartPlacing();
         }}
@@ -266,10 +275,12 @@ function Row(properties: {
         aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
         onClick={() => {
           if (properties.planner.isOutdated()) return;
+
           if (properties.isEditing) {
             edit.close();
             return;
           }
+
           edit.open(id());
         }}
       >
@@ -383,6 +394,7 @@ function EmptyState(properties: { plan: Plan; planner: Planner; level: 2 | 3 }):
         aria-disabled={properties.planner.isOutdated() ? "true" : undefined}
         onClick={() => {
           if (properties.planner.isOutdated()) return;
+
           edit.close();
           properties.planner.change((_, now) => createExampleWeek(now, randomIds));
           // The button goes with the empty state, so focus moves to the note that replaces it.

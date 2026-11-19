@@ -30,6 +30,7 @@ export function isAnswered(storage = findStorage()): boolean {
   } catch {
     return false;
   }
+
   return answeredAt !== null && answeredAt !== undefined;
 }
 
@@ -70,8 +71,10 @@ export async function exportPlan(store: PlanStore): Promise<void> {
     snackbar.show({ message: "Couldn't export your plan. Try again." });
     return;
   }
+
   // A newer version took over in another tab, which this tab already says.
   if (exported === "newer-version") return;
+
   downloadBlob(exported.blob, exported.filename);
 }
 

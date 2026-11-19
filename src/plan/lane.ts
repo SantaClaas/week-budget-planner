@@ -26,21 +26,27 @@ export function layoutLanes(parts: readonly BlockPart[]): Map<BlockId, Lane> {
         lane = laneEnds.length;
         laneEnds.push(0);
       }
+
       laneEnds[lane] = part.end;
       placed.push({ part, lane });
     }
+
     // Every part in the group shares the group's lane count, known once all are placed.
     for (const { part, lane } of placed)
       result.set(part.block.id, { index: lane, count: laneEnds.length });
+
     group = [];
     groupEnd = -1;
   };
 
   for (const part of sorted) {
     if (group.length > 0 && part.start >= groupEnd) closeGroup();
+
     group.push(part);
     groupEnd = Math.max(groupEnd, part.end);
   }
+
   if (group.length > 0) closeGroup();
+
   return result;
 }

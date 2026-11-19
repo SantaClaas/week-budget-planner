@@ -39,8 +39,10 @@ async function attemptForbidden(): Promise<Record<string, string>> {
       outcomes[name] = error instanceof Error ? error.name : "thrown";
       continue;
     }
+
     outcomes[name] = "allowed";
   }
+
   return outcomes;
 }
 
@@ -48,6 +50,7 @@ async function attemptForbidden(): Promise<Record<string, string>> {
 async function reloadForHeaders(page: Page): Promise<Record<string, string>> {
   const response = await page.reload();
   if (response === null) throw new Error("The reload had no response.");
+
   return response.headers();
 }
 

@@ -41,6 +41,7 @@ async function serveNotFoundPage(response: ServerResponse): Promise<void> {
     response.writeHead(404).end();
     return;
   }
+
   response.writeHead(404, { "Content-Type": "text/html", ...(values.isolated && isolation) });
   response.end(body);
 }
@@ -51,6 +52,7 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
     response.writeHead(404).end();
     return;
   }
+
   const relative = normalize(path.slice(BASE.length) || "index.html").replace(/^(\.\.[/\\])+/u, "");
   const file = join(root, relative.endsWith("/") ? `${relative}index.html` : relative);
   let body: Buffer;
@@ -60,6 +62,7 @@ async function serve(request: IncomingMessage, response: ServerResponse): Promis
     await serveNotFoundPage(response);
     return;
   }
+
   response.writeHead(200, {
     "Content-Type": CONTENT_TYPES.get(extname(file)) ?? "application/octet-stream",
     ...(values.isolated && isolation),

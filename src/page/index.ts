@@ -34,7 +34,9 @@ export const DESTINATIONS: readonly Destination[] = ["week", "activities", "sett
 export function read(pathname: string, base: string): Page | undefined {
   // The base without its slash, as a typed address may end.
   if (`${pathname}/` === base) return "week";
+
   if (!pathname.startsWith(base)) return undefined;
+
   const rest = pathname
     .slice(base.length)
     .replace(/index\.html$/u, "")

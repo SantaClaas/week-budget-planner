@@ -52,6 +52,7 @@ export function splitIntoParts(block: Block): BlockPart[] {
   if (end <= DAY) {
     return [{ block, day: block.day, start: block.start, length: block.length, end, kind: "only" }];
   }
+
   return [
     {
       block,
@@ -93,6 +94,7 @@ export function isRangeOverlapping(
     const shiftedB = startB + shift;
     if (startA < shiftedB + lengthB && shiftedB < startA + lengthA) return true;
   }
+
   return false;
 }
 
@@ -110,6 +112,7 @@ export function sumDayTotals(blocks: readonly Block[]): number[] {
   for (const part of blocks.flatMap((block) => splitIntoParts(block))) {
     totals[part.day] = (totals[part.day] ?? 0) + part.end - part.start;
   }
+
   return totals;
 }
 
@@ -177,6 +180,7 @@ export function describeTime(block: Block, format: Format = {}): string {
   const end = block.start + block.length;
   const length = formatLength(block.length, "narrow", format);
   if (end <= DAY) return `${formatClockRange(block.start, end, format)} · ${length}`;
+
   // `formatRange` would add the day of the month, which a week without dates doesn't have.
   const startDay = formatWeekday(block.day, "short", format);
   const endDay = formatWeekday(wrapDayIndex(block.day + 1), "short", format);

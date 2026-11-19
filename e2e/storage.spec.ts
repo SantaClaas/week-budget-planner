@@ -193,6 +193,7 @@ test.describe("a newer version of the app", () => {
       await expect(tab.getByRole("status")).toHaveText(OUTDATED_MESSAGE);
       await expect(tab.getByRole("button", { name: "Reload" })).toBeVisible();
     }
+
     // The leader let go of the lock and the other tab left the queue, so only the newer tab can
     // take it, open the database and migrate it.
     await expect
