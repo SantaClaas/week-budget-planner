@@ -101,7 +101,7 @@ function resolve(declarations: Map<string, string>): Map<string, string> {
           const found = declarations.get(name);
           return found === undefined ? match : substitute(found, depth + 1);
         });
-  return new Map([...declarations].map(([name, value]) => [name, substitute(value, 0)]));
+  return new Map([...declarations].values().map(([name, value]) => [name, substitute(value, 0)]));
 }
 
 /** What the fallback block must hold: the light value of every token that light-dark() sets,
@@ -155,9 +155,14 @@ describe("design tokens", () => {
   it("has a light fallback for every light-dark() color, and nothing else", () => {
     const expected = findExpectedFallbacks();
     const fallbacks = new Map(
-      [...readRules(fallbackText)].flatMap(([selector, declarations]) =>
-        [...declarations].map(([name, value]): [string, string] => [`${selector} ${name}`, value]),
-      ),
+      [...readRules(fallbackText)]
+        .values()
+        .flatMap(([selector, declarations]) =>
+          [...declarations].map(([name, value]): [string, string] => [
+            `${selector} ${name}`,
+            value,
+          ]),
+        ),
     );
     expect(expected.size).toBeGreaterThan(50);
     expect(fallbacks).toEqual(expected);

@@ -205,7 +205,9 @@ function readLevels(readColors: (level: number) => Colors): Levels {
 function findChangingTokens(sets: Levels[]): string[] {
   const changing = new Set<string>();
   for (const { standard, levels } of sets) {
-    const standardValues = new Map(standard.map(([token, pair]) => [token, writeValue(pair)]));
+    const standardValues = new Map(
+      standard.values().map(([token, pair]) => [token, writeValue(pair)]),
+    );
     for (const { colors } of levels) {
       for (const [token, pair] of colors) {
         if (standardValues.get(token) !== writeValue(pair)) changing.add(token);
@@ -213,7 +215,13 @@ function findChangingTokens(sets: Levels[]): string[] {
     }
   }
 
-  return sets[0]?.standard.map(([token]) => token).filter((token) => changing.has(token)) ?? [];
+  return (
+    sets[0]?.standard
+      .values()
+      .map(([token]) => token)
+      .filter((token) => changing.has(token))
+      .toArray() ?? []
+  );
 }
 
 /** The values: a variable per level for each token that changes, the value itself for the rest. */
@@ -276,8 +284,10 @@ function writeEveryColor(selectors: string[], indent: string): string {
 /** The light value of every token that light-dark() sets, for browsers without it. */
 const writeLightValues = (colors: Colors): string[] =>
   colors
+    .values()
     .filter(([, { light, dark }]) => light !== dark)
-    .map(([token, { light }]) => `--${token}: ${light};`);
+    .map(([token, { light }]) => `--${token}: ${light};`)
+    .toArray();
 
 /** The scheme's colors: each value once on :root, the rules that pick a level, and the light
  * fallback. */

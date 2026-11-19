@@ -216,7 +216,7 @@ export function layoutWeek(
   today: DayIndex | undefined,
   format: Format = {},
 ): DrawnDay[] {
-  const activities = new Map(plan.activities.map((activity) => [activity.id, activity]));
+  const activities = new Map(plan.activities.values().map((activity) => [activity.id, activity]));
   const totals = sumDayTotals(plan.blocks);
   return Array.from({ length: 7 }, (_, index) => {
     const day = wrapDayIndex(index);

@@ -32,7 +32,13 @@ describe("the week's layout", () => {
       true,
       true,
     ]);
-    expect(days.filter(({ isToday }) => isToday).map(({ name }) => name)).toEqual(["Wed"]);
+    expect(
+      days
+        .values()
+        .filter(({ isToday }) => isToday)
+        .map(({ name }) => name)
+        .toArray(),
+    ).toEqual(["Wed"]);
     expect(read(at(days, 0).total)).toBe("free");
     expect(at(days, 0).spoken).toBe("Monday, nothing placed");
   });

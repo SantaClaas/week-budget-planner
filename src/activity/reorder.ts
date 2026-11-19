@@ -51,7 +51,11 @@ const isMotionAllowed = (): boolean =>
  * are now, with the default spatial spring. The row being dragged follows the pointer instead.
  */
 function slideRows(rows: HTMLElement, update: () => void): void {
-  const before = new Map(listRows(rows).map((row) => [row, row.offsetTop]));
+  const before = new Map(
+    listRows(rows)
+      .values()
+      .map((row) => [row, row.offsetTop]),
+  );
   update();
   flush();
   if (!isMotionAllowed()) return;

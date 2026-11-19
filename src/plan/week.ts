@@ -77,8 +77,10 @@ export function splitIntoParts(block: Block): BlockPart[] {
 /** Every part that falls on `day`, sorted by start. */
 export function findPartsOnDay(blocks: readonly Block[], day: DayIndex): BlockPart[] {
   return blocks
+    .values()
     .flatMap((block) => splitIntoParts(block))
     .filter((part) => part.day === day)
+    .toArray()
     .toSorted((first, second) => first.start - second.start || second.end - first.end);
 }
 
@@ -109,7 +111,7 @@ export const isBlockOverlapping = (first: Block, second: Block): boolean =>
 /** Minutes of each day (Monday first) covered by blocks, counting overnight parts on their own day. */
 export function sumDayTotals(blocks: readonly Block[]): number[] {
   const totals = [0, 0, 0, 0, 0, 0, 0];
-  for (const part of blocks.flatMap((block) => splitIntoParts(block))) {
+  for (const part of blocks.values().flatMap((block) => splitIntoParts(block))) {
     totals[part.day] = (totals[part.day] ?? 0) + part.end - part.start;
   }
 
