@@ -42,10 +42,9 @@ In a web app that order is HTML, then CSS, then JavaScript:
 - **Technical code has its own domain.** The database, the tab leader election or the service worker bring their own words (leader, migration, connection, isolation), and code there uses them. The code doesn't have to follow the users' language everywhere. Balancing user requirements and technical requirements is part of the job, and it's why code isn't just generated from a description.
 - **Use the platform's or the design system's own name** when it has one. In CSS that's Material's names: `.top-app-bar`, `.active-indicator`, `.drag-handle`, `.title-medium`, `--elevation-level-1`.
 - **Code can name a thing differently from the copy.** The glossary's words are the planner's, and the code uses them. But where the copy uses a word that's easier for people and a technical concept already has a name, the code uses the technical name: the Settings page says "Theme", and the code says "color scheme", after the CSS `color-scheme` property whose values it stores. Code has to be clear from a technical point of view first. Copy also changes more often than code, so code names shouldn't follow every rewording.
-- **Prefix every key in `localStorage` and `sessionStorage`** with `week-budget-planner.`, as in `week-budget-planner.color-scheme`. Storage is shared by everything on the same origin, and in development that's every app that ever ran on the same `localhost` port, so an unprefixed key like `theme` is bound to collide.
 - **The rules stop at the edges.** They apply inside the code we control. At the edges of the application, names belong to the other side: browser and library APIs (`localStorage`, Drizzle's `params` in a batch statement), file formats, network messages and data on disk. We can't rename those, so use them as they are, and say so in a comment where it isn't obvious. Abbreviations are fine there when they help the edge, for example to save space on the wire or on disk. Away from the edges, use names people understand, not the names someone chose for an outside API.
 
-Functions and booleans have naming rules of their own in [`docs/guidelines/typescript.md`](typescript.md).
+Functions, booleans and storage keys have naming rules of their own in [`docs/guidelines/typescript.md`](typescript.md).
 
 ## Functions
 
@@ -109,21 +108,9 @@ The lint rule `no-use-before-define` checks it, with functions, classes, variabl
 
 - **Two operations that fail differently get a `try` each**, usually in functions of their own, as in the broadcast service's `answer()`: one `try` for the call, one for posting its result.
 - A `try` works like an `if`: a branch, and nesting when it grows. So the same rules apply as for `else` above.
+- **A cleanup that has to run however a scope ends is tied to the scope**, not to a `try` around the code that uses the resource. In TypeScript that's a `using` declaration (see "Clean up with `using`" in [`docs/guidelines/typescript.md`](typescript.md)).
 
-The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block with more than one statement, or with one that branches or loops. When several statements belong together because they commit or roll back as one, like a transaction's, that's usually a resource: make it a disposable (see "Clean up with `using`" below) instead of widening the `try`. Where that doesn't fit, disable the rule on that line and say why.
-
-### Clean up with `using`
-
-**A `try`/`finally` that releases a resource is a `using` declaration**, or `await using` when the cleanup is async. The resource is released when the scope ends, however it ends, in the reverse order of declaration, without a `try` around the code that uses it. TypeScript and the build lower the syntax for older browsers, and [`src/polyfill/disposal.ts`](../../src/polyfill/disposal.ts) adds the symbols and stacks where they're missing (see [`docs/spec/browser-support.md`](../spec/browser-support.md)).
-
-- **Most APIs don't support it yet**, since it's new (2025). `DisposableStack` and `AsyncDisposableStack` bridge them: `adopt()` takes a resource and its cleanup function, and `defer()` takes a cleanup on its own. `checkImport` in [`src/database/client.ts`](../../src/database/client.ts) defers deleting the import copy, and `readCopy` adopts the database connection.
-- **When the same kind of resource is used in many places**, a small wrapper can make it disposable once, for example a `Proxy` that adds `[Symbol.dispose]` to a library's object and passes everything else through. Write one when a resource keeps coming back, not before (see "Compress when it starts to repeat" below).
-- **Work that commits at the end is a disposable too**, whose cleanup undoes it unless it committed. `startTransaction()` in [`src/database/connection.ts`](../../src/database/connection.ts) returns a transaction whose dispose rolls back unless `commit()` ran, and `startWriting()` in [`src/database/client.ts`](../../src/database/client.ts) aborts a file write unless it was committed. The work then reads as a plain sequence, and every error after the start, a programming mistake included, undoes it and still reaches the caller untouched.
-- **A cleanup that has to run when an event ends a process started earlier** goes on a `DisposableStack` as the process starts, and the handler that ends it takes the stack with `using`: the week's drag controller and the drag from the Activities list collect their window listeners, the animation frame, the `data-dragging` cursor and the wavy bars this way, and their release handler starts with `using … = cleanup.move()`. Each step then runs however the release ends, even when another step, or the save, throws.
-- **A `using` that's never read** is named with a leading `_` (`using _ending`), the one name TypeScript accepts for an unread declaration; the lint allows that underscore in `using` declarations only.
-- Undoing a step that isn't a resource, like reopening the database after a failed import, stays a `catch` that cleans up and rethrows.
-
-The lint rule `week-budget-planner/prefer-using` fails on every `finally`. Where one really is the clearest way to write it, disable the rule on that line and say why.
+The lint rule `week-budget-planner/one-operation-per-try` fails on a `try` block with more than one statement, or with one that branches or loops. When several statements belong together because they commit or roll back as one, like a transaction's, that's usually a resource: make it a disposable (see "Clean up with `using`" in [`docs/guidelines/typescript.md`](typescript.md)) instead of widening the `try`. Where that doesn't fit, disable the rule on that line and say why.
 
 ## Modules
 

@@ -37,6 +37,10 @@ How TypeScript (and the little plain JavaScript) in this project is named, typed
 
 Inside a function, a boolean for a condition is fine. Naming a long condition with one is often clearer, and it doesn't need anything more.
 
+### Storage keys
+
+**Prefix every key in `localStorage` and `sessionStorage`** with `week-budget-planner.`, as in `week-budget-planner.color-scheme`. Storage is shared by everything on the same origin, and in development that's every app that ever ran on the same `localhost` port, so an unprefixed key like `theme` is bound to collide.
+
 ## Branded types
 
 **Give a value its own type when it means something of its own.** A branded type is a plain number or string at runtime, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it. Make one with `Brand` from [`src/brand.ts`](../../src/brand.ts): `type Length = Brand<number, "Length">`. Two reasons call for one, often both at once:
@@ -101,6 +105,19 @@ const taken = new Set(plan.blocks.values().filter((block) => block.activityId ==
 **Keep the array methods where the result has to be an array anyway.** A single `array.map(f)` allocates the one array it returns, the same as `values().map(f).toArray()`, so it stays as it is. Arrays are also right when the result is used more than once, indexed or measured (an iterator can be walked only once), when it's sorted (`toSorted()`), and where an API or the framework takes an array, such as Solid's `<For each>` or `JSON.stringify`.
 
 The types come from the `ES2025.Iterator` lib in the app's TypeScript config (the configs for code only Node runs, the build scripts and the tests, take all of `ESNext`, since Node is the one runtime there). Browsers without the helpers (Chrome before 122, Firefox before 131, Safari before 18.4) get core-js's polyfill before the app starts, from [`src/polyfill/index.ts`](../../src/polyfill/index.ts) (see [`docs/spec/browser-support.md`](../spec/browser-support.md)), so code can use them anywhere.
+
+## Clean up with `using`
+
+**A `try`/`finally` that releases a resource is a `using` declaration**, or `await using` when the cleanup is async. The resource is released when the scope ends, however it ends, in the reverse order of declaration, without a `try` around the code that uses it. TypeScript and the build lower the syntax for older browsers, and [`src/polyfill/disposal.ts`](../../src/polyfill/disposal.ts) adds the symbols and stacks where they're missing (see [`docs/spec/browser-support.md`](../spec/browser-support.md)).
+
+- **Most APIs don't support it yet**, since it's new (2025). `DisposableStack` and `AsyncDisposableStack` bridge them: `adopt()` takes a resource and its cleanup function, and `defer()` takes a cleanup on its own. `checkImport` in [`src/database/client.ts`](../../src/database/client.ts) defers deleting the import copy, and `readCopy` adopts the database connection.
+- **When the same kind of resource is used in many places**, a small wrapper can make it disposable once, for example a `Proxy` that adds `[Symbol.dispose]` to a library's object and passes everything else through. Write one when a resource keeps coming back, not before (see "Compress when it starts to repeat" in [`docs/guidelines/principles.md`](principles.md)).
+- **Work that commits at the end is a disposable too**, whose cleanup undoes it unless it committed. `startTransaction()` in [`src/database/connection.ts`](../../src/database/connection.ts) returns a transaction whose dispose rolls back unless `commit()` ran, and `startWriting()` in [`src/database/client.ts`](../../src/database/client.ts) aborts a file write unless it was committed. The work then reads as a plain sequence, and every error after the start, a programming mistake included, undoes it and still reaches the caller untouched.
+- **A cleanup that has to run when an event ends a process started earlier** goes on a `DisposableStack` as the process starts, and the handler that ends it takes the stack with `using`: the week's drag controller and the drag from the Activities list collect their window listeners, the animation frame, the `data-dragging` cursor and the wavy bars this way, and their release handler starts with `using … = cleanup.move()`. Each step then runs however the release ends, even when another step, or the save, throws.
+- **A `using` that's never read** is named with a leading `_` (`using _ending`), the one name TypeScript accepts for an unread declaration; the lint allows that underscore in `using` declarations only.
+- Undoing a step that isn't a resource, like reopening the database after a failed import, stays a `catch` that cleans up and rethrows.
+
+The lint rule `week-budget-planner/prefer-using` fails on every `finally`. Where one really is the clearest way to write it, disable the rule on that line and say why.
 
 ## Formatting and linting
 
