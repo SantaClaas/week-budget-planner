@@ -3,7 +3,7 @@ import { defineRule } from "@oxlint/plugins";
 /**
  * Every `finally` is reported: a cleanup that runs however a scope ends is a `using` or `await
  * using` declaration, with `DisposableStack` or `AsyncDisposableStack` for resources that aren't
- * disposable yet (see "Clean up with `using`" in docs/guidelines/principles.md). Where a `finally`
+ * disposable yet (see "Clean up with `using`" in docs/guidelines/typescript.md). Where a `finally`
  * really is the clearest way, the line disables the rule and says why.
  */
 export default defineRule({
