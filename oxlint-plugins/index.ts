@@ -2,6 +2,7 @@ import { definePlugin } from "@oxlint/plugins";
 
 import blankLineAfterScope from "./blank-line-after-scope.ts";
 import noElse from "./no-else.ts";
+import noIntermediateArray from "./no-intermediate-array.ts";
 import oneOperationPerTry from "./one-operation-per-try.ts";
 import preferUsing from "./prefer-using.ts";
 import shorterBranchFirst from "./shorter-branch-first.ts";
@@ -13,6 +14,7 @@ export default definePlugin({
   rules: {
     "blank-line-after-scope": blankLineAfterScope,
     "no-else": noElse,
+    "no-intermediate-array": noIntermediateArray,
     "one-operation-per-try": oneOperationPerTry,
     "prefer-using": preferUsing,
     "shorter-branch-first": shorterBranchFirst,
