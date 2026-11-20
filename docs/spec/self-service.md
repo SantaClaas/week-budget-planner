@@ -74,16 +74,16 @@ Two devices speak over one connection of the transport, which has already proven
 
 | Message | Holds | The other side |
 | --- | --- | --- |
-| **Hello** | the protocol's version, the group's id, the sender's own counter, and how far the sender has the receiver's changes | checks the version and that the sender is on its device list, then sends Rows from that point |
-| **Rows** | rows, and the sender's counter value they bring the receiver up to | checks them strictly, merges them, notes how far it now has the sender's changes, and answers Have |
-| **Have** | the counter value the sender now has the receiver's changes up to | notes it |
-| **Refused** | why: not in the group, or a newer version is needed | see [When a device is refused](#when-a-device-is-refused) |
+| `Hello` | the protocol's version, the group's id, the sender's own counter, and how far the sender has the receiver's changes | checks the version and that the sender is on its device list, then sends `Rows` from that point |
+| `Rows` | rows, and the sender's counter value they bring the receiver up to | checks them strictly, merges them, notes how far it now has the sender's changes, and answers `Have` |
+| `Have` | the counter value the sender now has the receiver's changes up to | notes it |
+| `Refused` | why: not in the group, or a newer version is needed | see [When a device is refused](#when-a-device-is-refused) |
 
-- **While two devices stay connected,** each sends Rows again whenever something changes on it.
+- **While two devices stay connected,** each sends `Rows` again whenever something changes on it.
 - **A row isn't sent back to the device it came from.**
 - **A device that says it has more of the other's changes than the other ever made** has outlived the other's data, for example after the other was restored from an old copy. The other then sends everything.
-- **A new device has nothing,** so it gets everything: the first Rows it receives is a snapshot.
-- **Nothing depends on order or on arriving once** (see [The idea](merge.md#the-idea) in [Merging changes](merge.md)). When a connection drops, the two say Hello again and continue.
+- **A new device has nothing,** so it gets everything: the first `Rows` it receives is a snapshot.
+- **Nothing depends on order or on arriving once** (see [The idea](merge.md#the-idea) in [Merging changes](merge.md)). When a connection drops, the two say `Hello` again and continue.
 
 ### Finding each other
 
