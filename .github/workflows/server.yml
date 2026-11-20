@@ -1,0 +1,88 @@
+name: Check the server
+
+# The Rust checks (see docs/guidelines/rust.md): format, lint and tests, the supply chain, and the
+# app served by the server in a browser. Apart from the app's checks in deploy.yml, so those need no
+# Rust toolchain. The runner's rustup installs the toolchain rust-toolchain.toml pins.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rust:
+    name: Format, lint and test the Rust
+    runs-on: ubuntu-latest
+    # Stops a job that hangs. It takes a few minutes, most of them compiling.
+    timeout-minutes: 20
+    permissions:
+      contents: read # Reads the repository to check it.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- --deny warnings
+      - run: cargo test --locked
+
+  supply-chain:
+    name: Check the Rust dependencies
+    runs-on: ubuntu-latest
+    # Stops a job that hangs. Building cargo-deny takes most of its few minutes.
+    timeout-minutes: 20
+    permissions:
+      contents: read # Reads the repository to check its dependencies.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Built from crates.io, whose checksums Cargo checks, at a version more than a week old, rather
+      # than a downloaded binary. Outside the workspace, so it doesn't take the pinned toolchain.
+      - name: Install cargo-deny 0.20.2
+        working-directory: ${{ runner.temp }}
+        run: cargo install --locked cargo-deny@0.20.2
+      - run: cargo deny --locked check
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+      # Every locked crate is at least a week old (see The supply chain in docs/guidelines/rust.md).
+      # It needs only Node and Cargo, no npm packages.
+      - run: node scripts/check-crate-age.ts
+
+  browser:
+    name: Serve the app to a browser
+    runs-on: ubuntu-latest
+    # Stops a job that hangs. It builds the app and the server, then runs one short browser test.
+    timeout-minutes: 20
+    permissions:
+      contents: read # Reads the repository to build and test it.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          # Nothing here gets deployed, but the pnpm cache stays on pull requests as in deploy.yml.
+          cache: ${{ github.event_name == 'pull_request' && 'pnpm' || '' }}
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      # Builds the app and the server, starts the server and runs e2e/server.spec.ts against it.
+      - run: pnpm test:server
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server-playwright-report
+          path: test-results/
+          retention-days: 7

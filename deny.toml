@@ -1,0 +1,40 @@
+# cargo-deny's checks on the Rust dependencies (see The supply chain in docs/guidelines/rust.md):
+# security advisories, licenses, sources and versions. CI runs `cargo deny check`.
+
+[advisories]
+# A crate with an advisory in the RustSec database fails, and so does a yanked version. An exception
+# names the advisory's id here and says why.
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Licenses that let the project use, change and ship the code without conditions it can't meet. A
+# new license is added here deliberately, after reading it.
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-3-Clause",
+  "MIT",
+  "Unicode-3.0",
+  "Unlicense",
+  "Zlib",
+]
+confidence-threshold = 0.93
+
+# The workspace's own crates aren't published (publish = false), so they need no license entry.
+[licenses.private]
+ignore = true
+
+[bans]
+# Two versions of one crate in the tree is a cost, not a danger: it shows as a warning.
+multiple-versions = "warn"
+# A dependency without a version (`*`) could be anything.
+wildcards = "deny"
+
+[sources]
+# Crates come from crates.io only: no other registry, and no git dependencies, which no lockfile
+# checksum or advisory database covers.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

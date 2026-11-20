@@ -13,6 +13,7 @@
     "test": "vitest run --configLoader native",
     "mutate": "stryker run",
     "test:browser": "pnpm build && PW_DISABLE_TS_ESM=1 playwright test",
+    "test:server": "pnpm build && cargo build --release --locked && PW_DISABLE_TS_ESM=1 playwright test --config playwright.server.config.ts",
     "typecheck": "tsc -b && node scripts/check-must-use.ts",
     "lint": "oxlint",
     "knip": "knip",

@@ -137,6 +137,8 @@ A device signs in, joins or creates a group, and syncs its changes through the s
 
 ### Hosting
 
+The server that will serve the app is in [`crates/server/`](../../crates/server/) (see its [`README.md`](../../crates/server/README.md)). It already sends the headers below, and its browser test shows the app reaching the full storage level from it with service workers blocked; where it runs and under which domain is still open.
+
 Serving the app from the server's origin changes more than the address:
 
 - **The headers come from the server.** The cross-origin isolation headers and the whole Content Security Policy, `frame-ancestors` included, are sent as headers. The service worker no longer has to add them, and the limited storage level it causes on a first visit or with service workers blocked goes away for that reason (see [Hosting](#hosting) and [Progressive enhancement](persistence.md#progressive-enhancement) in [Persistence](persistence.md)).

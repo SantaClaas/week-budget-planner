@@ -1,0 +1,5 @@
+# In tests a panic is a failed test, so unwrap() and expect() are fine there (see Tests in
+# docs/guidelines/rust.md).
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

@@ -11,6 +11,7 @@ How code in this project is named, split, styled and checked. The guidelines liv
 | [`solid.md`](guidelines/solid.md) | [`src/`](../src/) | Solid 2.0's official sources, the app's shape, no HTML from strings |
 | [`database.md`](guidelines/database.md) | [`src/database/`](../src/database/), [`src/storage/`](../src/storage/), [`drizzle/`](../drizzle/) | libraries, schema and migrations, repository functions, the storage layer from flashcut |
 | [`tests.md`](guidelines/tests.md) | `*.test.ts`, [`e2e/`](../e2e/) | what earns a test, unit and browser tests, keyboard tests, mutation testing, automatic accessibility checks, screen reader checks (Orca in a cloud container) |
+| [`rust.md`](guidelines/rust.md) | `.rs`, [`crates/`](../crates/), the Cargo files | the workspace and the pinned toolchain, Rust's names, modules and visibility, errors and panics, the pure core in async code, actors, Clippy and explained exceptions, the supply chain (exact versions, a week's wait, cargo-deny), tests and deterministic simulation |
 | [`workflows.md`](guidelines/workflows.md) | [`.github/`](../.github/) | hash-pinned actions, workflow linting, least privilege, Dependabot |
 
 Start with the principles; they hold everywhere. Before working on a kind of code, read its file too. Claude Code loads them by itself: [`.claude/rules/`](../.claude/rules/) links to each file, and each file lists the paths it applies to in its front matter, so it loads the first time a matching file is read or edited. The principles have no paths, so they load at the start of every session.
