@@ -26,12 +26,21 @@ What gets a test and how the tests run. It adds to [`docs/guidelines/principles.
 
 - **It covers the pure core**, [`src/plan/`](../../src/plan/) and [`src/merge/`](../../src/merge/) today: the code where a test is input and expected output (see "A pure core, with side effects at the edges" in [`principles.md`](principles.md)). Add a module to `mutate` in the config when it's of that kind. Components and the code at the edges stay out: mutating them mostly gives noise.
 - **The survivors are read, not counted.** There is no score to reach, and CI doesn't run it: a score would become a target as coverage does (see above). Run it by hand, after writing or changing a module's tests and now and then over everything, and open `reports/mutation/index.html`. A run takes a few minutes; while working on one module, narrow `mutate` to it for the run, and don't commit that.
-- **The merge's simulation isn't part of a mutation run** ([`vitest.mutation.config.ts`](../../vitest.mutation.config.ts) leaves it out). They are two tools: the simulation runs hundreds of seeded weeks to find what nobody thought of, and a mutation run asks of each rule whether a test names it. Run together, every mutant pays for every seed, and a mutant only the simulation kills still has no test that says which rule it broke. Whether the simulation would notice a broken merge at all is checked by hand when its harness changes: break the merge on purpose and see it fail.
+- **The merge's simulation isn't part of a mutation run** ([`vitest.mutation.config.ts`](../../vitest.mutation.config.ts) leaves it out). They are two tools: the simulation runs hundreds of seeded weeks to find what nobody thought of, and a mutation run asks of each rule whether a test names it. Run together, every mutant pays for every seed, and a mutant only the simulation kills still has no test that says which rule it broke. Whether the simulation would notice a broken merge at all is checked by hand (see below).
 - **A survivor is one of three things:**
   - **A rule no test pins down.** Usually an edge: the value exactly at a limit, the empty list, the block that ends at midnight. Write the test. This is what the run is for, and it's how "an exception to the type checks owes a test" (see "Where rules are enforced" in [`principles.md`](principles.md)) gets checked.
   - **Code that does nothing**, such as a condition that can't be false. Remove it.
   - **A change that makes no difference** (an equivalent mutant): a cache that's skipped, so the value is computed again, or a sort order nothing depends on. Leave it. Don't write a test of how the code works inside just to kill it.
 - **A test written for a survivor names the rule, not the mutant**: "keeps an id of exactly 40 characters", not "kills the `<=` mutant".
+
+## The merge's simulation
+
+**[`src/merge/simulation.test.ts`](../../src/merge/simulation.test.ts) runs hundreds of seeded weeks** between several devices and checks the merge's rules after every step (see Tests in [`docs/spec/merge.md`](../spec/merge.md)).
+
+- **Every test run checks the same seeds**, 1 to 400, so a failure is never chance and always replays: `MERGE_SEED=<seed> pnpm test src/merge/simulation.test.ts`.
+- **Each seed also picks the run's shape**: how many devices and events, which actions are left out or four times as common, and how often changes are lost, late or doubled. Runs that lean one way reach states that one balanced mix rarely does. This is swarm testing, and it finds more than adding seeds of one mix.
+- **[`.github/workflows/explore-merge.yml`](../../.github/workflows/explore-merge.yml) looks beyond the fixed seeds**: for half an hour after the merge or the plan changes on main, and weekly, it runs from random seeds (`MERGE_SEEDS_FROM`), and a broken rule opens an issue with the seeds. A found seed replays only until the simulation changes, so a fix pins the case in a unit test that names the rule. To explore by hand: `while MERGE_SEEDS_FROM=$((RANDOM * 32768 + RANDOM)) pnpm vitest run src/merge/simulation.test.ts; do :; done`.
+- **Whether it notices a broken merge is checked by hand** when its harness changes: break the merge on purpose a few ways (the older stamp wins, the counter stops, an action restamps what it didn't change) and see each fail within seconds. A break it misses is a rule it doesn't check yet.
 
 ## Automatic accessibility checks
 
