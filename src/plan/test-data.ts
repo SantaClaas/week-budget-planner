@@ -22,14 +22,14 @@ import { type Plan } from "./index.ts";
 
 // Tests write plain numbers and strings. These turn them into checked values through the same
 // sanitizers the app uses, which also keeps the test data valid.
-function required<Value>(value: Value | undefined, what: string): Value {
+function requireValue<Value>(value: Value | undefined, what: string): Value {
   if (value === undefined) throw new Error(`The test data has an invalid ${what}.`);
 
   return value;
 }
 export const createActivityId = (id: string): ActivityId =>
-  required(sanitizeActivityId(id), "activity id");
-export const createBlockId = (id: string): BlockId => required(sanitizeBlockId(id), "block id");
+  requireValue(sanitizeActivityId(id), "activity id");
+export const createBlockId = (id: string): BlockId => requireValue(sanitizeBlockId(id), "block id");
 
 /** New ids a test can predict: "new-activity-1", "new-block-1", "new-activity-2" and so on. */
 export function createPredictableIds(): IdGenerator {

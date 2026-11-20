@@ -485,7 +485,7 @@ async function callService<T>(
 export const databaseService: DatabaseService = {
   query: (sql, parameters, method) =>
     callService((service) => service.query(sql, parameters, method)),
-  batch: (statements) => callService((service) => service.batch(statements)),
+  runBatch: (statements) => callService((service) => service.runBatch(statements)),
   exportFile: () => callService((service) => service.exportFile()),
   importFile: (bytes) => callService((service) => service.importFile(bytes)),
   wipe: () => callService((service) => service.wipe()),

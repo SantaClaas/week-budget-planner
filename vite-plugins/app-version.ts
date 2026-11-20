@@ -42,7 +42,7 @@ export function readVersion(repositoryUrl: string, run: RunGit, now: Temporal.In
  * Every build also carries the instant it was built, in UTC to the second, so two builds of the same
  * commit can still be told apart.
  */
-export function appVersion(repositoryUrl: string): Plugin {
+export function addAppVersion(repositoryUrl: string): Plugin {
   const moduleId = "virtual:app-version";
   const resolvedId = `\0${moduleId}`;
   return {

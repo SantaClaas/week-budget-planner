@@ -14,7 +14,7 @@ export const isSqlValue = (value: unknown): value is SqlValue =>
 type QueryMethod = "run" | "all" | "get" | "values";
 
 /**
- * One statement for {@link QueryService.batch}, as Drizzle's sqlite-proxy hands it over. `params` is
+ * One statement for {@link QueryService.runBatch}, as Drizzle's sqlite-proxy hands it over. `params` is
  * Drizzle's name, so it stays abbreviated here.
  */
 type BatchStatement = { sql: string; params: SqlValue[]; method: QueryMethod };
@@ -38,20 +38,23 @@ export type QueryService = {
     method: QueryMethod,
   ): Promise<Result<QueryResult, "newer-version">>;
   /** Runs every statement in one transaction, rolling back if any fails. */
-  batch(statements: BatchStatement[]): Promise<Result<QueryResult[], "newer-version">>;
+  runBatch(statements: BatchStatement[]): Promise<Result<QueryResult[], "newer-version">>;
 };
 
 /** The subset of the Turso database API this app uses. Both the wasm and the Node package fit it. */
 export interface TursoConnection {
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- Turso's own method, which this interface describes.
   exec(sql: string): Promise<void>;
   prepare(sql: string): Promise<TursoStatement>;
   close(): Promise<void>;
 }
 
 interface TursoStatement {
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- Turso's own method, which this interface describes.
   raw(raw?: boolean): this;
   run(...parameters: SqlValue[]): Promise<unknown>;
   get(...parameters: SqlValue[]): Promise<unknown>;
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- Turso's own method, which this interface describes.
   all(...parameters: SqlValue[]): Promise<unknown[]>;
 }
 
@@ -115,7 +118,7 @@ export function createLocalQueryService(
 
       return execute(connection, sql, parameters, method);
     },
-    async batch(statements) {
+    async runBatch(statements) {
       const connection = await getConnection();
       if (connection === "newer-version") return connection;
 

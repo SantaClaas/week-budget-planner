@@ -68,6 +68,6 @@ export function createDatabase(service: QueryService): Database {
     // The parameters are checked before the query starts, so a bad one throws as it is, unwrapped.
     (sql, parameters: unknown[], method) =>
       service.query(sql, checkParameters(parameters), method).then(readRows),
-    (statements) => service.batch(statements).then(readRows),
+    (statements) => service.runBatch(statements).then(readRows),
   );
 }

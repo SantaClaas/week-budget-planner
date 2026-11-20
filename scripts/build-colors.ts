@@ -116,7 +116,7 @@ const seed = Hct.fromInt(argbFromHex(SEED));
 
 /** The same scheme with an activity's palette as its primary palette, so the primary roles give
  * that activity's colors with the library's own rules for containers. */
-function withPrimaryHue(scheme: DynamicScheme, hue: number): DynamicScheme {
+function applyPrimaryHue(scheme: DynamicScheme, hue: number): DynamicScheme {
   return new DynamicScheme({
     sourceColorArgb: scheme.sourceColorArgb,
     variant: scheme.variant,
@@ -152,7 +152,9 @@ function readSchemeColors(contrastLevel: number): Colors {
     ]),
     [
       "success",
-      readPair(contrastLevel, (scheme) => Roles.primary.getArgb(withPrimaryHue(scheme, green.hue))),
+      readPair(contrastLevel, (scheme) =>
+        Roles.primary.getArgb(applyPrimaryHue(scheme, green.hue)),
+      ),
     ],
     ["over-budget", readPair(contrastLevel, (scheme) => overBudget.getArgb(scheme))],
   ];
@@ -165,7 +167,7 @@ function readSchemeColors(contrastLevel: number): Colors {
  * docs/spec/design.md). */
 function readActivityColors(contrastLevel: number, hue: number): Colors {
   const read = (role: DynamicColor, level = contrastLevel): Pair =>
-    readPair(level, (scheme) => role.getArgb(withPrimaryHue(scheme, hue)));
+    readPair(level, (scheme) => role.getArgb(applyPrimaryHue(scheme, hue)));
   return [
     ["activity-container", read(Roles.primaryContainer)],
     ["on-activity-container", read(onActivityContainer)],
@@ -178,7 +180,7 @@ const writeValue = ({ light, dark }: Pair): string =>
   light === dark ? light : `light-dark(${light}, ${dark})`;
 
 /** The variable that holds a token's value at one contrast level. */
-const levelToken = (token: string, level: string): string => `--${token}-${level}-contrast`;
+const nameLevelToken = (token: string, level: string): string => `--${token}-${level}-contrast`;
 
 /** A rule with the given declarations. */
 function writeRule(selector: string, declarations: string[], indent: string): string[] {
@@ -231,15 +233,15 @@ function writeValues({ standard, levels }: Levels, changing: string[]): string[]
 
     const atLevels = levels.map(({ name, colors }) => {
       const value = colors.find(([other]) => other === token)?.[1] ?? pair;
-      return `${levelToken(token, name)}: ${writeValue(value)};`;
+      return `${nameLevelToken(token, name)}: ${writeValue(value)};`;
     });
-    return [`${levelToken(token, "standard")}: ${writeValue(pair)};`, ...atLevels];
+    return [`${nameLevelToken(token, "standard")}: ${writeValue(pair)};`, ...atLevels];
   });
 }
 
 /** Points each changing token at its value for one level. */
 const pointAt = (changing: string[], level: string): string[] =>
-  changing.map((token) => `--${token}: var(${levelToken(token, level)});`);
+  changing.map((token) => `--${token}: var(${nameLevelToken(token, level)});`);
 
 /** The rules that switch to each level: under the media query for the system setting, and for
  * `data-contrast` from the Contrast setting. `selectorFor` gets the root's selector and the rule's

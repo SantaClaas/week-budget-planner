@@ -29,13 +29,13 @@ async function openTestDatabase(): Promise<{ database: Database; connection: Tur
   };
 }
 
-function required<Value>(value: Value | undefined, what: string): Value {
+function requireValue<Value>(value: Value | undefined, what: string): Value {
   if (value === undefined) throw new Error(`The test has no ${what}.`);
 
   return value;
 }
 
-const example = (): Plan => createExampleWeek(NOW, createPredictableIds());
+const createExample = (): Plan => createExampleWeek(NOW, createPredictableIds());
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
@@ -86,15 +86,15 @@ describe("plan repository", () => {
 
   it("round-trips a plan", async () => {
     const { database } = await openTestDatabase();
-    await savePlan(database, undefined, example(), NOW);
+    await savePlan(database, undefined, createExample(), NOW);
     const { plan, isStored } = await loadPlan(database, createPredictableIds());
     expect(isStored).toBe(true);
-    expect(plan).toEqual(example());
+    expect(plan).toEqual(createExample());
   });
 
   it("creates every row of one action at the action's time", async () => {
     const { database } = await openTestDatabase();
-    await savePlan(database, undefined, example(), NOW);
+    await savePlan(database, undefined, createExample(), NOW);
     const rows = await database
       .select({ createdAt: activitiesTable.createdAt })
       .from(activitiesTable);
@@ -103,10 +103,10 @@ describe("plan repository", () => {
 
   it("writes only what changed", async () => {
     const { database } = await openTestDatabase();
-    const before = example();
+    const before = createExample();
     await savePlan(database, undefined, before, NOW);
     const [first, ...rest] = before.blocks;
-    const moved = { ...required(first, "first block"), start: sanitizeDayMinute(660) };
+    const moved = { ...requireValue(first, "first block"), start: sanitizeDayMinute(660) };
     const after: Plan = { ...before, blocks: [moved, ...rest] };
     expect(buildPlanStatements(database, before, after, NOW)).toHaveLength(1);
     expect(buildPlanStatements(database, before, before, NOW)).toHaveLength(0);
@@ -116,7 +116,7 @@ describe("plan repository", () => {
 
   it("deletes an activity together with its blocks", async () => {
     const { database } = await openTestDatabase();
-    const before = example();
+    const before = createExample();
     await savePlan(database, undefined, before, NOW);
     const after: Plan = {
       ...before,
@@ -131,7 +131,7 @@ describe("plan repository", () => {
 
   it("keeps the list order when activities move", async () => {
     const { database } = await openTestDatabase();
-    const before = example();
+    const before = createExample();
     await savePlan(database, undefined, before, NOW);
     const after: Plan = { ...before, activities: before.activities.toReversed() };
     await savePlan(database, before, after, NOW);
@@ -144,20 +144,20 @@ describe("plan repository", () => {
 
   it("rolls the whole action back when one statement fails", async () => {
     const { database } = await openTestDatabase();
-    const before = example();
+    const before = createExample();
     await savePlan(database, undefined, before, NOW);
     const after: Plan = { ...before, dayStart: sanitizeDayStart(6) };
     const [settingsUpdate] = buildPlanStatements(database, before, after, NOW);
     // A duplicate primary key makes the second statement fail after the first one ran.
     const duplicate = database.insert(blocksTable).values({
-      id: required(sanitizeBlockId("block-1"), "block id"),
-      activityId: required(sanitizeActivityId("stats"), "activity id"),
+      id: requireValue(sanitizeBlockId("block-1"), "block id"),
+      activityId: requireValue(sanitizeActivityId("stats"), "activity id"),
       day: sanitizeDayIndex(0),
       start: sanitizeDayMinute(0),
       length: sanitizeLength(15),
     });
     await expect(
-      database.batch([required(settingsUpdate, "settings update"), duplicate]),
+      database.batch([requireValue(settingsUpdate, "settings update"), duplicate]),
     ).rejects.toThrow(/UNIQUE|constraint/iu);
     expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(7);
     // The rollback ended the transaction, so the next action starts one of its own and is saved.
@@ -167,7 +167,7 @@ describe("plan repository", () => {
 
   it("refuses values that break the rules, even past the types", async () => {
     const { database, connection } = await openTestDatabase();
-    await savePlan(database, undefined, example(), NOW);
+    await savePlan(database, undefined, createExample(), NOW);
     const insert = (values: string) =>
       connection.exec(
         `INSERT INTO blocks (id, activity_id, day, start, length) VALUES (${values})`,

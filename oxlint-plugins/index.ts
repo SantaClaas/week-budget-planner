@@ -1,6 +1,7 @@
 import { definePlugin } from "@oxlint/plugins";
 
 import blankLineAfterScope from "./blank-line-after-scope.ts";
+import functionStartsWithVerb from "./function-starts-with-verb.ts";
 import noElse from "./no-else.ts";
 import noIntermediateArray from "./no-intermediate-array.ts";
 import oneOperationPerTry from "./one-operation-per-try.ts";
@@ -13,6 +14,7 @@ export default definePlugin({
   meta: { name: "week-budget-planner" },
   rules: {
     "blank-line-after-scope": blankLineAfterScope,
+    "function-starts-with-verb": functionStartsWithVerb,
     "no-else": noElse,
     "no-intermediate-array": noIntermediateArray,
     "one-operation-per-try": oneOperationPerTry,

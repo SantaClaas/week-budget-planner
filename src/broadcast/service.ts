@@ -145,7 +145,7 @@ export function provide(
     }
   }
 
-  const listener = (event: MessageEvent<ServiceMessage>): void => {
+  const handleMessage = (event: MessageEvent<ServiceMessage>): void => {
     const message = event.data;
     if (message.scope !== scope) return;
 
@@ -179,11 +179,11 @@ export function provide(
         break;
     }
   };
-  channel.addEventListener("message", listener);
+  channel.addEventListener("message", handleMessage);
 
   channel.postMessage(ready);
   return () => {
-    channel.removeEventListener("message", listener);
+    channel.removeEventListener("message", handleMessage);
   };
 }
 

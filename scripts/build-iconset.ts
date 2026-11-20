@@ -101,14 +101,14 @@ function listVariants(manifest: Manifest): Variant[] {
   const { repository, commit, style } = manifest.source;
   return [
     ...manifest.icons.flatMap(({ name, fill }) => {
-      const variant = (id: string, file: string) => ({
+      const createVariant = (id: string, file: string) => ({
         id,
         file: `material-symbols/${file}`,
         url: `https://raw.githubusercontent.com/${repository}/${commit}/symbols/web/${name}/${style}/${file}`,
         padding: 0,
       });
-      const outline = variant(name, `${name}_24px.svg`);
-      return fill ? [outline, variant(`${name}-fill`, `${name}_fill1_24px.svg`)] : [outline];
+      const outline = createVariant(name, `${name}_24px.svg`);
+      return fill ? [outline, createVariant(`${name}-fill`, `${name}_fill1_24px.svg`)] : [outline];
     }),
     ...manifest.brands.map((brand) => ({
       id: brand.name,
@@ -126,7 +126,7 @@ async function readVariants(): Promise<Variant[]> {
   return listVariants(manifest);
 }
 
-async function exists(url: URL): Promise<boolean> {
+async function isPresent(url: URL): Promise<boolean> {
   try {
     await access(url);
   } catch {
@@ -140,7 +140,7 @@ async function exists(url: URL): Promise<boolean> {
 async function fetchMissing(variants: Variant[]): Promise<void> {
   for (const { file, url } of variants) {
     const target = new URL(file, iconsDir);
-    if (await exists(target)) continue;
+    if (await isPresent(target)) continue;
 
     await mkdir(new URL(".", target), { recursive: true });
     const response = await fetch(url);

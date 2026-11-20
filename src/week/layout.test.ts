@@ -9,7 +9,7 @@ const work = createActivity({ id: "work", name: "Work" });
 const gym = createActivity({ id: "gym", name: "Gym", hue: 152, shape: "arch" });
 
 /** The item at `index`, which the test expects to be there. */
-function at<Item>(items: readonly Item[], index: number): Item {
+function readItem<Item>(items: readonly Item[], index: number): Item {
   const item = items[index];
   if (item === undefined) throw new Error(`The test expected an item at ${index.toString()}.`);
 
@@ -39,12 +39,12 @@ describe("the week's layout", () => {
         .map(({ name }) => name)
         .toArray(),
     ).toEqual(["Wed"]);
-    expect(read(at(days, 0).total)).toBe("free");
-    expect(at(days, 0).spoken).toBe("Monday, nothing placed");
+    expect(read(readItem(days, 0).total)).toBe("free");
+    expect(readItem(days, 0).spoken).toBe("Monday, nothing placed");
   });
 
   it("draws a block with its range, its length and a spoken name", () => {
-    const monday = at(
+    const monday = readItem(
       layoutWeek(
         {
           activities: [gym],
@@ -55,7 +55,7 @@ describe("the week's layout", () => {
       ),
       0,
     );
-    const block = at(monday.blocks, 0);
+    const block = readItem(monday.blocks, 0);
     expect(read(block.time)).toBe("18:00–19:30 · 1h 30m");
     expect(block.time.filter(({ datetime }) => datetime !== undefined)).toEqual([
       { text: "18:00", datetime: "18:00" },
@@ -77,8 +77,8 @@ describe("the week's layout", () => {
       undefined,
       BRITISH,
     );
-    const first = at(at(days, 1).blocks, 0);
-    const second = at(at(days, 2).blocks, 0);
+    const first = readItem(readItem(days, 1).blocks, 0);
+    const second = readItem(readItem(days, 2).blocks, 0);
     expect(first).toMatchObject({ part: "first", start: 1320, length: 120 });
     expect(second).toMatchObject({ part: "second", start: 0, length: 120 });
     expect(read(first.time)).toBe("Tue 22:00 – Wed 02:00 · 4h");
@@ -88,7 +88,7 @@ describe("the week's layout", () => {
   });
 
   it("puts Sunday night's overflow on Monday morning", () => {
-    const monday = at(
+    const monday = readItem(
       layoutWeek(
         {
           activities: [work],
@@ -105,7 +105,7 @@ describe("the week's layout", () => {
   });
 
   it("gives short blocks one line, and a 15-minute block no room for its shape", () => {
-    const monday = at(
+    const monday = readItem(
       layoutWeek(
         {
           activities: [work],
@@ -126,7 +126,7 @@ describe("the week's layout", () => {
   });
 
   it("sets overlapping blocks side by side", () => {
-    const monday = at(
+    const monday = readItem(
       layoutWeek(
         {
           activities: [work],
@@ -153,7 +153,7 @@ describe("the week's layout", () => {
         undefined,
         BRITISH,
       );
-      return at(at(days, 0).blocks, 0).nameLines;
+      return readItem(readItem(days, 0).blocks, 0).nameLines;
     });
     expect(lines).toEqual([1, 1, 3, 10]);
   });
@@ -162,7 +162,7 @@ describe("the week's layout", () => {
     const hours = listHours(BRITISH);
     expect(hours).toHaveLength(23);
     expect(hours[0]).toEqual({ hour: 1, text: "01:00", datetime: "01:00" });
-    expect(at(hours, 22).text).toBe("23:00");
+    expect(readItem(hours, 22).text).toBe("23:00");
   });
 });
 

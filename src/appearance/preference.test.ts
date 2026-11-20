@@ -27,7 +27,8 @@ const blocked = {
 };
 
 // Node has no StorageEvent, so a plain event carries the key.
-const storageEvent = (key: string | null): Event => Object.assign(new Event("storage"), { key });
+const createStorageEvent = (key: string | null): Event =>
+  Object.assign(new Event("storage"), { key });
 
 describe("the color scheme", () => {
   it("follows the system until a choice is stored", () => {
@@ -70,10 +71,10 @@ describe("the color scheme", () => {
       meta,
     );
     storage.setItem("week-budget-planner.color-scheme", "dark");
-    events.dispatchEvent(storageEvent("week-budget-planner.color-scheme"));
-    events.dispatchEvent(storageEvent("something-else"));
+    events.dispatchEvent(createStorageEvent("week-budget-planner.color-scheme"));
+    events.dispatchEvent(createStorageEvent("something-else"));
     stop();
-    events.dispatchEvent(storageEvent(null));
+    events.dispatchEvent(createStorageEvent(null));
     expect(seen).toEqual(["dark"]);
     expect(meta.content).toBe("dark");
   });

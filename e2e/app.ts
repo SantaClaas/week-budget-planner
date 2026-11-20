@@ -98,7 +98,7 @@ export async function importFile(
   return result;
 }
 
-export const toBytes = (text: string): number[] => [...new TextEncoder().encode(text)];
+export const encodeText = (text: string): number[] => [...new TextEncoder().encode(text)];
 
 /** Exports the database, as Settings will: its file name and its bytes. */
 export function exportDatabase(page: Page): Promise<{ name: string; bytes: number[] }> {

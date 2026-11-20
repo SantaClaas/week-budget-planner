@@ -6,7 +6,7 @@ import { ISOLATED_URL, PAGES_URL, expectStatus } from "./app.ts";
 // docs/spec/accessibility.md). A reload of a page's path has to start the app there, or a bookmark
 // would land on GitHub Pages' own error page.
 
-const heading = (name: string) => ({ level: 1, name });
+const describeHeading = (name: string) => ({ level: 1, name });
 
 test("starts on the page a reloaded path names, through GitHub Pages' 404 page", async ({
   page,
@@ -14,10 +14,10 @@ test("starts on the page a reloaded path names, through GitHub Pages' 404 page",
   await page.goto(`${PAGES_URL}activities`);
   // The service worker reloads the page once to isolate it; the path has to survive that too.
   await expect.poll(() => page.evaluate(() => crossOriginIsolated).catch(() => false)).toBe(true);
-  await expect(page.getByRole("heading", heading("Activities"))).toBeVisible();
+  await expect(page.getByRole("heading", describeHeading("Activities"))).toBeVisible();
   await expect(page).toHaveTitle("Activities · Week Budget Planner");
   await page.reload();
-  await expect(page.getByRole("heading", heading("Activities"))).toBeVisible();
+  await expect(page.getByRole("heading", describeHeading("Activities"))).toBeVisible();
   await expect(page).toHaveURL(`${PAGES_URL}activities`);
 });
 
@@ -30,7 +30,7 @@ test("moves between pages without a reload, and back with the browser", async ({
 
   await navigation.getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(`${ISOLATED_URL}settings`);
-  await expect(page.getByRole("heading", heading("Settings"))).toBeFocused();
+  await expect(page.getByRole("heading", describeHeading("Settings"))).toBeFocused();
   await expect(navigation.getByRole("link", { name: "Settings" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -38,25 +38,25 @@ test("moves between pages without a reload, and back with the browser", async ({
 
   await page.goBack();
   await expect(page).toHaveURL(ISOLATED_URL);
-  await expect(page.getByRole("heading", heading("Week"))).toBeVisible();
+  await expect(page.getByRole("heading", describeHeading("Week"))).toBeVisible();
   await expect(page).toHaveTitle("Week · Week Budget Planner");
   expect(await page.evaluate(() => "isSamePage" in window)).toBe(true);
 });
 
 test("says when a path has no page, and keeps the address", async ({ page }) => {
   await page.goto(`${ISOLATED_URL}no-such-page`);
-  await expect(page.getByRole("heading", heading("Page not found"))).toBeVisible();
+  await expect(page.getByRole("heading", describeHeading("Page not found"))).toBeVisible();
   await expect(page).toHaveTitle("Page not found · Week Budget Planner");
   await expect(page).toHaveURL(`${ISOLATED_URL}no-such-page`);
   // No destination is current, and the page leads back to the week.
   await expect(page.locator('[aria-current="page"]')).toHaveCount(0);
   await page.getByRole("link", { name: "Go to the week" }).click();
-  await expect(page.getByRole("heading", heading("Week"))).toBeFocused();
+  await expect(page.getByRole("heading", describeHeading("Week"))).toBeFocused();
 });
 
 test("shows a page for another spelling of its path, and fixes the address", async ({ page }) => {
   await page.goto(`${ISOLATED_URL}settings/`);
-  await expect(page.getByRole("heading", heading("Settings"))).toBeVisible();
+  await expect(page.getByRole("heading", describeHeading("Settings"))).toBeVisible();
   await expect(page).toHaveURL(`${ISOLATED_URL}settings`);
 });
 
@@ -77,7 +77,7 @@ test("reaches every page with the keyboard, and lands on its heading", async ({ 
   await page.keyboard.press("Tab");
   await expect(navigation.getByRole("link", { name: "Activities" })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", heading("Activities"))).toBeFocused();
+  await expect(page.getByRole("heading", describeHeading("Activities"))).toBeFocused();
 });
 
 test("uses the navigation bar on a phone", async ({ page }) => {
@@ -88,5 +88,5 @@ test("uses the navigation bar on a phone", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Sections" })).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Expand navigation" })).toBeHidden();
   await page.getByRole("link", { name: "Activities" }).click();
-  await expect(page.getByRole("heading", heading("Activities"))).toBeFocused();
+  await expect(page.getByRole("heading", describeHeading("Activities"))).toBeFocused();
 });

@@ -101,6 +101,7 @@ function ConfirmDialog(properties: {
   action: string;
   onConfirm: () => void;
   onClose?: () => void;
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- Solid's own name for the callback that gets the element.
   ref?: (dialog: HTMLDialogElement) => void;
 }): JSX.Element {
   return (

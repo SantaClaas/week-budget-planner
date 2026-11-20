@@ -77,12 +77,12 @@ export function create(
       return "wiped";
     },
     onExternalChange(callback) {
-      const listener = (event: StorageEvent): void => {
+      const handleStorage = (event: StorageEvent): void => {
         if (event.key === null || event.key === PLAN_KEY) callback();
       };
-      events.addEventListener("storage", listener);
+      events.addEventListener("storage", handleStorage);
       return () => {
-        events.removeEventListener("storage", listener);
+        events.removeEventListener("storage", handleStorage);
       };
     },
   };

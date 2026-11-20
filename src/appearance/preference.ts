@@ -94,16 +94,16 @@ export function create<Choice extends string, Target>(
     storage = findStorage(),
     target = options.findTarget(),
   ): () => void {
-    const listener = (event: StorageEvent) => {
+    const handleStorage = (event: StorageEvent) => {
       if (event.key !== null && event.key !== options.key) return;
 
       const choice = read(storage);
       apply(choice, target);
       callback(choice);
     };
-    events.addEventListener("storage", listener);
+    events.addEventListener("storage", handleStorage);
     return () => {
-      events.removeEventListener("storage", listener);
+      events.removeEventListener("storage", handleStorage);
     };
   }
 

@@ -11,7 +11,7 @@ import { loadPlan } from "./plan-repository.ts";
 /** A query service that answers every query with `answer`. */
 const createService = (answer: () => Promise<"newer-version">): QueryService => ({
   query: answer,
-  batch: answer,
+  runBatch: answer,
 });
 
 describe("queries through Drizzle", () => {
