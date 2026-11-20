@@ -91,6 +91,15 @@ export const DEFAULT_SHAPES = [
 export type Hue = (typeof PALETTE)[number]["hue"];
 export type Shape = (typeof SHAPES)[number];
 
+const PALETTE_HUES = new Set<unknown>(PALETTE.values().map((color) => color.hue));
+const SHAPE_NAMES = new Set<unknown>(SHAPES);
+
+/** Whether a value, loaded or received, is one of the palette's hues. */
+export const isHue = (value: unknown): value is Hue => PALETTE_HUES.has(value);
+
+/** Whether a value, loaded or received, is one of the shapes. */
+export const isShape = (value: unknown): value is Shape => SHAPE_NAMES.has(value);
+
 /** Each hue's palette color. */
 const COLORS_BY_HUE = new Map<Hue, (typeof PALETTE)[number]>(
   PALETTE.values().map((color) => [color.hue, color]),

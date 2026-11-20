@@ -1,6 +1,8 @@
 // A register: the smallest part of a row that merges as one, a value with its stamp (see Registers
 // in docs/spec/merge.md).
-import { compare as compareStamps, type Stamp } from "./stamp.ts";
+import type { Result } from "../result.ts";
+import { readExact } from "./record.ts";
+import { compare as compareStamps, parse as parseStamp, type Stamp } from "./stamp.ts";
 
 /** A plain value, as JSON holds it. */
 type Plain = string | number | boolean | null;
@@ -50,4 +52,23 @@ export function merge<Of extends Value>(first: Register<Of>, second: Register<Of
   if (isSame(first.value, second.value)) return first;
 
   return formatCanonical(second.value) > formatCanonical(first.value) ? second : first;
+}
+
+/**
+ * A received register, parsed strictly: a value `parseValue` accepts, and a well-formed stamp.
+ * `problem` is what to give back when the value is refused.
+ */
+export function parse<Of extends Value, Problem extends string>(
+  value: unknown,
+  parseValue: (value: unknown) => Of | undefined,
+  problem: Problem,
+): Result<Register<Of>, "not-a-change" | "invalid-stamp" | Problem> {
+  const fields = readExact(value, ["value", "stamp"]);
+  if (fields === undefined) return "not-a-change";
+
+  const stamp = parseStamp(fields["stamp"]);
+  if (stamp === undefined) return "invalid-stamp";
+
+  const checked = parseValue(fields["value"]);
+  return checked === undefined ? problem : { value: checked, stamp };
 }
