@@ -36,9 +36,13 @@ export type Change = {
 };
 
 /**
- * The rows with `change` merged in, register by register: the later stamp wins. The same whatever
- * order changes arrive in, and merging one twice changes nothing. Rows the change didn't alter
- * stay the same objects.
+ * Merges a change or a snapshot into the rows, register by register: the later stamp wins. The
+ * same whatever order changes arrive in, and merging one twice changes nothing.
+ *
+ * @param rows - The rows the node holds.
+ * @param change - A change or a snapshot, checked strictly if it was received.
+ * @returns The rows with it merged in. Rows it didn't alter stay the same objects, so comparing by
+ *   identity finds the ones to write.
  */
 export function merge(rows: Rows, change: Change): Rows {
   const activities = new Map(rows.activities);

@@ -71,7 +71,13 @@ export type SettingsRow = {
   readonly exampleLoadedAt: Register<string | null>;
 };
 
-/** Gives back `first` when no register changed, so a row nothing changed stays the same object. */
+/**
+ * The merged row, or the one held when no register changed, so a row nothing changed stays the
+ * same object.
+ *
+ * @param first - The row the node holds.
+ * @param merged - The row merged register by register.
+ */
 function keepUnchanged<Row extends object>(first: Row, merged: Row): Row {
   const isUnchanged = Object.keys(first).every(
     (key) => Reflect.get(first, key) === Reflect.get(merged, key),

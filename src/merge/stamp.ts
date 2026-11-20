@@ -115,7 +115,12 @@ export function read(stamp: Stamp): Parts {
   };
 }
 
-/** Below zero when `first` is earlier, above when it's later, zero when they're the same stamp. */
+/**
+ * Compares two stamps, for sorting.
+ *
+ * @returns Below zero when `first` is earlier, above when it's later, zero when they're the same
+ *   stamp.
+ */
 export function compare(first: Stamp, second: Stamp): number {
   if (first < second) return -1;
 

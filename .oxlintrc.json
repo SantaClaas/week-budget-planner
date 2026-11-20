@@ -6,7 +6,7 @@
   // jsx-a11y checks the markup in JSX (alt text, labels, roles and their required states, keyboard
   // handlers next to click handlers): the earliest stage that catches those mistakes (see "Where
   // rules are enforced" in docs/guidelines/principles.md).
-  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest", "jsx-a11y"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "vitest", "jsx-a11y", "jsdoc"],
   "jsPlugins": ["./oxlint-plugins/index.ts"],
   "categories": {
     "correctness": "error",
@@ -19,6 +19,20 @@
     "reportUnusedDisableDirectives": "error"
   },
   "rules": {
+    // JSDoc describes what the name and the type don't say, so only where that's needed (see
+    // Doc comments in docs/guidelines/typescript.md): a tag that's there has to be one that
+    // exists, and a @param its name and a description. Not every function needs one.
+    "jsdoc/require-param": "off",
+    "jsdoc/require-returns": "off",
+    "jsdoc/require-yields": "off",
+    // TypeScript has the types; a copy in braces only goes stale.
+    "jsdoc/require-param-type": "off",
+    "jsdoc/require-returns-type": "off",
+    "jsdoc/require-yields-type": "off",
+    "jsdoc/check-tag-names": ["error", { "definedTags": ["mustUse"] }],
+    "jsdoc/require-param-name": "error",
+    "jsdoc/require-param-description": "error",
+    "jsdoc/require-returns-description": "error",
     "week-budget-planner/require-reason": "error",
     "week-budget-planner/function-starts-with-verb": "error",
     // Return early instead (see Functions in docs/guidelines/principles.md).
