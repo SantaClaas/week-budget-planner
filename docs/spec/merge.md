@@ -75,7 +75,7 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 - **What it costs here is small.** The devices are one person's, their clocks are set by the network to within seconds, the conflict needs the same register changed on two of them while apart, and Undo and the other device's value are both a few taps away.
 - **A clock far ahead also dulls the stamps for a while.** Once the others merge its change, their clocks hold that future time, and until real time catches up their stamps differ only by the counter. Changes that know of each other still order correctly; changes made apart are then decided by the counter and the node id, not by time.
 - **The fix, in the later phases, uses the server that is there anyway.** Every response from the server carries its time. A node works out how far its own clock is off and corrects the time it stamps with, also while offline, by the last offset it knew. The server isn't the source of truth for time and nothing waits on it: a node that never reaches it stamps with its own clock, as in this phase. No second server is needed.
-- **Nothing that must be right may depend on a stamp's time.** How old a deletion marker is, for dropping it, is counted from when the group received it, not from its stamp (see [Deleting](#deleting)).
+- **Nothing that must be right may depend on a stamp's time.** When a deletion marker can be dropped is decided by which devices have it, not by how old it is (see [Deleting](#deleting)).
 
 What else was looked at:
 
