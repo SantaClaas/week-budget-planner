@@ -70,27 +70,35 @@ export const takeSnapshot = (rows: Rows): Change => ({
   settings: rows.settings,
 });
 
-/** Every register of a row, to find its stamps. */
-const listRegisters = (row: object): { stamp: Stamp }[] =>
-  Object.values(row).filter(
-    (value): value is { stamp: Stamp } =>
-      typeof value === "object" && value !== null && "stamp" in value,
-  );
-
-/** The latest stamp in a change, which the node's clock moves on to once it's merged. */
-export function findLatestStamp(change: Change): Stamp {
-  const rows: object[] = [...change.activities, ...change.blocks];
-  if (change.settings !== null) rows.push(change.settings);
-
-  let latest = LOWEST;
-  for (const row of rows) {
-    for (const register of listRegisters(row)) {
-      if (compareStamps(register.stamp, latest) > 0) latest = register.stamp;
-    }
+/** Every stamp in a change: each register's, row by row, named one by one so the types say so. */
+function* listStamps(change: Change): Generator<Stamp> {
+  for (const row of change.activities) {
+    yield row.name.stamp;
+    yield row.hue.stamp;
+    yield row.shape.stamp;
+    yield row.budget.stamp;
+    yield row.order.stamp;
+    yield row.existence.stamp;
   }
 
-  return latest;
+  for (const row of change.blocks) {
+    yield row.time.stamp;
+    yield row.existence.stamp;
+  }
+
+  if (change.settings === null) return;
+
+  yield change.settings.dayStart.stamp;
+  yield change.settings.dayEnd.stamp;
+  yield change.settings.exampleLoadedAt.stamp;
 }
+
+/** The latest stamp in a change, which the node's clock moves on to once it's merged. */
+export const findLatestStamp = (change: Change): Stamp =>
+  listStamps(change).reduce(
+    (latest, stamp) => (compareStamps(stamp, latest) > 0 ? stamp : latest),
+    LOWEST,
+  );
 
 /**
  * The plan the rows show: the activities that aren't deleted, in order of their order keys and
@@ -143,7 +151,9 @@ const createUnstamped = <Of>(value: Of): { value: Of; stamp: Stamp } => ({ value
 
 /**
  * The rows of a plan stored before stamps existed: every register gets the lowest stamp, and the
- * activities evenly spread order keys in their order (see Storage in docs/spec/merge.md).
+ * activities evenly spread order keys in their order (see Storage in docs/spec/merge.md). A block
+ * whose activity isn't in the plan is left out, as `sanitizePlan` leaves it out: as a row it would
+ * make every snapshot of this node one that the others refuse, for a block nobody can see.
  */
 export function convertPlan(plan: Plan): Rows {
   const keys = spread(plan.activities.length);
@@ -168,14 +178,17 @@ export function convertPlan(plan: Plan): Rows {
   }
 
   const blocks = new Map<BlockId, BlockRow>(
-    plan.blocks.values().map((block) => [
-      block.id,
-      {
-        id: block.id,
-        time: createUnstamped({ day: block.day, start: block.start, length: block.length }),
-        existence: createUnstamped({ activityId: block.activityId, isDeleted: false }),
-      },
-    ]),
+    plan.blocks
+      .values()
+      .filter((block) => activities.has(block.activityId))
+      .map((block) => [
+        block.id,
+        {
+          id: block.id,
+          time: createUnstamped({ day: block.day, start: block.start, length: block.length }),
+          existence: createUnstamped({ activityId: block.activityId, isDeleted: false }),
+        },
+      ]),
   );
   return {
     activities,
