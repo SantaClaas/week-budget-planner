@@ -10,6 +10,8 @@ paths:
 
 # Persistence
 
+Why SQLite, flashcut's storage layer and Drizzle, and what else was weighed, is in decision records [0002](../decisions/0002-sqlite-in-the-browser.md) and [0003](../decisions/0003-drizzle-over-a-proxy.md); why GitHub Pages and a service worker, in [0005](../decisions/0005-github-pages-with-a-service-worker.md).
+
 In the prototype, the plan lived in the claude.ai artifact database. That API exists only inside claude.ai artifacts and is **not** carried over. The real app stores everything in a **SQLite database inside the browser**, set up the same way as [flashcut](https://github.com/SantaClaas/flashcut), with **Drizzle** added on top. There is no backend.
 
 ## Database engine (same as flashcut)

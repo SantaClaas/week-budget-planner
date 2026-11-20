@@ -5,7 +5,7 @@ paths:
 
 # Design
 
-The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-with-m3-expressive)**, Google's 2025 update of Material Design 3. Build it with plain CSS from the tokens in [`docs/design/m3-tokens.css`](../design/m3-tokens.css), without a component library.
+The app follows **[Material 3 Expressive](https://m3.material.io/blog/building-with-m3-expressive)**, Google's 2025 update of Material Design 3. Build it with plain CSS from the tokens in [`docs/design/m3-tokens.css`](../design/m3-tokens.css), without a component library (decision record [0004](../decisions/0004-material-3-in-plain-css.md)).
 
 **Expressiveness is a goal, not decoration.** The app should feel playful and personal, with some whimsy, which is what Material 3 Expressive is about: bold shapes, lively color, emphasized type and springy motion. A planner can feel like a chore, and this one should feel like yours. When choosing between a plain and an expressive option that Google's guidance allows, lean expressive, for example shapes for activities, shape changes on selection and spring motion. Keep the week grid calm and readable, though: expressiveness must never add clutter or cost legibility, and it never overrides accessibility.
 
