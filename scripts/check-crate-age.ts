@@ -1,7 +1,8 @@
-// Checks that every crate version in Cargo.lock was published at least a week ago, so a broken or
-// compromised release has time to be found and pulled before it's built here (see The supply chain
-// in docs/guidelines/rust.md). pnpm enforces the same for npm (minimumReleaseAge in
-// pnpm-workspace.yaml); Cargo can't yet, so this script does.
+// Checks that every crate version in Cargo.lock was published at least as long ago as
+// `registry.global-min-publish-age` in .cargo/config.toml says (see The supply chain in
+// docs/guidelines/rust.md). Cargo applies that age when it picks a version, but keeps a version
+// that's already in the lockfile, however it got there; pnpm checks its lockfile against its age on
+// every install (minimumReleaseAge in pnpm-workspace.yaml). This script is that half for Cargo.
 //
 //   node scripts/check-crate-age.ts
 //
@@ -9,6 +10,7 @@
 // each version was published. Exceptions are in [workspace.metadata.release-age] in Cargo.toml.
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 /** A crate from crates.io as Cargo.lock has it. */
 type LockedCrate = { name: string; version: string };
@@ -87,8 +89,20 @@ export function findYoungCrates(
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-/** The locked crates from crates.io and the release-age settings, from `cargo metadata`. */
-function readWorkspace(): { crates: LockedCrate[]; minimumDays: number; exceptions: Set<string> } {
+/**
+ * The minimum age in days from Cargo's config: `global-min-publish-age` as "N days" or "N weeks",
+ * the forms Cargo's documentation suggests, or undefined when it isn't set in one of them.
+ */
+export function readMinimumDays(config: string): number | undefined {
+  const match = /^\s*global-min-publish-age\s*=\s*"(\d+) (days?|weeks?)"/mu.exec(config);
+  if (match === null) return undefined;
+
+  const count = Number(match[1]);
+  return match[2]?.startsWith("week") === true ? count * 7 : count;
+}
+
+/** The locked crates from crates.io and the exceptions, from `cargo metadata`. */
+function readWorkspace(): { crates: LockedCrate[]; exceptions: Set<string> } {
   const output = execFileSync(
     "cargo",
     ["metadata", "--format-version", "1", "--locked", "--quiet"],
@@ -112,15 +126,9 @@ function readWorkspace(): { crates: LockedCrate[]; minimumDays: number; exceptio
     .toArray();
   const workspace = isRecord(metadata["metadata"]) ? metadata["metadata"] : {};
   const settings = isRecord(workspace["release-age"]) ? workspace["release-age"] : {};
-  const minimumDays = settings["minimum-days"];
-  if (typeof minimumDays !== "number") {
-    throw new TypeError("Cargo.toml has no [workspace.metadata.release-age] minimum-days.");
-  }
-
   const excluded = Array.isArray(settings["exclude"]) ? settings["exclude"] : [];
   return {
     crates,
-    minimumDays,
     exceptions: new Set(excluded.values().filter((item: unknown) => typeof item === "string")),
   };
 }
@@ -148,7 +156,14 @@ async function fetchPublishTimes(crates: readonly LockedCrate[]): Promise<Map<st
 }
 
 if (import.meta.main) {
-  const { crates, minimumDays, exceptions } = readWorkspace();
+  const minimumDays = readMinimumDays(
+    readFileSync(new URL("../.cargo/config.toml", import.meta.url), "utf8"),
+  );
+  if (minimumDays === undefined) {
+    throw new Error('.cargo/config.toml sets no global-min-publish-age as "N days" or "N weeks".');
+  }
+
+  const { crates, exceptions } = readWorkspace();
   const young = findYoungCrates(
     crates,
     await fetchPublishTimes(crates),

@@ -1,0 +1,8 @@
+# Cargo's settings for this repository (see The supply chain in docs/guidelines/rust.md).
+
+[registry]
+# Waits a week after a version is published before resolving to it, like pnpm's minimumReleaseAge
+# in pnpm-workspace.yaml, so a broken or compromised release has time to be found and pulled. Cargo
+# skips younger versions when it picks one, but keeps a version that's already in Cargo.lock, so
+# scripts/check-crate-age.ts checks the lockfile against the same age in CI.
+global-min-publish-age = "7 days"

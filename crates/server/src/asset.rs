@@ -296,9 +296,9 @@ mod test {
     #[test]
     fn leaves_files_as_they_are_where_compressing_doesnt_help() {
         let tiny = create("a.js", b"1");
-        assert!(tiny.get("a.js").unwrap().encodings().is_empty());
+        assert_eq!(tiny.get("a.js").unwrap().encodings(), []);
         let image = create("a.png", &[0; 4096]);
-        assert!(image.get("a.png").unwrap().encodings().is_empty());
+        assert_eq!(image.get("a.png").unwrap().encodings(), []);
     }
 
     #[test]
