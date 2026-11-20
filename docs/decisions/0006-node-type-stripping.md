@@ -12,7 +12,7 @@ Everything Node runs is run by Node's own type stripping, on the latest Node rel
 
 ## Alternatives
 
-- **Each tool's own loader**, as they come by default. Replaced: the commit that made the change says only that every file Node runs now goes through its own type stripping "instead of a bundled loader". Why that was preferred isn't recorded.
+- **Each tool's own loader**, as they come by default. Replaced: one way to run TypeScript makes the process simpler and needs fewer dependencies (the project's author, 2026-11-20).
 - **A compile step** for the scripts. Not recorded whether it was weighed.
 
 ## Consequences

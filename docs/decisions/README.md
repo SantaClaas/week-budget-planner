@@ -17,7 +17,7 @@ A decision record keeps a decision that is expensive to reverse: what was decide
 
 - **One file per decision**, numbered in the order they were made: `0007-short-title.md`. The number never changes, so links stay valid.
 - **The sections:** Status, Context, Decision, Alternatives, Consequences. Context is what was true and needed when it was decided. Alternatives says what else was weighed and why it lost. Consequences says what follows, the costs included.
-- **Only reasons that were given.** Where a record is written after the fact and a reason wasn't written down at the time, it says "Not recorded" instead of guessing, so the gap is visible and the project's author can fill it.
+- **Only reasons that were given.** Where a record is written after the fact and a reason wasn't written down at the time, it says "Not recorded" instead of guessing, so the gap is visible and the project's author can fill it. A reason filled in later names who gave it and when, as in "(the project's author, 2026-11-20)".
 - **A record isn't rewritten.** When a decision changes, a new record says so and replaces the old one, and the old one's status becomes "Replaced by" with a link. A correction of a fact, a link that moved, or a gap filled in by the author may still be edited.
 - **The spec links to the record** where the decision shows, instead of repeating the reasons.
 - The status is one of: Proposed, Accepted (with the date it was decided), Replaced by a later record, or Dropped.
@@ -26,7 +26,7 @@ A decision record keeps a decision that is expensive to reverse: what was decide
 
 | Record | Status |
 | --- | --- |
-| [0001 Solid 2.0 while it's a release candidate](0001-solid-2-release-candidate.md) | Accepted, 2026-10-08 |
+| [0001 Solid 2.0 while it's a release candidate](0001-solid-2-release-candidate.md) | Accepted, 2026-10-08; to be replaced by the move to the release ([SantaClaas/week-budget-planner#122](https://github.com/SantaClaas/week-budget-planner/issues/122)) |
 | [0002 SQLite in the browser, with flashcut's storage layer](0002-sqlite-in-the-browser.md) | Accepted, 2026-10-08 |
 | [0003 Drizzle 1.0 over a proxy to the leader tab](0003-drizzle-over-a-proxy.md) | Accepted, 2026-10-08 |
 | [0004 Material 3 Expressive in plain CSS, from Google's sources only](0004-material-3-in-plain-css.md) | Accepted, 2026-10-15 |

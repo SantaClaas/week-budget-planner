@@ -20,7 +20,7 @@ Use Drizzle, `drizzle-orm` and `drizzle-kit` at `1.0.0-rc.4`, pinned exactly ([D
 - **Drizzle's Turso driver in every tab.** Not possible: follower tabs have no database object, so a driver that needs one can only run on the leader. The proxy driver needs nothing but a callback.
 - **`database.transaction()` over the proxy.** Rejected: it sends BEGIN, each statement and COMMIT as separate calls, so another tab's query could land in between. The batch is one call.
 - **Flashcut's `PRAGMA user_version` next to Drizzle's migration table.** Rejected: two records of which migrations ran could disagree.
-- **Plain SQL without a query builder**, as in flashcut. Not recorded why it lost.
+- **Plain SQL without a query builder**, as in flashcut. Rejected: the project's author wanted to try Drizzle, and to find out whether it works in the browser this way, and its generated migrations are handy (2026-11-20).
 
 ## Consequences
 

@@ -19,8 +19,8 @@ Flashcut's code is copied with renames and then follows this project's guideline
 ## Alternatives
 
 - **Building the tab sharing anew.** Rejected: flashcut's leader election and RPC already handle request ids, finding the leader, calls that were never sent when a tab is promoted, and calls lost when the leader changes. In the spec's words, it "already solves the hard part of multiple tabs".
-- **Other SQLite builds for the browser**, such as SQLite's own WebAssembly build or wa-sqlite. Not recorded whether they were weighed; Turso's was chosen because flashcut uses it.
-- **IndexedDB, or `localStorage` alone.** Not recorded as weighed for the main store. `localStorage` stays as the limited storage level, for browsers where the database can't run ([Progressive enhancement](../spec/persistence.md#progressive-enhancement)).
+- **Other SQLite builds for the browser**, such as SQLite's own WebAssembly build or wa-sqlite. Turso's was chosen because it develops SQLite further, and because Turso's cloud might later offer syncing the database as another way to keep a backup, which hasn't been checked yet (the project's author, 2026-11-20). Flashcut uses it too. Whether the other builds were weighed isn't recorded.
+- **IndexedDB, or `localStorage` alone.** Rejected for the main store: a SQLite database file is a more portable format, and SQLite enforces relational rules (column types, keys, `CHECK` constraints), where IndexedDB stores documents (the project's author, 2026-11-20). `localStorage` stays as the limited storage level, for browsers where the database can't run ([Progressive enhancement](../spec/persistence.md#progressive-enhancement)).
 
 ## Consequences
 

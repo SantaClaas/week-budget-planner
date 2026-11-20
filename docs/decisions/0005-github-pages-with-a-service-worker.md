@@ -17,7 +17,7 @@ Host the app on GitHub Pages, deployed by [`.github/workflows/deploy.yml`](../..
 ## Alternatives
 
 - **Copying [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) in.** Rejected: a page has one service worker per scope, and the later step to installing as a PWA will extend this same worker. Its technique is written as part of our own worker instead.
-- **A host that can send headers.** Not recorded why GitHub Pages was preferred at the time. [`public/_headers`](../../public/_headers) is kept for hosts that read it, and the decision to serve the app from the sync server later removes the problem.
+- **A host that can send headers**, such as Netlify or Cloudflare Pages. Rejected: GitHub Pages was the easiest to set up, without another account (the project's author, 2026-11-20). [`public/_headers`](../../public/_headers) is kept for hosts that read it, and the decision to serve the app from the sync server later removes the problem.
 
 ## Consequences
 
