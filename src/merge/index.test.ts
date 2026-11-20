@@ -19,6 +19,7 @@ import {
 import { formatCanonical, isSame, merge as mergeRegisters } from "./register.ts";
 import { mergeActivity } from "./row.ts";
 import { LOWEST } from "./stamp.ts";
+import { parse } from "./check.ts";
 import { createStamp, required } from "./test-data.ts";
 
 const work = createActivity({ id: "work", name: "Work" });
@@ -176,6 +177,22 @@ describe("reading the plan", () => {
     expect(shown.activities).toEqual(example.activities);
     expect(shown.blocks).toEqual(example.blocks.toSorted(compareIds));
     expect(findLatestStamp(takeSnapshot(converted))).toBe(LOWEST);
+  });
+
+  it("leaves out a block whose activity isn't in the plan, so its snapshots are accepted", () => {
+    const orphan = createBlock({ id: "orphan", activityId: "gone" });
+    const converted = convertPlan({ ...plan, blocks: [...plan.blocks, orphan] });
+    expect(converted.blocks.has(orphan.id)).toBe(false);
+    expect(parse(takeSnapshot(converted))).not.toBeTypeOf("string");
+  });
+
+  it("finds the latest stamp among every register of every kind of row", () => {
+    const latest = createStamp(9, 0, "z");
+    const settings = { ...rows.settings, exampleLoadedAt: { value: null, stamp: latest } };
+    expect(findLatestStamp({ ...takeSnapshot(rows), settings })).toBe(latest);
+    const block = required(rows.blocks.values().next().value, "a block row");
+    const blocks = [{ ...block, time: { ...block.time, stamp: latest } }];
+    expect(findLatestStamp({ ...takeSnapshot(rows), blocks })).toBe(latest);
   });
 
   it("orders activities by key, and equal keys by id", () => {
