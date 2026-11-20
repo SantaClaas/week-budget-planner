@@ -20,7 +20,7 @@ import { formatCanonical, isSame, merge as mergeRegisters } from "./register.ts"
 import { mergeActivity } from "./row.ts";
 import { LOWEST } from "./stamp.ts";
 import { parse } from "./check.ts";
-import { createStamp, required } from "./test-data.ts";
+import { createStamp, requireValue } from "./test-data.ts";
 
 const work = createActivity({ id: "work", name: "Work" });
 const gym = createActivity({ id: "gym", name: "Gym", hue: 152, shape: "arch" });
@@ -104,7 +104,7 @@ describe("register", () => {
 
 describe("rows", () => {
   it("keeps a row as the same object when merging changes nothing in it", () => {
-    const row = required(rows.activities.get(work.id), "row for work");
+    const row = requireValue(rows.activities.get(work.id), "row for work");
     expect(mergeActivity(row, { ...row })).toBe(row);
     const merged = merge(rows, takeSnapshot(rows));
     expect(merged.activities.get(work.id)).toBe(row);
@@ -190,14 +190,14 @@ describe("reading the plan", () => {
     const latest = createStamp(9, 0, "z");
     const settings = { ...rows.settings, exampleLoadedAt: { value: null, stamp: latest } };
     expect(findLatestStamp({ ...takeSnapshot(rows), settings })).toBe(latest);
-    const block = required(rows.blocks.values().next().value, "a block row");
+    const block = requireValue(rows.blocks.values().next().value, "a block row");
     const blocks = [{ ...block, time: { ...block.time, stamp: latest } }];
     expect(findLatestStamp({ ...takeSnapshot(rows), blocks })).toBe(latest);
   });
 
   it("orders activities by key, and equal keys by id", () => {
-    const workRow = required(rows.activities.get(work.id), "row for work");
-    const gymRow = required(rows.activities.get(gym.id), "row for the gym");
+    const workRow = requireValue(rows.activities.get(work.id), "row for work");
+    const gymRow = requireValue(rows.activities.get(gym.id), "row for the gym");
     const sameKey = { ...gymRow, order: workRow.order };
     const shown = readPlan({
       ...rows,
@@ -211,8 +211,8 @@ describe("reading the plan", () => {
 
   it("leaves out deleted activities and their blocks, and deleted blocks", () => {
     const deleted = { value: { isDeleted: true }, stamp: createStamp(1, 0, "a") };
-    const gymRow = required(rows.activities.get(gym.id), "row for the gym");
-    const blockRow = required(rows.blocks.get(createBlock({ id: "1" }).id), "row for block 1");
+    const gymRow = requireValue(rows.activities.get(gym.id), "row for the gym");
+    const blockRow = requireValue(rows.blocks.get(createBlock({ id: "1" }).id), "row for block 1");
     const withoutGym = readPlan({
       ...rows,
       activities: new Map([...rows.activities, [gym.id, { ...gymRow, existence: deleted }]]),
