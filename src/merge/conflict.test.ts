@@ -58,6 +58,7 @@ const change =
   (shown) => {
     const activity = shown.activities.find((each) => each.id === id);
     if (activity === undefined) throw new Error(`No activity ${id}.`);
+
     const { id: _, ...rest } = activity;
     return activityList.update(shown, id, { ...rest, ...values });
   };
@@ -68,6 +69,7 @@ const changeBlock =
     ...shown,
     blocks: shown.blocks.map((block) => {
       if (block.id !== id) return block;
+
       const changed = createBlock({ ...block, ...values });
       return { ...block, day: changed.day, start: changed.start, length: changed.length };
     }),

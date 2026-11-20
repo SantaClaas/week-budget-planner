@@ -5,6 +5,7 @@ import { assign, between, compare, parse, spread, type OrderKey } from "./order.
 function createKey(text: string): OrderKey {
   const key = parse(text);
   if (key === undefined) throw new Error(`The test data has an invalid order key: ${text}.`);
+
   return key;
 }
 
@@ -37,6 +38,7 @@ function insertIntoGap(count: number): { keys: OrderKey[]; low: OrderKey; high: 
     // oxlint-disable-next-line week-budget-planner/no-else -- two equal branches that take turns read best side by side.
     else low = key;
   }
+
   return { keys, low, high };
 }
 
@@ -51,6 +53,7 @@ function insertAtEnds(count: number): OrderKey[] {
     keys.unshift(first);
     keys.push(last);
   }
+
   return keys;
 }
 
@@ -66,6 +69,7 @@ function dragRepeatedly(start: readonly OrderKey[], count: number) {
     changed.push(listChanged(moved, assigned).length);
     list = assigned;
   }
+
   return { list, changed, isAlwaysAscending };
 }
 

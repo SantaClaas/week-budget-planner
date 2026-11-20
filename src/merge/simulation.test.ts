@@ -103,6 +103,7 @@ function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Pla
       const appended = activityList.add(shown, added);
       return activityList.move(appended, added.id, random.integer(0, shown.activities.length));
     }
+
     const { id: _, ...values } = activity;
     switch (choice) {
       case 1:
@@ -159,6 +160,7 @@ function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Pla
       case 8:
       case 9: {
         if (block === undefined) return shown;
+
         const changed = createBlock({
           ...block,
           ...(choice === 8
@@ -172,6 +174,7 @@ function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Pla
       }
       case 10: {
         if (block === undefined) return shown;
+
         node.removed.blocks.push(block);
         return { ...shown, blocks: shown.blocks.filter((each) => each.id !== block.id) };
       }
@@ -180,11 +183,13 @@ function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Pla
         const back = random.pick(node.removed.activities);
         if (back === undefined || shown.activities.some((each) => each.id === back.id))
           return shown;
-        const ids = new Set(shown.blocks.map((each) => each.id));
+
+        const ids = new Set(shown.blocks.values().map((each) => each.id));
         // A block removed more than once is in the list more than once: bring it back once.
         const blocks = [
           ...new Map(
             node.removed.blocks
+              .values()
               .filter((each) => each.activityId === back.id && !ids.has(each.id))
               .map((each) => [each.id, each]),
           ).values(),
@@ -200,6 +205,7 @@ function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Pla
         const isOwned = shown.activities.some((each) => each.id === back?.activityId);
         if (back === undefined || !isOwned || shown.blocks.some((each) => each.id === back.id))
           return shown;
+
         return { ...shown, blocks: [...shown.blocks, back] };
       }
       case 13:
@@ -236,6 +242,7 @@ function findRow(
   id?: string,
 ): object | undefined {
   if (kind === "settings") return rows.settings;
+
   const all: ReadonlyMap<string, object> = kind === "activity" ? rows.activities : rows.blocks;
   return all.get(id ?? "");
 }
@@ -244,6 +251,7 @@ function findRow(
 function readRegister(row: object, name: string): { value: unknown; stamp: Stamp } | undefined {
   const field: unknown = Reflect.get(row, name);
   if (typeof field !== "object" || field === null) return undefined;
+
   const stamp = parseStamp(Reflect.get(field, "stamp"));
   return stamp === undefined ? undefined : { value: Reflect.get(field, "value"), stamp };
 }
@@ -304,9 +312,11 @@ function shuffle<Item>(items: readonly Item[], random: Random): Item[] {
     const item = shuffled[index];
     const swapped = shuffled[other];
     if (item === undefined || swapped === undefined) continue;
+
     shuffled[index] = swapped;
     shuffled[other] = item;
   }
+
   return shuffled;
 }
 
@@ -326,6 +336,7 @@ type Run = {
 function isShowingAction(shown: Plan, before: Plan, after: Plan): boolean {
   const returned = new Set(
     after.activities
+      .values()
       .filter((activity) => !before.activities.some((each) => each.id === activity.id))
       .map((activity) => activity.id),
   );
@@ -345,6 +356,7 @@ function isShowingAction(shown: Plan, before: Plan, after: Plan): boolean {
 function performAction(run: Run, event: number, now: number): void {
   const node = run.random.pick(run.nodes);
   if (node === undefined) return;
+
   const clockBefore = node.clock;
   const rowsBefore = node.rows;
   const perform = createAction(run.random, node);
@@ -365,9 +377,11 @@ function performAction(run: Run, event: number, now: number): void {
   node.seen.add(number);
   for (const [to, other] of run.nodes.entries()) {
     if (other === node) continue;
+
     // Lost until the final exchange, delivered once, or delivered twice.
     const fate = run.random.next();
     if (fate < 0.15) continue;
+
     const dueAt = event + run.random.integer(0, 20);
     run.deliveries.push({ change: number, to, dueAt });
     if (fate > 0.85)
@@ -385,12 +399,14 @@ function deliver(run: Run, delivery: Delivery): void {
   const node = run.nodes[delivery.to];
   const change = run.changes[delivery.change];
   if (node === undefined || change === undefined) return;
+
   receive(node, change);
   node.seen.add(delivery.change);
   check(isValid(node.rows), "the plan after a merge passes sanitizePlan unchanged");
   const seen = listSeen(node);
   for (const other of run.nodes) {
     if (other === node || listSeen(other) !== seen) continue;
+
     check(
       isSameRows(other.rows, node.rows),
       "nodes that merged the same changes hold the same rows",
@@ -425,12 +441,14 @@ function runSimulation(seed: number): void {
   // The final exchange: every node merges every other's snapshot.
   const snapshots = nodes.map((node) => send(takeSnapshot(node.rows)));
   for (const node of nodes) for (const snapshot of snapshots) receive(node, snapshot);
+
   const finalRows = nodes[0]?.rows ?? initial;
   for (const node of nodes)
     check(
       isSameRows(node.rows, finalRows),
       "after the final exchange, every node holds the same rows",
     );
+
   check(isValid(finalRows), "the merged plan passes sanitizePlan unchanged");
 
   // Merge order doesn't matter, and merging a change twice changes nothing.
@@ -443,6 +461,7 @@ function runSimulation(seed: number): void {
       "the changes merge to the same rows in any order, and twice",
     );
   }
+
   for (const change of run.changes)
     check(
       isSameRows(merge(finalRows, change), finalRows),
@@ -460,6 +479,7 @@ function findBrokenRule(seed: number): string[] {
     const rule = error instanceof Error ? error.message : String(error);
     return [`seed ${String(seed)}: ${rule} (replay it with MERGE_SEED=${String(seed)})`];
   }
+
   return [];
 }
 
@@ -467,6 +487,7 @@ function findBrokenRule(seed: number): string[] {
 function listBatches(): number[][] {
   const only = process.env["MERGE_SEED"];
   if (only !== undefined) return [[Number(only)]];
+
   return Array.from({ length: RUNS / BATCH }, (_, batch) =>
     Array.from({ length: BATCH }, (_unused, index) => batch * BATCH + index + 1),
   );

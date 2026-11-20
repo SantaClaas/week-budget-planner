@@ -12,7 +12,9 @@ export function next(clock: stamp.Stamp, now: Temporal.Instant, node: stamp.Node
   const last = stamp.read(clock);
   const wall = Math.max(0, now.epochMilliseconds);
   if (wall > last.time) return stamp.create(wall, 0, node);
+
   if (last.counter < stamp.MAX_COUNTER) return stamp.create(last.time, last.counter + 1, node);
+
   return stamp.create(last.time + 1, 0, node);
 }
 

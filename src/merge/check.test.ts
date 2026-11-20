@@ -27,12 +27,15 @@ function createReceived(path: readonly (string | number)[], value?: unknown): un
   const received: unknown = JSON.parse(valid);
   let target = received;
   for (const step of path.slice(0, -1)) target = isContainer(target) ? target[step] : undefined;
+
   if (!isContainer(target)) throw new Error(`The snapshot has nothing at ${path.join(".")}.`);
+
   const last = path.at(-1) ?? "";
   if (value === undefined) {
     Reflect.deleteProperty(target, last);
     return received;
   }
+
   Reflect.set(target, last, value);
   return received;
 }
@@ -44,6 +47,7 @@ function createWithRenamedStamp(): unknown {
   const first: unknown = Array.isArray(activities) ? activities.at(0) : undefined;
   const name = isContainer(first) ? first["name"] : undefined;
   if (!isContainer(name)) throw new Error("The snapshot has no first activity.");
+
   name["at"] = "1763200000000-000003-me";
   return received;
 }
@@ -53,6 +57,7 @@ function createWithRepeatedBlock(): unknown {
   const received = createReceived([]);
   const blocks = isContainer(received) ? received["blocks"] : undefined;
   if (!Array.isArray(blocks)) throw new Error("The snapshot has no blocks.");
+
   blocks.push(blocks.at(0));
   return received;
 }

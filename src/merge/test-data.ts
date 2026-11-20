@@ -12,12 +12,14 @@ import { LOWEST, create, parseNodeId, type NodeId, type Stamp } from "./stamp.ts
 /** The value, or a throw when the test data doesn't have it. */
 export function required<Value>(value: Value | null | undefined, what: string): Value {
   if (value === undefined || value === null) throw new Error(`The test data has no ${what}.`);
+
   return value;
 }
 
 export function createNodeId(text: string): NodeId {
   const id = parseNodeId(text);
   if (id === undefined) throw new Error(`The test data has an invalid node id: ${text}.`);
+
   return id;
 }
 
@@ -51,6 +53,7 @@ export function act(node: Node, now: number, perform: (plan: Plan) => Plan): Cha
 export function send(change: Change): Change {
   const received = parse(JSON.parse(JSON.stringify(change)));
   if (typeof received === "string") throw new Error(`A change was refused: ${received}.`);
+
   return received;
 }
 
