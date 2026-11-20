@@ -1,6 +1,6 @@
 # 0001 Solid 2.0 while it's a release candidate
 
-**Status:** Accepted, 2026-10-08, when the prototype was handed over for the port.
+**Status:** Accepted, 2026-10-08, when the prototype was handed over for the port. Solid 2.0.0 was released on 2026-11-17; moving to the release ([SantaClaas/week-budget-planner#122](https://github.com/SantaClaas/week-budget-planner/issues/122)) will replace this record.
 
 ## Context
 
@@ -12,8 +12,8 @@ Build the app with SolidJS 2.0, on its release candidates, with every Solid pack
 
 ## Alternatives
 
-- **Solid 1.x**, the stable line. Not recorded why it lost to 2.0.
-- **Another framework, or none**, such as staying with plain JavaScript like the prototype. Not recorded whether these were weighed.
+- **Solid 1.x**, the stable line. Rejected: 2.0 is an improvement over 1.x, and its release was close, so the app wouldn't have to move from 1.x to 2.0 later (the project's author, 2026-11-20).
+- **Another framework, or none**, such as staying with plain JavaScript like the prototype. Solid was chosen for its focus on speed, through its fine-grained reactive signals (the project's author, 2026-11-20). Which other frameworks were weighed isn't recorded.
 
 ## Consequences
 

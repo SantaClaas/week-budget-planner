@@ -16,7 +16,7 @@ The prototype had a look of its own. The app should feel playful and personal: a
 ## Alternatives
 
 - **Third-party Material libraries** (MUI, Vuetify, Flutter packages and the like). Rejected as sources: their values and patterns aren't Google's.
-- **Google's own Material web components.** Not recorded whether they were weighed.
+- **Google's own Material web components.** Rejected: they give less control over the result, and when the project's author last checked, they weren't fully up to date and did things the author didn't want (2026-11-20).
 - **Keeping the prototype's look**, or another design system. Not recorded beyond the goal of an expressive, personal app.
 
 ## Consequences
