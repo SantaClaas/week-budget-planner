@@ -198,7 +198,7 @@ An old `.db` file imported and then merged, should that feature come, is the sam
 
 The merge is pure, so its tests need no browser (see [`docs/guidelines/tests.md`](../guidelines/tests.md)):
 
-- **Simulation:** several nodes in one process, each with its own rows and clock, and a seeded scheduler that delivers changes late, twice, out of order or not at all until a final exchange of snapshots. The same seed replays the same run, and every test run checks the same seeds, so a failure is never chance; `MERGE_SEEDS_FROM` checks others, by hand or in a scheduled workflow. Wall clocks are part of what the seed sets, including clocks that disagree, and so is the run's shape: how many nodes and events, the mix of actions, and how often changes are lost, late or doubled.
+- **Simulation:** several nodes in one process, each with its own rows and clock, and a seeded scheduler that delivers changes late, twice, out of order or not at all until a final exchange of snapshots. The same seed replays the same run, and every test run checks the same seeds, so a failure is never chance; `MERGE_SEEDS_FROM` checks others, by hand or in a workflow after each change to the merge on main. Wall clocks are part of what the seed sets, including clocks that disagree, and so is the run's shape: how many nodes and events, the mix of actions, and how often changes are lost, late or doubled.
 - **What must hold after every action:** its change gives its stamp only to the registers whose value the action changed, so it can't overwrite what another node changed meanwhile.
 - **What must hold after every run:**
   - nodes that merged the same changes have the same rows and show the same plan;
