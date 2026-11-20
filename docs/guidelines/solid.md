@@ -6,7 +6,7 @@ paths:
 
 # Solid 2.0
 
-The app is built with SolidJS 2.0, a release candidate, pinned to exact versions (see [`CLAUDE.md`](../../CLAUDE.md)). This adds to [`docs/guidelines/principles.md`](principles.md) and [`docs/guidelines/typescript.md`](typescript.md).
+The app is built with SolidJS 2.0, a release candidate, pinned to exact versions (see [`CLAUDE.md`](../../CLAUDE.md), and decision record [0001](../decisions/0001-solid-2-release-candidate.md) for why). This adds to [`docs/guidelines/principles.md`](principles.md) and [`docs/guidelines/typescript.md`](typescript.md).
 
 ## Read the official sources first
 
