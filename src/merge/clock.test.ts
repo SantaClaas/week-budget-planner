@@ -5,50 +5,54 @@ import { LOWEST, compare, sanitizeTime } from "./stamp.ts";
 import { createNodeId, createStamp, required } from "./test-data.ts";
 
 const node = createNodeId("me");
-const at = (milliseconds: number) =>
+const createTime = (milliseconds: number) =>
   sanitizeTime(Temporal.Instant.fromEpochMilliseconds(milliseconds));
 
 describe("clock", () => {
   it("stamps with the wall clock when it's later than the clock", () => {
-    expect(issueNext(LOWEST, at(1000), node)).toBe(createStamp(1000, 0, "me"));
-    expect(issueNext(createStamp(999, 7, "other"), at(1000), node)).toBe(
+    expect(issueNext(LOWEST, createTime(1000), node)).toBe(createStamp(1000, 0, "me"));
+    expect(issueNext(createStamp(999, 7, "other"), createTime(1000), node)).toBe(
       createStamp(1000, 0, "me"),
     );
   });
 
   it("counts up within the same millisecond", () => {
-    expect(issueNext(createStamp(1000, 0, "me"), at(1000), node)).toBe(createStamp(1000, 1, "me"));
-    expect(issueNext(createStamp(1000, 41, "other"), at(1000), node)).toBe(
+    expect(issueNext(createStamp(1000, 0, "me"), createTime(1000), node)).toBe(
+      createStamp(1000, 1, "me"),
+    );
+    expect(issueNext(createStamp(1000, 41, "other"), createTime(1000), node)).toBe(
       createStamp(1000, 42, "me"),
     );
   });
 
   it("stays later than a clock that ran ahead of the wall clock", () => {
     const ahead = createStamp(5_000_000, 3, "other");
-    expect(issueNext(ahead, at(1000), node)).toBe(createStamp(5_000_000, 4, "me"));
+    expect(issueNext(ahead, createTime(1000), node)).toBe(createStamp(5_000_000, 4, "me"));
   });
 
   it("moves the time on by a millisecond instead of passing 999999", () => {
-    expect(issueNext(createStamp(1000, 999_998, "me"), at(1000), node)).toBe(
+    expect(issueNext(createStamp(1000, 999_998, "me"), createTime(1000), node)).toBe(
       createStamp(1000, 999_999, "me"),
     );
-    expect(issueNext(createStamp(1000, 999_999, "me"), at(1000), node)).toBe(
+    expect(issueNext(createStamp(1000, 999_999, "me"), createTime(1000), node)).toBe(
       createStamp(1001, 0, "me"),
     );
-    expect(issueNext(createStamp(1000, 999_999, "me"), at(500), node)).toBe(
+    expect(issueNext(createStamp(1000, 999_999, "me"), createTime(500), node)).toBe(
       createStamp(1001, 0, "me"),
     );
   });
 
   it("counts up once a wall clock past the latest time is held at it", () => {
     const end = createStamp(9_999_999_999_999, 4, "other");
-    expect(issueNext(end, at(20_000_000_000_000), node)).toBe(
+    expect(issueNext(end, createTime(20_000_000_000_000), node)).toBe(
       createStamp(9_999_999_999_999, 5, "me"),
     );
   });
 
   it("gives no stamp once the clock is at the latest stamp there is", () => {
-    expect(issueNext(createStamp(9_999_999_999_999, 999_999, "me"), at(0), node)).toBeUndefined();
+    expect(
+      issueNext(createStamp(9_999_999_999_999, 999_999, "me"), createTime(0), node),
+    ).toBeUndefined();
   });
 
   it("moves on to a later stamp it merged, and keeps its own when that's later", () => {
@@ -62,7 +66,7 @@ describe("clock", () => {
 
   it("stamps after everything it has merged, whatever the wall clock says", () => {
     const merged = advance(createStamp(2000, 0, "me"), createStamp(9_000_000, 5, "other"));
-    const stamp = required(issueNext(merged, at(2001), node), "stamp");
+    const stamp = required(issueNext(merged, createTime(2001), node), "stamp");
     expect(compare(stamp, createStamp(9_000_000, 5, "other"))).toBeGreaterThan(0);
   });
 });

@@ -16,7 +16,7 @@ import {
 import { createStamp } from "./test-data.ts";
 
 /** The time a stamp holds for a wall clock reading `milliseconds` after 1970. */
-const at = (milliseconds: number) =>
+const createTime = (milliseconds: number) =>
   sanitizeTime(Temporal.Instant.fromEpochMilliseconds(milliseconds));
 
 /** Each item with the one after it. */
@@ -70,10 +70,10 @@ describe("stamp", () => {
   });
 
   it("holds a wall clock before 1970 or after 2286 at the nearest end", () => {
-    expect(at(-5000)).toBe(0);
-    expect(at(1_763_200_000_000)).toBe(1_763_200_000_000);
-    expect(at(9_999_999_999_999)).toBe(9_999_999_999_999);
-    expect(at(10_000_000_000_000)).toBe(9_999_999_999_999);
+    expect(createTime(-5000)).toBe(0);
+    expect(createTime(1_763_200_000_000)).toBe(1_763_200_000_000);
+    expect(createTime(9_999_999_999_999)).toBe(9_999_999_999_999);
+    expect(createTime(10_000_000_000_000)).toBe(9_999_999_999_999);
   });
 
   it("parses a time and a counter strictly", () => {

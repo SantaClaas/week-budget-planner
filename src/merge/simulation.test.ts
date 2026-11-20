@@ -3,6 +3,9 @@
 // random nodes and delivers their changes late, twice, out of order, or not at all until a final
 // exchange of snapshots. The same seed replays the same run: a failing run names its seed, and
 // MERGE_SEED=<seed> pnpm test src/merge/simulation.test.ts runs that one alone.
+//
+// The random numbers come from mulberry32, a public-domain generator by Tommy Ettinger
+// (https://gist.github.com/tommyettinger/46a874533244883189143505d203312c), written anew here.
 import { isDeepStrictEqual } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -29,7 +32,8 @@ const START = 1_763_200_000_000;
 /** A seeded random number generator (mulberry32): the same seed, the same numbers. */
 function createRandom(seed: number) {
   let state = seed >>> 0;
-  const next = (): number => {
+  /** A number from 0 up to, not including, 1. */
+  const pickFraction = (): number => {
     state = (state + 0x6d_2b_79_f5) >>> 0;
     let value = state;
     value = Math.imul(value ^ (value >>> 15), value | 1);
@@ -37,12 +41,20 @@ function createRandom(seed: number) {
     return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
   };
   /** A whole number from `low` to `high`, both included. */
-  const integer = (low: number, high: number): number =>
-    low + Math.floor(next() * (high - low + 1));
+  const pickInteger = (low: number, high: number): number =>
+    low + Math.floor(pickFraction() * (high - low + 1));
   const pick = <Item>(items: readonly Item[]): Item | undefined =>
-    items[integer(0, items.length - 1)];
-  const isChance = (probability: number): boolean => next() < probability;
-  return { next, integer, pick, isChance };
+    items[pickInteger(0, items.length - 1)];
+  /** One of the items, each as likely as its weight says, relative to the others. */
+  const pickWeighted = <Item extends { readonly weight: number }>(
+    items: readonly Item[],
+  ): Item | undefined => {
+    const total = items.reduce((sum, item) => sum + item.weight, 0);
+    let left = pickFraction() * total;
+    return items.find((item) => (left -= item.weight) < 0) ?? items.at(-1);
+  };
+  const isChance = (probability: number): boolean => pickFraction() < probability;
+  return { pickFraction, pickInteger, pick, pickWeighted, isChance };
 }
 
 type Random = ReturnType<typeof createRandom>;
@@ -52,19 +64,19 @@ type WallClock = { offset: number; isStuck: boolean; stuckAt: number };
 
 /** Clocks that agree, that run ahead by hours or days, that lag, and that don't move at all. */
 function createWallClock(random: Random): WallClock {
-  const kind = random.integer(0, 5);
+  const kind = random.pickInteger(0, 5);
   const offsets = [
-    random.integer(-2000, 2000),
-    random.integer(-2000, 2000),
-    random.integer(3_600_000, 86_400_000 * 3),
-    -random.integer(60_000, 3_600_000),
-    random.integer(-500, 500),
+    random.pickInteger(-2000, 2000),
+    random.pickInteger(-2000, 2000),
+    random.pickInteger(3_600_000, 86_400_000 * 3),
+    -random.pickInteger(60_000, 3_600_000),
+    random.pickInteger(-500, 500),
     0,
   ];
   return {
     offset: offsets[kind] ?? 0,
     isStuck: kind >= 4,
-    stuckAt: START + random.integer(0, 5000),
+    stuckAt: START + random.pickInteger(0, 5000),
   };
 }
 
@@ -82,146 +94,197 @@ type SimulatedNode = Node & {
 
 const NAMES = ["Work", "Gym", "Read", "Cook", "Run", "Yoga", "Study", "Call mum", "Swim"];
 
-/** One random user action on the plan a node shows, as the app could make it. */
+/** What an action needs besides the plan a node shows. */
+type Context = {
+  readonly random: Random;
+  readonly node: SimulatedNode;
+  /** A new id for an activity or a block that this node adds. */
+  readonly createId: (kind: "a" | "b") => string;
+};
+
+/** A user action, as the app could make it: the plan a node shows, and the plan after. */
+type Perform = (shown: Plan, context: Context) => Plan;
+
+/** A budget picked at random, valid for its mode. */
+function pickBudget(random: Random): Pick<Activity, "mode" | "budgetMinutes" | "days"> {
+  const mode = random.isChance(0.5) ? "day" : "week";
+  const { budgetMinutes, days } = createActivity({
+    mode,
+    budgetMinutes: SLOT * random.pickInteger(1, (mode === "day" ? DAY : WEEK) / SLOT),
+    days: random.pickInteger(1, 7),
+  });
+  return { mode, budgetMinutes, days };
+}
+
+const addActivity: Perform = (shown, { random, createId }) => {
+  const added = createActivity({
+    id: createId("a"),
+    name: random.pick(NAMES) ?? "Work",
+    hue: random.pick(PALETTE)?.hue ?? 255,
+    shape: random.pick(DEFAULT_SHAPES) ?? "circle",
+    ...pickBudget(random),
+  });
+  const appended = activityList.add(shown, added);
+  return activityList.move(appended, added.id, random.pickInteger(0, shown.activities.length));
+};
+
+/** An action on an activity the node shows, which does nothing where there is none. */
+const withActivity =
+  (perform: (shown: Plan, activity: Activity, context: Context) => Plan): Perform =>
+  (shown, context) => {
+    const activity = context.random.pick(shown.activities);
+    return activity === undefined ? shown : perform(shown, activity, context);
+  };
+
+/** An action on a block the node shows, which does nothing where there is none. */
+const withBlock =
+  (perform: (shown: Plan, block: Block, context: Context) => Plan): Perform =>
+  (shown, context) => {
+    const block = context.random.pick(shown.blocks);
+    return block === undefined ? shown : perform(shown, block, context);
+  };
+
+const replaceBlock = (shown: Plan, changed: Block): Plan => ({
+  ...shown,
+  blocks: shown.blocks.map((each) => (each.id === changed.id ? changed : each)),
+});
+
+const renameActivity = withActivity((shown, activity, { random }) =>
+  activityList.update(shown, activity.id, {
+    ...activity,
+    name: createActivity({ name: random.pick(NAMES) ?? "Work" }).name,
+  }),
+);
+
+const changeLook = withActivity((shown, activity, { random }) =>
+  activityList.update(shown, activity.id, {
+    ...activity,
+    hue: random.pick(PALETTE)?.hue ?? 255,
+    shape: random.pick(DEFAULT_SHAPES) ?? "circle",
+  }),
+);
+
+const changeBudget = withActivity((shown, activity, { random }) =>
+  activityList.update(shown, activity.id, { ...activity, ...pickBudget(random) }),
+);
+
+const removeActivity = withActivity((shown, activity, { node }) => {
+  node.removed.activities.push(activity);
+  node.removed.blocks.push(...shown.blocks.filter((each) => each.activityId === activity.id));
+  return activityList.remove(shown, activity.id).plan;
+});
+
+const reorderActivity = withActivity((shown, activity, { random }) =>
+  activityList.move(shown, activity.id, random.pickInteger(0, shown.activities.length - 1)),
+);
+
+const addBlock = withActivity((shown, activity, { random, createId }) => ({
+  ...shown,
+  blocks: [
+    ...shown.blocks,
+    createBlock({
+      id: createId("b"),
+      activityId: activity.id,
+      day: random.pickInteger(0, 6),
+      start: SLOT * random.pickInteger(0, DAY / SLOT - 1),
+      length: SLOT * random.pickInteger(1, 16),
+    }),
+  ],
+}));
+
+const moveBlock = withBlock((shown, block, { random }) =>
+  replaceBlock(
+    shown,
+    createBlock({
+      ...block,
+      day: random.pickInteger(0, 6),
+      start: SLOT * random.pickInteger(0, DAY / SLOT - 1),
+    }),
+  ),
+);
+
+const resizeBlock = withBlock((shown, block, { random }) =>
+  replaceBlock(shown, createBlock({ ...block, length: SLOT * random.pickInteger(1, DAY / SLOT) })),
+);
+
+const removeBlock = withBlock((shown, block, { node }) => {
+  node.removed.blocks.push(block);
+  return { ...shown, blocks: shown.blocks.filter((each) => each.id !== block.id) };
+});
+
+/** Undoes a removal: the activity comes back with the same id, and its blocks with it. */
+const bringBackActivity: Perform = (shown, { random, node }) => {
+  const back = random.pick(node.removed.activities);
+  if (back === undefined || shown.activities.some((each) => each.id === back.id)) return shown;
+
+  const ids = new Set(shown.blocks.values().map((each) => each.id));
+  // A block removed more than once is in the list more than once: bring it back once.
+  const blocks = new Map(
+    node.removed.blocks
+      .values()
+      .filter((each) => each.activityId === back.id && !ids.has(each.id))
+      .map((each) => [each.id, each]),
+  ).values();
+  const added = activityList.add(shown, back);
+  return {
+    ...activityList.move(added, back.id, random.pickInteger(0, shown.activities.length)),
+    blocks: [...shown.blocks, ...blocks],
+  };
+};
+
+/** Undoes the removal of a block whose activity is there. */
+const bringBackBlock: Perform = (shown, { random, node }) => {
+  const back = random.pick(node.removed.blocks);
+  const isOwned = shown.activities.some((each) => each.id === back?.activityId);
+  if (back === undefined || !isOwned || shown.blocks.some((each) => each.id === back.id))
+    return shown;
+
+  return { ...shown, blocks: [...shown.blocks, back] };
+};
+
+const setDayHours: Perform = (shown, { random }) =>
+  random.isChance(0.5)
+    ? { ...shown, dayStart: sanitizeDayStart(random.pickInteger(0, 12)) }
+    : { ...shown, dayEnd: sanitizeDayEnd(random.pickInteger(13, 24)) };
+
+/** Loads the example week again, or keeps it: only its time, which is what the merge sees. */
+const setExampleLoadedAt: Perform = (shown, { random }) => ({
+  ...shown,
+  exampleLoadedAt: random.isChance(0.5)
+    ? null
+    : Temporal.Instant.fromEpochMilliseconds(START + random.pickInteger(0, 1_000_000)).toString(),
+});
+
+/** The actions a user can make, with how often each is picked relative to the others. */
+const ACTIONS: readonly { readonly weight: number; readonly perform: Perform }[] = [
+  { weight: 1, perform: addActivity },
+  { weight: 1, perform: renameActivity },
+  { weight: 1, perform: changeLook },
+  { weight: 1, perform: changeBudget },
+  { weight: 1, perform: removeActivity },
+  { weight: 1, perform: reorderActivity },
+  // Twice as often, so the week fills up.
+  { weight: 2, perform: addBlock },
+  { weight: 1, perform: moveBlock },
+  { weight: 1, perform: resizeBlock },
+  { weight: 1, perform: removeBlock },
+  { weight: 1, perform: bringBackActivity },
+  { weight: 1, perform: bringBackBlock },
+  { weight: 1, perform: setDayHours },
+  { weight: 1, perform: setExampleLoadedAt },
+];
+
+/**
+ * One random user action of a node, picked by weight. A node with no activities always adds one,
+ * since most actions need one.
+ */
 function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Plan {
-  const newId = (kind: string): string => `${node.id}-${kind}${String((node.count += 1))}`;
+  const createId = (kind: "a" | "b"): string => `${node.id}-${kind}${String((node.count += 1))}`;
+  const context: Context = { random, node, createId };
   return (shown) => {
-    const activity = random.pick(shown.activities);
-    const block = random.pick(shown.blocks);
-    const choice = random.integer(0, 14);
-    if (choice === 0 || activity === undefined) {
-      const mode = random.isChance(0.5) ? "day" : "week";
-      const added = createActivity({
-        id: newId("a"),
-        name: random.pick(NAMES) ?? "Work",
-        hue: random.pick(PALETTE)?.hue ?? 255,
-        shape: random.pick(DEFAULT_SHAPES) ?? "circle",
-        mode,
-        budgetMinutes: SLOT * random.integer(1, (mode === "day" ? DAY : WEEK) / SLOT),
-        days: random.integer(1, 7),
-      });
-      const appended = activityList.add(shown, added);
-      return activityList.move(appended, added.id, random.integer(0, shown.activities.length));
-    }
-
-    const { id: _, ...values } = activity;
-    switch (choice) {
-      case 1:
-        return activityList.update(shown, activity.id, {
-          ...values,
-          name: createActivity({ name: random.pick(NAMES) ?? "Work" }).name,
-        });
-      case 2:
-        return activityList.update(shown, activity.id, {
-          ...values,
-          hue: random.pick(PALETTE)?.hue ?? 255,
-          shape: random.pick(DEFAULT_SHAPES) ?? "circle",
-        });
-      case 3: {
-        const mode = random.isChance(0.5) ? "day" : "week";
-        const budget = createActivity({
-          mode,
-          budgetMinutes: SLOT * random.integer(1, (mode === "day" ? DAY : WEEK) / SLOT),
-          days: random.integer(1, 7),
-        });
-        return activityList.update(shown, activity.id, {
-          ...values,
-          mode,
-          budgetMinutes: budget.budgetMinutes,
-          days: budget.days,
-        });
-      }
-      case 4: {
-        node.removed.activities.push(activity);
-        node.removed.blocks.push(...shown.blocks.filter((each) => each.activityId === activity.id));
-        return activityList.remove(shown, activity.id).plan;
-      }
-      case 5:
-        return activityList.move(
-          shown,
-          activity.id,
-          random.integer(0, shown.activities.length - 1),
-        );
-      case 6:
-      case 7:
-        return {
-          ...shown,
-          blocks: [
-            ...shown.blocks,
-            createBlock({
-              id: newId("b"),
-              activityId: activity.id,
-              day: random.integer(0, 6),
-              start: SLOT * random.integer(0, DAY / SLOT - 1),
-              length: SLOT * random.integer(1, 16),
-            }),
-          ],
-        };
-      case 8:
-      case 9: {
-        if (block === undefined) return shown;
-
-        const changed = createBlock({
-          ...block,
-          ...(choice === 8
-            ? { day: random.integer(0, 6), start: SLOT * random.integer(0, DAY / SLOT - 1) }
-            : { length: SLOT * random.integer(1, DAY / SLOT) }),
-        });
-        return {
-          ...shown,
-          blocks: shown.blocks.map((each) => (each.id === block.id ? changed : each)),
-        };
-      }
-      case 10: {
-        if (block === undefined) return shown;
-
-        node.removed.blocks.push(block);
-        return { ...shown, blocks: shown.blocks.filter((each) => each.id !== block.id) };
-      }
-      case 11: {
-        // Undo a removal: the activity comes back with the same id, and its blocks with it.
-        const back = random.pick(node.removed.activities);
-        if (back === undefined || shown.activities.some((each) => each.id === back.id))
-          return shown;
-
-        const ids = new Set(shown.blocks.values().map((each) => each.id));
-        // A block removed more than once is in the list more than once: bring it back once.
-        const blocks = [
-          ...new Map(
-            node.removed.blocks
-              .values()
-              .filter((each) => each.activityId === back.id && !ids.has(each.id))
-              .map((each) => [each.id, each]),
-          ).values(),
-        ];
-        const added = activityList.add(shown, back);
-        return {
-          ...activityList.move(added, back.id, random.integer(0, shown.activities.length)),
-          blocks: [...shown.blocks, ...blocks],
-        };
-      }
-      case 12: {
-        const back = random.pick(node.removed.blocks);
-        const isOwned = shown.activities.some((each) => each.id === back?.activityId);
-        if (back === undefined || !isOwned || shown.blocks.some((each) => each.id === back.id))
-          return shown;
-
-        return { ...shown, blocks: [...shown.blocks, back] };
-      }
-      case 13:
-        return random.isChance(0.5)
-          ? { ...shown, dayStart: sanitizeDayStart(random.integer(0, 12)) }
-          : { ...shown, dayEnd: sanitizeDayEnd(random.integer(13, 24)) };
-      default:
-        return {
-          ...shown,
-          exampleLoadedAt: random.isChance(0.5)
-            ? null
-            : Temporal.Instant.fromEpochMilliseconds(
-                START + random.integer(0, 1_000_000),
-              ).toString(),
-        };
-    }
+    const action =
+      shown.activities.length === 0 ? addActivity : random.pickWeighted(ACTIONS)?.perform;
+    return (action ?? addActivity)(shown, context);
   };
 }
 
@@ -308,7 +371,7 @@ function checkKept(rows: Rows, change: Change): void {
 function shuffle<Item>(items: readonly Item[], random: Random): Item[] {
   const shuffled = [...items];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const other = random.integer(0, index);
+    const other = random.pickInteger(0, index);
     const item = shuffled[index];
     const swapped = shuffled[other];
     if (item === undefined || swapped === undefined) continue;
@@ -379,13 +442,13 @@ function performAction(run: Run, event: number, now: number): void {
     if (other === node) continue;
 
     // Lost until the final exchange, delivered once, or delivered twice.
-    const fate = run.random.next();
+    const fate = run.random.pickFraction();
     if (fate < 0.15) continue;
 
-    const dueAt = event + run.random.integer(0, 20);
+    const dueAt = event + run.random.pickInteger(0, 20);
     run.deliveries.push({ change: number, to, dueAt });
     if (fate > 0.85)
-      run.deliveries.push({ change: number, to, dueAt: dueAt + run.random.integer(0, 10) });
+      run.deliveries.push({ change: number, to, dueAt: dueAt + run.random.pickInteger(0, 10) });
   }
 }
 
@@ -420,7 +483,7 @@ function runSimulation(seed: number): void {
     ? sanitizePlan(exampleWeek, createPredictableIds())
     : createEmptyPlan();
   const initial = convertPlan(start);
-  const nodes: SimulatedNode[] = Array.from({ length: random.integer(2, 4) }, (_, index) => ({
+  const nodes: SimulatedNode[] = Array.from({ length: random.pickInteger(2, 4) }, (_, index) => ({
     ...createNode(`node${String(index)}`, initial),
     wallClock: createWallClock(random),
     removed: { activities: [], blocks: [] },
@@ -430,7 +493,7 @@ function runSimulation(seed: number): void {
   const run: Run = { random, nodes, changes: [], deliveries: [] };
   let now = START;
   for (let event = 0; event < EVENTS; event += 1) {
-    now += random.isChance(0.3) ? 0 : random.integer(1, 3000);
+    now += random.isChance(0.3) ? 0 : random.pickInteger(1, 3000);
     const due = run.deliveries.filter((delivery) => delivery.dueAt <= event);
     const delivery = random.isChance(0.4) ? random.pick(due) : undefined;
     if (delivery === undefined) performAction(run, event, now);
