@@ -137,7 +137,7 @@ A device signs in, joins or creates a group, and syncs its changes through the s
 
 ### Hosting
 
-The server that will serve the app is in [`crates/server/`](../../crates/server/) (see its [`README.md`](../../crates/server/README.md)). It already sends the headers below, and its browser test shows the app reaching the full storage level from it with service workers blocked; where it runs and under which domain is still open.
+The server that will serve the app is in [`crates/server/`](../../crates/server/) (see its [`README.md`](../../crates/server/README.md)). It already sends the headers below, and its browser test shows the app reaching the full storage level from it with service workers blocked; where it runs and under which domain is still open. The build is compressed once when it's made (`pnpm compress`), not by the server on each request. While working on the app, Vite's dev server stays in front: it serves the app and proxies the server's own paths, such as the relay, to the server, so both share one origin as they will in production.
 
 Serving the app from the server's origin changes more than the address:
 

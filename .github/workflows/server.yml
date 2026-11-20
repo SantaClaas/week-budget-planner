@@ -78,7 +78,8 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps --only-shell chromium
-      # Builds the app and the server, starts the server and runs e2e/server.spec.ts against it.
+      # Builds and compresses the app, builds the server, starts it and runs e2e/server.spec.ts
+      # against it.
       - run: pnpm test:server
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

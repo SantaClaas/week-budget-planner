@@ -1,7 +1,7 @@
-//! The Week Budget Planner's server. Today it serves the app's build with the headers the app
-//! needs, and does nothing else (see crates/server/README.md and docs/spec/network.md).
+//! The Week Budget Planner's server. Today it serves the app's build, compressed at build time, with
+//! the headers the app needs, and does nothing else (see crates/server/README.md and
+//! docs/spec/network.md).
 
-mod asset;
 mod base;
 mod config;
 mod header;
@@ -12,18 +12,16 @@ use std::process::ExitCode;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
-use asset::Assets;
-use site::Site;
-
 /// Why the server couldn't start or stopped.
 #[derive(Debug, thiserror::Error)]
 enum Error {
     #[error("the configuration: {0}")]
     Config(#[from] config::Error),
-    #[error("the app's files: {0}")]
-    Asset(#[from] asset::Error),
-    #[error("the app's build has no index.html in {0}; run pnpm build first")]
-    NoPage(std::path::PathBuf),
+    #[error("couldn't read the app's page, {path}; run pnpm build first: {source}")]
+    NoPage {
+        path: std::path::PathBuf,
+        source: std::io::Error,
+    },
     #[error("the app's page: {0}")]
     Header(#[from] header::Error),
     #[error("couldn't listen on {address}: {source}")]
@@ -67,26 +65,13 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let config = config::read(|name| std::env::var(name).ok())?;
-    let files = asset::read_directory(&config.app)?;
-    let page = files
-        .iter()
-        .find(|(path, _)| path == "index.html")
-        .map(|(_, bytes)| String::from_utf8_lossy(bytes).into_owned())
-        .ok_or_else(|| Error::NoPage(config.app.clone()))?;
+    let page_path = config.app.join("index.html");
+    let page = std::fs::read_to_string(&page_path).map_err(|source| Error::NoPage {
+        path: page_path,
+        source,
+    })?;
     let policy = header::read_policy(&page)?;
-    let started = std::time::Instant::now();
-    let site = Site {
-        assets: Assets::new(files),
-        base: config.base,
-        policy,
-    };
-    tracing::info!(
-        milliseconds = started.elapsed().as_millis(),
-        app = %config.app.display(),
-        "read and compressed the app's files"
-    );
-
-    let router = site::route(site).layer(
+    let router = site::route(&config.app, config.base, policy).layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
             .on_response(DefaultOnResponse::new().level(Level::INFO)),
@@ -97,7 +82,7 @@ async fn run() -> Result<(), Error> {
             address: config.address,
             source,
         })?;
-    tracing::info!(address = %config.address, "listening");
+    tracing::info!(address = %config.address, app = %config.app.display(), "listening");
     axum::serve(listener, router)
         .with_graceful_shutdown(wait_for_shutdown())
         .await

@@ -26,6 +26,11 @@ impl Base {
         Ok(Self(text.to_owned()))
     }
 
+    /// The base as it's written, with both slashes.
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+
     /// What follows the base in a request's path, or `None` for a path that isn't under it. The
     /// base without its last slash counts as the base itself, as the app reads a typed address.
     pub(crate) fn strip<'path>(&self, path: &'path str) -> Option<&'path str> {

@@ -61,6 +61,7 @@ const VERBS = new Set([
   "close",
   "collect",
   "compare",
+  "compress",
   "connect",
   "construct",
   "consume",
