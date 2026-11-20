@@ -30,6 +30,11 @@ These are technical terms for code and docs. The copy will say "device", and wha
 | **Relay** | The service that carries a connection between two nodes when they can't reach each other directly. It passes bytes on and keeps nothing. Separate from the mailbox, though both may run on one server. |
 | **Change** | What one user action did to the plan, in a form that merges (see [Phase 1](#phase-1-changes-that-merge)). |
 | **Snapshot** | The whole plan at one point, encrypted like a change. It replaces all the changes before it. |
+| **Register** | The smallest part of a row that merges as one: a value, or a few fields that belong together, with a stamp (see [Registers](merge.md#registers) in [Merging changes](merge.md)). |
+| **Stamp** | When a register was written and by which node: a time, a counter and a node id. The later stamp wins. |
+| **Clock** | The latest stamp a node has issued or merged. Its next stamp is later than that. |
+| **Deletion marker** | A row whose existence register says deleted. It stays so that other devices' copies of the row don't bring it back. |
+| **Order key** | The text an activity is sorted by in the Activities list. A new one can be made between any two. |
 
 Don't say "ring": it suggests a hash ring, which this design doesn't have. And don't say "owner": it could mean the person whose plan it is, the operator of a server, or the project's author, and those are different people with different interests.
 

@@ -11,9 +11,11 @@ import {
   type ServiceMessage,
 } from "../broadcast/service.ts";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
-import { createDatabase, type Database } from "./drizzle.ts";
+import { createDatabase, runOnDatabase, type Database } from "./drizzle.ts";
 import { runMigrations } from "./migration.ts";
-import { loadPlan } from "./plan-repository.ts";
+import { createRandomNodeId } from "./node.ts";
+import { loadNode, loadPlan, renewNode } from "./plan-repository.ts";
+import type { Stamp } from "../merge/stamp.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Result } from "../result.ts";
 
@@ -261,9 +263,9 @@ async function writeFile(
   await writing.commit();
 }
 
-async function readFileBytes(): Promise<Uint8Array<ArrayBuffer>> {
+async function readFileBytes(name = DATABASE_FILE): Promise<Uint8Array<ArrayBuffer>> {
   const root = await navigator.storage.getDirectory();
-  const handle = await root.getFileHandle(DATABASE_FILE);
+  const handle = await root.getFileHandle(name);
   const file = await handle.getFile();
   return new Uint8Array(await file.arrayBuffer());
 }
@@ -276,26 +278,39 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
 type ImportProblem = "invalid-file" | "newer-version";
 
 /**
- * Opens the copy of an imported database, migrates it and reads its plan. "newer-version" when a
+ * Opens the copy of an imported database, migrates it and reads its plan, then gives its node a new
+ * id and the later clock (see `renewNode`) and folds the WAL into the file. "newer-version" when a
  * newer version of the app made it; throws when it isn't a database this app can read.
+ *
+ * @param clock - This browser's clock before the import.
  */
-async function readCopy(name: string): Promise<Result<"readable", "newer-version">> {
+async function readCopy(
+  name: string,
+  clock: Stamp | undefined,
+): Promise<Result<"readable", "newer-version">> {
   await using resources = new AsyncDisposableStack();
   const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
   if ((await runMigrations(connection)) === "newer-version") return "newer-version";
 
   const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
   await loadPlan(database, randomIds);
+  await renewNode(database, clock, createRandomNodeId());
+  await connection.exec("PRAGMA wal_checkpoint(TRUNCATE)");
   return "readable";
 }
 
 /**
- * Whether the file is a database this app can open: it has the SQLite header, and a copy of it
+ * Checks that the file is a database this app can open: it has the SQLite header, and a copy of it
  * opens, migrates and holds a readable plan. The copy is deleted again either way.
+ *
+ * @param clock - This browser's clock before the import, which the copy's node takes when it's
+ *   later.
+ * @returns The copy's bytes, migrated and with the new node: what replaces the database.
  */
 async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
-): Promise<Result<"importable", ImportProblem>> {
+  clock: Stamp | undefined,
+): Promise<Result<Uint8Array<ArrayBuffer>, ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
 
   await using cleanup = new AsyncDisposableStack();
@@ -304,13 +319,15 @@ async function checkImport(
   await writeFile(await navigator.storage.getDirectory(), name, bytes);
   let copy: Result<"readable", "newer-version">;
   try {
-    copy = await readCopy(name);
+    copy = await readCopy(name, clock);
   } catch (error) {
     console.warn("[database] the imported file can't be opened", error);
     return "invalid-file";
   }
 
-  return copy === "readable" ? "importable" : copy;
+  if (copy === "newer-version") return copy;
+
+  return await readFileBytes(name);
 }
 
 function broadcastReload(): void {
@@ -351,13 +368,18 @@ const localService: DatabaseService = {
   },
 
   async importFile(bytes) {
-    const check = await checkImport(bytes);
-    if (check !== "importable") return check;
+    const stored = await runOnDatabase(() =>
+      loadNode(createDatabase(createLocalQueryService(getLocalConnection))),
+    );
+    if (stored === "newer-version") return stored;
+
+    const imported = await checkImport(bytes, stored?.clock);
+    if (typeof imported === "string") return imported;
 
     if ((await closeForReload()) === "newer-version") return "newer-version";
 
     try {
-      await replaceDatabaseFile(bytes);
+      await replaceDatabaseFile(imported);
     } catch (error) {
       localDatabase = open();
       throw error;
