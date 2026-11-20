@@ -79,7 +79,7 @@ const removeBlock =
   (id: string): Action =>
   (shown) => ({ ...shown, blocks: shown.blocks.filter((block) => block.id !== id) });
 
-const named = (name: string): Activity["name"] => createActivity({ name }).name;
+const createName = (name: string): Activity["name"] => createActivity({ name }).name;
 const findActivity = (shown: Plan, id: string): Activity | undefined =>
   shown.activities.find((activity) => activity.id === id);
 
@@ -106,8 +106,8 @@ const addOn =
 describe("conflicts, case by case", () => {
   it("rename the same activity: the later name", () => {
     const merged = runApart(
-      change(gym.id, { name: named("Climbing") }),
-      change(gym.id, { name: named("Boulder") }),
+      change(gym.id, { name: createName("Climbing") }),
+      change(gym.id, { name: createName("Boulder") }),
     );
     expect(findActivity(merged.plan, "gym")?.name).toBe("Boulder");
   });
@@ -115,7 +115,7 @@ describe("conflicts, case by case", () => {
   it("rename an activity, and change its budget: both", () => {
     const budgetMinutes = sanitizeBudgetMinutes(300, "week");
     const merged = runApart(
-      change(gym.id, { name: named("Climbing") }),
+      change(gym.id, { name: createName("Climbing") }),
       change(gym.id, { budgetMinutes }),
     );
     expect(findActivity(merged.plan, "gym")).toMatchObject({
@@ -180,7 +180,7 @@ describe("conflicts, case by case", () => {
   });
 
   it("delete an activity, and rename it: deleted", () => {
-    const rename = change(gym.id, { name: named("Climbing") });
+    const rename = change(gym.id, { name: createName("Climbing") });
     expect(findActivity(runApart(removeGym, rename).plan, "gym")).toBeUndefined();
     expect(findActivity(runApart(rename, removeGym).plan, "gym")).toBeUndefined();
   });
