@@ -24,9 +24,8 @@ import { convertPlan, merge, readPlan, takeSnapshot, type Change, type Rows } fr
 import { compare as compareStamps, parse as parseStamp, type Stamp } from "./stamp.ts";
 import { act, createNode, receive, send, type Node } from "./test-data.ts";
 
-/** How many runs, each with its own seed, and how many events each run has. */
+/** How many runs, each with its own seed, and how many of them one test makes. */
 const RUNS = 400;
-const EVENTS = 80;
 const BATCH = 25;
 const START = 1_763_200_000_000;
 
@@ -256,8 +255,11 @@ const setExampleLoadedAt: Perform = (shown, { random }) => ({
     : Temporal.Instant.fromEpochMilliseconds(START + random.pickInteger(0, 1_000_000)).toString(),
 });
 
-/** The actions a user can make, with how often each is picked relative to the others. */
-const ACTIONS: readonly { readonly weight: number; readonly perform: Perform }[] = [
+/** An action, with how often it's picked relative to the others. */
+type Weighted = { readonly weight: number; readonly perform: Perform };
+
+/** The actions a user can make, in their usual mix. */
+const ACTIONS: readonly Weighted[] = [
   { weight: 1, perform: addActivity },
   { weight: 1, perform: renameActivity },
   { weight: 1, perform: changeLook },
@@ -276,15 +278,60 @@ const ACTIONS: readonly { readonly weight: number; readonly perform: Perform }[]
 ];
 
 /**
+ * What a run is like, picked by its seed (swarm testing): how many nodes and events it has, how
+ * often each action happens, and how unreliable delivery is. Runs that each lean one way reach
+ * states that one balanced mix rarely does, such as a long stretch of removals and undos, or a node
+ * that hears almost nothing until the final exchange.
+ */
+type Shape = {
+  readonly nodes: number;
+  readonly events: number;
+  readonly actions: readonly Weighted[];
+  /** How likely a change is lost until the final exchange, and how likely it arrives twice. */
+  readonly loss: number;
+  readonly duplication: number;
+  /** The most events a change takes to arrive. */
+  readonly delay: number;
+  /** How likely an event delivers a change that's due, rather than making an action. */
+  readonly delivery: number;
+};
+
+/**
+ * Picks a run's shape.
+ *
+ * @returns Each action left out, in its usual weight or four times as common, and the other parts
+ *   from a few values each, from gentle to harsh.
+ */
+function pickShape(random: Random): Shape {
+  const leaning = ACTIONS.map((action) => ({
+    ...action,
+    weight: action.weight * (random.pick([0, 1, 1, 4]) ?? 1),
+  }));
+  return {
+    nodes: random.pickInteger(2, 6),
+    events: random.pick([20, 80, 80, 200]) ?? 80,
+    actions: leaning.some((action) => action.weight > 0) ? leaning : ACTIONS,
+    loss: random.pick([0, 0.15, 0.5]) ?? 0.15,
+    duplication: random.pick([0, 0.15, 0.5]) ?? 0.15,
+    delay: random.pick([0, 20, 60]) ?? 20,
+    delivery: random.pick([0.1, 0.4, 0.7]) ?? 0.4,
+  };
+}
+
+/**
  * One random user action of a node, picked by weight. A node with no activities always adds one,
  * since most actions need one.
  */
-function createAction(random: Random, node: SimulatedNode): (shown: Plan) => Plan {
+function createAction(
+  random: Random,
+  node: SimulatedNode,
+  actions: readonly Weighted[],
+): (shown: Plan) => Plan {
   const createId = (kind: "a" | "b"): string => `${node.id}-${kind}${String((node.count += 1))}`;
   const context: Context = { random, node, createId };
   return (shown) => {
     const action =
-      shown.activities.length === 0 ? addActivity : random.pickWeighted(ACTIONS)?.perform;
+      shown.activities.length === 0 ? addActivity : random.pickWeighted(actions)?.perform;
     return (action ?? addActivity)(shown, context);
   };
 }
@@ -341,18 +388,21 @@ function isValid(rows: Rows): boolean {
   return isSame(sanitizePlan(shown, createPredictableIds()), shown);
 }
 
+/** A row of a change, with its kind and its id, if it has one. */
+type RowOfChange = readonly ["activity" | "block" | "settings", object, string | undefined];
+
+const listRowsOfChange = (change: Change): RowOfChange[] => [
+  ...change.activities.map((row) => ["activity", row, row.id] as const),
+  ...change.blocks.map((row) => ["block", row, row.id] as const),
+  ...(change.settings === null ? [] : [["settings", change.settings, undefined] as const]),
+];
+
 /**
  * Checks that every value a change saved is still in the rows, unless a later stamp replaced it.
  * A deleted row keeps its values too, so that holds for deleted rows as well.
  */
 function checkKept(rows: Rows, change: Change): void {
-  const rowsOfChange: (readonly ["activity" | "block" | "settings", object, string | undefined])[] =
-    [
-      ...change.activities.map((row) => ["activity", row, row.id] as const),
-      ...change.blocks.map((row) => ["block", row, row.id] as const),
-      ...(change.settings === null ? [] : [["settings", change.settings, undefined] as const]),
-    ];
-  for (const [kind, saved, id] of rowsOfChange) {
+  for (const [kind, saved, id] of listRowsOfChange(change)) {
     const held = findRow(rows, kind, id);
     check(held !== undefined, `the ${kind} ${String(id)} a change saved is still there`);
     for (const [name, register] of listRegisters(saved)) {
@@ -363,6 +413,27 @@ function checkKept(rows: Rows, change: Change): void {
       check(
         isSameValue,
         `the ${name} of ${kind} ${String(id)} keeps the value saved with its stamp`,
+      );
+    }
+  }
+}
+
+/**
+ * Checks that a change gives its stamp only to the registers whose value the action changed (see
+ * Saving an action in docs/spec/merge.md). A register it carries unchanged keeps the stamp it had,
+ * so it can't overwrite what another node changed meanwhile.
+ */
+function checkOnlyChanged(rowsBefore: Rows, change: Change): void {
+  for (const [kind, saved, id] of listRowsOfChange(change)) {
+    const held = findRow(rowsBefore, kind, id);
+    if (held === undefined) continue;
+
+    for (const [name, register] of listRegisters(saved)) {
+      const before = readRegister(held, name);
+      const isCarried = before !== undefined && compareStamps(before.stamp, register.stamp) === 0;
+      check(
+        isCarried || !isSame(before?.value, register.value),
+        `the ${name} of ${kind} ${String(id)} gets a new stamp only when its value changed`,
       );
     }
   }
@@ -387,6 +458,7 @@ function shuffle<Item>(items: readonly Item[], random: Random): Item[] {
 /** The state of a run: its nodes, every change made so far, and those still on their way. */
 type Run = {
   readonly random: Random;
+  readonly shape: Shape;
   readonly nodes: readonly SimulatedNode[];
   readonly changes: Change[];
   deliveries: Delivery[];
@@ -423,7 +495,7 @@ function performAction(run: Run, event: number, now: number): void {
 
   const clockBefore = node.clock;
   const rowsBefore = node.rows;
-  const perform = createAction(run.random, node);
+  const perform = createAction(run.random, node, run.shape.actions);
   const before = readPlan(node.rows);
   let after = before;
   const change = act(node, readWallClock(node.wallClock, now), (shown) => {
@@ -436,6 +508,7 @@ function performAction(run: Run, event: number, now: number): void {
   );
   check(compareStamps(node.clock, clockBefore) > 0, "a new stamp is later than the clock");
   check(isSameRows(node.rows, merge(rowsBefore, change)), "a node saves what its change merges to");
+  checkOnlyChanged(rowsBefore, change);
   check(isValid(node.rows), "the plan after an action passes sanitizePlan unchanged");
   const number = run.changes.push(change) - 1;
   node.seen.add(number);
@@ -444,11 +517,11 @@ function performAction(run: Run, event: number, now: number): void {
 
     // Lost until the final exchange, delivered once, or delivered twice.
     const fate = run.random.pickFraction();
-    if (fate < 0.15) continue;
+    if (fate < run.shape.loss) continue;
 
-    const dueAt = event + run.random.pickInteger(0, 20);
+    const dueAt = event + run.random.pickInteger(0, run.shape.delay);
     run.deliveries.push({ change: number, to, dueAt });
-    if (fate > 0.85)
+    if (fate >= 1 - run.shape.duplication)
       run.deliveries.push({ change: number, to, dueAt: dueAt + run.random.pickInteger(0, 10) });
   }
 }
@@ -480,23 +553,24 @@ function deliver(run: Run, delivery: Delivery): void {
 
 function runSimulation(seed: number): void {
   const random = createRandom(seed);
+  const shape = pickShape(random);
   const start = random.isChance(0.7)
     ? sanitizePlan(exampleWeek, createPredictableIds())
     : createEmptyPlan();
   const initial = convertPlan(start);
-  const nodes: SimulatedNode[] = Array.from({ length: random.pickInteger(2, 4) }, (_, index) => ({
+  const nodes: SimulatedNode[] = Array.from({ length: shape.nodes }, (_, index) => ({
     ...createNode(`node${String(index)}`, initial),
     wallClock: createWallClock(random),
     removed: { activities: [], blocks: [] },
     seen: new Set<number>(),
     count: 0,
   }));
-  const run: Run = { random, nodes, changes: [], deliveries: [] };
+  const run: Run = { random, shape, nodes, changes: [], deliveries: [] };
   let now = START;
-  for (let event = 0; event < EVENTS; event += 1) {
+  for (let event = 0; event < shape.events; event += 1) {
     now += random.isChance(0.3) ? 0 : random.pickInteger(1, 3000);
     const due = run.deliveries.filter((delivery) => delivery.dueAt <= event);
-    const delivery = random.isChance(0.4) ? random.pick(due) : undefined;
+    const delivery = random.isChance(shape.delivery) ? random.pick(due) : undefined;
     if (delivery === undefined) performAction(run, event, now);
     // oxlint-disable-next-line week-budget-planner/no-else -- each event is one of two things, side by side.
     else deliver(run, delivery);
@@ -541,7 +615,10 @@ function findBrokenRule(seed: number): string[] {
     runSimulation(seed);
   } catch (error) {
     const rule = error instanceof Error ? error.message : String(error);
-    return [`seed ${String(seed)}: ${rule} (replay it with MERGE_SEED=${String(seed)})`];
+    // The same seed picks the same shape, so it's picked again to say what the run was like.
+    const { nodes, events } = pickShape(createRandom(seed));
+    const shape = `${String(nodes)} nodes, ${String(events)} events`;
+    return [`seed ${String(seed)} (${shape}): ${rule} (replay it with MERGE_SEED=${String(seed)})`];
   }
 
   return [];

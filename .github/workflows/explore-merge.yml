@@ -1,0 +1,96 @@
+name: Explore the merge
+
+# Runs the merge's simulation from random seeds for a while, to find weeks the fixed seeds that every
+# test run checks never reach (see "The merge's simulation" in docs/guidelines/tests.md). It runs
+# when the merge or the plan it merges changes on main, and weekly, since the seeds differ each time.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/merge/**"
+      - "src/plan/**"
+      - ".github/workflows/explore-merge.yml"
+  schedule:
+    # Mondays at 03:17 UTC, off the full hour that most scheduled workflows start at.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: How long to explore, from 1 to 60 minutes
+        type: number
+        default: 30
+
+permissions: {}
+
+# A newer commit makes an exploration of the older one pointless.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  explore:
+    name: Explore the merge
+    runs-on: ubuntu-latest
+    # Stops a job that hangs: the exploration itself stops after at most an hour.
+    timeout-minutes: 75
+    permissions:
+      contents: read # Reads the repository to run its tests.
+      issues: write # Opens an issue with the seeds when a run breaks a rule.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      # No pnpm cache: it's only used on pull requests (see docs/guidelines/workflows.md).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          check-latest: true
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Run the simulation from random seeds
+        id: explore
+        env:
+          MINUTES: ${{ inputs.minutes || 30 }}
+        run: |
+          if ! [[ "$MINUTES" =~ ^[0-9]+$ ]] || (( MINUTES < 1 || MINUTES > 60 )); then
+            echo "::error::minutes is $MINUTES, not a whole number from 1 to 60."
+            exit 1
+          fi
+          end=$((SECONDS + MINUTES * 60))
+          weeks=0
+          while (( SECONDS < end )); do
+            # The highest start that still fits the 400 seeds below 2^32.
+            from=$(shuf --input-range=1-4294966896 --head-count=1)
+            if ! MERGE_SEEDS_FROM="$from" pnpm vitest run src/merge/simulation.test.ts > simulation.log 2>&1; then
+              cat simulation.log
+              exit 1
+            fi
+            weeks=$((weeks + 400))
+          done
+          echo "$weeks weeks from random seeds, and every rule held." >> "$GITHUB_STEP_SUMMARY"
+      - name: Report the seeds in an issue
+        if: failure() && steps.explore.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="The merge's simulation broke a rule"
+          seeds=$(grep -oE 'seed [0-9]+ \([^)]*\): .*MERGE_SEED=[0-9]+\)' simulation.log | sort -u | head -n 10 || true)
+          if [[ -z "$seeds" ]]; then
+            echo "::error::The simulation failed without naming a seed; see the log above."
+            exit 1
+          fi
+          body=$(printf '%s\n' \
+            "An exploration of commit $COMMIT found runs that break a rule ($RUN):" \
+            "" '```' "$seeds" '```' "" \
+            "Replay one on that commit with \`MERGE_SEED=<seed> pnpm test src/merge/simulation.test.ts\`." \
+            "A seed replays the same run only until the simulation changes, so once it's fixed, pin the case in a unit test that names the rule.")
+          existing=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi
