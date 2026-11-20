@@ -45,7 +45,7 @@ function useFirstFreeSlot(plan: Plan, planner: Planner, activity: Activity): voi
 /**
  * The floating toolbar while an activity is placing (see Adding blocks in
  * docs/spec/interactions.md): what's placing and at what length, what's left of it, "Use first
- * free slot" and "Done". It says "Click a time slot" with a mouse and "Tap a slot" on touch. On
+ * free slot" and "Done". It says "Click a slot" with a mouse and "Tap a slot" on touch. On
  * phones it keeps to one line with the design canvas's shorter labels: no length, "First free
  * slot", and a close icon named "Stop placing" for Done.
  */
@@ -76,7 +76,7 @@ export function PlacingToolbar(properties: { plan: Plan; planner: Planner }): JS
                 <span class="for-wide-window"> · {formatLength(length())}</span>
               </span>
               <span class="body-small">
-                <span class="for-fine-pointer">Click a time slot</span>
+                <span class="for-fine-pointer">Click a slot</span>
                 <span class="for-coarse-pointer">Tap a slot</span>
                 {left() > 0 ? ` · ${formatLength(left())} left to place` : ""}
               </span>

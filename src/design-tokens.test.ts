@@ -34,7 +34,7 @@ function findLightValue(value: string): string {
 }
 
 /** Splits the CSS into the blocks that start with `opening` and everything else. */
-function splitBlocks(text: string, opening: string): { rest: string; blocks: string } {
+function extractBlocks(text: string, opening: string): { rest: string; blocks: string } {
   let rest = "";
   let blocks = "";
   let position = 0;
@@ -69,8 +69,8 @@ function readRules(text: string): Map<string, Map<string, string>> {
   return rules;
 }
 
-const { rest: withoutFallbacks, blocks: fallbackText } = splitBlocks(css, FALLBACK_START);
-const { rest: baseText, blocks: levelText } = splitBlocks(withoutFallbacks, LEVELS_START);
+const { rest: withoutFallbacks, blocks: fallbackText } = extractBlocks(css, FALLBACK_START);
+const { rest: baseText, blocks: levelText } = extractBlocks(withoutFallbacks, LEVELS_START);
 const base = readRules(baseText);
 // The two media queries have the same selector inside, so their rules are keyed by the query too.
 const levelRules = readRules(

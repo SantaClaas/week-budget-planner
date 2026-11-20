@@ -514,7 +514,7 @@ export function Week(properties: {
       if (scroller === undefined || column === null || column === undefined) return;
 
       const hour = untrack(() => findOpeningHour(properties.plan));
-      // A quarter hour above it, so the hour's label, centered on its line, isn't half hidden
+      // 15 minutes above it, so the hour's label, centered on its line, isn't half hidden
       // under the sticky day headers.
       scroller.scrollTop = (column.offsetHeight * (hour * 4 - 1)) / 96;
     },
