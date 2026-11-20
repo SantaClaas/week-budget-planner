@@ -1,5 +1,6 @@
 # Opens weekly pull requests that bump the actions in .github/workflows (each pinned hash and the
-# version comment after it together) and the npm dependencies, a week after each release.
+# version comment after it together), the npm dependencies and the Rust crates, a week after each
+# release.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -34,5 +35,20 @@ updates:
         dependency-type: development
       production:
         dependency-type: production
+    commit-message:
+      prefix: Bump
+
+  # The Rust crates, with the same week of waiting that scripts/check-crate-age.ts enforces, so the
+  # check passes every version it proposes.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    # The default strategy moves an exact requirement (=x.y.z) in Cargo.toml to the new version.
+    groups:
+      cargo:
+        patterns: ["*"]
     commit-message:
       prefix: Bump

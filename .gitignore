@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Cargo's build output.
+target/
 .vite/
 *.log
 .DS_Store

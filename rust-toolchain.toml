@@ -1,0 +1,6 @@
+# The Rust toolchain every build uses, locally and in CI (see Layout in docs/guidelines/rust.md).
+# A new release is taken by changing this line, a week after it's out, like any dependency.
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

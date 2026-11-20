@@ -1,0 +1,24 @@
+[package]
+name = "week-budget-planner-server"
+description = "Serves the Week Budget Planner app with the headers it needs (see crates/server/README.md)."
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+axum.workspace = true
+brotli.workspace = true
+flate2.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+http-body-util.workspace = true
+tower.workspace = true
+
+[lints]
+workspace = true
