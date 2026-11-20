@@ -46,11 +46,13 @@ export function merge(rows: Rows, change: Change): Rows {
     const held = activities.get(row.id);
     activities.set(row.id, held === undefined ? row : mergeActivity(held, row));
   }
+
   const blocks = new Map(rows.blocks);
   for (const row of change.blocks) {
     const held = blocks.get(row.id);
     blocks.set(row.id, held === undefined ? row : mergeBlock(held, row));
   }
+
   const settings =
     change.settings === null ? rows.settings : mergeSettings(rows.settings, change.settings);
   return { activities, blocks, settings };
@@ -79,12 +81,14 @@ const listRegisters = (row: object): { stamp: Stamp }[] =>
 export function findLatestStamp(change: Change): Stamp {
   const rows: object[] = [...change.activities, ...change.blocks];
   if (change.settings !== null) rows.push(change.settings);
+
   let latest = LOWEST;
   for (const row of rows) {
     for (const register of listRegisters(row)) {
       if (compareStamps(register.stamp, latest) > 0) latest = register.stamp;
     }
   }
+
   return latest;
 }
 
@@ -104,7 +108,7 @@ export function readPlan(rows: Rows): Plan {
         { key: second.order.value, id: second.id },
       ),
     );
-  const living = new Set(activities.map((row) => row.id));
+  const living = new Set(activities.values().map((row) => row.id));
   const blocks = rows.blocks
     .values()
     .filter((row) => !row.existence.value.isDeleted && living.has(row.existence.value.activityId))
@@ -147,6 +151,7 @@ export function convertPlan(plan: Plan): Rows {
   for (const [index, activity] of plan.activities.entries()) {
     const key = keys[index];
     if (key === undefined) throw new RangeError("spread() gave fewer keys than activities.");
+
     activities.set(activity.id, {
       id: activity.id,
       name: createUnstamped(activity.name),
@@ -161,8 +166,9 @@ export function convertPlan(plan: Plan): Rows {
       existence: createUnstamped({ isDeleted: false }),
     });
   }
+
   const blocks = new Map<BlockId, BlockRow>(
-    plan.blocks.map((block) => [
+    plan.blocks.values().map((block) => [
       block.id,
       {
         id: block.id,

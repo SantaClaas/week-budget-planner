@@ -43,6 +43,7 @@ function write<Of extends Value>(
   stamp: Stamp,
 ): Register<Of> {
   if (held !== undefined && previous !== undefined && isSame(previous, next)) return held;
+
   return { value: next, stamp };
 }
 
@@ -69,9 +70,10 @@ const readActivityRow = (row: ActivityRow): ActivityValues => ({
  * it kept are in the order they were.
  */
 function isOrderKept(before: Plan, after: Plan): boolean {
-  const beforeIds = new Set(before.activities.map((activity) => activity.id));
+  const beforeIds = new Set(before.activities.values().map((activity) => activity.id));
   if (after.activities.some((activity) => !beforeIds.has(activity.id))) return false;
-  const afterIds = new Set(after.activities.map((activity) => activity.id));
+
+  const afterIds = new Set(after.activities.values().map((activity) => activity.id));
   const kept = before.activities.filter((activity) => afterIds.has(activity.id));
   return kept.every((activity, index) => activity.id === after.activities[index]?.id);
 }
@@ -84,7 +86,7 @@ function assignOrderKeys(rows: Rows, before: Plan, after: Plan): Map<ActivityId,
   const held = after.activities.map((activity) => rows.activities.get(activity.id)?.order.value);
   const keys = isOrderKept(before, after) ? held : assign(held);
   return new Map(
-    after.activities.flatMap((activity, index) => {
+    after.activities.values().flatMap((activity, index) => {
       const key = keys[index];
       return key === undefined ? [] : [[activity.id, key] as const];
     }),
@@ -99,6 +101,7 @@ const isWritten = (held: object | undefined, row: object): boolean =>
 /** The value, or a throw for one the code made sure is there. */
 function ensure<Of>(value: Of | undefined, what: string): Of {
   if (value === undefined) throw new Error(`Missing ${what}.`);
+
   return value;
 }
 
@@ -130,8 +133,8 @@ function writeActivity(
 /** The activities' rows the action touched. */
 function writeActivities(rows: Rows, before: Plan, after: Plan, stamp: Stamp): ActivityRow[] {
   const keys = assignOrderKeys(rows, before, after);
-  const beforeById = new Map(before.activities.map((activity) => [activity.id, activity]));
-  const afterById = new Map(after.activities.map((activity) => [activity.id, activity]));
+  const beforeById = new Map(before.activities.values().map((activity) => [activity.id, activity]));
+  const afterById = new Map(after.activities.values().map((activity) => [activity.id, activity]));
   const ids = new Set([...beforeById.keys(), ...afterById.keys()]);
   const touched: ActivityRow[] = [];
   for (const id of ids) {
@@ -147,9 +150,11 @@ function writeActivities(rows: Rows, before: Plan, after: Plan, stamp: Stamp): A
         ? previous && { ...previous, existence: { isDeleted: true } }
         : readActivityValues(now, ensure(keys.get(id), "an order key"));
     if (next === undefined) continue;
+
     const row = writeActivity(held, previous, next, id, stamp);
     if (row !== undefined) touched.push(row);
   }
+
   return touched;
 }
 
@@ -165,8 +170,8 @@ const readBlockRow = (row: BlockRow): BlockValues => ({
 
 /** The blocks' rows the action touched, with the same rule as for activities. */
 function writeBlocks(rows: Rows, before: Plan, after: Plan, stamp: Stamp): BlockRow[] {
-  const beforeById = new Map(before.blocks.map((block) => [block.id, block]));
-  const afterById = new Map(after.blocks.map((block) => [block.id, block]));
+  const beforeById = new Map(before.blocks.values().map((block) => [block.id, block]));
+  const afterById = new Map(after.blocks.values().map((block) => [block.id, block]));
   const ids = new Set<BlockId>([...beforeById.keys(), ...afterById.keys()]);
   const touched: BlockRow[] = [];
   for (const id of ids) {
@@ -180,6 +185,7 @@ function writeBlocks(rows: Rows, before: Plan, after: Plan, stamp: Stamp): Block
         ? previous && { ...previous, existence: { ...previous.existence, isDeleted: true } }
         : readBlockValues(now);
     if (next === undefined) continue;
+
     const row: BlockRow = {
       id,
       time: write(held?.time, previous?.time, next.time, stamp),
@@ -187,6 +193,7 @@ function writeBlocks(rows: Rows, before: Plan, after: Plan, stamp: Stamp): Block
     };
     if (isWritten(held, row)) touched.push(row);
   }
+
   return touched;
 }
 
@@ -229,11 +236,12 @@ export function make(
   const blocks = writeBlocks(rows, before, after, stamp);
   const settings = writeSettings(rows.settings, before, after, stamp);
   const written = merge(rows, { version: FORMAT_VERSION, activities, blocks, settings });
-  const included = new Map(activities.map((row) => [row.id, row]));
+  const included = new Map(activities.values().map((row) => [row.id, row]));
   for (const block of blocks) {
     const id = block.existence.value.activityId;
     included.set(id, ensure(written.activities.get(id), `a row for the activity ${id}`));
   }
+
   return {
     rows: written,
     change: { version: FORMAT_VERSION, activities: [...included.values()], blocks, settings },

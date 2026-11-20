@@ -59,6 +59,7 @@ const isRecord = (value: unknown): value is Fields =>
 /** The object, when it has exactly these fields: none missing and none unknown. */
 function readFields(value: unknown, names: readonly string[]): Fields | undefined {
   if (!isRecord(value)) return undefined;
+
   const keys = Object.keys(value);
   const isExact = keys.length === names.length && names.every((name) => Object.hasOwn(value, name));
   return isExact ? value : undefined;
@@ -75,8 +76,10 @@ function readRegister<Of extends Value>(
 ): Result<Register<Of>, Problem> {
   const fields = readFields(value, ["value", "stamp"]);
   if (fields === undefined) return "not-a-change";
+
   const stamp = parseStamp(fields["stamp"]);
   if (stamp === undefined) return "invalid-stamp";
+
   const checked = readValue(fields["value"]);
   return checked === undefined ? problem : { value: checked, stamp };
 }
@@ -87,7 +90,7 @@ const readKept =
   (value) =>
     typeof value === "number" && sanitize(value) === value ? sanitize(value) : undefined;
 
-const PALETTE_HUES = new Set<unknown>(PALETTE.map((color) => color.hue));
+const PALETTE_HUES = new Set<unknown>(PALETTE.values().map((color) => color.hue));
 const SHAPE_NAMES = new Set<unknown>(SHAPES);
 
 const isHue = (value: unknown): value is Hue => PALETTE_HUES.has(value);
@@ -101,6 +104,7 @@ const readShape: Reader<Shape> = (value) => (isShape(value) ? value : undefined)
  */
 function readName(value: unknown): ActivityName | undefined {
   if (typeof value !== "string") return undefined;
+
   const name = sanitizeActivityName(value);
   return name === value ? name : undefined;
 }
@@ -115,11 +119,14 @@ function readBudget(value: unknown): Budget | undefined {
   const days = fields?.["days"];
   if (mode === undefined || typeof minutes !== "number" || typeof days !== "number")
     return undefined;
+
   const budgetMinutes = parseBudgetMinutes(minutes, mode);
   const dayCount = parseDayCount(days);
   if (typeof budgetMinutes === "string" || typeof dayCount === "string") return undefined;
+
   // The parser rounds to the slot; a value it changed isn't one the app could have written.
   if (budgetMinutes !== minutes) return undefined;
+
   return { mode, budgetMinutes, days: dayCount };
 }
 
@@ -140,20 +147,28 @@ const ACTIVITY_FIELDS = ["id", "name", "hue", "shape", "budget", "order", "exist
 function readActivity(value: unknown): Result<ActivityRow, Problem> {
   const fields = readFields(value, ACTIVITY_FIELDS);
   if (fields === undefined) return "not-a-change";
+
   const id = readActivityId(fields["id"]);
   if (id === undefined) return "invalid-id";
+
   const name = readRegister(fields["name"], readName, "invalid-value");
   if (typeof name === "string") return name;
+
   const hue = readRegister(fields["hue"], readHue, "invalid-value");
   if (typeof hue === "string") return hue;
+
   const shape = readRegister(fields["shape"], readShape, "invalid-value");
   if (typeof shape === "string") return shape;
+
   const budget = readRegister(fields["budget"], readBudget, "invalid-value");
   if (typeof budget === "string") return budget;
+
   const order = readRegister(fields["order"], readOrderKey, "invalid-order-key");
   if (typeof order === "string") return order;
+
   const existence = readRegister(fields["existence"], readActivityExistence, "invalid-value");
   if (typeof existence === "string") return existence;
+
   return { id, name, hue, shape, budget, order, existence };
 }
 
@@ -167,6 +182,7 @@ function readTime(value: unknown): BlockTime | undefined {
   const start = readStart(fields?.["start"]);
   const length = readLength(fields?.["length"]);
   if (day === undefined || start === undefined || length === undefined) return undefined;
+
   return { day, start, length };
 }
 
@@ -175,18 +191,23 @@ function readBlockExistence(value: unknown): BlockExistence | undefined {
   const activityId = readActivityId(fields?.["activityId"]);
   const isDeleted = fields?.["isDeleted"];
   if (activityId === undefined || typeof isDeleted !== "boolean") return undefined;
+
   return { activityId, isDeleted };
 }
 
 function readBlock(value: unknown): Result<BlockRow, Problem> {
   const fields = readFields(value, ["id", "time", "existence"]);
   if (fields === undefined) return "not-a-change";
+
   const id = readBlockId(fields["id"]);
   if (id === undefined) return "invalid-id";
+
   const time = readRegister(fields["time"], readTime, "invalid-value");
   if (typeof time === "string") return time;
+
   const existence = readRegister(fields["existence"], readBlockExistence, "invalid-value");
   if (typeof existence === "string") return existence;
+
   return { id, time, existence };
 }
 
@@ -200,29 +221,36 @@ const readHour =
 /** Null, or a time as `sanitizePlan` keeps it: an ISO 8601 instant in UTC, normalized. */
 function readExampleLoadedAt(value: unknown): string | null | undefined {
   if (value === null) return null;
+
   if (typeof value !== "string") return undefined;
+
   let normalized: string;
   try {
     normalized = Temporal.Instant.from(value).toString();
   } catch {
     return undefined;
   }
+
   return normalized === value ? value : undefined;
 }
 
 function readSettings(value: unknown): Result<SettingsRow, Problem> {
   const fields = readFields(value, ["dayStart", "dayEnd", "exampleLoadedAt"]);
   if (fields === undefined) return "not-a-change";
+
   const dayStart = readRegister(fields["dayStart"], readHour(parseDayStart), "invalid-value");
   if (typeof dayStart === "string") return dayStart;
+
   const dayEnd = readRegister(fields["dayEnd"], readHour(parseDayEnd), "invalid-value");
   if (typeof dayEnd === "string") return dayEnd;
+
   const exampleLoadedAt = readRegister(
     fields["exampleLoadedAt"],
     readExampleLoadedAt,
     "invalid-value",
   );
   if (typeof exampleLoadedAt === "string") return exampleLoadedAt;
+
   return { dayStart, dayEnd, exampleLoadedAt };
 }
 
@@ -232,15 +260,19 @@ function readList<Row extends { id: string }>(
   readRow: (value: unknown) => Result<Row, Problem>,
 ): Result<Row[], Problem> {
   if (!Array.isArray(value)) return "not-a-change";
+
   const rows: Row[] = [];
   const ids = new Set<string>();
   for (const item of value) {
     const row = readRow(item);
     if (typeof row === "string") return row;
+
     if (ids.has(row.id)) return "repeated-id";
+
     ids.add(row.id);
     rows.push(row);
   }
+
   return rows;
 }
 
@@ -255,18 +287,24 @@ const isFromNewerVersion = (value: unknown): boolean =>
  */
 export function parse(value: unknown): Result<Change, Problem> {
   if (isFromNewerVersion(value)) return "newer-version";
+
   const fields = readFields(value, ["version", "activities", "blocks", "settings"]);
   if (fields?.["version"] !== FORMAT_VERSION) return "not-a-change";
+
   const activities = readList(fields["activities"], readActivity);
   if (typeof activities === "string") return activities;
+
   const blocks = readList(fields["blocks"], readBlock);
   if (typeof blocks === "string") return blocks;
+
   const settings = fields["settings"] === null ? null : readSettings(fields["settings"]);
   if (typeof settings === "string") return settings;
-  const activityIds = new Set(activities.map((row) => row.id));
+
+  const activityIds = new Set(activities.values().map((row) => row.id));
   const isEveryActivityThere = blocks.every((row) =>
     activityIds.has(row.existence.value.activityId),
   );
   if (!isEveryActivityThere) return "missing-activity";
+
   return { version: FORMAT_VERSION, activities, blocks, settings };
 }

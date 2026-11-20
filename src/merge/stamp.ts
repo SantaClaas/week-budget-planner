@@ -54,8 +54,10 @@ type Parts = { time: number; counter: number; node: NodeId | "" };
 export function create(time: number, counter: number, node: NodeId): Stamp {
   if (!Number.isInteger(time) || time < 0 || time > MAX_TIME)
     throw new RangeError(`A stamp's time must be 0 to ${String(MAX_TIME)}, not ${String(time)}.`);
+
   if (!Number.isInteger(counter) || counter < 0 || counter > MAX_COUNTER)
     throw new RangeError(`A stamp's counter must be 0 to 999999, not ${String(counter)}.`);
+
   const timeText = String(time).padStart(13, "0");
   const counterText = String(counter).padStart(6, "0");
   return brand<Stamp>(`${timeText}-${counterText}-${node}`);
@@ -64,7 +66,9 @@ export function create(time: number, counter: number, node: NodeId): Stamp {
 /** A received stamp, checked strictly: the lowest stamp, or one in the form described at `Stamp`. */
 export function parse(value: unknown): Result<Stamp, undefined> {
   if (value === LOWEST) return LOWEST;
+
   if (typeof value !== "string") return undefined;
+
   return STAMP.test(value) ? brand<Stamp>(value) : undefined;
 }
 
@@ -82,5 +86,6 @@ export function read(stamp: Stamp): Parts {
 /** Below zero when `first` is earlier, above when it's later, zero when they're the same stamp. */
 export function compare(first: Stamp, second: Stamp): number {
   if (first < second) return -1;
+
   return first > second ? 1 : 0;
 }

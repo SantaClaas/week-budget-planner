@@ -47,15 +47,19 @@ function findMidpoint(low: string, high?: string): string {
   if (high !== undefined) {
     let shared = 0;
     while ((low[shared] ?? "0") === high[shared]) shared += 1;
+
     if (shared > 0)
       return high.slice(0, shared) + findMidpoint(low.slice(shared), high.slice(shared));
   }
+
   const lowDigit = readDigit(low, 0);
   const highDigit = high === undefined ? BASE : readDigit(high, 0);
   if (highDigit - lowDigit > 1) return DIGITS[Math.round((lowDigit + highDigit) / 2)] ?? "";
+
   // The first digits are next to each other. A longer `high` leaves room right at its first digit;
   // otherwise keep the low digit and look for room after the rest of `low`.
   if (high !== undefined && high.length > 1) return high.slice(0, 1);
+
   return (DIGITS[lowDigit] ?? "") + findMidpoint(low.slice(1));
 }
 
@@ -67,6 +71,7 @@ function findMidpoint(low: string, high?: string): string {
 export function between(before?: OrderKey, after?: OrderKey): OrderKey {
   if (before !== undefined && after !== undefined && before >= after)
     throw new RangeError(`No key fits between "${before}" and "${after}".`);
+
   return brand(findMidpoint(before ?? "", after));
 }
 
@@ -77,6 +82,7 @@ function listBetween(
   count: number,
 ): OrderKey[] {
   if (count === 0) return [];
+
   const middle = between(before, after);
   const half = Math.floor((count - 1) / 2);
   return [
@@ -90,6 +96,7 @@ function listBetween(
 export function spread(count: number): OrderKey[] {
   let digits = 1;
   while (BASE ** digits <= count) digits += 1;
+
   const step = BASE ** digits / (count + 1);
   return Array.from({ length: count }, (_, index) => {
     let value = Math.floor(step * (index + 1));
@@ -98,6 +105,7 @@ export function spread(count: number): OrderKey[] {
       text = (DIGITS[value % BASE] ?? "") + text;
       value = Math.floor(value / BASE);
     }
+
     // Dropping the zeros at the end keeps the order: all keys have the same number of digits.
     return brand(text.replace(/0+$/u, ""));
   });
@@ -109,7 +117,9 @@ type Ordered = { readonly key: OrderKey; readonly id: string };
 /** Below zero when `first` comes first in the list, above when `second` does. */
 export function compare(first: Ordered, second: Ordered): number {
   if (first.key !== second.key) return first.key < second.key ? -1 : 1;
+
   if (first.id === second.id) return 0;
+
   return first.id < second.id ? -1 : 1;
 }
 
@@ -124,19 +134,24 @@ function findAscending(keys: readonly (OrderKey | undefined)[]): Set<number> {
   let best: number | undefined;
   for (const [index, key] of keys.entries()) {
     if (key === undefined) continue;
+
     let length = 1;
     for (let earlier = 0; earlier < index; earlier += 1) {
       const earlierKey = keys[earlier];
       const earlierLength = lengths.get(earlier) ?? 0;
       if (earlierKey === undefined || earlierKey >= key || earlierLength + 1 <= length) continue;
+
       length = earlierLength + 1;
       previous.set(index, earlier);
     }
+
     lengths.set(index, length);
     if (best === undefined || length > (lengths.get(best) ?? 0)) best = index;
   }
+
   const kept = new Set<number>();
   for (let index = best; index !== undefined; index = previous.get(index)) kept.add(index);
+
   return kept;
 }
 
@@ -162,10 +177,12 @@ export function assign(keys: readonly (OrderKey | undefined)[]): OrderKey[] {
       waiting += 1;
       continue;
     }
+
     fill(key);
     assigned.push(key);
     before = key;
   }
+
   fill();
   const isTooLong = assigned.some((key) => key.length > MAX_LENGTH);
   return isTooLong ? spread(keys.length) : assigned;

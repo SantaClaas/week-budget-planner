@@ -16,6 +16,7 @@ export type Register<Of extends Value> = { readonly value: Of; readonly stamp: S
 /** The value as JSON with every object's keys sorted, so equal values give equal text. */
 export function formatCanonical(value: Value): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
+
   // An object's keys are never the same, so they need no case for being equal.
   const entries = Object.entries(value)
     .toSorted(([first], [second]) => (first < second ? -1 : 1))
@@ -26,10 +27,13 @@ export function formatCanonical(value: Value): string {
 /** Whether two values are the same, field by field, whatever the order of their keys. */
 export function isSame(first: Value, second: Value): boolean {
   if (first === second) return true;
+
   if (typeof first !== "object" || typeof second !== "object" || first === null || second === null)
     return false;
+
   const keys = Object.keys(first);
   if (keys.length !== Object.keys(second).length) return false;
+
   return keys.every((key) => Object.hasOwn(second, key) && first[key] === second[key]);
 }
 
@@ -42,6 +46,8 @@ export function isSame(first: Value, second: Value): boolean {
 export function merge<Of extends Value>(first: Register<Of>, second: Register<Of>): Register<Of> {
   const order = compareStamps(first.stamp, second.stamp);
   if (order !== 0) return order > 0 ? first : second;
+
   if (isSame(first.value, second.value)) return first;
+
   return formatCanonical(second.value) > formatCanonical(first.value) ? second : first;
 }
