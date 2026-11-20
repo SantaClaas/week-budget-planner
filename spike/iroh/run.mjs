@@ -1,15 +1,19 @@
 // Drives the spike end to end: starts the native server (our relay plus a
-// native iroh node), the static server, and headless Chromium, then runs
-// each scenario and prints its result as JSON.
+// native iroh node), the static server, and each headless browser engine
+// (Chromium, Firefox, WebKit) through Playwright, then runs each scenario
+// in each engine and prints the results as JSON.
 //
 //   node run.mjs   (after ./build.sh)
+//   ENGINES=firefox,webkit node run.mjs   (a subset; default: all three)
 
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
 
-// Playwright is preinstalled outside the repository; NODE_PATH points to it.
-const { chromium } = createRequire(`${process.cwd()}/`)("playwright");
+// Playwright comes from NODE_PATH or the working directory's node_modules
+// (the repository's own version, for Firefox and WebKit builds that match).
+const playwright = createRequire(`${process.cwd()}/`)(process.env.PLAYWRIGHT_MODULE ?? "playwright");
+const engines = (process.env.ENGINES ?? "chromium,firefox,webkit").split(",");
 
 const here = new URL(".", import.meta.url).pathname;
 const pagePort = 8080;
@@ -71,16 +75,25 @@ async function scenario(browser, name, query) {
 const server = await startServer();
 const staticServer = await startStatic();
 const isPublic = process.env.PUBLIC === "1";
-const browser = await chromium.launch({
-  executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "/opt/pw-browsers/chromium",
-  // In a cloud container, outside hosts are reachable only through its proxy.
-  ...(isPublic && process.env.HTTPS_PROXY
-    ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } }
-    : {}),
-});
+
+function launch(engine) {
+  return playwright[engine].launch({
+    // Chromium is preinstalled in the cloud container; Firefox and WebKit
+    // come from PLAYWRIGHT_BROWSERS_PATH.
+    ...(engine === "chromium"
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "/opt/pw-browsers/chromium" }
+      : {}),
+    // In a cloud container, outside hosts are reachable only through its proxy.
+    ...(isPublic && process.env.HTTPS_PROXY
+      ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } }
+      : {}),
+  });
+}
+
 const crossOriginRelay = `http://localhost:${relayPort}`;
 const sameOriginRelay = `http://localhost:${pagePort}`;
-const results = [];
+let browser;
+let results;
 
 // PUBLIC=1: the native node and the page both use n0's public relays.
 async function runPublicScenarios() {
@@ -125,23 +138,54 @@ async function runLocalScenarios() {
   }));
 
   // Browser to browser, both relayed through the same relay.
-  const accepting = await open(browser, { mode: "accept", csp: "app", relay: sameOriginRelay });
-  const accepted = await waitForResult(accepting.page);
-  const dialing = accepted.ok
-    ? await scenario(browser, "browser to browser (page dials another page's node)", {
-        mode: "page", csp: "app", relay: sameOriginRelay, server: accepted.endpointId,
-      })
-    : { name: "browser to browser", result: { ok: false, error: "accepting page failed", accepted } };
-  results.push(dialing);
-  await accepting.context.close();
+  results.push(await browserToBrowser(browser, browser, "browser to browser (page dials another page's node)"));
 }
 
+// One page binds and waits, a page in `dialingBrowser` dials it through the
+// relay. The two can be different engines.
+async function browserToBrowser(acceptingBrowser, dialingBrowser, name) {
+  const accepting = await open(acceptingBrowser, { mode: "accept", csp: "app", relay: sameOriginRelay });
+  const accepted = await waitForResult(accepting.page);
+  const dialing = accepted.ok
+    ? await scenario(dialingBrowser, name, {
+        mode: "page", csp: "app", relay: sameOriginRelay, server: accepted.endpointId,
+      })
+    : { name, result: { ok: false, error: "accepting page failed", accepted } };
+  await accepting.context.close();
+  return dialing;
+}
+
+const report = { server: { endpointId: server.endpointId, relayUrl: server.relayUrl }, engines: [] };
+const browsers = {};
 try {
-  await (isPublic ? runPublicScenarios() : runLocalScenarios());
+  for (const engine of engines) {
+    try {
+      browser = await launch(engine);
+    } catch (error) {
+      report.engines.push({ engine, launchError: String(error).slice(0, 2000) });
+      continue;
+    }
+    browsers[engine] = browser;
+    results = [];
+    await (isPublic ? runPublicScenarios() : runLocalScenarios());
+    report.engines.push({ engine, version: browser.version(), results });
+  }
+  // Every pair of different engines, both ways, through the same relay.
+  if (!isPublic) {
+    report.crossEngine = [];
+    for (const accepting of Object.keys(browsers)) {
+      for (const dialing of Object.keys(browsers)) {
+        if (accepting === dialing) continue;
+        report.crossEngine.push(
+          await browserToBrowser(browsers[accepting], browsers[dialing], `${dialing} page dials ${accepting} page`),
+        );
+      }
+    }
+  }
 } finally {
-  await browser.close();
+  for (const each of Object.values(browsers)) await each.close();
   staticServer.kill();
   server.child.kill("SIGINT");
 }
 
-console.log(JSON.stringify({ server: { endpointId: server.endpointId, relayUrl: server.relayUrl }, results }, null, 2));
+console.log(JSON.stringify(report, null, 2));

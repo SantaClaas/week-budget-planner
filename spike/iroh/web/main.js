@@ -10,14 +10,31 @@ document.addEventListener("securitypolicyviolation", (event) => {
 });
 
 // Mirrors the app's `default` Trusted Types policy for script URLs: only
-// same-origin URLs pass (src/trusted-html.ts).
-trustedTypes.createPolicy("default", {
-  createScriptURL(url) {
-    const parsed = new URL(url, location.href);
-    if (parsed.origin !== location.origin) throw new TypeError(`refused ${url}`);
-    return parsed.href;
-  },
-});
+// same-origin URLs pass (src/trusted-html.ts). Engines without Trusted Types
+// skip it, and the probe below records what the policy header did there.
+const hasTrustedTypes = typeof globalThis.trustedTypes !== "undefined";
+if (hasTrustedTypes) {
+  trustedTypes.createPolicy("default", {
+    createScriptURL(url) {
+      const parsed = new URL(url, location.href);
+      if (parsed.origin !== location.origin) throw new TypeError(`refused ${url}`);
+      return parsed.href;
+    },
+  });
+}
+
+// Whether `require-trusted-types-for 'script'` is enforced: the default
+// policy has no createHTML, so an HTML string sink must throw where it is.
+function probeTrustedTypes() {
+  const probe = document.createElement("div");
+  try {
+    probe.innerHTML = "<b>probe</b>";
+  } catch (error) {
+    return { hasTrustedTypes, isEnforced: true, error: String(error) };
+  }
+  return { hasTrustedTypes, isEnforced: false };
+}
+const trustedTypesProbe = probeTrustedTypes();
 
 const parameters = new URLSearchParams(location.search);
 const mode = parameters.get("mode") ?? "page";
@@ -25,7 +42,14 @@ const relayUrl = parameters.get("relay");
 const serverId = parameters.get("server");
 
 function report(result) {
-  window.spikeResult = { mode, crossOriginIsolated, violations, ...result };
+  window.spikeResult = {
+    mode,
+    crossOriginIsolated,
+    hasSharedArrayBuffer: typeof SharedArrayBuffer === "function",
+    trustedTypes: trustedTypesProbe,
+    violations,
+    ...result,
+  };
   document.body.textContent = JSON.stringify(window.spikeResult, null, 2);
 }
 

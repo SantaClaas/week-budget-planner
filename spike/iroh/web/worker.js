@@ -8,9 +8,9 @@ self.addEventListener("securitypolicyviolation", (event) => {
 self.addEventListener("message", async (event) => {
   try {
     const { node, ...result } = await run(event.data);
-    postMessage({ ok: true, ...result, crossOriginIsolated, violations });
+    postMessage({ ok: true, ...result, crossOriginIsolated, hasTrustedTypes: typeof trustedTypes !== "undefined", violations });
     await node.close();
   } catch (error) {
-    postMessage({ ok: false, error: String(error), crossOriginIsolated, violations });
+    postMessage({ ok: false, error: String(error), crossOriginIsolated, hasTrustedTypes: typeof trustedTypes !== "undefined", violations });
   }
 });
