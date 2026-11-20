@@ -158,12 +158,14 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **`activities`:** `position` is replaced by `order_key` (text). New: `is_deleted`, and a stamp for each register: `name_stamp`, `hue_stamp`, `shape_stamp`, `budget_stamp`, `order_stamp`, `existence_stamp`.
 - **`blocks`:** new: `is_deleted`, `time_stamp`, `existence_stamp`. The foreign key to `activities` holds, since a deleted activity's row stays.
 - **`settings`:** new: `day_start_stamp`, `day_end_stamp`, `example_loaded_at_stamp`.
-- **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged.
+- **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged. The first save after the database opens without one makes it.
 - **The rows and the merge are also a type and a function in memory,** which the database reads into and writes from, so they work without it (see [The limited storage levels](#the-limited-storage-levels)).
-- A stamp column is text with a `CHECK` on its form.
+- A stamp column is text with a `CHECK` on its form, and so is an order key (1 to 100 letters and digits, not ending in "0"); `is_deleted` is an integer, 0 or 1.
 - **Reading the plan** takes the rows that aren't deleted, the blocks whose activity isn't either, and the activities in order of `order_key`, then id. The blocks come in order of their ids, so every node shows the same order.
-- **Saving an action** compares before and after as it does now. A removed row becomes an update that marks it deleted; a changed register gets the action's stamp.
-- **The migration** gives every existing row the lowest stamp in each register, turns `position` into evenly spread order keys, and leaves `node` to be filled when the database next opens.
+- **Saving an action** reads the rows and the node, stamps what the action changed with the node's next stamp (see [The idea](#the-idea)), and writes the touched rows, whole, and the clock in one batch. A removed row becomes an update that marks it deleted. In code: `saveAction` in [`src/database/plan-repository.ts`](../../src/database/plan-repository.ts).
+  - **The read and the write are two calls through the leader tab, so every tab's save holds one Web Lock** (`week-budget-planner.save`) from the read to the write. Two saves in between could read the same rows and the same clock, and the later write would undo the earlier one.
+  - **A tab saves the plan it showed before an action and the plan after**, since an action can't be sent to the leader tab. The rows may hold another tab's change made since, so only what the action changed is applied to them, field by field ([`src/merge/replay.ts`](../../src/merge/replay.ts)): a field it didn't change keeps its value, a row deleted since stays deleted, and the order it gave is kept in the places the activities hold now.
+- **The migration** ([`drizzle/20261120020448_stamps/migration.sql`](../../drizzle/20261120020448_stamps/migration.sql)) gives every existing row the lowest stamp in each register, keeps every row as it is (none was deleted before), and turns `position` into order keys of two digits from each activity's rank: the first from `1` up, the second from `1` to `z`. They ascend as text in the old order, leave room before the first, and are good for 3721 activities. drizzle-kit's own SQL for it added the new columns without values and then rebuilt the tables anyway, so the migration is its rebuild with the copying rewritten by hand. `node` is made by the next save.
 - **Size:** a stamp is about 33 characters, and an activity has six. A plan with 20 activities, 60 blocks and as many deleted rows again grows by a few tens of kilobytes.
 
 ## Export and import
