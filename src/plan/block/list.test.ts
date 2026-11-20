@@ -7,7 +7,7 @@ import { changeLength, moveTo } from "../week.ts";
 import * as list from "./list.ts";
 
 /** A slot, from plain numbers. */
-const at = (day: number, start: number) => ({
+const createSlot = (day: number, start: number) => ({
   day: sanitizeDayIndex(day),
   start: sanitizeDayMinute(start),
 });
@@ -57,12 +57,12 @@ describe("block list", () => {
     const id = createBlockId("new");
     const empty = { ...plan, activities: [gym], blocks: [], ...createDayHours(7, 22) };
     // Per day, the default length is the budget per day.
-    const block = list.create(empty, gym, at(2, 1080), id);
+    const block = list.create(empty, gym, createSlot(2, 1080), id);
     expect(block).toMatchObject({ id: "new", activityId: "gym", day: 2, start: 1080, length: 90 });
     expect(list.add(empty, block).blocks).toEqual([block]);
     // Inside the day hours it ends by their end; outside them it keeps its length.
-    expect(list.create(empty, gym, at(2, 1290), id).length).toBe(30);
-    expect(list.create(empty, gym, at(2, 1380), id).length).toBe(90);
+    expect(list.create(empty, gym, createSlot(2, 1290), id).length).toBe(30);
+    expect(list.create(empty, gym, createSlot(2, 1380), id).length).toBe(90);
   });
 });
 

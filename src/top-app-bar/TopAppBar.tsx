@@ -16,6 +16,7 @@ export function TopAppBar(properties: {
   base: string;
   planner: Planner | undefined;
   /** Receives the heading, which takes focus when the user moves to this page. */
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- named like Solid's ref, which it is passed to.
   headingRef?: (heading: HTMLHeadingElement) => void;
 }): JSX.Element {
   return (

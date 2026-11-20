@@ -18,6 +18,7 @@ class MemoryStorage implements Storage {
   getItem(key: string) {
     return this.#items.get(key) ?? null;
   }
+  // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- the Storage interface's own method, which this class stands in for.
   key(index: number) {
     return [...this.#items.keys()][index] ?? null;
   }
@@ -29,7 +30,7 @@ class MemoryStorage implements Storage {
   }
 }
 
-const events = () => {
+const createEventTarget = () => {
   const target = new EventTarget();
   return Object.assign(target, {
     dispatchStorage(key: string | null) {
@@ -39,7 +40,7 @@ const events = () => {
   });
 };
 
-const example = () => createExampleWeek(NOW, createPredictableIds());
+const createExample = () => createExampleWeek(NOW, createPredictableIds());
 /** The value of a Result the test expects to have one. */
 function readValue<Value>(result: Value | "newer-version"): Value {
   if (result === "newer-version") throw new Error("The store answered newer-version.");
@@ -47,71 +48,75 @@ function readValue<Value>(result: Value | "newer-version"): Value {
   return result;
 }
 
-const file = (text: string, name: string) =>
+const createFile = (text: string, name: string) =>
   new File([text], name, { type: name.endsWith(".json") ? "application/json" : "" });
 
 describe("localStorage store", () => {
   it("starts empty, then keeps what was saved", async () => {
     const storage = new MemoryStorage();
-    const store = local.create(storage, events());
+    const store = local.create(storage, createEventTarget());
     expect(await store.load()).toMatchObject({ isStored: false });
-    expect(await store.save(undefined, example(), NOW)).toBe("saved");
-    expect(await local.create(storage, events()).load()).toEqual({
-      plan: example(),
+    expect(await store.save(undefined, createExample(), NOW)).toBe("saved");
+    expect(await local.create(storage, createEventTarget()).load()).toEqual({
+      plan: createExample(),
       isStored: true,
     });
   });
 
   it("exports and imports .json and refuses .db files", async () => {
     const storage = new MemoryStorage();
-    const store = local.create(storage, events());
-    expect(await store.save(undefined, example(), NOW)).toBe("saved");
+    const store = local.create(storage, createEventTarget());
+    expect(await store.save(undefined, createExample(), NOW)).toBe("saved");
     const exported = readValue(
       await store.exportFile(Temporal.PlainDateTime.from("2026-10-15T09:05")),
     );
     expect(exported.filename).toBe("week-budget-planner-2026-10-15-09-05-00.json");
     expect(await store.wipe()).toBe("wiped");
     expect(storage.getItem(PLAN_KEY)).toBeNull();
-    expect(await store.importFile(file(await exported.blob.text(), "backup.json"))).toBe(
+    expect(await store.importFile(createFile(await exported.blob.text(), "backup.json"))).toBe(
       "imported",
     );
-    expect(readValue(await store.load()).plan).toEqual(example());
-    expect(await store.importFile(file("SQLite", "backup.db"))).toBe("needs-database");
+    expect(readValue(await store.load()).plan).toEqual(createExample());
+    expect(await store.importFile(createFile("SQLite", "backup.db"))).toBe("needs-database");
   });
 
   it("refuses a .json file that isn't a plan and keeps the stored plan", async () => {
     const storage = new MemoryStorage();
-    const store = local.create(storage, events());
-    expect(await store.save(undefined, example(), NOW)).toBe("saved");
-    expect(await store.importFile(file('{"name": "notes"}', "notes.json"))).toBe("invalid-file");
-    expect(await store.importFile(file("{broken", "broken.json"))).toBe("invalid-file");
-    expect(await store.importFile(file('{"version": 2}', "newer.json"))).toBe("newer-version");
-    expect(readValue(await store.load()).plan).toEqual(example());
+    const store = local.create(storage, createEventTarget());
+    expect(await store.save(undefined, createExample(), NOW)).toBe("saved");
+    expect(await store.importFile(createFile('{"name": "notes"}', "notes.json"))).toBe(
+      "invalid-file",
+    );
+    expect(await store.importFile(createFile("{broken", "broken.json"))).toBe("invalid-file");
+    expect(await store.importFile(createFile('{"version": 2}', "newer.json"))).toBe(
+      "newer-version",
+    );
+    expect(readValue(await store.load()).plan).toEqual(createExample());
   });
 
   it("leaves a plan saved by a newer version alone", async () => {
     const storage = new MemoryStorage();
     const newer = JSON.stringify({ version: 2, activities: [{ id: "a", name: "Unknown to us" }] });
     storage.setItem(PLAN_KEY, newer);
-    const store = local.create(storage, events());
+    const store = local.create(storage, createEventTarget());
     expect(await store.load()).toBe("newer-version");
-    expect(await store.save(undefined, example(), NOW)).toBe("newer-version");
+    expect(await store.save(undefined, createExample(), NOW)).toBe("newer-version");
     expect(await store.exportFile(Temporal.Now.plainDateTimeISO())).toBe("newer-version");
     expect(storage.getItem(PLAN_KEY)).toBe(newer);
   });
 
   it("stops saving once another tab saved with a newer version", async () => {
     const storage = new MemoryStorage();
-    const store = local.create(storage, events());
-    expect(await store.save(undefined, example(), NOW)).toBe("saved");
+    const store = local.create(storage, createEventTarget());
+    expect(await store.save(undefined, createExample(), NOW)).toBe("saved");
     const newer = JSON.stringify({ version: 2 });
     storage.setItem(PLAN_KEY, newer);
-    expect(await store.save(example(), example(), NOW)).toBe("newer-version");
+    expect(await store.save(createExample(), createExample(), NOW)).toBe("newer-version");
     expect(storage.getItem(PLAN_KEY)).toBe(newer);
   });
 
   it("reports changes from other tabs", () => {
-    const target = events();
+    const target = createEventTarget();
     const store = local.create(new MemoryStorage(), target);
     let calls = 0;
     const stop = store.onExternalChange(() => {

@@ -11,7 +11,7 @@ import {
   importFile,
   readDescription,
   removeFirstBlock,
-  toBytes,
+  encodeText,
   tryLoading,
 } from "./app.ts";
 
@@ -122,13 +122,13 @@ test("exports the database and imports it again", async ({ page }) => {
 test("refuses files it can't import and keeps the plan", async ({ page }) => {
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "full");
-  expect(await importFile(page, "notes.db", toBytes("not a database"))).toBe("invalid-file");
+  expect(await importFile(page, "notes.db", encodeText("not a database"))).toBe("invalid-file");
   // Has the SQLite header, but nothing a database can open after it.
-  expect(await importFile(page, "fake.db", toBytes(`SQLite format 3\0${"x".repeat(5000)}`))).toBe(
-    "invalid-file",
-  );
   expect(
-    await importFile(page, "notes.json", toBytes('{"name": "notes"}'), "application/json"),
+    await importFile(page, "fake.db", encodeText(`SQLite format 3\0${"x".repeat(5000)}`)),
+  ).toBe("invalid-file");
+  expect(
+    await importFile(page, "notes.json", encodeText('{"name": "notes"}'), "application/json"),
   ).toBe("invalid-file");
   await page.reload();
   await expectStatus(page, "full");
@@ -162,7 +162,7 @@ test.describe("a newer version of the app", () => {
     await expectStatus(page, "full");
     expect(await importFile(page, "newer.db", newerDatabase)).toBe("newer-version");
     expect(
-      await importFile(page, "newer.json", toBytes('{"version": 2}'), "application/json"),
+      await importFile(page, "newer.json", encodeText('{"version": 2}'), "application/json"),
     ).toBe("newer-version");
     await page.reload();
     await expectStatus(page, "full");
@@ -275,7 +275,7 @@ test.describe("a newer version of the app", () => {
 });
 
 test("reports a database that won't open, and deleting it starts over", async ({ page }) => {
-  await writeDatabaseFile(page, toBytes("garbage that is not a database"));
+  await writeDatabaseFile(page, encodeText("garbage that is not a database"));
   await page.goto(ISOLATED_URL);
   await expectStatus(page, "limited");
   expect(await page.evaluate(() => window.weekBudgetPlanner?.store.fallbackReason)).toBe(

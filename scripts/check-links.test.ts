@@ -11,7 +11,7 @@ import {
 
 /** Files that exist in a test: their paths, and the Markdown of those that are Markdown. */
 const createFiles = (markdownByPath: Record<string, string | undefined>) => ({
-  exists: (path: string) => path in markdownByPath,
+  isPresent: (path: string) => path in markdownByPath,
   listAnchors(path: string) {
     const markdown = markdownByPath[path];
     return markdown === undefined ? undefined : listAnchors(markdown);

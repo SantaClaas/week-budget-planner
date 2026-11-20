@@ -89,7 +89,7 @@ const MINUTES_FOR_PADDING_AND_TIME = 30;
 const countNameLines = (length: Length): number =>
   Math.max(1, Math.floor((length - MINUTES_FOR_PADDING_AND_TIME) / MINUTES_PER_NAME_LINE));
 
-function sizeOf(length: Length): BlockSize {
+function pickSize(length: Length): BlockSize {
   if (length <= 15) return "tiny";
 
   return length <= 30 ? "short" : "regular";
@@ -180,7 +180,7 @@ export function announceChange(
 
 function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Format): DrawnBlock {
   const { length } = part;
-  const size = sizeOf(length);
+  const size = pickSize(length);
   const lengthText = createLengthText(part.block.length, format);
   return {
     key: `${part.block.id}-${part.kind}`,

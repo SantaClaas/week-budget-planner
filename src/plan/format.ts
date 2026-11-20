@@ -48,7 +48,7 @@ function reuseDateTimeFormat(locale: string | undefined, options: Intl.DateTimeF
   return format;
 }
 
-const toPlainTime = (minutes: number) => {
+const convertToPlainTime = (minutes: number) => {
   const inDay = ((minutes % 1440) + 1440) % 1440;
   return Temporal.PlainTime.from({ hour: Math.floor(inDay / 60), minute: inDay % 60 });
 };
@@ -89,12 +89,12 @@ export function formatLength(
 
 /** A minute of the day as a clock time: "07:30" or "7:30 AM". Minutes past midnight wrap. */
 export function formatClock(minutes: number, format: Format = {}): string {
-  return reuseClockFormat(format).format(toPlainTime(minutes));
+  return reuseClockFormat(format).format(convertToPlainTime(minutes));
 }
 
 /** Two clock times as a range: "10:00–11:30" or "10:00 – 11:30 AM". */
 export function formatClockRange(start: number, end: number, format: Format = {}): string {
-  return reuseClockFormat(format).formatRange(toPlainTime(start), toPlainTime(end));
+  return reuseClockFormat(format).formatRange(convertToPlainTime(start), convertToPlainTime(end));
 }
 
 /** Where a piece of a formatted range comes from: its start, its end, or between them. */
@@ -111,8 +111,8 @@ export function formatClockRangeToParts(
 ): RangePiece[] {
   const pieces: RangePiece[] = [];
   for (const part of reuseClockFormat(format).formatRangeToParts(
-    toPlainTime(start),
-    toPlainTime(end),
+    convertToPlainTime(start),
+    convertToPlainTime(end),
   )) {
     const last = pieces.at(-1);
     // Intl splits each piece into hours, separators and minutes; only where they come from matters.
@@ -129,7 +129,7 @@ export function formatClockRangeToParts(
 
 /** A minute of the day as HTML's `datetime` value for a time: "10:30". Minutes past midnight wrap. */
 export const formatClockDatetime = (minutes: number): Datetime =>
-  brandDatetime(toPlainTime(minutes).toString({ smallestUnit: "minute" }));
+  brandDatetime(convertToPlainTime(minutes).toString({ smallestUnit: "minute" }));
 
 /**
  * A length as HTML's `datetime` value for a duration, in hours and minutes: "PT1H30M", and a day

@@ -87,11 +87,11 @@ export function findTemplates(code: string): string[] {
 const isOwnCode = (id: string) => !id.startsWith("\0") && !id.includes("/node_modules/");
 
 /** `trustedHtmlFiles`: files, relative to the project root, that are imported with `?raw` and written as HTML. */
-export function contentSecurityPolicy({
+export function addContentSecurityPolicy({
   trustedHtmlFiles = [],
 }: { trustedHtmlFiles?: string[] } = {}): Plugin[] {
   let root = process.cwd();
-  const relative = (id: string) =>
+  const formatRelativePath = (id: string) =>
     path
       .relative(root, id.split("?")[0] ?? id)
       .split(path.sep)
@@ -107,7 +107,7 @@ export function contentSecurityPolicy({
       transform(code, id) {
         if (!isOwnCode(id)) return;
 
-        const file = relative(id);
+        const file = formatRelativePath(id);
         if (file === TRUSTED_HTML_MODULE || file === ENTRY_MODULE) return;
 
         if (IMPORT_PATTERN.test(code)) {
@@ -128,7 +128,7 @@ export function contentSecurityPolicy({
         // Libraries count too: a prebuilt Solid component library ships template() calls as well.
         if (id.startsWith("\0")) return null;
 
-        const file = relative(id);
+        const file = formatRelativePath(id);
         const isTrustedFile = id.includes("?raw") && trustedHtmlFiles.includes(file);
         const html = isTrustedFile
           ? [readFileSync(path.join(root, file), "utf8")]

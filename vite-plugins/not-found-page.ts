@@ -5,7 +5,7 @@ import type { Plugin } from "vite";
  * have, so a reload of a page's path such as `/week-budget-planner/activities` starts the app
  * there (see Hosting on GitHub Pages in docs/spec/persistence.md).
  */
-export function notFoundPage(): Plugin {
+export function addNotFoundPage(): Plugin {
   return {
     name: "week-budget-planner:not-found-page",
     apply: "build",

@@ -20,6 +20,7 @@
   },
   "rules": {
     "week-budget-planner/require-reason": "error",
+    "week-budget-planner/function-starts-with-verb": "error",
     // Return early instead (see Functions in docs/guidelines/principles.md).
     "week-budget-planner/no-else": "error",
     // A ternary chooses between two values; a third choice reads better as an early return

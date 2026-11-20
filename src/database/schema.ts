@@ -30,13 +30,14 @@ import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/activity/look.ts"
 /** A constant as SQL text. Constraints are DDL, which can't take parameters. */
 const quote = (value: number | string): string =>
   typeof value === "number" ? String(value) : `'${value.replaceAll("'", "''")}'`;
-const literal = (value: number | string): SQL => sql.raw(quote(value));
-const list = (values: readonly (number | string)[]): SQL =>
+const formatLiteral = (value: number | string): SQL => sql.raw(quote(value));
+const formatList = (values: readonly (number | string)[]): SQL =>
   sql.raw(values.map((value) => quote(value)).join(", "));
 
 const isBetween = (column: AnySQLiteColumn, low: number, high: number): SQL =>
-  sql`${column} BETWEEN ${literal(low)} AND ${literal(high)}`;
-const isSlotMultiple = (column: AnySQLiteColumn): SQL => sql`${column} % ${literal(SLOT)} = 0`;
+  sql`${column} BETWEEN ${formatLiteral(low)} AND ${formatLiteral(high)}`;
+const isSlotMultiple = (column: AnySQLiteColumn): SQL =>
+  sql`${column} % ${formatLiteral(SLOT)} = 0`;
 const isIdLength = (column: AnySQLiteColumn): SQL => sql`length(${column}) BETWEEN 1 AND 40`;
 
 /** Activities in list order (`position`). Times and budgets are integer minutes. */
@@ -57,15 +58,18 @@ export const activities = sqliteTable(
     check("activities_id", isIdLength(table.id)),
     check(
       "activities_name",
-      sql`length(${table.name}) BETWEEN 1 AND ${literal(MAX_NAME_CHARACTERS)}`,
+      sql`length(${table.name}) BETWEEN 1 AND ${formatLiteral(MAX_NAME_CHARACTERS)}`,
     ),
-    check("activities_hue", sql`${table.hue} IN (${list(PALETTE.map((color) => color.hue))})`),
-    check("activities_shape", sql`${table.shape} IN (${list(SHAPES)})`),
+    check(
+      "activities_hue",
+      sql`${table.hue} IN (${formatList(PALETTE.map((color) => color.hue))})`,
+    ),
+    check("activities_shape", sql`${table.shape} IN (${formatList(SHAPES)})`),
     check("activities_mode", sql`${table.mode} IN ('week', 'day')`),
     check(
       "activities_budget_minutes",
       // Spelled out with AND and OR: a STRICT table refuses a CASE here, whose type it can't tell.
-      sql`${isSlotMultiple(table.budgetMinutes)} AND ${table.budgetMinutes} >= ${literal(SLOT)} AND ((${table.mode} = 'day' AND ${table.budgetMinutes} <= ${literal(DAY)}) OR (${table.mode} = 'week' AND ${table.budgetMinutes} <= ${literal(WEEK)}))`,
+      sql`${isSlotMultiple(table.budgetMinutes)} AND ${table.budgetMinutes} >= ${formatLiteral(SLOT)} AND ((${table.mode} = 'day' AND ${table.budgetMinutes} <= ${formatLiteral(DAY)}) OR (${table.mode} = 'week' AND ${table.budgetMinutes} <= ${formatLiteral(WEEK)}))`,
     ),
     check("activities_days", isBetween(table.days, 1, 7)),
   ],

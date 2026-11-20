@@ -119,7 +119,7 @@ export function listLinks(markdown: string): { target: string; line: number }[] 
 
 /** What a checker needs to know about the files: which exist, and a Markdown file's anchors. */
 type Files = {
-  exists(path: string): boolean;
+  isPresent(path: string): boolean;
   /** The anchors of the Markdown file at `path`, or nothing when it isn't one. */
   listAnchors(path: string): Set<string> | undefined;
 };
@@ -145,7 +145,7 @@ function findProblem(path: string, target: string, files: Files): DeadLink["prob
   if (linkedPath.startsWith("/")) return undefined;
 
   const linked = linkedPath === "" ? path : resolve(dirname(path), decode(linkedPath));
-  if (!files.exists(linked)) return "no such file";
+  if (!files.isPresent(linked)) return "no such file";
 
   if (anchor === undefined || anchor === "") return undefined;
 
@@ -177,7 +177,7 @@ function listMarkdownFiles(folder: string): string[] {
 export function checkRepository(): DeadLink[] {
   const anchorsByPath = new Map<string, Set<string>>();
   const files: Files = {
-    exists: existsSync,
+    isPresent: existsSync,
     listAnchors(path) {
       const known = anchorsByPath.get(path);
       if (known || !path.endsWith(".md")) return known;

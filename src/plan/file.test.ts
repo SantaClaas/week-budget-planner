@@ -5,13 +5,13 @@ import { createExampleWeek } from "./example.ts";
 import { createEmptyPlan } from "./index.ts";
 import { createPredictableIds } from "./test-data.ts";
 
-const example = () =>
+const createExample = () =>
   createExampleWeek(Temporal.Instant.from("2026-10-15T08:00:00Z"), createPredictableIds());
 
 describe("plan file", () => {
   it("round-trips the stored format", () => {
-    expect(planFile.parse(planFile.serialize(example()), createPredictableIds())).toEqual(
-      example(),
+    expect(planFile.parse(planFile.serialize(createExample()), createPredictableIds())).toEqual(
+      createExample(),
     );
   });
 
@@ -20,7 +20,9 @@ describe("plan file", () => {
   });
 
   it("reads only real plan files on import", () => {
-    expect(planFile.read(planFile.serialize(example()), createPredictableIds())).toEqual(example());
+    expect(planFile.read(planFile.serialize(createExample()), createPredictableIds())).toEqual(
+      createExample(),
+    );
     expect(planFile.read("{not json", createPredictableIds())).toBe("not-a-plan");
     expect(planFile.read('{"name": "something else"}', createPredictableIds())).toBe("not-a-plan");
     expect(planFile.read("null", createPredictableIds())).toBe("not-a-plan");
@@ -32,7 +34,7 @@ describe("plan file", () => {
     expect(planFile.read(newer, createPredictableIds())).toBe("newer-version");
     expect(planFile.parse(newer, createPredictableIds())).toBe("newer-version");
     expect(planFile.isWrittenByNewerVersion(newer)).toBe(true);
-    expect(planFile.isWrittenByNewerVersion(planFile.serialize(example()))).toBe(false);
+    expect(planFile.isWrittenByNewerVersion(planFile.serialize(createExample()))).toBe(false);
     expect(planFile.isWrittenByNewerVersion("{not json")).toBe(false);
   });
 });

@@ -87,7 +87,7 @@ describe("slots", () => {
 });
 
 /** The slot at `start` minutes into `day`. */
-const at = (day: number, start: number) => ({
+const createSlot = (day: number, start: number) => ({
   day: sanitizeDayIndex(day),
   start: sanitizeDayMinute(start),
 });
@@ -99,17 +99,17 @@ describe("the empty slot", () => {
   };
 
   it("starts at the first empty slot of the day hours", () => {
-    expect(findEmptySlot(plan)).toEqual(at(0, 480));
+    expect(findEmptySlot(plan)).toEqual(createSlot(0, 480));
   });
 
   it("stays where it was while that slot is empty, and moves on once a block covers it", () => {
-    expect(findEmptySlot(plan, at(3, 600))).toEqual(at(3, 600));
-    expect(findEmptySlot(plan, at(0, 435))).toEqual(at(0, 480));
+    expect(findEmptySlot(plan, createSlot(3, 600))).toEqual(createSlot(3, 600));
+    expect(findEmptySlot(plan, createSlot(0, 435))).toEqual(createSlot(0, 480));
   });
 
   it("goes around the week from Sunday night", () => {
     const night = { ...plan, blocks: [createBlock({ day: 6, start: 1425, length: 15 })] };
-    expect(findEmptySlot(night, at(6, 1425))).toEqual(at(0, 0));
+    expect(findEmptySlot(night, createSlot(6, 1425))).toEqual(createSlot(0, 0));
   });
 
   it("finds nothing when every slot is covered", () => {
@@ -120,37 +120,39 @@ describe("the empty slot", () => {
   });
 
   it("moves by 15 minutes, an hour or a day, across midnight", () => {
-    expect(moveEmptySlot([], at(1, 600), "later")).toEqual(at(1, 615));
-    expect(moveEmptySlot([], at(1, 600), "hour-earlier")).toEqual(at(1, 540));
-    expect(moveEmptySlot([], at(1, 600), "day-later")).toEqual(at(2, 600));
-    expect(moveEmptySlot([], at(1, 0), "earlier")).toEqual(at(0, 1425));
+    expect(moveEmptySlot([], createSlot(1, 600), "later")).toEqual(createSlot(1, 615));
+    expect(moveEmptySlot([], createSlot(1, 600), "hour-earlier")).toEqual(createSlot(1, 540));
+    expect(moveEmptySlot([], createSlot(1, 600), "day-later")).toEqual(createSlot(2, 600));
+    expect(moveEmptySlot([], createSlot(1, 0), "earlier")).toEqual(createSlot(0, 1425));
   });
 
   it("skips the slots that blocks cover", () => {
-    expect(moveEmptySlot(plan.blocks, at(0, 405), "later")).toEqual(at(0, 480));
-    expect(moveEmptySlot(plan.blocks, at(0, 480), "hour-earlier")).toEqual(at(0, 405));
-    expect(moveEmptySlot(plan.blocks, at(1, 420), "day-earlier")).toBeUndefined();
+    expect(moveEmptySlot(plan.blocks, createSlot(0, 405), "later")).toEqual(createSlot(0, 480));
+    expect(moveEmptySlot(plan.blocks, createSlot(0, 480), "hour-earlier")).toEqual(
+      createSlot(0, 405),
+    );
+    expect(moveEmptySlot(plan.blocks, createSlot(1, 420), "day-earlier")).toBeUndefined();
   });
 
   it("never moves past the week's ends", () => {
-    expect(moveEmptySlot([], at(0, 0), "earlier")).toBeUndefined();
-    expect(moveEmptySlot([], at(6, 1425), "later")).toBeUndefined();
-    expect(moveEmptySlot([], at(6, 600), "day-later")).toBeUndefined();
+    expect(moveEmptySlot([], createSlot(0, 0), "earlier")).toBeUndefined();
+    expect(moveEmptySlot([], createSlot(6, 1425), "later")).toBeUndefined();
+    expect(moveEmptySlot([], createSlot(6, 600), "day-later")).toBeUndefined();
   });
 
   it("moves 15 minutes earlier over covered slots, and onto Monday 00:00", () => {
-    expect(moveEmptySlot(plan.blocks, at(0, 480), "earlier")).toEqual(at(0, 405));
-    expect(moveEmptySlot([], at(0, 15), "earlier")).toEqual(at(0, 0));
+    expect(moveEmptySlot(plan.blocks, createSlot(0, 480), "earlier")).toEqual(createSlot(0, 405));
+    expect(moveEmptySlot([], createSlot(0, 15), "earlier")).toEqual(createSlot(0, 0));
   });
 
   it("moves an hour later and a day earlier", () => {
-    expect(moveEmptySlot([], at(1, 600), "hour-later")).toEqual(at(1, 660));
-    expect(moveEmptySlot([], at(2, 600), "day-earlier")).toEqual(at(1, 600));
+    expect(moveEmptySlot([], createSlot(1, 600), "hour-later")).toEqual(createSlot(1, 660));
+    expect(moveEmptySlot([], createSlot(2, 600), "day-earlier")).toEqual(createSlot(1, 600));
   });
 
   it("starts on the next day when Monday's day hours are covered", () => {
     const monday = { ...plan, blocks: [createBlock({ day: 0, start: 420, length: 900 })] };
-    expect(findEmptySlot(monday)).toEqual(at(1, 420));
+    expect(findEmptySlot(monday)).toEqual(createSlot(1, 420));
   });
 
   it("starts at the week's first empty slot when the day hours are covered on every day", () => {
@@ -158,6 +160,6 @@ describe("the empty slot", () => {
     const covered = Array.from({ length: 7 }, (_, day) =>
       createBlock({ id: String(day), day, start: 420, length: 900 }),
     );
-    expect(findEmptySlot({ ...plan, blocks: covered })).toEqual(at(0, 0));
+    expect(findEmptySlot({ ...plan, blocks: covered })).toEqual(createSlot(0, 0));
   });
 });

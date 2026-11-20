@@ -61,7 +61,8 @@ export const snap = (minutes: number): number => Math.round(minutes / SLOT) * SL
 /** Rounds down to the slot that contains the minute, for pointer positions. */
 export const snapDown = (minutes: number): number => Math.floor(minutes / SLOT) * SLOT;
 
-const modulo = (value: number, modulus: number): number => ((value % modulus) + modulus) % modulus;
+const wrapAround = (value: number, modulus: number): number =>
+  ((value % modulus) + modulus) % modulus;
 
 /** `fallback` when the value isn't a number at all, otherwise the value rounded and clamped. */
 function sanitizeInteger(value: number, low: number, high: number, fallback: number): number {
@@ -76,13 +77,14 @@ export const sanitizeDayIndex = (value: number, fallback = 0): DayIndex =>
 
 /** Wraps any day number around the week, so 7 is Monday again and -1 is Sunday. */
 export const wrapDayIndex = (value: number): DayIndex =>
-  brand<DayIndex>(modulo(Math.round(value), 7));
+  brand<DayIndex>(wrapAround(Math.round(value), 7));
 
 export const sanitizeDayMinute = (value: number, fallback = 540): DayMinute =>
   brand<DayMinute>(clamp(snap(sanitizeInteger(value, 0, DAY, fallback)), 0, DAY - SLOT));
 
 /** Wraps any minute around the week. */
-export const wrapWeekMinute = (value: number): WeekMinute => brand<WeekMinute>(modulo(value, WEEK));
+export const wrapWeekMinute = (value: number): WeekMinute =>
+  brand<WeekMinute>(wrapAround(value, WEEK));
 
 export const sanitizeLength = (value: number, fallback = 60): Length =>
   brand<Length>(clamp(snap(sanitizeInteger(value, SLOT, MAX_LENGTH, fallback)), SLOT, MAX_LENGTH));
