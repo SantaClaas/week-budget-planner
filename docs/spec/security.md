@@ -8,7 +8,7 @@ paths:
 
 # Security
 
-There is no backend and no account, but the plan is the user's own data, and an imported file is untrusted input. The page carries a Content Security Policy that blocks any script it didn't ship, and Trusted Types, so nothing can write a string as HTML unless the build put it on an allowlist. That second part also stops us from adding a way to write untrusted HTML by mistake later.
+There is no backend and no account, but the plan is the user's own data, and an imported file is untrusted input. The page carries a Content Security Policy that blocks any script it didn't ship, and Trusted Types, so nothing can write a string as HTML unless the build put it on an allowlist. That second part also stops us from adding a way to write untrusted HTML by mistake later. What each rule protects against, and where the protection has gaps, is in the [Threat model](threat-model.md).
 
 **Content Security Policy.** GitHub Pages can't send headers, so the policy is a `<meta http-equiv="Content-Security-Policy">` that the build adds as the first element of `<head>` ([`vite-plugins/content-security-policy.ts`](../../vite-plugins/content-security-policy.ts)), in front of the inline scripts:
 
