@@ -77,6 +77,13 @@ describe("migrations", () => {
     for (const name of MIGRATION_NAMES) expect(name).toMatch(/^\d{14}_/u);
   });
 
+  it("logs every migration in docs/spec/formats.md", () => {
+    // Someone importing an old export finds there what changed and whether it still imports.
+    const log = readFileSync(new URL("../../docs/spec/formats.md", import.meta.url), "utf8");
+    const missing = MIGRATION_NAMES.filter((name) => !log.includes(`### \`${name}\``));
+    expect(missing).toEqual([]);
+  });
+
   it("makes every table STRICT, which drizzle-kit leaves out", async () => {
     // A migration drizzle-kit generates later, for example one that rebuilds a table to change it,
     // comes without STRICT. Add it to that migration's SQL by hand, as in the first one.

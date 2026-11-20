@@ -14,6 +14,8 @@ Why SQLite, flashcut's storage layer and Drizzle, and what else was weighed, is 
 
 In the prototype, the plan lived in the claude.ai artifact database. That API exists only inside claude.ai artifacts and is **not** carried over. The real app stores everything in a **SQLite database inside the browser**, set up the same way as [flashcut](https://github.com/SantaClaas/flashcut), with **Drizzle** added on top. There is no backend.
 
+Every format written here, and how each changed, is logged in [Stored formats](formats.md).
+
 ## Database engine (same as flashcut)
 
 - `@tursodatabase/database-wasm`, persisted in OPFS. Import it from `@tursodatabase/database-wasm/vite`.

@@ -12,6 +12,7 @@ The behavior and the design of the app, split by topic in [`docs/spec/`](spec/).
 | [`grid-geometry.md`](spec/grid-geometry.md) | the week grid's sizes, hours and lanes | |
 | [`interactions.md`](spec/interactions.md) | dragging, placing, resizing, adding a block, the activity forms, undo, the keyboard | |
 | [`persistence.md`](spec/persistence.md) | the database, tabs, writes and undo, export and import, keeping the data, hosting, progressive enhancement | [`src/database/`](../src/database/), [`src/storage/`](../src/storage/), [`drizzle/`](../drizzle/), the service worker |
+| [`formats.md`](spec/formats.md) | every format another version may read: the database and its migrations, the plan file, the messages between tabs; what this version accepts, and a log of each change | [`drizzle/`](../drizzle/), the schema, the plan file, the protocol between tabs |
 | [`security.md`](spec/security.md) | the Content Security Policy, Trusted Types, browser permissions | [`index.html`](../index.html), the headers, the Vite config |
 | [`threat-model.md`](spec/threat-model.md) | what is protected and from whom: script on the page, crafted imports, the shared GitHub Pages origin, dependencies, the deploy, losing the plan; the gaps | the headers, the workflows, the import, `pnpm-workspace.yaml` |
 | [`design.md`](spec/design.md) | Material 3 Expressive, theme, shapes, text size, approved deviations | `.css` files |
