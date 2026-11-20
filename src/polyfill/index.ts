@@ -14,6 +14,10 @@ export async function loadPolyfills(): Promise<void> {
   if (!("Iterator" in globalThis && "toArray" in Iterator.prototype))
     loading.push(import("core-js/es/iterator/index.js"));
 
+  // the Set methods union, intersection, isSubsetOf and the rest (Chrome 122, Firefox 127,
+  // Safari 17), which the merge uses
+  if (!("union" in Set.prototype)) loading.push(import("core-js/es/set/index.js"));
+
   // Promise.withResolvers (Chrome 119, Firefox 121, Safari 17.4), which the tab leader uses
   if (!("withResolvers" in Promise)) loading.push(import("core-js/es/promise/with-resolvers.js"));
 

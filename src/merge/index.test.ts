@@ -35,10 +35,8 @@ const rows = convertPlan(plan);
 
 /** The rows after `perform` changed the plan they show, stamped `stamp`. */
 function change(held: Rows, stamp: string, perform: (shown: Plan) => Plan): Change {
-  const before = readPlan(held);
   const [time = "0", counter = "0", node = "x"] = stamp.split("-");
-  return make(held, before, perform(before), createStamp(Number(time), Number(counter), node))
-    .change;
+  return make(held, perform, createStamp(Number(time), Number(counter), node)).change;
 }
 
 /** The plan with the work activity changed. */

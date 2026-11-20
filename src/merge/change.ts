@@ -1,10 +1,11 @@
-// Making a change from a user action: compare the plan before and after, and give what changed
-// the action's one stamp (see The idea and Deleting in docs/spec/merge.md).
+// Making a change from a user action: apply it to the plan the rows show, compare the plan before
+// and after, and give what changed the action's one stamp (see The idea and Deleting in
+// docs/spec/merge.md).
 import type { Activity } from "../plan/activity/index.ts";
 import type { Block } from "../plan/block/index.ts";
-import type { ActivityId, BlockId } from "../plan/id.ts";
+import type { ActivityId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
-import { FORMAT_VERSION, merge, type Change, type Rows } from "./index.ts";
+import { FORMAT_VERSION, merge, readPlan, type Change, type Rows } from "./index.ts";
 import { assign, type OrderKey } from "./order.ts";
 import { isSame, type Register, type Value } from "./register.ts";
 import type {
@@ -71,11 +72,13 @@ const readActivityRow = (row: ActivityRow): ActivityValues => ({
  */
 function isOrderKept(before: Plan, after: Plan): boolean {
   const beforeIds = new Set(before.activities.values().map((activity) => activity.id));
-  if (after.activities.some((activity) => !beforeIds.has(activity.id))) return false;
-
   const afterIds = new Set(after.activities.values().map((activity) => activity.id));
-  const kept = before.activities.filter((activity) => afterIds.has(activity.id));
-  return kept.every((activity, index) => activity.id === after.activities[index]?.id);
+  if (!afterIds.isSubsetOf(beforeIds)) return false;
+
+  return before.activities
+    .values()
+    .filter((activity) => afterIds.has(activity.id))
+    .every((activity, index) => activity.id === after.activities[index]?.id);
 }
 
 /**
@@ -135,7 +138,7 @@ function writeActivities(rows: Rows, before: Plan, after: Plan, stamp: Stamp): A
   const keys = assignOrderKeys(rows, before, after);
   const beforeById = new Map(before.activities.values().map((activity) => [activity.id, activity]));
   const afterById = new Map(after.activities.values().map((activity) => [activity.id, activity]));
-  const ids = new Set([...beforeById.keys(), ...afterById.keys()]);
+  const ids = new Set(beforeById.keys()).union(afterById);
   const touched: ActivityRow[] = [];
   for (const id of ids) {
     const held = rows.activities.get(id);
@@ -172,7 +175,7 @@ const readBlockRow = (row: BlockRow): BlockValues => ({
 function writeBlocks(rows: Rows, before: Plan, after: Plan, stamp: Stamp): BlockRow[] {
   const beforeById = new Map(before.blocks.values().map((block) => [block.id, block]));
   const afterById = new Map(after.blocks.values().map((block) => [block.id, block]));
-  const ids = new Set<BlockId>([...beforeById.keys(), ...afterById.keys()]);
+  const ids = new Set(beforeById.keys()).union(afterById);
   const touched: BlockRow[] = [];
   for (const id of ids) {
     const held = rows.blocks.get(id);
@@ -218,9 +221,16 @@ function writeSettings(
 }
 
 /**
- * What one user action did: the rows with it written, and the change to send. `before` is the
- * plan the rows show (read in the same transaction as the save), `after` the plan the action
- * made, and `stamp` the action's one stamp, from the node's clock.
+ * What one user action did: the rows with it written, and the change to send. `update` is the
+ * action: it gets the plan the rows show and gives back the plan after, as the planner's actions
+ * do. `stamp` is the action's one stamp, from the node's clock. Call it in the same transaction
+ * that reads the rows and saves what it gives back.
+ *
+ * It takes the action, not a plan after, on purpose: every register that differs between the
+ * plan the rows show and the plan after gets the stamp. A plan after built on an older plan, one a
+ * tab showed before another device's change was merged, would differ in what that change wrote,
+ * and stamp it back to how it was, on every node. Applied to the plan the rows show, the action can
+ * only differ in what it did itself.
  *
  * Only registers whose values changed get the stamp. A removed activity or block is marked
  * deleted, not removed. The change holds the touched rows, whole, and with each touched block its
@@ -228,10 +238,11 @@ function writeSettings(
  */
 export function make(
   rows: Rows,
-  before: Plan,
-  after: Plan,
+  update: (before: Plan) => Plan,
   stamp: Stamp,
 ): { rows: Rows; change: Change } {
+  const before = readPlan(rows);
+  const after = update(before);
   const activities = writeActivities(rows, before, after, stamp);
   const blocks = writeBlocks(rows, before, after, stamp);
   const settings = writeSettings(rows.settings, before, after, stamp);
