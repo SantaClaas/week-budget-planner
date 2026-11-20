@@ -2,7 +2,7 @@ name: Explore the merge
 
 # Runs the merge's simulation from random seeds for a while, to find weeks the fixed seeds that every
 # test run checks never reach (see "The merge's simulation" in docs/guidelines/tests.md). It runs
-# when the merge or the plan it merges changes on main, and weekly, since the seeds differ each time.
+# only when the merge or the plan it merges changes on main: unchanged code has had its half hour.
 on:
   push:
     branches: [main]
@@ -10,9 +10,6 @@ on:
       - "src/merge/**"
       - "src/plan/**"
       - ".github/workflows/explore-merge.yml"
-  schedule:
-    # Mondays at 03:17 UTC, off the full hour that most scheduled workflows start at.
-    - cron: "17 3 * * 1"
   workflow_dispatch:
     inputs:
       minutes:
