@@ -9,7 +9,7 @@ These are rules about what the user gets, so they were the project's author's to
 1. **A delete wins over an edit made at the same time** on another device (see [Deleting](#deleting)).
 2. **Blocks added to an activity that another device deleted are hidden with it**, and come back if the deletion is undone (see [Deleting](#deleting)).
 3. **A block moved on one device and resized on another ends up as one of the two left it**, not as a mix (see [Registers](#registers)).
-4. **The example week gets new ids each time it is loaded** (see [The example week](#the-example-week)). Today its ids are the same everywhere.
+4. **The example week gets new ids each time it is loaded** (see [The example week](#the-example-week)). Before, its ids were the same everywhere.
 5. **Syncing doesn't depend on the storage level.** A window that can't keep the plan, such as a private one, can still load it from the group and sync for as long as it's open (see [The limited storage levels](#the-limited-storage-levels)).
 6. **Importing a file still replaces the plan.** Merging a file into the plan becomes possible, and is left as a feature of its own, since it needs a screen and copy (see [Export and import](#export-and-import)).
 
@@ -85,7 +85,7 @@ What else was looked at:
 - **The order in which changes reach the server:** no clocks at all, but then the last device to come back online wins, even with a change made a week before the other's, and two devices syncing directly would have no order.
 - **Refusing changes from a clock that is off:** the server can't read stamps, and a node that refused them would end up with a different plan from one that didn't.
 
-**The node id** is a random id like the others (see [Data model](data-model.md)), made the first time the database opens, and stored in it. All tabs of a browser are one node (see [Terms](network.md#terms) in [Network](network.md)): the leader holds the clock and gives each save its stamp, in the save's own transaction. **An imported file brings its node id with it, which must not be kept:** two devices with one node id could issue the same stamp for different values. An import gives the node a new id and keeps the later of the two clocks. In a stamp it is 1 to 40 letters and digits, so a stamp's text sorts the same in JavaScript and in SQLite.
+**The node id** is a random id like the others (see [Data model](data-model.md)), made by the first save, and stored in the database. All tabs of a browser are one node (see [Terms](network.md#terms) in [Network](network.md)): each save reads the clock and writes its stamp in one batch, under a lock that every tab's save holds (see [Storage](#storage)). **An imported file brings its node id with it, which must not be kept:** two devices with one node id could issue the same stamp for different values. An import gives the node a new id and keeps the later of the two clocks. In a stamp it is 1 to 40 letters and digits, so a stamp's text sorts the same in JavaScript and in SQLite.
 
 ## Deleting
 
@@ -108,7 +108,7 @@ What else was looked at:
 - A new activity gets a key after the last.
 - **A key is 1 to 100 letters and digits.** Keys grow when the same gap is filled again and again; if one would pass the limit, the whole list gets evenly spread keys.
 
-Today the order is a `position` number per activity, and reordering renumbers every row in between. Merged per row, two devices' renumberings would interleave into an order neither made.
+Before stamps, the order was a `position` number per activity, and reordering renumbered every row in between. Merged per row, two devices' renumberings would have interleaved into an order neither made.
 
 ## Conflicts, case by case
 
@@ -147,7 +147,7 @@ A change, a snapshot or a file comes from outside the code, even when another of
 
 ## The example week
 
-**The example week gets new ids each time it's loaded.** Today its ids come from [`examples/example-week.json`](../../examples/example-week.json) as they are, so every device's example week has the same ids. Two devices that each kept theirs and went on to different plans would then merge register by register into a mix of both, as if they were one plan edited twice. A row's identity has to come from one act of creating it. With new ids, merging two such plans gives all the activities of both, which is plain to see and to clean up.
+**The example week gets new ids each time it's loaded** (`createExampleWeek` in [`src/plan/example.ts`](../../src/plan/example.ts)). Its ids used to come from [`examples/example-week.json`](../../examples/example-week.json) as they are, so every device's example week had the same ids. Two devices that each kept theirs and went on to different plans would then have merged register by register into a mix of both, as if they were one plan edited twice. A row's identity has to come from one act of creating it. With new ids, merging two such plans gives all the activities of both, which is plain to see and to clean up.
 
 `exampleLoadedAt` is a register like any other. What a device does with its own plan when it joins a group (drop an untouched example week, replace its plan, or merge it in) is the later phases's question.
 
@@ -170,8 +170,8 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 
 ## Export and import
 
-- **An export** is the database file, as now. It holds the stamps, the deletion markers and the node id.
-- **An import replaces the plan,** as now, after the same checks. It then gives the node a new id (see [Stamps and the clock](#stamps-and-the-clock)).
+- **An export** is the database file, as before. It holds the stamps, the deletion markers and the node id.
+- **An import replaces the plan,** as before, after the same checks. The leader gives the checked copy's node a new id and the later of its clock and this browser's, and the copy replaces the database (`renewNode` in [`src/database/plan-repository.ts`](../../src/database/plan-repository.ts)). With the file's id, two browsers that imported the same file would stamp under one id; with the earlier clock, this browser's next stamp could be earlier than one it made before the import (see [Stamps and the clock](#stamps-and-the-clock)).
 - **A file from before stamps** is migrated on its copy like any older export, which gives its rows the lowest stamp.
 - **A `.json` file** has no stamps. Importing one at the full level is an action like any other: the plan before, the file's plan after, saved with a new stamp.
 - **Merging a file into the plan** needs nothing more than the merge. It would let two devices exchange changes by file before any server exists, or bring back one deleted activity from an old export. It needs a choice on the import dialog and copy for it, so it's left as a feature of its own.
@@ -200,23 +200,6 @@ The merge is pure, so its tests need no browser (see [`docs/guidelines/tests.md`
 - **The migration:** an existing database opens with the same plan, in the same order.
 - The merge module is added to the mutation run (see [Mutation testing](../guidelines/tests.md#mutation-testing) in [`docs/guidelines/tests.md`](../guidelines/tests.md)).
 
-## What changes in the rest of the spec
-
-Made together with the code, so the spec doesn't describe what isn't built:
-
-- [Data model](data-model.md): the example week's ids; that a plan is read from rows that exist; "Sanitize every loaded plan (from storage or sync)" gets the strict check for what is received.
-- [Persistence](persistence.md): Suggested tables; Writes and undo (a save stamps what it writes, a delete marks); Export, import and reset (the new node id after an import).
-- [Interactions](interactions.md): Reorder, where it describes how the order is stored.
-- [Network](network.md): the terms below.
-
 ## Terms
 
-Technical terms, for code and docs (see [Terms](network.md#terms) in [Network](network.md)):
-
-| Term | Meaning |
-| --- | --- |
-| **Register** | The smallest part of a row that merges as one: a value, or a few fields that belong together, with a stamp. |
-| **Stamp** | When a register was written and by which node: a time, a counter and a node id. The later stamp wins. |
-| **Clock** | The latest stamp a node has issued or merged. Its next stamp is later than that. |
-| **Deletion marker** | A row whose existence register says deleted. It stays so that other devices' copies of the row don't bring it back. |
-| **Order key** | The text an activity is sorted by in the Activities list. A new one can be made between any two. |
+The design's terms (register, stamp, clock, deletion marker and order key) are with the others in [Terms](network.md#terms) in [Network](network.md).

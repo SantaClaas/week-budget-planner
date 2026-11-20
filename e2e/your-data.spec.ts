@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -68,6 +68,55 @@ test("exports the database and imports it again, after asking", async ({ page })
   await dialog.getByRole("button", { name: "Replace" }).click();
   // Every tab reloads with the imported plan.
   await expectStatus(page, "full");
+});
+
+/** Whether a value is a node row as SQLite gives it back. */
+const isNode = (value: unknown): value is { node_id: string; clock: string } =>
+  typeof value === "object" &&
+  value !== null &&
+  "node_id" in value &&
+  typeof value.node_id === "string" &&
+  "clock" in value &&
+  typeof value.clock === "string";
+
+/** The node in an exported database file: the id it stamps with and its clock. */
+async function readNode(bytes: Buffer): Promise<{ node_id: string; clock: string }> {
+  const path = join(await mkdtemp(join(tmpdir(), "week-budget-planner-")), "exported.db");
+  await writeFile(path, bytes);
+  const connection = await connect(path);
+  const statement = await connection.prepare("SELECT node_id, clock FROM node");
+  const node: unknown = await statement.get();
+  await connection.close();
+  if (!isNode(node)) throw new Error("The exported file has no node.");
+
+  return node;
+}
+
+test("gives this browser a new node id after an import, and keeps its later clock", async ({
+  page,
+}) => {
+  await openSettings(page);
+  const exported = await exportWithButton(page, /^Export database$/u);
+  const before = await readNode(exported.bytes);
+  // A change after the export moves this browser's clock past the file's.
+  await removeFirstBlock(page);
+  await page.goto(`${ISOLATED_URL}settings`);
+  const changed = await readNode((await exportWithButton(page, /^Export database$/u)).bytes);
+
+  await pickFile(page, {
+    name: "backup.db",
+    mimeType: "application/vnd.sqlite3",
+    buffer: exported.bytes,
+  });
+  await page
+    .getByRole("alertdialog", { name: "Replace your plan?" })
+    .getByRole("button", { name: "Replace" })
+    .click();
+  await expectStatus(page, "full", "5 activities · 8 blocks");
+  const after = await readNode((await exportWithButton(page, /^Export database$/u)).bytes);
+
+  expect(after.node_id).not.toBe(before.node_id);
+  expect(after.clock).toBe(changed.clock);
 });
 
 /**

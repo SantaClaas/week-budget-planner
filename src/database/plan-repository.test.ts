@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/tursodatabase/wasm-migrator";
 import { describe, expect, it } from "vitest";
 
 import { createExampleWeek } from "../plan/example.ts";
-import { sanitizeActivityId, sanitizeBlockId } from "../plan/id.ts";
+import { sanitizeActivityId } from "../plan/id.ts";
 import {
   sanitizeDayIndex,
   sanitizeDayMinute,
@@ -17,8 +17,15 @@ import type { Plan } from "../plan/index.ts";
 import { createLocalQueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
 import { MIGRATION_NAMES, runMigrations } from "./migration.ts";
-import { LOWEST, parseNodeId, type NodeId } from "../merge/stamp.ts";
-import { buildChangeStatements, loadPlan, loadRows, saveAction } from "./plan-repository.ts";
+import { LOWEST, parse as parseStamp, parseNodeId, type NodeId } from "../merge/stamp.ts";
+import {
+  buildChangeStatements,
+  loadNode,
+  loadPlan,
+  loadRows,
+  renewNode,
+  saveAction,
+} from "./plan-repository.ts";
 import { activities as activitiesTable, blocks as blocksTable } from "./schema.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
 
@@ -41,6 +48,12 @@ function requireValue<Value>(value: Value | undefined, what: string): Value {
 }
 
 const createExample = (): Plan => createExampleWeek(NOW, createPredictableIds());
+
+/** The plan as the rows show it: its blocks in order of their ids. */
+const sortBlocks = (plan: Plan): Plan => ({
+  ...plan,
+  blocks: plan.blocks.toSorted((first, second) => (first.id < second.id ? -1 : 1)),
+});
 
 const NODE_ID: NodeId = requireValue(parseNodeId("testNode"), "node id");
 const createNodeId = (): NodeId => NODE_ID;
@@ -109,10 +122,10 @@ describe("plan repository", () => {
   it("round-trips a plan", async () => {
     const { database } = await openTestDatabase();
     const example = createExample();
-    expect(await save(database, () => example)).toEqual(example);
+    expect(await save(database, () => example)).toEqual(sortBlocks(example));
     const { plan, isStored } = await loadPlan(database, createPredictableIds());
     expect(isStored).toBe(true);
-    expect(plan).toEqual(example);
+    expect(plan).toEqual(sortBlocks(example));
   });
 
   it("creates every row of one action at the action's time", async () => {
@@ -157,7 +170,7 @@ describe("plan repository", () => {
       later,
     );
     const { rows } = await loadRows(database);
-    const movedId = requireValue(example.blocks[0], "first block").id;
+    const movedId = requireValue(sortBlocks(example).blocks[0], "first block").id;
     const moved = requireValue(rows.blocks.get(movedId), "moved block");
     expect(moved.time.stamp > firstStamp).toBe(true);
     expect(moved.existence.stamp).toBe(firstStamp);
@@ -169,15 +182,18 @@ describe("plan repository", () => {
     const { database } = await openTestDatabase();
     const example = createExample();
     await save(database, () => example);
-    const gym = requireValue(sanitizeActivityId("gym"), "activity id");
+    const gym = requireValue(
+      example.activities.find((activity) => activity.name === "Gym"),
+      "the gym",
+    ).id;
     await save(database, (plan) => ({
       ...plan,
       activities: plan.activities.filter((activity) => activity.id !== gym),
       blocks: plan.blocks.filter((block) => block.activityId !== gym),
     }));
     const { plan } = await loadPlan(database, createPredictableIds());
-    expect(plan.activities.map((activity) => activity.id)).not.toContain("gym");
-    expect(plan.blocks.some((block) => block.activityId === "gym")).toBe(false);
+    expect(plan.activities.map((activity) => activity.id)).not.toContain(gym);
+    expect(plan.blocks.some((block) => block.activityId === gym)).toBe(false);
     const { rows } = await loadRows(database);
     expect(rows.activities.get(gym)?.existence.value.isDeleted).toBe(true);
     const gymBlocks = rows.blocks.values().filter((row) => row.existence.value.activityId === gym);
@@ -210,7 +226,7 @@ describe("plan repository", () => {
 
   it("rolls the whole action back when one statement fails", async () => {
     const { database } = await openTestDatabase();
-    await save(database, createExample);
+    const example = await save(database, createExample);
     const { rows } = await loadRows(database);
     const change = {
       version: 1 as const,
@@ -229,8 +245,8 @@ describe("plan repository", () => {
     );
     // A duplicate primary key makes the second statement fail after the first one ran.
     const duplicate = database.insert(blocksTable).values({
-      id: requireValue(sanitizeBlockId("block-1"), "block id"),
-      activityId: requireValue(sanitizeActivityId("stats"), "activity id"),
+      id: requireValue(example.blocks[0], "first block").id,
+      activityId: requireValue(example.activities[0], "first activity").id,
       isDeleted: false,
       existenceStamp: LOWEST,
       day: sanitizeDayIndex(0),
@@ -249,7 +265,8 @@ describe("plan repository", () => {
 
   it("refuses values that break the rules, even past the types", async () => {
     const { database, connection } = await openTestDatabase();
-    await save(database, createExample);
+    const example = await save(database, createExample);
+    const activityId = requireValue(example.activities[0], "first activity").id;
     const lowest = "'0000000000000-000000-'";
     const insert = (values: string) =>
       connection.exec(
@@ -257,7 +274,7 @@ describe("plan repository", () => {
       );
     const insertBlock = (id: string, day: number, start: number, length: number, stamp = lowest) =>
       insert(
-        `'${id}', 'stats', 0, ${lowest}, ${String(day)}, ${String(start)}, ${String(length)}, ${stamp}`,
+        `'${id}', '${activityId}', 0, ${lowest}, ${String(day)}, ${String(start)}, ${String(length)}, ${stamp}`,
       );
     await expect(insertBlock("b1", 7, 600, 60)).rejects.toThrow(/CHECK constraint failed/u);
     await expect(insertBlock("b2", 0, 607, 60)).rejects.toThrow(/CHECK constraint failed/u);
@@ -269,9 +286,9 @@ describe("plan repository", () => {
     await expect(insertBlock("b6", 0, 600, 60, "'1763200000000-000001-no-hyphen'")).rejects.toThrow(
       /CHECK constraint failed/u,
     );
-    await expect(insert(`'b7', 'stats', 2, ${lowest}, 0, 600, 60, ${lowest}`)).rejects.toThrow(
-      /CHECK constraint failed/u,
-    );
+    await expect(
+      insert(`'b7', '${activityId}', 2, ${lowest}, 0, 600, 60, ${lowest}`),
+    ).rejects.toThrow(/CHECK constraint failed/u);
     await expect(connection.exec("UPDATE activities SET hue = 1")).rejects.toThrow(
       /CHECK constraint failed/u,
     );
@@ -338,5 +355,49 @@ describe("the migration to stamps", () => {
       createNodeId,
     );
     expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(8);
+  });
+});
+
+describe("the node after an import", () => {
+  const imported = requireValue(parseNodeId("newNode"), "node id");
+  const later = requireValue(parseStamp("1900000000000-000004-elsewhere"), "stamp");
+
+  it("gets a new id, and keeps the file's clock where it's later", async () => {
+    const { database } = await openTestDatabase();
+    await save(database, createExample);
+    const fileClock = requireValue(await loadNode(database), "node").clock;
+    expect(await renewNode(database, LOWEST, imported)).toEqual({
+      nodeId: "newNode",
+      clock: fileClock,
+    });
+    expect(await loadNode(database)).toEqual({ nodeId: "newNode", clock: fileClock });
+  });
+
+  it("keeps this browser's clock where it's later", async () => {
+    const { database } = await openTestDatabase();
+    await save(database, createExample);
+    expect(await renewNode(database, later, imported)).toEqual({ nodeId: "newNode", clock: later });
+  });
+
+  it("takes this browser's clock for a file that has no node yet", async () => {
+    const { database } = await openTestDatabase();
+    expect(await renewNode(database, later, imported)).toEqual({ nodeId: "newNode", clock: later });
+  });
+
+  it("makes no node when neither has a clock, so the first save makes one", async () => {
+    const { database } = await openTestDatabase();
+    expect(await renewNode(database, undefined, imported)).toBeUndefined();
+    expect(await loadNode(database)).toBeUndefined();
+  });
+
+  it("stamps the next save with the new id, later than both clocks", async () => {
+    const { database } = await openTestDatabase();
+    await save(database, createExample);
+    await renewNode(database, later, imported);
+    await save(database, (plan) => ({ ...plan, dayStart: sanitizeDayStart(6) }));
+    const { rows, node } = await loadRows(database);
+    expect(rows.settings.dayStart.stamp.endsWith("-newNode")).toBe(true);
+    expect(rows.settings.dayStart.stamp > later).toBe(true);
+    expect(node?.clock).toBe(rows.settings.dayStart.stamp);
   });
 });

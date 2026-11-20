@@ -2,7 +2,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { eq } from "drizzle-orm";
 
 import { make } from "../merge/change.ts";
-import { issueNext } from "../merge/clock.ts";
+import { advance, issueNext } from "../merge/clock.ts";
 import { convertPlan, readPlan, type Change, type Rows } from "../merge/index.ts";
 import type { ActivityRow, BlockRow, SettingsRow } from "../merge/row.ts";
 import { LOWEST, sanitizeTime, type NodeId, type Stamp } from "../merge/stamp.ts";
@@ -57,6 +57,12 @@ const readSettings = (record: SettingsRecord | undefined): SettingsRow =>
 /** This browser's node: its id and its clock, once the first save has made them. */
 type StoredNode = { nodeId: NodeId; clock: Stamp };
 
+/** Reads this browser's node, or undefined before the first save. */
+export async function loadNode(database: Database): Promise<StoredNode | undefined> {
+  const record = await database.select().from(node).where(eq(node.id, SINGLE_ROW_ID)).get();
+  return record && { nodeId: record.nodeId, clock: record.clock };
+}
+
 /**
  * Reads every row, deleted ones too, and this browser's node. The database's `CHECK` constraints
  * hold every value to the same rules as the merge's strict check, and its foreign key keeps every
@@ -68,11 +74,11 @@ type StoredNode = { nodeId: NodeId; clock: Stamp };
 export async function loadRows(
   database: Database,
 ): Promise<{ rows: Rows; isStored: boolean; node: StoredNode | undefined }> {
-  const [settingsRecord, activityRecords, blockRecords, nodeRecord] = await Promise.all([
+  const [settingsRecord, activityRecords, blockRecords, stored] = await Promise.all([
     database.select().from(settings).where(eq(settings.id, SINGLE_ROW_ID)).get(),
     database.select().from(activities),
     database.select().from(blocks),
-    database.select().from(node).where(eq(node.id, SINGLE_ROW_ID)).get(),
+    loadNode(database),
   ]);
   const rows: Rows = {
     activities: new Map<ActivityId, ActivityRow>(
@@ -86,7 +92,7 @@ export async function loadRows(
   return {
     rows,
     isStored: settingsRecord !== undefined,
-    node: nodeRecord && { nodeId: nodeRecord.nodeId, clock: nodeRecord.clock },
+    node: stored,
   };
 }
 
@@ -219,4 +225,32 @@ export async function saveAction(
   if (first) await database.batch([first, ...rest]);
 
   return readPlan(made.rows);
+}
+
+/**
+ * Gives an imported database's node a new id and the later of two clocks (see Export and import in
+ * docs/spec/merge.md). With the file's id, two browsers that imported the same file would issue
+ * stamps under one id, and two different values could get the same stamp. With the earlier clock,
+ * this browser's next stamp could be earlier than one it issued before the import.
+ *
+ * @param database - The imported database, migrated.
+ * @param clock - This browser's clock before the import, or undefined before its first save.
+ * @param nodeId - The new id.
+ * @returns The node it wrote, or undefined when neither the file nor this browser has a clock: the
+ *   first save then makes the node, as in a new database.
+ */
+export async function renewNode(
+  database: Database,
+  clock: Stamp | undefined,
+  nodeId: NodeId,
+): Promise<StoredNode | undefined> {
+  const imported = await loadNode(database);
+  if (imported === undefined && clock === undefined) return undefined;
+
+  const renewed = { nodeId, clock: advance(clock ?? LOWEST, imported?.clock ?? LOWEST) };
+  await database
+    .insert(node)
+    .values({ id: SINGLE_ROW_ID, ...renewed })
+    .onConflictDoUpdate({ target: node.id, set: renewed });
+  return renewed;
 }

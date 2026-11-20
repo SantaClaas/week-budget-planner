@@ -1,12 +1,10 @@
 import { databaseService, getDatabase, onNewerVersion } from "../database/client.ts";
 
 export { hasDatabaseFile, removeBrokenDatabase } from "../database/client.ts";
-import { customAlphabet } from "nanoid";
-
 import { runOnDatabase } from "../database/drizzle.ts";
+import { createRandomNodeId } from "../database/node.ts";
 import { loadPlan, saveAction } from "../database/plan-repository.ts";
 import { replay } from "../merge/replay.ts";
-import { parseNodeId, type NodeId } from "../merge/stamp.ts";
 import * as size from "../database/size.ts";
 import { randomIds } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
@@ -14,20 +12,6 @@ import { broadcastMessage, listenForBroadcasts } from "../broadcast/index.ts";
 import type { Result } from "../result.ts";
 import * as jsonFile from "./json-file.ts";
 import { createExportName, type PlanStore } from "./plan-store.ts";
-
-/** Twelve letters and digits, the characters a node id may hold (see merge/stamp.ts). */
-const createNodeText = customAlphabet(
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-  12,
-);
-
-/** A new node id for this browser, made on its first save. */
-function createNodeId(): NodeId {
-  const id = parseNodeId(createNodeText());
-  if (id === undefined) throw new Error("A new node id had characters a node id can't hold.");
-
-  return id;
-}
 
 /**
  * The lock every tab's save holds while it reads the rows and writes the change, so no other save
@@ -47,7 +31,7 @@ const saveUnderLock = (
   now: Temporal.Instant,
 ): Promise<Result<Plan, "newer-version">> =>
   navigator.locks.request(SAVE_LOCK, () =>
-    runOnDatabase(() => saveAction(database, update, now, createNodeId)),
+    runOnDatabase(() => saveAction(database, update, now, createRandomNodeId)),
   );
 
 /** Replaces the stored plan with an imported one, as one save, and tells the other tabs. */
