@@ -64,7 +64,7 @@ test("opens at the day hours, and scrolls with the keyboard", async ({ page }) =
   await expectStatus(page, "full");
   const week = page.getByRole("region", { name: "Week" });
   await expect(week.getByRole("heading", { name: /^Monday, /u })).toBeVisible();
-  // A quarter hour above 07:00, so its label shows in full under the day headers.
+  // 15 minutes above 07:00, so its label shows in full under the day headers.
   const opening = await measureScroll(week);
   expect(opening.scrollTop).toBeCloseTo((opening.height * 27) / 96, 0);
   await week.focus();

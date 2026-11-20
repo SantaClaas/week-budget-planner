@@ -1222,7 +1222,7 @@
     }
   }
   /* activity list (the Activities pane and page): a segmented list whose rows line up. The list defines
-     its columns once and every activity takes them over with subgrid, so the shapes, names, hours left
+     its columns once and every activity takes them over with subgrid, so the shapes, names, what's left to place
      and buttons line up from row to row, whatever their lengths. The progress bar spans the row below.
      <li class="activity" data-color="blue"><button class="activity-button" aria-pressed="false" aria-labelledby="…"
      aria-describedby="…"><span class="emblem" aria-hidden="true"></span><span class="name">…</span><span class="left-to-place">…</span>
@@ -1256,9 +1256,9 @@
         grid-column: 1 / -1;
         margin-inline-end: 0.5rem;
       }
-      /* The button that starts placing holds the shape, the name and the hours left, and takes their
+      /* The button that starts placing holds the shape, the name and what's left to place, and takes their
          columns over, so they still line up with the other rows. It's labelled by the name and
-         described by the budget and the hours left (see Activities in docs/spec/accessibility.md). */
+         described by the budget and what's left to place (see Activities in docs/spec/accessibility.md). */
       & > .activity-button {
         grid-column: 1 / 4;
         display: grid;

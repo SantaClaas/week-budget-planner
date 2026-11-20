@@ -108,7 +108,7 @@ test("placing, and Add block on an empty slot", async ({ page }) => {
   await page.getByRole("button", { name: "Gym", exact: true }).click();
   await expect(page.getByRole("region", { name: /^Placing Gym/u })).toMatchAriaSnapshot(`
     - region /Placing Gym · 1 hr, \\d+ mins/:
-      - paragraph: /Placing Gym · 1 hr, \\d+ mins Click a time slot · 3 hrs left to place/
+      - paragraph: /Placing Gym · 1 hr, \\d+ mins Click a slot · 3 hrs left to place/
       - button "Use first free slot"
       - button "Done"
   `);

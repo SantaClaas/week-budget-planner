@@ -4,6 +4,8 @@ Use one name per thing, the same way in the UI copy, this spec and the code.
 
 **Wrong names (look-up only)** lists words people use by mistake for a term: old names from the prototype, everyday words and words from other apps. They are not synonyms or alternatives, and none of them is ever correct. The column exists only to find the right term: when someone uses one of these words, in an issue, a finding, a review or a request, read it as the term, and answer, write and code with the term alone. Don't use a wrong name anywhere, not in the copy, the code, the spec, commit messages or replies, not even in brackets beside the term, except to point out that it's wrong. When a word turns up that isn't listed, add it to its term.
 
+**A test enforces the column.** [`scripts/check-glossary.ts`](../../scripts/check-glossary.ts) (`pnpm glossary`) reads the wrong names from this table and fails on each one it finds in the copy, the code and the docs, inside identifiers too (`isArmed`). So a word added here is checked from then on. A word too common for a machine to tell from a wrong use, such as "event" (a DOM event) or "duration" (Temporal's), goes on the check's list of unchecked words with its reason, and is left to review. A wrong name that is the whole of a quote or a code span, as in `"block" (never "tile")`, points out that it's wrong and passes. The prototype isn't checked: its copy predates this glossary.
+
 | Term | Meaning | Wrong names (look-up only) | Notes |
 | --- | --- | --- | --- |
 | **Week** | The one reusable plan, Monday to Sunday. It has no dates. | plan, schedule, timetable, calendar, grid | Code: `Plan` |
