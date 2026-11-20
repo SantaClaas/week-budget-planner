@@ -5,9 +5,18 @@
 import type { Plan } from "../plan/index.ts";
 import { make } from "./change.ts";
 import { parse } from "./check.ts";
-import { advance, next } from "./clock.ts";
+import { advance, issueNext } from "./clock.ts";
 import { findLatestStamp, merge, readPlan, type Change, type Rows } from "./index.ts";
-import { LOWEST, create, parseNodeId, type NodeId, type Stamp } from "./stamp.ts";
+import {
+  LOWEST,
+  create,
+  parseCounter,
+  parseNodeId,
+  parseTime,
+  sanitizeTime,
+  type NodeId,
+  type Stamp,
+} from "./stamp.ts";
 
 /** The value, or a throw when the test data doesn't have it. */
 export function required<Value>(value: Value | null | undefined, what: string): Value {
@@ -24,8 +33,14 @@ export function createNodeId(text: string): NodeId {
 }
 
 /** The stamp of `time` and `counter` by the node `node`. */
-export const createStamp = (time: number, counter: number, node: string): Stamp =>
-  create(time, counter, createNodeId(node));
+export function createStamp(time: number, counter: number, node: string): Stamp {
+  const checkedTime = parseTime(time);
+  const checkedCounter = parseCounter(counter);
+  if (checkedTime === "out-of-range" || checkedCounter === "out-of-range")
+    throw new Error(`The test data has a stamp out of range: ${String(time)}, ${String(counter)}.`);
+
+  return create(checkedTime, checkedCounter, createNodeId(node));
+}
 
 export type Node = { readonly id: NodeId; clock: Stamp; rows: Rows };
 
@@ -42,7 +57,8 @@ export const createNode = (name: string, rows: Rows): Node => ({
 export function act(node: Node, now: number, perform: (plan: Plan) => Plan): Change {
   const before = readPlan(node.rows);
   const after = perform(before);
-  const stamp = next(node.clock, Temporal.Instant.fromEpochMilliseconds(now), node.id);
+  const time = sanitizeTime(Temporal.Instant.fromEpochMilliseconds(now));
+  const stamp = required(issueNext(node.clock, time, node.id), "later stamp");
   const made = make(node.rows, before, after, stamp);
   node.clock = stamp;
   node.rows = made.rows;

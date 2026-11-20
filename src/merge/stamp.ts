@@ -17,21 +17,32 @@ export type NodeId = Brand<string, "NodeId">;
  */
 export type Stamp = Brand<string, "Stamp">;
 
-/** The latest time a stamp can hold: 13 digits of milliseconds, in the year 2286. */
+/**
+ * The time a stamp holds: whole milliseconds since 1970, from 0 to 13 digits' worth, which ends in
+ * the year 2286. Only the functions below make one, so a stamp's time is always in range.
+ */
+export type Time = Brand<number, "Time">;
+
+/** A stamp's counter: a whole number from 0 to 999999 (6 digits). */
+export type Counter = Brand<number, "Counter">;
+
+/** The latest time a stamp can hold. */
 const MAX_TIME = 9_999_999_999_999;
-/** The highest counter: 6 digits. */
-export const MAX_COUNTER = 999_999;
+/** The highest counter. */
+const MAX_COUNTER = 999_999;
 
 const NODE_ID = /^[0-9A-Za-z]{1,40}$/u;
 const STAMP = /^(\d{13})-(\d{6})-([0-9A-Za-z]{1,40})$/u;
 
 /**
- * Gives a checked node id or stamp its brand. Only the functions below call it, with text they've
+ * Gives a checked node id, stamp, time or counter its brand. Only the functions below call it, with text they've
  * just checked or made, so this is the one type assertion in the module.
  */
 // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Value is the brand to give: a return-only type parameter is what makes this the cast.
-function brand<Value extends Brand<string, string>>(value: string): Value {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place a checked node id or stamp becomes a brand (see Branded types in docs/guidelines/typescript.md).
+function brand<Value extends Brand<string, string> | Brand<number, string>>(
+  value: string | number,
+): Value {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- the one place a checked node id, stamp, time or counter becomes a brand (see Branded types in docs/guidelines/typescript.md).
   return value as Value;
 }
 
@@ -44,20 +55,40 @@ export const LOWEST: Stamp = brand<Stamp>("0000000000000-000000-");
 export const parseNodeId = (text: string): Result<NodeId, undefined> =>
   NODE_ID.test(text) ? brand<NodeId>(text) : undefined;
 
-/** A stamp's three parts. The node id is empty only in the lowest stamp. */
-type Parts = { time: number; counter: number; node: NodeId | "" };
+const isWholeBetween = (value: number, high: number): boolean =>
+  Number.isInteger(value) && value >= 0 && value <= high;
 
 /**
- * The stamp of `time`, `counter` and `node`. Throws on parts out of range: the clock only passes
- * parts it has kept in range, so one that isn't is a mistake in the code.
+ * The time a stamp holds for a wall clock reading. A clock before 1970 or after 2286 is held at the
+ * nearest end: it's for the edge that reads the clock, which may also tell the person their clock
+ * looks wrong (see "A clock that is wrong" in docs/spec/merge.md).
  */
-export function create(time: number, counter: number, node: NodeId): Stamp {
-  if (!Number.isInteger(time) || time < 0 || time > MAX_TIME)
-    throw new RangeError(`A stamp's time must be 0 to ${String(MAX_TIME)}, not ${String(time)}.`);
+export const sanitizeTime = (instant: Temporal.Instant): Time =>
+  brand<Time>(Math.min(MAX_TIME, Math.max(0, Math.floor(instant.epochMilliseconds))));
 
-  if (!Number.isInteger(counter) || counter < 0 || counter > MAX_COUNTER)
-    throw new RangeError(`A stamp's counter must be 0 to 999999, not ${String(counter)}.`);
+/** A time given as a number, checked strictly, for tests and for what's received. */
+export const parseTime = (value: number): Result<Time, "out-of-range"> =>
+  isWholeBetween(value, MAX_TIME) ? brand<Time>(value) : "out-of-range";
 
+/** A counter given as a number, checked strictly. */
+export const parseCounter = (value: number): Result<Counter, "out-of-range"> =>
+  isWholeBetween(value, MAX_COUNTER) ? brand<Counter>(value) : "out-of-range";
+
+/** The counter a stamp starts with. */
+export const FIRST_COUNTER: Counter = brand<Counter>(0);
+
+/** The counter after `counter`, or "out-of-range" when it's the highest. */
+export const incrementCounter = (counter: Counter): Result<Counter, "out-of-range"> =>
+  parseCounter(counter + 1);
+
+/** The millisecond after `time`, or "out-of-range" when it's the latest a stamp holds. */
+export const incrementTime = (time: Time): Result<Time, "out-of-range"> => parseTime(time + 1);
+
+/** A stamp's three parts. The node id is empty only in the lowest stamp. */
+type Parts = { time: Time; counter: Counter; node: NodeId | "" };
+
+/** The stamp of `time`, `counter` and `node`. Every part is a brand, so every stamp is valid. */
+export function create(time: Time, counter: Counter, node: NodeId): Stamp {
   const timeText = String(time).padStart(13, "0");
   const counterText = String(counter).padStart(6, "0");
   return brand<Stamp>(`${timeText}-${counterText}-${node}`);
@@ -76,9 +107,10 @@ export function parse(value: unknown): Result<Stamp, undefined> {
 export function read(stamp: Stamp): Parts {
   // A node id has no hyphens, so the text splits into exactly the three parts.
   const [time = "", counter = "", node = ""] = stamp.split("-");
+  // The text was checked or made by this module, so its parts are in range.
   return {
-    time: Number(time),
-    counter: Number(counter),
+    time: brand<Time>(Number(time)),
+    counter: brand<Counter>(Number(counter)),
     node: node === "" ? "" : brand<NodeId>(node),
   };
 }
