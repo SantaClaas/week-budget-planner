@@ -2,7 +2,8 @@
 // with its own rows, clock and wall clock, and a seeded scheduler that makes random user actions on
 // random nodes and delivers their changes late, twice, out of order, or not at all until a final
 // exchange of snapshots. The same seed replays the same run: a failing run names its seed, and
-// MERGE_SEED=<seed> pnpm test src/merge/simulation.test.ts runs that one alone.
+// MERGE_SEED=<seed> pnpm test src/merge/simulation.test.ts runs that one alone. Every run checks
+// the same seeds; MERGE_SEEDS_FROM=<seed> checks as many others, starting there.
 //
 // The random numbers come from mulberry32, a public-domain generator by Tommy Ettinger
 // (https://gist.github.com/tommyettinger/46a874533244883189143505d203312c), written anew here.
@@ -546,13 +547,41 @@ function findBrokenRule(seed: number): string[] {
   return [];
 }
 
-/** The seeds, in batches that each finish well within a test's time limit. */
-function listBatches(): number[][] {
-  const only = process.env["MERGE_SEED"];
-  if (only !== undefined) return [[Number(only)]];
+/** The largest seed: the generator keeps 32 bits, so a larger one would replay a smaller one. */
+const MAX_SEED = 0xff_ff_ff_ff;
 
+/**
+ * Reads a seed from the environment variable `name`.
+ *
+ * @param max The largest seed it may be.
+ * @returns The seed, or undefined when the variable isn't set.
+ * @throws {RangeError} When it isn't a whole number from 0 to `max`, so a typo can't quietly
+ *   replay another run.
+ */
+function readSeed(name: string, max: number): number | undefined {
+  const text = process.env[name];
+  if (text === undefined) return undefined;
+
+  const seed = Number(text);
+  if (/^\d+$/u.test(text) && seed <= max) return seed;
+
+  throw new RangeError(`${name} is "${text}", not a whole number from 0 to ${String(max)}.`);
+}
+
+/**
+ * Lists the seeds, in batches that each finish well within a test's time limit. They are 1 to RUNS,
+ * so every run checks the same weeks. MERGE_SEED runs one seed alone, and MERGE_SEEDS_FROM starts
+ * the RUNS seeds somewhere else, to look for weeks the fixed seeds never reach.
+ *
+ * @returns The seeds, one list per test.
+ */
+function listBatches(): number[][] {
+  const only = readSeed("MERGE_SEED", MAX_SEED);
+  if (only !== undefined) return [[only]];
+
+  const first = readSeed("MERGE_SEEDS_FROM", MAX_SEED - RUNS + 1) ?? 1;
   return Array.from({ length: RUNS / BATCH }, (_, batch) =>
-    Array.from({ length: BATCH }, (_unused, index) => batch * BATCH + index + 1),
+    Array.from({ length: BATCH }, (_unused, index) => first + batch * BATCH + index),
   );
 }
 
