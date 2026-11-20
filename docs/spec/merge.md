@@ -75,7 +75,7 @@ Devices' clocks can't be trusted to agree, so a stamp is a **hybrid logical cloc
 - **What it costs here is small.** The devices are one person's, their clocks are set by the network to within seconds, the conflict needs the same register changed on two of them while apart, and Undo and the other device's value are both a few taps away.
 - **A clock far ahead also dulls the stamps for a while.** Once the others merge its change, their clocks hold that future time, and until real time catches up their stamps differ only by the counter. Changes that know of each other still order correctly; changes made apart are then decided by the counter and the node id, not by time.
 - **The fix, in the later phases, uses the server that is there anyway.** Every response from the server carries its time. A node works out how far its own clock is off and corrects the time it stamps with, also while offline, by the last offset it knew. The server isn't the source of truth for time and nothing waits on it: a node that never reaches it stamps with its own clock, as in this phase. No second server is needed.
-- **Nothing that must be right may depend on a stamp's time.** How old a deletion marker is, for dropping it, is counted from when the group received it, not from its stamp (see [Deleting](#deleting)).
+- **Nothing that must be right may depend on a stamp's time.** When a deletion marker can be dropped is decided by which devices have it, not by how old it is (see [Deleting](#deleting)).
 
 What else was looked at:
 
@@ -95,7 +95,7 @@ What else was looked at:
 - **Undoing a delete** writes existence again, with a new stamp, and the row comes back as the device that undid it last showed it: every register that differs from that gets the new stamp too. An edit another device made to the row while it was deleted is replaced by it. The person who presses Undo gets back what they saw, and an import of an older file shows the file's values for rows that had been deleted since.
 - **A block shows only while its activity exists.** When one device deletes an activity and another adds a block to it, the block's row merges in but isn't part of the plan. If the deletion is undone, it appears with the activity. Deleting an activity still marks the blocks it had as deleted too, as it removes them today; the rule is for the blocks the deleting device didn't know about.
 - **Ids are never used again**, so a deleted row can't be mistaken for a new one.
-- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Dropping them needs a bound on how long a device may be away, which is the server's lease (see Leases and nonces under [Ideas for the infrastructure](network.md#ideas-for-the-infrastructure) in [Network](network.md)), so the rule belongs to the later phases. A marker's age is then counted from when the group received it, which the node records as it merges, not from the stamp, whose time a wrong clock could set. What the later phases have to settle is written under [Returning after a long time](#returning-after-a-long-time).
+- **Markers are all kept in this phase.** A marker is one row, and a plan's rows number in the tens. Once devices sync, a marker is dropped when every device in the group has it (see [Deletion markers](self-service.md#deletion-markers) in [Self-service](self-service.md)). That needs no clock and no new format.
 
 ## Order
 
@@ -158,12 +158,14 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **`activities`:** `position` is replaced by `order_key` (text). New: `is_deleted`, and a stamp for each register: `name_stamp`, `hue_stamp`, `shape_stamp`, `budget_stamp`, `order_stamp`, `existence_stamp`.
 - **`blocks`:** new: `is_deleted`, `time_stamp`, `existence_stamp`. The foreign key to `activities` holds, since a deleted activity's row stays.
 - **`settings`:** new: `day_start_stamp`, `day_end_stamp`, `example_loaded_at_stamp`.
-- **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged.
+- **`node`** (new, one row): `node_id` and `clock`, the latest stamp issued or merged. The first save after the database opens without one makes it.
 - **The rows and the merge are also a type and a function in memory,** which the database reads into and writes from, so they work without it (see [The limited storage levels](#the-limited-storage-levels)).
-- A stamp column is text with a `CHECK` on its form.
+- A stamp column is text with a `CHECK` on its form, and so is an order key (1 to 100 letters and digits, not ending in "0"); `is_deleted` is an integer, 0 or 1.
 - **Reading the plan** takes the rows that aren't deleted, the blocks whose activity isn't either, and the activities in order of `order_key`, then id. The blocks come in order of their ids, so every node shows the same order.
-- **Saving an action** compares before and after as it does now. A removed row becomes an update that marks it deleted; a changed register gets the action's stamp.
-- **The migration** gives every existing row the lowest stamp in each register, turns `position` into evenly spread order keys, and leaves `node` to be filled when the database next opens.
+- **Saving an action** reads the rows and the node, stamps what the action changed with the node's next stamp (see [The idea](#the-idea)), and writes the touched rows, whole, and the clock in one batch. A removed row becomes an update that marks it deleted. In code: `saveAction` in [`src/database/plan-repository.ts`](../../src/database/plan-repository.ts).
+  - **The read and the write are two calls through the leader tab, so every tab's save holds one Web Lock** (`week-budget-planner.save`) from the read to the write. Two saves in between could read the same rows and the same clock, and the later write would undo the earlier one.
+  - **A tab saves the plan it showed before an action and the plan after**, since an action can't be sent to the leader tab. The rows may hold another tab's change made since, so only what the action changed is applied to them, field by field ([`src/merge/replay.ts`](../../src/merge/replay.ts)): a field it didn't change keeps its value, a row deleted since stays deleted, and the order it gave is kept in the places the activities hold now.
+- **The migration** ([`drizzle/20261120020448_stamps/migration.sql`](../../drizzle/20261120020448_stamps/migration.sql)) gives every existing row the lowest stamp in each register, keeps every row as it is (none was deleted before), and turns `position` into order keys of two digits from each activity's rank: the first from `1` up, the second from `1` to `z`. They ascend as text in the old order, leave room before the first, and are good for 3721 activities. drizzle-kit's own SQL for it added the new columns without values and then rebuilt the tables anyway, so the migration is its rebuild with the copying rewritten by hand. `node` is made by the next save.
 - **Size:** a stamp is about 33 characters, and an activity has six. A plan with 20 activities, 60 blocks and as many deleted rows again grows by a few tens of kilobytes.
 
 ## Export and import
@@ -182,23 +184,12 @@ The rows stay in the tables they're in, with their stamps beside their values, s
 - **It is a node of its own for as long as it's open,** with a new node id each time, since it has nowhere to keep one, and it tells the group that it's temporary, so it can be let go when it closes (see [Removing a device](network.md#removing-a-device) in [Network](network.md)). Without the database there's no leader either, so each such tab is its own node with its own connection.
 - **In this phase nothing changes at these levels.** They keep the plan as JSON without stamps, as now, and a plan made there reaches the full level by a `.json` import. Whether the level with `localStorage` should keep stamps too, so unsent changes survive a reload, is decided with the later phases.
 
-## Returning after a long time
-
-This is for the later phases, since it depends on the lease. It's written down because it decides whether markers can ever be dropped, and the format above has to allow it.
-
-The danger: once the other devices have dropped a marker, a device that was away since before the deletion still has the row, and merging its row would bring it back. So a device that returns after its lease doesn't merge its state. It takes the group's snapshot and carries over only what it never sent, by the stamps later than its last sync:
-
-- **A row it created itself and never sent** is added, with a new existence stamp.
-- **A row that is in the snapshot** merges as usual.
-- **A row it edited that isn't in the snapshot** was deleted while it was away. The edit is dropped, which matches "a delete wins".
-
-An old `.db` file imported and then merged, should that feature come, is the same case, and gets the same rule.
-
 ## Tests
 
 The merge is pure, so its tests need no browser (see [`docs/guidelines/tests.md`](../guidelines/tests.md)):
 
-- **Simulation:** several nodes in one process, each with its own rows and clock, and a seeded scheduler that delivers changes late, twice, out of order or not at all until a final exchange of snapshots. The same seed replays the same run, and every test run checks the same seeds, so a failure is never chance; `MERGE_SEEDS_FROM` checks others by hand. Wall clocks are part of what the seed sets, including clocks that disagree.
+- **Simulation:** several nodes in one process, each with its own rows and clock, and a seeded scheduler that delivers changes late, twice, out of order or not at all until a final exchange of snapshots. The same seed replays the same run, and every test run checks the same seeds, so a failure is never chance; `MERGE_SEEDS_FROM` checks others, by hand or in a workflow after each change to the merge on main. Wall clocks are part of what the seed sets, including clocks that disagree, and so is the run's shape: how many nodes and events, the mix of actions, and how often changes are lost, late or doubled.
+- **What must hold after every action:** its change gives its stamp only to the registers whose value the action changed, so it can't overwrite what another node changed meanwhile.
 - **What must hold after every run:**
   - nodes that merged the same changes have the same rows and show the same plan;
   - merging the same change again changes nothing, and neither does the order of merging;
