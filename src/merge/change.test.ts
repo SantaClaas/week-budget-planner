@@ -26,8 +26,7 @@ const stamp = createStamp(1_763_200_000_000, 0, "me");
 
 /** Makes the change from the plan the rows show to what `perform` turns it into. */
 function act(held: Rows, perform: (shown: Plan) => Plan, at = stamp) {
-  const before = readPlan(held);
-  return make(held, before, perform(before), at);
+  return make(held, perform, at);
 }
 
 /** Every register of a row with the stamp it has, by name. */
@@ -215,6 +214,31 @@ describe("making a change", () => {
   it("refuses a block whose activity has no row", () => {
     const empty = convertPlan(createEmptyPlan());
     const after = { ...plan, activities: [], blocks: [createBlock()] };
-    expect(() => make(empty, readPlan(empty), after, stamp)).toThrow(/no|Missing/u);
+    expect(() => make(empty, () => after, stamp)).toThrow(/no|Missing/u);
+  });
+
+  it("keeps a change another device made, merged since the tab last showed the plan", () => {
+    // The tab shows the plan from before the rename; the rename arrives and is merged; then the
+    // person resizes a block. The action is applied to the plan the rows show, rename included.
+    const renamed = act(rows, (shown) =>
+      activityList.update(shown, required(shown.activities[0], "activity").id, {
+        ...required(shown.activities[0], "activity"),
+        name: createActivity({ name: "Renamed" }).name,
+      }),
+    );
+    const later = createStamp(1_763_200_000_001, 0, "me");
+    const resized = act(
+      renamed.rows,
+      (shown) => ({
+        ...shown,
+        blocks: [
+          { ...required(shown.blocks[0], "block"), length: createBlock({ length: 120 }).length },
+          ...shown.blocks.slice(1),
+        ],
+      }),
+      later,
+    );
+    expect(readPlan(resized.rows).activities[0]?.name).toBe("Renamed");
+    expect(resized.change.activities.every((row) => row.name.stamp !== later)).toBe(true);
   });
 });

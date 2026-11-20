@@ -6,7 +6,7 @@ import type { Plan } from "../plan/index.ts";
 import { make } from "./change.ts";
 import { parse } from "./check.ts";
 import { advance, issueNext } from "./clock.ts";
-import { findLatestStamp, merge, readPlan, type Change, type Rows } from "./index.ts";
+import { findLatestStamp, merge, type Change, type Rows } from "./index.ts";
 import {
   LOWEST,
   create,
@@ -55,11 +55,9 @@ export const createNode = (name: string, rows: Rows): Node => ({
  * it shows into the plan after. Gives back the change it saved, for the other nodes.
  */
 export function act(node: Node, now: number, perform: (plan: Plan) => Plan): Change {
-  const before = readPlan(node.rows);
-  const after = perform(before);
   const time = sanitizeTime(Temporal.Instant.fromEpochMilliseconds(now));
   const stamp = required(issueNext(node.clock, time, node.id), "later stamp");
-  const made = make(node.rows, before, after, stamp);
+  const made = make(node.rows, perform, stamp);
   node.clock = stamp;
   node.rows = made.rows;
   return made.change;
