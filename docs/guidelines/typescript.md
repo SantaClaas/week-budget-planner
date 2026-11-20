@@ -43,6 +43,15 @@ Inside a function, a boolean for a condition is fine. Naming a long condition wi
 
 **Prefix every key in `localStorage` and `sessionStorage`** with `week-budget-planner.`, as in `week-budget-planner.color-scheme`. Storage is shared by everything on the same origin, and in development that's every app that ever ran on the same `localhost` port, so an unprefixed key like `theme` is bound to collide.
 
+## Doc comments
+
+**A doc comment is JSDoc (`/** … */`), on what's declared, and says what the name and the type don't:** what a value means, its unit and range, where it comes from, what the caller must make sure of, what happens at the edges. Editors show it wherever the name is used, and a `//` comment they don't.
+
+- **Describe a parameter with `@param`,** and what comes back with `@returns`, where either needs more than its name and type: `@param time - The wall clock as a stamp's time: what to do with a clock out of range is decided where it's read.` A sentence about the parameters inside the description reads well only for one, and then the editor can't show it next to the argument being typed.
+- **No types in braces.** TypeScript has the types, and a copy in a comment only goes stale: `@param stamp - …`, not `@param {Stamp} stamp - …`.
+- **Not on every function.** One whose name and parameters say it all, such as `isHue(value)`, needs no comment, and a `@param` that repeats the name says nothing. The lint doesn't ask for `@param` on every parameter; it checks that a tag exists, and that a `@param` has a name and a description (`jsdoc/check-tag-names`, `jsdoc/require-param-description`).
+- **The project's own tag** is `@mustUse` (see Results below).
+
 ## Branded types
 
 **Give a value its own type when it means something of its own.** A branded type is a plain number or string at runtime, but TypeScript won't let a plain `number`, or a value of another brand, stand in for it. Make one with `Brand` from [`src/brand.ts`](../../src/brand.ts): `type Length = Brand<number, "Length">`. Two reasons call for one, often both at once:

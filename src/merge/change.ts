@@ -34,8 +34,13 @@ type BlockValues = { time: BlockTime; existence: BlockExistence };
 type SettingsValues = Pick<Plan, "dayStart" | "dayEnd" | "exampleLoadedAt">;
 
 /**
- * The register as it was, when its value didn't change and it exists; otherwise the new value
- * with the action's stamp.
+ * One register after the action.
+ *
+ * @param held - The register as the node holds it, or undefined for a new row.
+ * @param previous - Its value before the action, or undefined for a new row.
+ * @param next - Its value after the action.
+ * @param stamp - The action's stamp.
+ * @returns `held` itself when its value didn't change, otherwise the new value with the stamp.
  */
 function write<Of extends Value>(
   held: Register<Of> | undefined,
@@ -96,7 +101,12 @@ function assignOrderKeys(rows: Rows, before: Plan, after: Plan): Map<ActivityId,
   );
 }
 
-/** Whether a register of `row` isn't the one held: the action wrote it, or the row is new. */
+/**
+ * Whether the action wrote a register of a row, or the row is new.
+ *
+ * @param held - The row as the node holds it, or undefined for a new one.
+ * @param row - The row after the action, whose unwritten registers are `held`'s own objects.
+ */
 const isWritten = (held: object | undefined, row: object): boolean =>
   held === undefined ||
   Object.entries(row).some(([key, field]) => field !== Reflect.get(held, key));
@@ -221,10 +231,8 @@ function writeSettings(
 }
 
 /**
- * What one user action did: the rows with it written, and the change to send. `update` is the
- * action: it gets the plan the rows show and gives back the plan after, as the planner's actions
- * do. `stamp` is the action's one stamp, from the node's clock. Call it in the same transaction
- * that reads the rows and saves what it gives back.
+ * Makes the change for one user action. Call it in the same transaction that reads the rows and
+ * saves what it gives back.
  *
  * It takes the action, not a plan after, on purpose: every register that differs between the
  * plan the rows show and the plan after gets the stamp. A plan after built on an older plan, one a
@@ -232,9 +240,14 @@ function writeSettings(
  * and stamp it back to how it was, on every node. Applied to the plan the rows show, the action can
  * only differ in what it did itself.
  *
- * Only registers whose values changed get the stamp. A removed activity or block is marked
- * deleted, not removed. The change holds the touched rows, whole, and with each touched block its
- * activity's row, so it never points at a row the receiver might not have.
+ * @param rows - The rows the node holds.
+ * @param update - The action: it gets the plan the rows show and gives back the plan after, as the
+ *   planner's actions do.
+ * @param stamp - The action's one stamp, from the node's clock (see `clock.issueNext`).
+ * @returns The rows with the action written, and the change to send. Only registers whose values
+ *   changed get the stamp. A removed activity or block is marked deleted, not removed. The change
+ *   holds the touched rows, whole, and with each touched block its activity's row, so it never
+ *   points at a row the receiver might not have.
  */
 export function make(
   rows: Rows,

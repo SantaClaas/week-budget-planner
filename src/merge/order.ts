@@ -42,8 +42,9 @@ export const parse = (value: unknown): Result<OrderKey, undefined> =>
 const readDigit = (text: string, index: number): number => DIGITS.indexOf(text[index] ?? "0");
 
 /**
- * Digits that sort after `low` and don't end in "0": a key at the end of the list. `low` is a key,
- * or empty for a list with none.
+ * Digits that sort after `low` and don't end in "0": a key at the end of the list.
+ *
+ * @param low - The last key, or empty for a list with none.
  */
 function findAfter(low: string): string {
   const lowDigit = readDigit(low, 0);
@@ -54,8 +55,10 @@ function findAfter(low: string): string {
 }
 
 /**
- * Digits that sort strictly between `low` and `high` and don't end in "0". `low` is a key, or empty
- * for the start of the list; `high` is a key above it.
+ * Digits that sort strictly between `low` and `high` and don't end in "0".
+ *
+ * @param low - The key below the gap, or empty at the start of the list.
+ * @param high - The key above the gap, which sorts after `low`.
  */
 function findBetween(low: string, high: string): string {
   let shared = 0;
@@ -81,9 +84,13 @@ export const createAfter = (last: OrderKey): OrderKey => brand(findAfter(last));
 export const createBefore = (first: OrderKey): OrderKey => brand(findBetween("", first));
 
 /**
- * A key strictly between `before` and `after`. Throws when `before` isn't below `after`: then no
- * key fits, and the digits it would make sort wrong, which is a mistake in the code that calls it.
- * The keys `assign` passes come from a run that ascends strictly, so it never does.
+ * A key strictly between two others.
+ *
+ * @param before - The key below.
+ * @param after - The key above.
+ * @throws {RangeError} When `before` isn't below `after`: then no key fits, and the digits it would
+ *   make sort wrong, which is a mistake in the code that calls it. The keys `assign` passes come
+ *   from a run that ascends strictly, so it never does.
  */
 export function createBetween(before: OrderKey, after: OrderKey): OrderKey {
   if (before >= after) throw new RangeError(`No key fits between "${before}" and "${after}".`);
@@ -92,9 +99,11 @@ export function createBetween(before: OrderKey, after: OrderKey): OrderKey {
 }
 
 /**
- * `count` keys in order in a gap of the list, split in halves so they stay short. The gap starts
- * after `low`, a key or empty at the start of the list, and ends before `high`, or at the end of
- * the list when there's none.
+ * Keys in order in a gap of the list, split in halves so they stay short.
+ *
+ * @param low - The key the gap starts after, or empty at the start of the list.
+ * @param high - The key the gap ends before, or undefined at the end of the list.
+ * @param count - How many keys.
  */
 function listInGap(low: string, high: OrderKey | undefined, count: number): OrderKey[] {
   if (count === 0) return [];
@@ -126,7 +135,11 @@ export function spread(count: number): OrderKey[] {
 /** What the Activities list is sorted by: the order key, and the id where keys are equal. */
 type Ordered = { readonly key: OrderKey; readonly id: string };
 
-/** Below zero when `first` comes first in the list, above when `second` does. */
+/**
+ * Compares two activities by where they come in the list, for sorting.
+ *
+ * @returns Below zero when `first` comes first, above when `second` does, zero for the same id.
+ */
 export function compare(first: Ordered, second: Ordered): number {
   if (first.key !== second.key) return first.key < second.key ? -1 : 1;
 
@@ -168,12 +181,14 @@ function findAscending(keys: readonly (OrderKey | undefined)[]): Set<number> {
 }
 
 /**
- * Keys for a list in its new order, given each item's key so far (undefined for a new item). As
- * many keys as possible stay as they are: those of a longest run already in order. The others get
- * new keys between their neighbors, so one activity dragged to a new place is the one whose key
- * changes, and a new activity at the end gets a key after the last. Two equal keys can't both stay,
- * since nothing would fit between them. Should a new key grow past the longest a key can be, the
- * whole list gets evenly spread keys instead.
+ * Keys for a list in its new order. As many keys as possible stay as they are: those of a longest
+ * run already in order. The others get new keys between their neighbors, so one activity dragged to
+ * a new place is the one whose key changes, and a new activity at the end gets a key after the
+ * last. Two equal keys can't both stay, since nothing would fit between them. Should a new key grow
+ * past the longest a key can be, the whole list gets evenly spread keys instead.
+ *
+ * @param keys - Each item's key so far, in the new order, and undefined for a new item.
+ * @returns A key for each item, in the same order.
  */
 export function assign(keys: readonly (OrderKey | undefined)[]): OrderKey[] {
   const kept = findAscending(keys);

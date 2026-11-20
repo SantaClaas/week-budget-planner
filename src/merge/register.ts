@@ -42,8 +42,12 @@ export function isSame(first: Value, second: Value): boolean {
 /**
  * The register that wins: the one with the later stamp. Equal stamps with different values
  * shouldn't happen, but can (a copied browser profile, rows from before stamps), so the value that
- * sorts later as canonical JSON wins then, and every node still gets the same result. `first` is
- * given back when it wins or both are the same, so a row nothing changed stays the same object.
+ * sorts later as canonical JSON wins then, and every node still gets the same result.
+ *
+ * @param first - The register the node holds.
+ * @param second - The register that arrived.
+ * @returns `first` itself when it wins or both are the same, so a row nothing changed stays the
+ *   same object; otherwise `second`.
  */
 export function merge<Of extends Value>(first: Register<Of>, second: Register<Of>): Register<Of> {
   const order = compareStamps(first.stamp, second.stamp);
@@ -55,8 +59,11 @@ export function merge<Of extends Value>(first: Register<Of>, second: Register<Of
 }
 
 /**
- * A received register, parsed strictly: a value `parseValue` accepts, and a well-formed stamp.
- * `problem` is what to give back when the value is refused.
+ * A received register, parsed strictly: a value its parser accepts, and a well-formed stamp.
+ *
+ * @param value - What was received, as JSON gives it.
+ * @param parseValue - The parser of the register's value: the checked value, or undefined.
+ * @param problem - What to give back when the value is refused.
  */
 export function parse<Of extends Value, Problem extends string>(
   value: unknown,

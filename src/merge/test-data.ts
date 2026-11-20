@@ -51,8 +51,12 @@ export const createNode = (name: string, rows: Rows): Node => ({
 });
 
 /**
- * Makes `node` do one action at the wall-clock time `now` (milliseconds): `perform` turns the plan
- * it shows into the plan after. Gives back the change it saved, for the other nodes.
+ * Makes a node do one action.
+ *
+ * @param node - The node, whose clock and rows the action moves on.
+ * @param now - Its wall clock, in milliseconds since 1970.
+ * @param perform - The action: it turns the plan the node shows into the plan after.
+ * @returns The change the node saved, for the other nodes.
  */
 export function act(node: Node, now: number, perform: (plan: Plan) => Plan): Change {
   const time = sanitizeTime(Temporal.Instant.fromEpochMilliseconds(now));
