@@ -136,7 +136,11 @@ function decode(part: string): string {
   return decoded;
 }
 
-/** What's wrong with one link from the file at `path`, or nothing. */
+/**
+ * What's wrong with one link, or nothing.
+ *
+ * @param path - The file the link is in.
+ */
 function findProblem(path: string, target: string, files: Files): DeadLink["problem"] | undefined {
   if (target === "" || HAS_SCHEME.test(target) || target.startsWith("//")) return undefined;
 
@@ -155,7 +159,12 @@ function findProblem(path: string, target: string, files: Files): DeadLink["prob
   return anchors.has(decode(anchor).toLowerCase()) ? undefined : "no such section";
 }
 
-/** The dead links in the Markdown text of the file at `path`. */
+/**
+ * The dead links in one Markdown file.
+ *
+ * @param path - Where the file is.
+ * @param markdown - The file's text.
+ */
 export function findDeadLinks(path: string, markdown: string, files: Files): DeadLink[] {
   return listLinks(markdown).flatMap(({ target, line }) => {
     const problem = findProblem(path, target, files);

@@ -12,9 +12,12 @@ import { activities, blocks, settings } from "./schema.ts";
 const SETTINGS_ID = 1;
 
 /**
- * Reads the plan. `isStored` is false when the database has never held a plan (first run), so the
- * caller can load the example week. The database's constraints keep the ids valid, but anything
- * read is sanitized all the same, so `ids` gives the new ones it would need.
+ * Reads the plan.
+ *
+ * @param ids - Gives the new ids the sanitizer would need: the database's constraints keep the ids
+ *   valid, but anything read is sanitized all the same.
+ * @returns The plan, and `isStored`, which is false when the database has never held a plan (first
+ *   run), so the caller can load the example week.
  */
 export async function loadPlan(
   database: Database,
@@ -60,9 +63,12 @@ const isSameBlock = (previous: Block, next: Block): boolean =>
   previous.length === next.length;
 
 /**
- * The statements that turn the stored `before` into `after`: deletes first (a deleted activity's
- * blocks before the activity), then upserts. Only what changed is written, and rows it creates
- * are created at `now`.
+ * The statements that turn the stored plan into the next one: deletes first (a deleted activity's
+ * blocks before the activity), then upserts. Only what changed is written.
+ *
+ * @param before - The plan as it is stored, or undefined when none is.
+ * @param after - The plan to store.
+ * @param now - When the rows it creates are created.
  */
 export function buildPlanStatements(
   database: Database,
@@ -161,8 +167,12 @@ export function buildPlanStatements(
 }
 
 /**
- * Writes one user action: everything that differs between `before` (what is stored) and `after`,
- * in one transaction, at `now`. Undo uses the same path, with the restored plan as `after`.
+ * Writes one user action: everything that differs between the stored plan and the next one, in one
+ * transaction.
+ *
+ * @param before - The plan as it is stored, or undefined when none is.
+ * @param after - The plan to store. For undo, the restored plan.
+ * @param now - When the action happened.
  */
 export async function savePlan(
   database: Database,

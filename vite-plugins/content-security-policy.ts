@@ -86,7 +86,13 @@ export function findTemplates(code: string): string[] {
 
 const isOwnCode = (id: string) => !id.startsWith("\0") && !id.includes("/node_modules/");
 
-/** `trustedHtmlFiles`: files, relative to the project root, that are imported with `?raw` and written as HTML. */
+/**
+ * The plugins that add the Content Security Policy and Trusted Types.
+ *
+ * @param options - What the build can't find by itself.
+ * @param options.trustedHtmlFiles - Files, relative to the project root, that are imported with
+ *   `?raw` and written as HTML.
+ */
 export function addContentSecurityPolicy({
   trustedHtmlFiles = [],
 }: { trustedHtmlFiles?: string[] } = {}): Plugin[] {

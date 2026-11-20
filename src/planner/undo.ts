@@ -213,9 +213,12 @@ function revertOrder<Value extends Entity>(list: readonly Value[], order: Order)
 }
 
 /**
- * `plan` with `step` undone. "conflict" when something the step touched has changed since, as
- * another tab can change it, or when undoing it would bring back a block whose activity is gone:
- * then nothing is undone, rather than overwriting the other change or undoing half the step.
+ * Undoes a step on the plan as it is now.
+ *
+ * @returns `plan` with `step` undone, or "conflict" when something the step touched has changed
+ *   since, as another tab can change it, or when undoing it would bring back a block whose activity
+ *   is gone: then nothing is undone, rather than overwriting the other change or undoing half the
+ *   step.
  */
 export function revert(plan: Plan, step: Step): Result<Plan, "conflict"> {
   const isFieldUnchanged = FIELD_NAMES.every(

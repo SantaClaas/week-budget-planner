@@ -40,9 +40,10 @@ type DatabaseService = QueryService & {
   /** Checkpoints the WAL, briefly closes the database, and returns the raw SQLite file bytes. */
   exportFile(): Promise<Result<Uint8Array<ArrayBuffer>, "newer-version">>;
   /**
-   * Replaces the database file and reloads every tab. Destructive. Leaves the database as it was
-   * and returns "invalid-file" when the file isn't a database this app can open, or
-   * "newer-version" when a newer version of the app made it.
+   * Replaces the database file and reloads every tab. Destructive.
+   *
+   * @returns "imported", or, leaving the database as it was, "invalid-file" when the file isn't a
+   *   database this app can open, or "newer-version" when a newer version of the app made it.
    */
   importFile(bytes: Uint8Array<ArrayBuffer>): Promise<Result<"imported", ImportProblem>>;
   /** Deletes the database files entirely and reloads every tab. Destructive. */
@@ -456,8 +457,10 @@ function startElection(): void {
 }
 
 /**
- * Runs `operation` locally when leader, otherwise through the leader tab. "newer-version" once
- * this tab stepped down for a newer one.
+ * Runs an operation locally when leader, otherwise through the leader tab.
+ *
+ * @returns What `operation` gives back, or "newer-version" once this tab stepped down for a newer
+ *   one.
  */
 async function callService<T>(
   operation: (service: DatabaseService) => Promise<T>,

@@ -114,10 +114,12 @@ function sanitizeBlocks(
 }
 
 /**
- * Turns anything loaded (storage, an import, another tab) into a valid plan: clamps numbers, snaps
- * times to the slot, gives activities with a missing or unknown color or shape their default (in
- * list order), gives invalid or repeated ids new ones from `ids`, and drops blocks whose activity
- * doesn't exist.
+ * Turns anything loaded into a valid plan: clamps numbers, snaps times to the slot, gives
+ * activities with a missing or unknown color or shape their default (in list order), gives invalid
+ * or repeated ids new ones, and drops blocks whose activity doesn't exist.
+ *
+ * @param input - What was loaded: from storage, an import or another tab.
+ * @param ids - Gives the new ids for invalid or repeated ones.
  */
 export function sanitizePlan(input: unknown, ids: IdGenerator): Plan {
   if (!isRecord(input)) return createEmptyPlan();

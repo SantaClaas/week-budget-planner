@@ -22,13 +22,16 @@ export type Planner = {
   canUndo(): boolean;
   saveStatus(): ReturnType<typeof saveStatus.describe>;
   /**
-   * Applies one user action: `update` gets the plan and the action's `now`, and gives back the
-   * changed plan, or the same one when nothing changed. Does nothing in an outdated tab.
+   * Applies one user action. Does nothing in an outdated tab.
+   *
+   * @param update - Gets the plan and the action's `now`, and gives back the changed plan, or the
+   *   same one when nothing changed.
    */
   change(update: (before: Plan, now: Temporal.Instant) => Plan): void;
   /**
-   * Shows `update` applied to the plan without saving it or recording an undo step, as a drag in
-   * progress does. Each call starts again from the plan as it is, not from the last preview.
+   * Shows a change without saving it or recording an undo step, as a drag in progress does.
+   *
+   * @param update - The change to show. Each call gets the plan as it is, not the last preview.
    */
   preview(update: (before: Plan) => Plan): void;
   /** Shows the plan as it is again, after a drag that changed nothing or was cancelled. */
@@ -98,7 +101,9 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
 
   /**
    * Offers to save again, once per run of failed saves (see Writes and undo). The change stays on
-   * screen, and `retry` saves it.
+   * screen.
+   *
+   * @param retry - Saves the change again.
    */
   function offerRetry(retry: () => void): void {
     if (isFailing) return;
@@ -118,7 +123,12 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
     });
   }
 
-  /** Writes `after` over what the store holds, and offers `retry` when that fails. */
+  /**
+   * Writes a plan over what the store holds.
+   *
+   * @param after - The plan to write.
+   * @param retry - What the snackbar's Retry runs when the write fails.
+   */
   async function saveNow(after: Plan, now: Temporal.Instant, retry: () => void): Promise<void> {
     let result: Result<"saved", "newer-version">;
     try {
@@ -230,9 +240,10 @@ export function create(store: PlanStore, stored: Plan, options: Options): Planne
 }
 
 /**
- * Opens the best storage and its plan, saving the example week on first run, and gives back the
- * planner for it with the store it saves to. "newer-version" when a newer version of the app saved
- * the plan, which this one can't read.
+ * Opens the best storage and its plan, saving the example week on first run.
+ *
+ * @returns The planner for the plan, with the store it saves to, or "newer-version" when a newer
+ *   version of the app saved the plan, which this one can't read.
  */
 export async function open(
   options: Options,

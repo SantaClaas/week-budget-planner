@@ -59,8 +59,9 @@ export interface PlanStore {
     now: Temporal.Instant,
   ): Promise<Result<"saved", "newer-version">>;
   /**
-   * The `.db` file at the full level, the `.json` plan file otherwise, named after `at`, the local
-   * date and time the export started.
+   * The `.db` file at the full level, the `.json` plan file otherwise.
+   *
+   * @param at - The local date and time the export started, which the file is named after.
    */
   exportFile(at: Temporal.PlainDateTime): Promise<Result<ExportedFile, "newer-version">>;
   /**

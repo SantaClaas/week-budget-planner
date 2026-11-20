@@ -45,7 +45,9 @@ function stopPlacingOnEscape(event: KeyboardEvent): void {
 /**
  * A tab on a newer version took over while this one ran, and the planner stopped every change:
  * reloads now when hidden, else asks to reload with the plan on screen read-only, and reloads once
- * the tab is hidden, until `signal` aborts.
+ * the tab is hidden.
+ *
+ * @param signal - Stops waiting for the tab to be hidden when it aborts.
  */
 function leaveForNewerVersion(signal: AbortSignal): void {
   if (document.visibilityState === "hidden") {

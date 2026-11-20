@@ -106,7 +106,9 @@ async function startTransaction(connection: TursoConnection): Promise<Transactio
 
 /**
  * The {@link QueryService} for a local connection: the leader tab's, or a test database.
- * `getConnection` gives back "newer-version" for a database that a newer version of the app made.
+ *
+ * @param getConnection - Gives back the connection, or "newer-version" for a database that a newer
+ *   version of the app made.
  */
 export function createLocalQueryService(
   getConnection: () => Promise<Result<TursoConnection, "newer-version">>,
