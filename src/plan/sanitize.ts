@@ -16,16 +16,10 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "./time.ts";
-import { PALETTE, SHAPES, type Hue, type Shape } from "./activity/look.ts";
+import { isHue, isShape } from "./activity/look.ts";
 import { createEmptyPlan, type Plan } from "./index.ts";
 import { type Activity } from "./activity/index.ts";
 import { type Block } from "./block/index.ts";
-
-const PALETTE_HUES = new Set<number>(PALETTE.values().map((color) => color.hue));
-const SHAPE_NAMES = new Set<string>(SHAPES);
-
-const isHue = (value: number): value is Hue => PALETTE_HUES.has(value);
-const isShape = (value: string): value is Shape => SHAPE_NAMES.has(value);
 
 /** A valid instant as a normalized ISO 8601 time in UTC, or null. */
 function readTime(value: unknown): string | null {
