@@ -15,6 +15,10 @@ import {
 } from "./stamp.ts";
 import { createStamp } from "./test-data.ts";
 
+/** The time a stamp holds for a wall clock reading `milliseconds` after 1970. */
+const at = (milliseconds: number) =>
+  sanitizeTime(Temporal.Instant.fromEpochMilliseconds(milliseconds));
+
 /** Each item with the one after it. */
 const listNeighbors = <Item>(items: readonly Item[]): [Item, Item][] =>
   items.slice(1).flatMap((later, index): [Item, Item][] => {
@@ -66,8 +70,6 @@ describe("stamp", () => {
   });
 
   it("holds a wall clock before 1970 or after 2286 at the nearest end", () => {
-    const at = (milliseconds: number) =>
-      sanitizeTime(Temporal.Instant.fromEpochMilliseconds(milliseconds));
     expect(at(-5000)).toBe(0);
     expect(at(1_763_200_000_000)).toBe(1_763_200_000_000);
     expect(at(9_999_999_999_999)).toBe(9_999_999_999_999);
