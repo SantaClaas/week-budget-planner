@@ -1,6 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
+import { connect } from "@tursodatabase/database";
+import * as driverCore from "drizzle-orm/tursodatabase/driver-core";
+import { migrate } from "drizzle-orm/tursodatabase/wasm-migrator";
 
 import { ISOLATED_URL, PAGES_URL, expectStatus, removeFirstBlock } from "./app.ts";
 
@@ -63,6 +68,66 @@ test("exports the database and imports it again, after asking", async ({ page })
   await dialog.getByRole("button", { name: "Replace" }).click();
   // Every tab reloads with the imported plan.
   await expectStatus(page, "full");
+});
+
+/**
+ * A database file as the first release saved it, before stamps: only the first migration, with a
+ * plan of two activities and three blocks. Made in Node with the same engine the app runs.
+ */
+async function createDatabaseBeforeStamps(): Promise<Buffer> {
+  const drizzleFolder = new URL("../drizzle/", import.meta.url);
+  const [first = ""] = (await readdir(drizzleFolder)).toSorted();
+  const sql = await readFile(new URL(`${first}/migration.sql`, drizzleFolder), "utf8");
+  const path = join(await mkdtemp(join(tmpdir(), "week-budget-planner-")), "before-stamps.db");
+  const connection = await connect(path);
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- construct() exists at runtime, but Drizzle's types leave it out (as in src/database/migration.ts).
+  const driver = driverCore as unknown as {
+    construct(client: unknown): Parameters<typeof migrate>[0];
+  };
+  expect(await migrate(driver.construct(connection), { migrations: { [first]: sql } })).toBeFalsy();
+  await connection.exec(`INSERT INTO activities VALUES
+    ('work', 'Work', 78, 'square', 'week', 720, 5, 1, '2026-10-01T00:00:00Z'),
+    ('gym', 'Gym', 152, 'arch', 'day', 90, 3, 0, '2026-10-01T00:00:00Z')`);
+  await connection.exec(`INSERT INTO blocks VALUES
+    ('b1', 'work', 0, 600, 90), ('b2', 'gym', 2, 420, 60), ('b3', 'gym', 4, 420, 60)`);
+  await connection.exec("INSERT INTO settings VALUES (1, 7, 22, NULL)");
+  await connection.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  await connection.close();
+  return readFile(path);
+}
+
+/** The names of the stored plan's activities, in their order. */
+const readActivityNames = (page: Page): Promise<string[]> =>
+  page.evaluate(async () => {
+    const loaded = await window.weekBudgetPlanner?.store.load();
+    if (loaded === undefined || loaded === "newer-version") return [];
+
+    return loaded.plan.activities.map((activity) => activity.name);
+  });
+
+test("imports a database saved before stamps, keeps its plan, and saves on it", async ({
+  page,
+}) => {
+  await openSettings(page);
+  await pickFile(page, {
+    name: "before-stamps.db",
+    mimeType: "application/vnd.sqlite3",
+    buffer: await createDatabaseBeforeStamps(),
+  });
+  await page
+    .getByRole("alertdialog", { name: "Replace your plan?" })
+    .getByRole("button", {
+      name: "Replace",
+    })
+    .click();
+  await expectStatus(page, "full", "2 activities · 3 blocks");
+  // The order is the old positions', and the names and blocks are as they were.
+  expect(await readActivityNames(page)).toEqual(["Gym", "Work"]);
+
+  // A change is saved through the migrated rows, and kept after a reload.
+  await removeFirstBlock(page);
+  await page.reload();
+  await expectStatus(page, "full", "2 activities · 2 blocks");
 });
 
 test("refuses a file that isn't a database, and keeps the plan", async ({ page }) => {

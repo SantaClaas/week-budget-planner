@@ -62,6 +62,7 @@ flowchart LR
   module_App --> module_top_app_bar
   module_App --> module_week
   module_database --> module_broadcast
+  module_database --> module_merge
   module_database --> module_plan
   module_database --> module_result
   module_index --> module_App
@@ -114,6 +115,7 @@ flowchart LR
   module_snackbar --> module_announcement
   module_storage --> module_broadcast
   module_storage --> module_database
+  module_storage --> module_merge
   module_storage --> module_plan
   module_storage --> module_result
   module_top_app_bar --> module_icons
