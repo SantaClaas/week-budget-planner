@@ -26,8 +26,10 @@ export const PAGES_URL = "http://localhost:4312/week-budget-planner/";
 const EXAMPLE_WEEK = "5 activities · 8 blocks";
 
 /**
- * Waits until the app has opened its plan at `level`, holding `plan` ("5 activities · 8 blocks"),
- * as its store and planner report them.
+ * Waits until the app has opened its plan, as its store and planner report them.
+ *
+ * @param level - The storage level the store opened at.
+ * @param plan - What the plan holds, as "5 activities · 8 blocks".
  */
 export async function expectStatus(
   page: Page,

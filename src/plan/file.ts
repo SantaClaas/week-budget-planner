@@ -42,9 +42,11 @@ const isFromNewerVersion = (data: unknown): boolean =>
   data.version > 1;
 
 /**
- * Reads an imported plan file strictly, so an import never replaces the plan with an empty one:
- * "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, "newer-version"
- * when a newer version of the app wrote it (a `version` above 1). Invalid ids get new ones from `ids`.
+ * Reads an imported plan file strictly, so an import never replaces the plan with an empty one.
+ *
+ * @param ids - Gives invalid ids new ones.
+ * @returns The plan, "not-a-plan" when the text isn't JSON or isn't a plan in the stored format, or
+ *   "newer-version" when a newer version of the app wrote it (a `version` above 1).
  */
 export function read(text: string, ids: IdGenerator): Result<Plan, "not-a-plan" | "newer-version"> {
   let data: unknown;
@@ -77,9 +79,11 @@ export function isWrittenByNewerVersion(text: string): boolean {
 }
 
 /**
- * Parses stored JSON leniently: anything malformed becomes a valid (possibly empty) plan, and
- * invalid ids get new ones from `ids`. Only a plan from a newer version is refused, with
- * "newer-version", since sanitizing it would drop whatever this version doesn't know.
+ * Parses stored JSON leniently: anything malformed becomes a valid (possibly empty) plan.
+ *
+ * @param ids - Gives invalid ids new ones.
+ * @returns The plan, or "newer-version" for a plan from a newer version, the only one refused, since
+ *   sanitizing it would drop whatever this version doesn't know.
  */
 export function parse(text: string, ids: IdGenerator): Result<Plan, "newer-version"> {
   let data: unknown;

@@ -179,8 +179,11 @@ describe("design tokens", () => {
 });
 
 /**
- * Where a spring with this damping ratio and stiffness (and a mass of 1) is after `seconds`, going
- * from 0 to 1 from rest: the closed form of a damped harmonic oscillator.
+ * Where a spring is, going from 0 to 1 from rest: the closed form of a damped harmonic oscillator,
+ * with a mass of 1.
+ *
+ * @param damping - The damping ratio.
+ * @param seconds - The time since the spring was let go.
  */
 function moveSpring(damping: number, stiffness: number, seconds: number): number {
   const natural = Math.sqrt(stiffness);
