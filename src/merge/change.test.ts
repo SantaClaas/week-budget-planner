@@ -7,7 +7,7 @@ import { sanitizeDayStart } from "../plan/time.ts";
 import { make } from "./change.ts";
 import { convertPlan, merge, readPlan, takeSnapshot, type Rows } from "./index.ts";
 import { LOWEST } from "./stamp.ts";
-import { createStamp, required } from "./test-data.ts";
+import { createStamp, requireValue } from "./test-data.ts";
 
 const work = createActivity({ id: "work", name: "Work" });
 const gym = createActivity({ id: "gym", name: "Gym", hue: 152, shape: "arch" });
@@ -101,8 +101,8 @@ describe("making a change", () => {
   });
 
   it("leaves two equal order keys alone when the action doesn't change the order", () => {
-    const workRow = required(rows.activities.get(work.id), "row for work");
-    const gymRow = required(rows.activities.get(gym.id), "row for the gym");
+    const workRow = requireValue(rows.activities.get(work.id), "row for work");
+    const gymRow = requireValue(rows.activities.get(gym.id), "row for the gym");
     const tied: Rows = {
       ...rows,
       activities: new Map([...rows.activities, [gym.id, { ...gymRow, order: workRow.order }]]),
@@ -196,7 +196,7 @@ describe("making a change", () => {
   it("stamps only the settings that changed, and sends no activities", () => {
     const made = act(rows, (shown) => ({ ...shown, dayStart: sanitizeDayStart(6) }));
     expect(made.change.activities).toEqual([]);
-    expect(listStamps(required(made.change.settings, "settings"))).toEqual({
+    expect(listStamps(requireValue(made.change.settings, "settings"))).toEqual({
       dayStart: stamp,
       dayEnd: LOWEST,
       exampleLoadedAt: LOWEST,
@@ -221,8 +221,8 @@ describe("making a change", () => {
     // The tab shows the plan from before the rename; the rename arrives and is merged; then the
     // person resizes a block. The action is applied to the plan the rows show, rename included.
     const renamed = act(rows, (shown) =>
-      activityList.update(shown, required(shown.activities[0], "activity").id, {
-        ...required(shown.activities[0], "activity"),
+      activityList.update(shown, requireValue(shown.activities[0], "activity").id, {
+        ...requireValue(shown.activities[0], "activity"),
         name: createActivity({ name: "Renamed" }).name,
       }),
     );
@@ -232,7 +232,10 @@ describe("making a change", () => {
       (shown) => ({
         ...shown,
         blocks: [
-          { ...required(shown.blocks[0], "block"), length: createBlock({ length: 120 }).length },
+          {
+            ...requireValue(shown.blocks[0], "block"),
+            length: createBlock({ length: 120 }).length,
+          },
           ...shown.blocks.slice(1),
         ],
       }),

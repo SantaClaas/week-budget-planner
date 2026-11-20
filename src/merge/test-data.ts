@@ -19,7 +19,7 @@ import {
 } from "./stamp.ts";
 
 /** The value, or a throw when the test data doesn't have it. */
-export function required<Value>(value: Value | null | undefined, what: string): Value {
+export function requireValue<Value>(value: Value | null | undefined, what: string): Value {
   if (value === undefined || value === null) throw new Error(`The test data has no ${what}.`);
 
   return value;
@@ -60,7 +60,7 @@ export const createNode = (name: string, rows: Rows): Node => ({
  */
 export function act(node: Node, now: number, perform: (plan: Plan) => Plan): Change {
   const time = sanitizeTime(Temporal.Instant.fromEpochMilliseconds(now));
-  const stamp = required(issueNext(node.clock, time, node.id), "later stamp");
+  const stamp = requireValue(issueNext(node.clock, time, node.id), "later stamp");
   const made = make(node.rows, perform, stamp);
   node.clock = stamp;
   node.rows = made.rows;

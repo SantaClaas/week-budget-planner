@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { advance, issueNext } from "./clock.ts";
 import { LOWEST, compare, sanitizeTime } from "./stamp.ts";
-import { createNodeId, createStamp, required } from "./test-data.ts";
+import { createNodeId, createStamp, requireValue } from "./test-data.ts";
 
 const node = createNodeId("me");
 const createTime = (milliseconds: number) =>
@@ -66,7 +66,7 @@ describe("clock", () => {
 
   it("stamps after everything it has merged, whatever the wall clock says", () => {
     const merged = advance(createStamp(2000, 0, "me"), createStamp(9_000_000, 5, "other"));
-    const stamp = required(issueNext(merged, createTime(2001), node), "stamp");
+    const stamp = requireValue(issueNext(merged, createTime(2001), node), "stamp");
     expect(compare(stamp, createStamp(9_000_000, 5, "other"))).toBeGreaterThan(0);
   });
 });

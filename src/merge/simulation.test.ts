@@ -129,7 +129,7 @@ const addActivity: Perform = (shown, { random, createId }) => {
 };
 
 /** An action on an activity the node shows, which does nothing where there is none. */
-const withActivity =
+const applyToActivity =
   (perform: (shown: Plan, activity: Activity, context: Context) => Plan): Perform =>
   (shown, context) => {
     const activity = context.random.pick(shown.activities);
@@ -137,7 +137,7 @@ const withActivity =
   };
 
 /** An action on a block the node shows, which does nothing where there is none. */
-const withBlock =
+const applyToBlock =
   (perform: (shown: Plan, block: Block, context: Context) => Plan): Perform =>
   (shown, context) => {
     const block = context.random.pick(shown.blocks);
@@ -149,14 +149,14 @@ const replaceBlock = (shown: Plan, changed: Block): Plan => ({
   blocks: shown.blocks.map((each) => (each.id === changed.id ? changed : each)),
 });
 
-const renameActivity = withActivity((shown, activity, { random }) =>
+const renameActivity = applyToActivity((shown, activity, { random }) =>
   activityList.update(shown, activity.id, {
     ...activity,
     name: createActivity({ name: random.pick(NAMES) ?? "Work" }).name,
   }),
 );
 
-const changeLook = withActivity((shown, activity, { random }) =>
+const changeLook = applyToActivity((shown, activity, { random }) =>
   activityList.update(shown, activity.id, {
     ...activity,
     hue: random.pick(PALETTE)?.hue ?? 255,
@@ -164,21 +164,21 @@ const changeLook = withActivity((shown, activity, { random }) =>
   }),
 );
 
-const changeBudget = withActivity((shown, activity, { random }) =>
+const changeBudget = applyToActivity((shown, activity, { random }) =>
   activityList.update(shown, activity.id, { ...activity, ...pickBudget(random) }),
 );
 
-const removeActivity = withActivity((shown, activity, { node }) => {
+const removeActivity = applyToActivity((shown, activity, { node }) => {
   node.removed.activities.push(activity);
   node.removed.blocks.push(...shown.blocks.filter((each) => each.activityId === activity.id));
   return activityList.remove(shown, activity.id).plan;
 });
 
-const reorderActivity = withActivity((shown, activity, { random }) =>
+const reorderActivity = applyToActivity((shown, activity, { random }) =>
   activityList.move(shown, activity.id, random.pickInteger(0, shown.activities.length - 1)),
 );
 
-const addBlock = withActivity((shown, activity, { random, createId }) => ({
+const addBlock = applyToActivity((shown, activity, { random, createId }) => ({
   ...shown,
   blocks: [
     ...shown.blocks,
@@ -192,7 +192,7 @@ const addBlock = withActivity((shown, activity, { random, createId }) => ({
   ],
 }));
 
-const moveBlock = withBlock((shown, block, { random }) =>
+const moveBlock = applyToBlock((shown, block, { random }) =>
   replaceBlock(
     shown,
     createBlock({
@@ -203,11 +203,11 @@ const moveBlock = withBlock((shown, block, { random }) =>
   ),
 );
 
-const resizeBlock = withBlock((shown, block, { random }) =>
+const resizeBlock = applyToBlock((shown, block, { random }) =>
   replaceBlock(shown, createBlock({ ...block, length: SLOT * random.pickInteger(1, DAY / SLOT) })),
 );
 
-const removeBlock = withBlock((shown, block, { node }) => {
+const removeBlock = applyToBlock((shown, block, { node }) => {
   node.removed.blocks.push(block);
   return { ...shown, blocks: shown.blocks.filter((each) => each.id !== block.id) };
 });
