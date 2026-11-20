@@ -6,7 +6,7 @@ members = ["crates/server"]
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.100"
 publish = false
 
 # Exact versions, as pnpm saves them: the lockfile pins the rest (see The supply chain in
@@ -30,6 +30,10 @@ tracing-subscriber = { version = "=0.3.23", default-features = false, features =
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
+# Cargo's own lints (Rust 1.100): a dependency no code uses fails, as knip does for npm.
+[workspace.lints.cargo]
+unused_dependencies = "warn"
+
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 # Picked from restriction (see Lints and formatting in docs/guidelines/rust.md).
@@ -45,8 +49,8 @@ undocumented_unsafe_blocks = "warn"
 unimplemented = "warn"
 unwrap_used = "warn"
 
-# Crate versions younger than a week that may be in Cargo.lock anyway, each with its exact version
-# and why (see The supply chain in docs/guidelines/rust.md). scripts/check-crate-age.ts reads it.
+# Crate versions younger than registry.global-min-publish-age in .cargo/config.toml that may be in
+# Cargo.lock anyway, each with its exact version and why (see The supply chain in
+# docs/guidelines/rust.md). scripts/check-crate-age.ts reads it.
 [workspace.metadata.release-age]
-minimum-days = 7
 exclude = []

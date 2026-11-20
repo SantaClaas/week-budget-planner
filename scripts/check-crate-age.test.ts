@@ -1,6 +1,13 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-import { createIndexPath, findYoungCrates, readPublishTimes } from "./check-crate-age.ts";
+import {
+  createIndexPath,
+  findYoungCrates,
+  readMinimumDays,
+  readPublishTimes,
+} from "./check-crate-age.ts";
 
 const NOW = Temporal.Instant.from("2026-11-20T12:00:00Z");
 
@@ -64,5 +71,26 @@ describe("crates younger than a week", () => {
     expect(findYoungCrates(crates, times, NOW, 7, new Set(["young@1.0.0"]))).toEqual([
       { name: "young", version: "1.0.1", publishedAt: undefined },
     ]);
+  });
+});
+
+describe("the minimum age in Cargo's config", () => {
+  it("reads it in days or weeks", () => {
+    expect(readMinimumDays('[registry]\nglobal-min-publish-age = "7 days"\n')).toBe(7);
+    expect(readMinimumDays('global-min-publish-age = "2 weeks"')).toBe(14);
+    expect(readMinimumDays('global-min-publish-age = "1 day"')).toBe(1);
+  });
+
+  it("gives nothing for a form it doesn't read, so the check fails instead of passing", () => {
+    expect(readMinimumDays("[registry]\n")).toBeUndefined();
+    expect(readMinimumDays('global-min-publish-age = "36 hours"')).toBeUndefined();
+    expect(readMinimumDays('# global-min-publish-age = "7 days"')).toBeUndefined();
+  });
+
+  it("is as long as pnpm waits for npm packages", () => {
+    const config = readFileSync(new URL("../.cargo/config.toml", import.meta.url), "utf8");
+    const pnpm = readFileSync(new URL("../pnpm-workspace.yaml", import.meta.url), "utf8");
+    const minutes = Number(/^minimumReleaseAge: (\d+)$/mu.exec(pnpm)?.[1]);
+    expect(readMinimumDays(config)).toBe(minutes / (24 * 60));
   });
 });
