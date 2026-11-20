@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { assign, between, compare, parse, spread, type OrderKey } from "./order.ts";
+import {
+  assign,
+  compare,
+  createAfter,
+  createBefore,
+  createBetween,
+  parse,
+  spread,
+  type OrderKey,
+} from "./order.ts";
 
 function createKey(text: string): OrderKey {
   const key = parse(text);
@@ -32,7 +41,7 @@ function insertIntoGap(count: number): { keys: OrderKey[]; low: OrderKey; high: 
   let high = createKey("W");
   const keys = [low, high];
   for (let index = 0; index < count; index += 1) {
-    const key = between(low, high);
+    const key = createBetween(low, high);
     keys.push(key);
     if (index % 2 === 0) high = key;
     // oxlint-disable-next-line week-budget-planner/no-else -- two equal branches that take turns read best side by side.
@@ -44,12 +53,12 @@ function insertIntoGap(count: number): { keys: OrderKey[]; low: OrderKey; high: 
 
 /** Makes `count` keys before the first and as many after the last. */
 function insertAtEnds(count: number): OrderKey[] {
-  let first = between();
+  let first = spread(1)[0] ?? createKey("V");
   let last = first;
   const keys = [first];
   for (let index = 0; index < count; index += 1) {
-    first = between(undefined, first);
-    last = between(last);
+    first = createBefore(first);
+    last = createAfter(last);
     keys.unshift(first);
     keys.push(last);
   }
@@ -74,10 +83,14 @@ function dragRepeatedly(start: readonly OrderKey[], count: number) {
 }
 
 describe("order key", () => {
-  it("makes a first key, one after the last and one before the first", () => {
-    const first = between();
-    expect(parse(first)).toBe(first);
-    expect(isAscending([between(undefined, first), first, between(first)])).toBe(true);
+  it("makes a key after the last and one before the first", () => {
+    const only = createKey("V");
+    expect(parse(createAfter(only))).toBe(createAfter(only));
+    expect(isAscending([createBefore(only), only, createAfter(only)])).toBe(true);
+  });
+
+  it("makes the first key of a list in the middle of the range", () => {
+    expect(assign([undefined])).toEqual(["V"]);
   });
 
   it.each([
@@ -91,21 +104,21 @@ describe("order key", () => {
     ["z", "zz"],
     ["0001", "0002"],
   ])("makes a key strictly between %s and %s", (low, high) => {
-    expect(isAscending([low, between(createKey(low), createKey(high)), high])).toBe(true);
+    expect(isAscending([low, createBetween(createKey(low), createKey(high)), high])).toBe(true);
   });
 
   it("makes the shortest key where the longer neighbor leaves room at its first digit", () => {
-    expect(between(createKey("1"), createKey("2z"))).toBe("2");
-    expect(between(createKey("Vz"), createKey("W1"))).toBe("W");
+    expect(createBetween(createKey("1"), createKey("2z"))).toBe("2");
+    expect(createBetween(createKey("Vz"), createKey("W1"))).toBe("W");
   });
 
   it("makes keys before keys that start with zeros", () => {
-    expect(isAscending([between(undefined, createKey("0001")), "0001"])).toBe(true);
+    expect(isAscending([createBefore(createKey("0001")), "0001"])).toBe(true);
   });
 
   it("refuses to make a key between two that aren't in order", () => {
-    expect(() => between(createKey("2"), createKey("1"))).toThrow(RangeError);
-    expect(() => between(createKey("2"), createKey("2"))).toThrow(RangeError);
+    expect(() => createBetween(createKey("2"), createKey("1"))).toThrow(RangeError);
+    expect(() => createBetween(createKey("2"), createKey("2"))).toThrow(RangeError);
   });
 
   it("stays valid and in order after many insertions into the same gap", () => {

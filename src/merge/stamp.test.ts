@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { LOWEST, MAX_COUNTER, compare, create, parse, parseNodeId, read } from "./stamp.ts";
-import { createNodeId, createStamp } from "./test-data.ts";
+import {
+  FIRST_COUNTER,
+  LOWEST,
+  compare,
+  incrementCounter,
+  incrementTime,
+  parse,
+  parseCounter,
+  parseNodeId,
+  parseTime,
+  read,
+  sanitizeTime,
+} from "./stamp.ts";
+import { createStamp } from "./test-data.ts";
 
 /** Each item with the one after it. */
 const listNeighbors = <Item>(items: readonly Item[]): [Item, Item][] =>
@@ -53,15 +65,32 @@ describe("stamp", () => {
     expect(compare(LOWEST, createStamp(0, 0, "0"))).toBeLessThan(0);
   });
 
-  it("refuses parts out of range when it makes a stamp", () => {
-    const node = createNodeId("a");
-    expect(() => create(-1, 0, node)).toThrow(RangeError);
-    expect(() => create(10_000_000_000_000, 0, node)).toThrow(RangeError);
-    expect(() => create(1.5, 0, node)).toThrow(RangeError);
-    expect(() => create(0, -1, node)).toThrow(RangeError);
-    expect(() => create(0, MAX_COUNTER + 1, node)).toThrow(RangeError);
-    expect(() => create(0, 0.5, node)).toThrow(RangeError);
-    expect(create(9_999_999_999_999, MAX_COUNTER, node)).toBe("9999999999999-999999-a");
+  it("holds a wall clock before 1970 or after 2286 at the nearest end", () => {
+    const at = (milliseconds: number) =>
+      sanitizeTime(Temporal.Instant.fromEpochMilliseconds(milliseconds));
+    expect(at(-5000)).toBe(0);
+    expect(at(1_763_200_000_000)).toBe(1_763_200_000_000);
+    expect(at(9_999_999_999_999)).toBe(9_999_999_999_999);
+    expect(at(10_000_000_000_000)).toBe(9_999_999_999_999);
+  });
+
+  it("parses a time and a counter strictly", () => {
+    expect(parseTime(0)).toBe(0);
+    expect(parseTime(9_999_999_999_999)).toBe(9_999_999_999_999);
+    expect(parseTime(-1)).toBe("out-of-range");
+    expect(parseTime(10_000_000_000_000)).toBe("out-of-range");
+    expect(parseTime(1.5)).toBe("out-of-range");
+    expect(parseCounter(999_999)).toBe(999_999);
+    expect(parseCounter(1_000_000)).toBe("out-of-range");
+    expect(parseCounter(-1)).toBe("out-of-range");
+    expect(parseCounter(0.5)).toBe("out-of-range");
+  });
+
+  it("counts a counter and a time up to their highest, and no further", () => {
+    expect(incrementCounter(FIRST_COUNTER)).toBe(1);
+    expect(incrementCounter(read(createStamp(0, 999_999, "a")).counter)).toBe("out-of-range");
+    expect(incrementTime(read(createStamp(41, 0, "a")).time)).toBe(42);
+    expect(incrementTime(read(createStamp(9_999_999_999_999, 0, "a")).time)).toBe("out-of-range");
   });
 
   it("parses well-formed stamps and the lowest", () => {

@@ -2,6 +2,9 @@
 // docs/spec/merge.md). A key is a fraction written in base 62 without its "0.", so a new key can
 // always be made between two others (fractional indexing), and moving an activity changes its key
 // alone.
+//
+// Making a key between two others follows David Greenspan's "Implementing Fractional Indexing"
+// (https://observablehq.com/@dgreensp/implementing-fractional-indexing), written anew here.
 import type { Brand } from "../brand.ts";
 import type { Result } from "../result.ts";
 
@@ -39,57 +42,66 @@ export const parse = (value: unknown): Result<OrderKey, undefined> =>
 const readDigit = (text: string, index: number): number => DIGITS.indexOf(text[index] ?? "0");
 
 /**
- * Digits that sort strictly between `low` and `high` and don't end in "0". `low` may be empty (the
- * start) and `high` undefined (the end). Both are digit strings that don't end in "0", with `low`
- * below `high`. (After David Greenspan's "Implementing Fractional Indexing".)
+ * Digits that sort after `low` and don't end in "0": a key at the end of the list. `low` is a key,
+ * or empty for a list with none.
  */
-function findMidpoint(low: string, high?: string): string {
-  if (high !== undefined) {
-    let shared = 0;
-    while ((low[shared] ?? "0") === high[shared]) shared += 1;
-
-    if (shared > 0)
-      return high.slice(0, shared) + findMidpoint(low.slice(shared), high.slice(shared));
-  }
-
+function findAfter(low: string): string {
   const lowDigit = readDigit(low, 0);
-  const highDigit = high === undefined ? BASE : readDigit(high, 0);
-  if (highDigit - lowDigit > 1) return DIGITS[Math.round((lowDigit + highDigit) / 2)] ?? "";
+  if (BASE - lowDigit > 1) return DIGITS[Math.round((lowDigit + BASE) / 2)] ?? "";
 
-  // The first digits are next to each other. A longer `high` leaves room right at its first digit;
-  // otherwise keep the low digit and look for room after the rest of `low`.
-  if (high !== undefined && high.length > 1) return high.slice(0, 1);
-
-  return (DIGITS[lowDigit] ?? "") + findMidpoint(low.slice(1));
+  // The first digit is the highest there is: keep it, and look for room after the rest of `low`.
+  return (DIGITS[lowDigit] ?? "") + findAfter(low.slice(1));
 }
 
 /**
- * A key that sorts strictly between `before` and `after`: after the last when `after` is
- * undefined, before the first when `before` is. Throws when `before` isn't below `after`, which a
- * list sorted by its keys never asks for.
+ * Digits that sort strictly between `low` and `high` and don't end in "0". `low` is a key, or empty
+ * for the start of the list; `high` is a key above it.
  */
-export function between(before?: OrderKey, after?: OrderKey): OrderKey {
-  if (before !== undefined && after !== undefined && before >= after)
-    throw new RangeError(`No key fits between "${before}" and "${after}".`);
+function findBetween(low: string, high: string): string {
+  let shared = 0;
+  while ((low[shared] ?? "0") === high[shared]) shared += 1;
 
-  return brand(findMidpoint(before ?? "", after));
+  if (shared > 0) return high.slice(0, shared) + findBetween(low.slice(shared), high.slice(shared));
+
+  const lowDigit = readDigit(low, 0);
+  const highDigit = readDigit(high, 0);
+  if (highDigit - lowDigit > 1) return DIGITS[Math.round((lowDigit + highDigit) / 2)] ?? "";
+
+  // The first digits are next to each other. A longer `high` leaves room right at its first digit;
+  // otherwise keep the low digit, and anything after the rest of `low` fits.
+  if (high.length > 1) return high.slice(0, 1);
+
+  return (DIGITS[lowDigit] ?? "") + findAfter(low.slice(1));
 }
 
-/** `count` keys between `before` and `after`, in order, split in halves so they stay short. */
-function listBetween(
-  before: OrderKey | undefined,
-  after: OrderKey | undefined,
-  count: number,
-): OrderKey[] {
+/** A key after `last`: the end of the list. */
+export const createAfter = (last: OrderKey): OrderKey => brand(findAfter(last));
+
+/** A key before `first`: the start of the list. */
+export const createBefore = (first: OrderKey): OrderKey => brand(findBetween("", first));
+
+/**
+ * A key strictly between `before` and `after`. Throws when `before` isn't below `after`: then no
+ * key fits, and the digits it would make sort wrong, which is a mistake in the code that calls it.
+ * The keys `assign` passes come from a run that ascends strictly, so it never does.
+ */
+export function createBetween(before: OrderKey, after: OrderKey): OrderKey {
+  if (before >= after) throw new RangeError(`No key fits between "${before}" and "${after}".`);
+
+  return brand(findBetween(before, after));
+}
+
+/**
+ * `count` keys in order in a gap of the list, split in halves so they stay short. The gap starts
+ * after `low`, a key or empty at the start of the list, and ends before `high`, or at the end of
+ * the list when there's none.
+ */
+function listInGap(low: string, high: OrderKey | undefined, count: number): OrderKey[] {
   if (count === 0) return [];
 
-  const middle = between(before, after);
+  const middle = brand(high === undefined ? findAfter(low) : findBetween(low, high));
   const half = Math.floor((count - 1) / 2);
-  return [
-    ...listBetween(before, middle, half),
-    middle,
-    ...listBetween(middle, after, count - 1 - half),
-  ];
+  return [...listInGap(low, middle, half), middle, ...listInGap(middle, high, count - 1 - half)];
 }
 
 /** `count` keys spread evenly, in order, all of the same few digits: for an existing list. */
@@ -167,9 +179,9 @@ export function assign(keys: readonly (OrderKey | undefined)[]): OrderKey[] {
   const kept = findAscending(keys);
   const assigned: OrderKey[] = [];
   let waiting = 0;
-  let before: OrderKey | undefined;
+  let before = "";
   const fill = (after?: OrderKey): void => {
-    assigned.push(...listBetween(before, after, waiting));
+    assigned.push(...listInGap(before, after, waiting));
     waiting = 0;
   };
   for (const [index, key] of keys.entries()) {
