@@ -26,6 +26,7 @@ const SKIPPED_FOLDERS = new Set([
   "node_modules",
   "playwright-report",
   "reports",
+  "target",
   "test-results",
 ]);
 
