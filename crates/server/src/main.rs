@@ -3,7 +3,7 @@
 //! docs/spec/network.md).
 
 mod base;
-mod config;
+mod configuration;
 mod header;
 mod site;
 
@@ -16,7 +16,7 @@ use tracing::Level;
 #[derive(Debug, thiserror::Error)]
 enum Error {
     #[error("the configuration: {0}")]
-    Config(#[from] config::Error),
+    Configuration(#[from] configuration::Error),
     #[error("couldn't listen on {address}: {source}")]
     Listen {
         address: std::net::SocketAddr,
@@ -57,19 +57,19 @@ async fn wait_for_shutdown() {
 }
 
 async fn run() -> Result<(), Error> {
-    let config = config::read(|name| std::env::var(name))?;
-    let router = site::route(&config.app, config.base).layer(
+    let configuration = configuration::read(|name| std::env::var(name))?;
+    let router = site::route(&configuration.app, configuration.base).layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
             .on_response(DefaultOnResponse::new().level(Level::INFO)),
     );
-    let listener = tokio::net::TcpListener::bind(config.address)
+    let listener = tokio::net::TcpListener::bind(configuration.address)
         .await
         .map_err(|source| Error::Listen {
-            address: config.address,
+            address: configuration.address,
             source,
         })?;
-    tracing::info!(address = %config.address, app = %config.app.display(), "listening");
+    tracing::info!(address = %configuration.address, app = %configuration.app.display(), "listening");
     axum::serve(listener, router)
         .with_graceful_shutdown(wait_for_shutdown())
         .await
