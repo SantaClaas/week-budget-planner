@@ -13,6 +13,8 @@ const ADDRESS: &str = "WEEK_BUDGET_PLANNER_ADDRESS";
 const APP: &str = "WEEK_BUDGET_PLANNER_APP";
 /// The path the app was built for (Vite's `base`).
 const BASE: &str = "WEEK_BUDGET_PLANNER_BASE";
+/// The file that keeps the server's node key.
+const NODE_KEY: &str = "WEEK_BUDGET_PLANNER_NODE_KEY";
 
 /// Why the configuration can't be used.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
@@ -30,6 +32,7 @@ pub(crate) struct Configuration {
     pub(crate) address: SocketAddr,
     pub(crate) app: PathBuf,
     pub(crate) base: Base,
+    pub(crate) node_key: PathBuf,
 }
 
 /// A variable's value, or its default when it isn't set.
@@ -64,7 +67,13 @@ pub(crate) fn read(
     let address = address.parse().map_err(|_| Error::Address(address))?;
     let app = PathBuf::from(read_or(&read_variable, APP, "dist")?);
     let base = Base::parse(&read_or(&read_variable, BASE, "/")?)?;
-    Ok(Configuration { address, app, base })
+    let node_key = PathBuf::from(read_or(&read_variable, NODE_KEY, "node-key")?);
+    Ok(Configuration {
+        address,
+        app,
+        base,
+        node_key,
+    })
 }
 
 #[cfg(test)]
@@ -95,6 +104,7 @@ mod test {
                 address: "127.0.0.1:8080".parse().unwrap(),
                 app: PathBuf::from("dist"),
                 base: Base::parse("/").unwrap(),
+                node_key: PathBuf::from("node-key"),
             })
         );
     }
@@ -105,6 +115,7 @@ mod test {
             "WEEK_BUDGET_PLANNER_ADDRESS" => Ok("0.0.0.0:4313".to_owned()),
             "WEEK_BUDGET_PLANNER_APP" => Ok("/srv/app".to_owned()),
             "WEEK_BUDGET_PLANNER_BASE" => Ok("/week-budget-planner/".to_owned()),
+            "WEEK_BUDGET_PLANNER_NODE_KEY" => Ok("/var/lib/server/node-key".to_owned()),
             _ => Err(VarError::NotPresent),
         })
         .unwrap();
@@ -113,6 +124,10 @@ mod test {
         assert_eq!(
             configuration.base,
             Base::parse("/week-budget-planner/").unwrap()
+        );
+        assert_eq!(
+            configuration.node_key,
+            PathBuf::from("/var/lib/server/node-key")
         );
     }
 

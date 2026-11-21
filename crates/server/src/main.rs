@@ -4,7 +4,6 @@
 
 mod base;
 mod configuration;
-mod connection;
 mod header;
 mod node;
 mod relay;
@@ -13,7 +12,7 @@ mod site;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::process::ExitCode;
 
-use iroh::{RelayUrl, SecretKey};
+use iroh::RelayUrl;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
@@ -29,10 +28,14 @@ enum Error {
     },
     #[error("the relay's address on this machine, {0}, isn't a relay URL: {1}")]
     RelayUrl(String, String),
+    #[error("the server's node key: {0}")]
+    NodeKey(#[from] node::KeyError),
     #[error("the server's node: {0}")]
     Node(#[from] node::Error),
     #[error("serving stopped: {0}")]
-    Serve(#[from] tokio::task::JoinError),
+    Serve(#[from] std::io::Error),
+    #[error("the serving task stopped: {0}")]
+    Task(#[from] tokio::task::JoinError),
 }
 
 /// The address the server's own node reaches the relay at: the server's port on this machine,
@@ -78,13 +81,13 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let configuration = configuration::read(|name| std::env::var(name))?;
-    // A new key, and so a new node id, on every start: the app asks for it at /node each time.
-    let secret_key = SecretKey::generate();
+    // Kept in a file, so a restart keeps the node's id (see Running it in crates/server/README.md).
+    let secret_key = node::load_or_create_key(&configuration.node_key)?;
     let node_id = secret_key.public();
     // The member list will change who the relay admits (the mailbox, #97); until then it's everyone.
     let (relay, _admission) = relay::create();
     let router = site::route(&configuration.app, configuration.base)
-        .merge(relay::route())
+        .merge(relay::route(relay.clone()))
         .merge(node::route(node_id))
         .layer(
             TraceLayer::new_for_http()
@@ -107,15 +110,16 @@ async fn run() -> Result<(), Error> {
                 Error::RelayUrl(relay_url.clone(), error.to_string())
             })?;
     tracing::info!(address = %configuration.address, app = %configuration.app.display(), "listening");
-    let serving = tokio::spawn(connection::serve(
-        listener,
-        router,
-        relay,
-        wait_for_shutdown(),
-    ));
+    // Serving starts first: the node reaches the relay through it.
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(wait_for_shutdown())
+            .await
+    });
     let node = node::spawn(secret_key, relay_url).await?;
     tracing::info!(node = %node_id, "the node reached the relay");
-    serving.await?;
+    serving.await??;
+    relay.shutdown().await;
     if let Err(error) = node.shutdown().await {
         tracing::warn!(%error, "the node didn't shut down cleanly");
     }
