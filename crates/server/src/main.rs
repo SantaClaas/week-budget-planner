@@ -17,13 +17,6 @@ use tracing::Level;
 enum Error {
     #[error("the configuration: {0}")]
     Config(#[from] config::Error),
-    #[error("couldn't read the page's policy, {path}; run pnpm build first: {source}")]
-    NoPolicy {
-        path: std::path::PathBuf,
-        source: std::io::Error,
-    },
-    #[error("the page's policy: {0}")]
-    Header(#[from] header::Error),
     #[error("couldn't listen on {address}: {source}")]
     Listen {
         address: std::net::SocketAddr,
@@ -65,13 +58,7 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let config = config::read(|name| std::env::var(name).ok())?;
-    let policy_path = config.app.join("content-security-policy.txt");
-    let policy = std::fs::read_to_string(&policy_path).map_err(|source| Error::NoPolicy {
-        path: policy_path,
-        source,
-    })?;
-    let policy = header::parse_policy(&policy)?;
-    let router = site::route(&config.app, config.base, policy).layer(
+    let router = site::route(&config.app, config.base).layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
             .on_response(DefaultOnResponse::new().level(Level::INFO)),

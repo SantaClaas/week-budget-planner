@@ -23,6 +23,7 @@
     "icons": "node scripts/build-iconset.ts",
     "colors": "node scripts/build-colors.ts",
     "compress": "node scripts/compress.ts dist",
+    "policy": "node scripts/build-content-security-policy.ts",
     "links": "node scripts/check-links.ts",
     "glossary": "node scripts/check-glossary.ts",
     "modules": "node scripts/build-module-graph.ts",
