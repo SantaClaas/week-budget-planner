@@ -23,8 +23,7 @@ jobs:
     # Stops a job that hangs, instead of GitHub's six hours. It takes under a minute today.
     timeout-minutes: 10
     permissions:
-      # Reads the repository to lint its workflows.
-      contents: read
+      contents: read # Reads the repository to lint its workflows.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,8 +48,7 @@ jobs:
     # Stops a job that hangs, instead of GitHub's six hours. It takes about two minutes today.
     timeout-minutes: 10
     permissions:
-      # Reads the repository to check and build it.
-      contents: read
+      contents: read # Reads the repository to check and build it.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -99,10 +97,8 @@ jobs:
     # Stops a job that hangs, instead of GitHub's six hours.
     timeout-minutes: 10
     permissions:
-      # Publishes the build to GitHub Pages.
-      pages: write
-      # Lets deploy-pages prove to Pages that the build comes from this workflow.
-      id-token: write
+      pages: write # Publishes the build to GitHub Pages.
+      id-token: write # Lets deploy-pages prove to Pages that the build comes from this workflow.
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
