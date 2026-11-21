@@ -130,7 +130,6 @@ mod test {
     use axum::body::Body;
     use axum::http::{HeaderValue, Request, StatusCode, header};
     use axum::response::Response;
-    use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     use super::route;
@@ -174,12 +173,9 @@ mod test {
     }
 
     async fn read_body(response: Response) -> Vec<u8> {
-        response
-            .into_body()
-            .collect()
+        axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap()
-            .to_bytes()
             .to_vec()
     }
 
