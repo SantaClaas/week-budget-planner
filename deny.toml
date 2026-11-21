@@ -5,6 +5,9 @@
 # A crate with an advisory in the RustSec database fails, and so does a yanked version. An exception
 # names the advisory's id here and says why.
 yanked = "deny"
+# An ignore for an advisory no crate in the tree has any more fails, so it's removed once it's
+# not needed.
+unused-ignored-advisory = "deny"
 ignore = [
   # chrono is marked unmaintained. iroh-relay's ACME support (tokio-rustls-acme) and a Windows-only
   # crate under iroh use it; neither reports a vulnerability. Drop this once iroh moves off it.
@@ -18,7 +21,6 @@ ignore = [
 # Licenses that let the project use, change and ship the code without conditions it can't meet. A
 # new license is added here deliberately, after reading it.
 allow = [
-  "0BSD",
   "Apache-2.0",
   "Apache-2.0 WITH LLVM-exception",
   "BSD-2-Clause",
@@ -32,6 +34,8 @@ allow = [
   "Zlib",
 ]
 confidence-threshold = 0.93
+# A license on the list that no crate uses any more fails, so the list stays what the tree needs.
+unused-allowed-license = "deny"
 
 # The workspace's own crates aren't published (publish = false), so they need no license entry.
 [licenses.private]
