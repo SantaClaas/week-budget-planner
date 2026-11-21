@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-base="%BASE_URL%">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -60,8 +60,11 @@
           storage?.setItem(flag, "1");
           location.reload();
         };
-        // From the base, not the page's path, so it's the same worker on every page.
-        const url = new URL("%BASE_URL%service-worker.js", location.href).href;
+        // From the base, not the page's path, so it's the same worker on every page. The build
+        // writes the base into data-base, so this script's text, and its hash in the Content
+        // Security Policy, stay the same whatever the base (see content-security-policy.txt).
+        const base = new URL(document.documentElement.dataset.base ?? "/", location.href);
+        const url = new URL("service-worker.js", base).href;
         // Registering takes a trusted script URL (see docs/spec/security.md). This policy
         // only ever returns the one service worker URL.
         const policy = window.trustedTypes?.createPolicy("service-worker", {

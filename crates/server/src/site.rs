@@ -19,13 +19,6 @@ use crate::header as security;
 /// the app's destinations, so it fails when the app gets a page this list doesn't have.
 const PAGES: [&str; 2] = ["activities", "settings"];
 
-/// What the headers depend on: the base, for which files are hashed, and the page's policy.
-#[derive(Debug, Clone)]
-struct Headers {
-    base: Base,
-    policy: HeaderValue,
-}
-
 /// How long a browser may keep a response before it asks again.
 ///
 /// * `path` - The request's path.
@@ -45,7 +38,9 @@ fn choose_caching(base: &Base, path: &str, status: StatusCode) -> &'static str {
 }
 
 /// Adds the headers every response gets, a page's on top, and how long to keep it.
-async fn add_headers(State(headers): State<Headers>, request: Request, next: Next) -> Response {
+///
+/// * `base` - The base, which tells the hashed files under `assets/` from the rest.
+async fn add_headers(State(base): State<Base>, request: Request, next: Next) -> Response {
     let path = request.uri().path().to_owned();
     let mut response = next.run(request).await;
     let status = response.status();
@@ -56,11 +51,11 @@ async fn add_headers(State(headers): State<Headers>, request: Request, next: Nex
         .and_then(|value| value.to_str().ok())
         .is_some_and(|content_type| content_type.starts_with("text/html"));
     if is_page {
-        security::add_page(response_headers, &headers.policy);
+        security::add_page(response_headers);
     }
 
     if !response_headers.contains_key(header::CACHE_CONTROL) {
-        let caching = choose_caching(&headers.base, &path, status);
+        let caching = choose_caching(&base, &path, status);
         response_headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(caching));
     }
 
@@ -94,8 +89,7 @@ async fn refuse() -> Response {
 /// outside it.
 ///
 /// * `app` - The folder of the app's build.
-/// * `policy` - The page's Content Security Policy as a header (see [`security::parse_policy`]).
-pub(crate) fn route(app: &Path, base: Base, policy: HeaderValue) -> Router {
+pub(crate) fn route(app: &Path, base: Base) -> Router {
     let page = serve_file(&app.join("index.html"));
     // The app's own page for a path it doesn't have (404.html, a copy of index.html the build
     // makes), with the status that says so.
@@ -116,10 +110,7 @@ pub(crate) fn route(app: &Path, base: Base, policy: HeaderValue) -> Router {
         Some("") | None => router.fallback_service(files),
         Some(prefix) => router.nest_service(prefix, files).fallback(refuse),
     };
-    router.layer(middleware::from_fn_with_state(
-        Headers { base, policy },
-        add_headers,
-    ))
+    router.layer(middleware::from_fn_with_state(base, add_headers))
 }
 
 #[cfg(test)]
@@ -128,19 +119,19 @@ mod test {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use axum::body::Body;
-    use axum::http::{HeaderValue, Request, StatusCode, header};
+    use axum::http::{Request, StatusCode, header};
     use axum::response::Response;
     use tower::ServiceExt;
 
     use super::route;
     use crate::base::Base;
+    use crate::header::POLICY;
 
     const PAGE: &str = "<!doctype html><title>Week Budget Planner</title>";
     const NOT_FOUND_PAGE: &str = "<!doctype html><title>Page not found</title>";
     const SCRIPT: &str = "let block = 1;";
     /// Stands in for the Brotli copy `pnpm compress` makes: only which file is sent matters here.
     const SCRIPT_BROTLI: &[u8] = b"brotli bytes";
-    const POLICY: &str = "default-src 'self'; frame-ancestors 'none'";
 
     /// A build folder of its own for each test, in the system's temporary folder.
     fn create_build() -> PathBuf {
@@ -160,11 +151,7 @@ mod test {
     }
 
     async fn send(base: &str, request: Request<Body>) -> Response {
-        let router = route(
-            &create_build(),
-            Base::parse(base).unwrap(),
-            HeaderValue::from_static(POLICY),
-        );
+        let router = route(&create_build(), Base::parse(base).unwrap());
         router.oneshot(request).await.unwrap()
     }
 

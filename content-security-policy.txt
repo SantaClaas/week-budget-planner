@@ -1,0 +1,1 @@
+default-src 'self'; script-src 'self' 'sha256-aGV8x7CPYxEsqXF1KNOhW7VmvEAxvwCc9XvAEUz/tnU=' 'sha256-RfFgejftrD2tT6oSYqmZ7sCsY3MAhtLP3pKMJ6ix500=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; require-trusted-types-for 'script'; trusted-types default service-worker; frame-ancestors 'none'
