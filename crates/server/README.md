@@ -27,23 +27,29 @@ pnpm compress
 
 The first run takes about half a minute, nearly all of it Brotli on the database engine's WebAssembly module. Each copy is kept in `node_modules/.cache/compress/` by the hash of its file's content, so later runs take about a second, until a file changes: the module only does when the engine is updated. CI keeps the cache between runs too, with `actions/cache`. Without compressing, the server sends every file as it is.
 
-The server needs a node key, which it reads from its credentials (see [Secrets](#secrets) below) and never makes itself. Make one once, in a folder outside the repository:
+For syncing, the app also needs the transport's WebAssembly module, which needs Rust and wasm-bindgen-cli (see [`crates/transport/README.md`](../transport/README.md)); without it the app runs, and its transport says it's unavailable. Build it before the app:
 
 ```bash
-mkdir -p ~/.local/share/week-budget-planner/credentials
+pnpm transport
+```
+
+Then run the server:
+
+```bash
+pnpm server
+```
+
+[`scripts/run-server.ts`](../../scripts/run-server.ts) serves the app under `/week-budget-planner/`, the base it's built for, at <http://127.0.0.1:8080/week-budget-planner/>. The server needs a node key, which it reads from its credentials and never makes itself (see [Secrets](#secrets) below), so the script makes one the first time, in `.credentials/` at the repository's root, and keeps it, so the node's id survives restarts as it does in production. The folder holds a `.gitignore` of its own that ignores everything in it, whatever the root `.gitignore` says, so the key can't be committed by mistake. Deleting the folder gives the server a new id on its next start.
+
+Run by hand, the same is:
+
+```bash
+cargo run --release -- generate-node-key .credentials/node-key
 ```
 
 ```bash
-cargo run --release -- generate-node-key ~/.local/share/week-budget-planner/credentials/node-key
+CREDENTIALS_DIRECTORY=.credentials WEEK_BUDGET_PLANNER_BASE=/week-budget-planner/ cargo run --release
 ```
-
-The app is built for GitHub Pages, under `/week-budget-planner/`, so serve it under the same base:
-
-```bash
-CREDENTIALS_DIRECTORY=~/.local/share/week-budget-planner/credentials WEEK_BUDGET_PLANNER_BASE=/week-budget-planner/ cargo run --release
-```
-
-Then open <http://127.0.0.1:8080/week-budget-planner/>.
 
 | Variable | Default | What it sets |
 | --- | --- | --- |
@@ -51,7 +57,7 @@ Then open <http://127.0.0.1:8080/week-budget-planner/>.
 | `WEEK_BUDGET_PLANNER_APP` | `dist` | the folder of the app's build |
 | `WEEK_BUDGET_PLANNER_BASE` | `/` | the path the app was built for (Vite's `base`), with a slash at each end |
 
-**While working on the app**, `pnpm dev` stays the way to run it: Vite's dev server serves the app, with its hot reload, and once the server has paths of its own for the app to call (the relay, later the mailbox), Vite proxies those to the server (`server.proxy` in [`vite.config.ts`](../../vite.config.ts)), so both run side by side on one origin. In production the server serves both.
+**While working on the app**, `pnpm dev` stays the way to run it: Vite's dev server serves the app, with its hot reload, and proxies the server's own paths (`/relay`, `/ping` and `/node`, later the mailbox) to `pnpm server` on its default address (`server.proxy` in [`vite.config.ts`](../../vite.config.ts)), so both run side by side on one origin. Run `pnpm transport` once for the module, and both commands. In production the server serves both.
 
 ## Secrets
 
@@ -60,7 +66,7 @@ Then open <http://127.0.0.1:8080/week-budget-planner/>.
 - **The server reads it from `$CREDENTIALS_DIRECTORY/node-key`,** where systemd puts a service's credentials: `LoadCredential=node-key:/etc/week-budget-planner/node-key` in the unit makes the key readable to the service only, for as long as it runs. A container can do the same by mounting a secret file into a folder and setting `CREDENTIALS_DIRECTORY` to it.
 - **The server never makes it.** Without the variable or the key it refuses to start and says where it looked, so a wrong path or a lost file can't quietly give the server a new identity. A restart keeps the key, and so the node's id, so a connected browser only waits for the server to come back.
 - **`week-budget-planner-server generate-node-key <file>` makes one** when a server is set up: 32 random bytes as 64 hexadecimal digits, in a new file readable by its owner only. It refuses to write over a file that exists.
-- **It's never logged:** iroh prints a secret key as `SecretKey(..)`. The browser test makes a key of its own in a temporary folder.
+- **It's never logged:** iroh prints a secret key as `SecretKey(..)`. The browser test makes a key of its own in a temporary folder, and `pnpm server` one in `.credentials/` (see [Running it](#running-it)).
 
 ## Checking it
 
@@ -76,7 +82,7 @@ cargo clippy --all-targets --locked -- --deny warnings
 cargo test --locked
 ```
 
-The browser test builds and compresses the app, builds the server, starts it, and checks that the app reaches the full storage level with service workers blocked, that each of the app's pages is served, and that the compressed copies are sent:
+The browser test builds the transport's module, builds and compresses the app, builds the server, starts it, and checks that the app reaches the full storage level with service workers blocked, that each of the app's pages is served, and that the compressed copies are sent, and it runs the transport's tests against it (see Checking it in [`crates/transport/README.md`](../transport/README.md)):
 
 ```bash
 pnpm test:server

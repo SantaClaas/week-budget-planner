@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- No icon file, so the browser doesn't ask for one and log a 404. -->
+    <link rel="icon" href="data:," />
+    <title>Transport check · Week Budget Planner</title>
+    <script type="module" src="/src/transport/check.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Transport check</h1>
+      <p>
+        Connects to the server's node through its relay, and sends bytes that the node sends back.
+        It's for testing the transport until the app can turn syncing on (see
+        crates/transport/README.md).
+      </p>
+      <p>Result: <output>running</output></p>
+      <button type="button" hidden>Send again</button>
+    </main>
+  </body>
+</html>

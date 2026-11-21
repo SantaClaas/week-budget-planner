@@ -12,6 +12,14 @@ declare module "virtual:app-version" {
   export default version;
 }
 
+/**
+ * The transport's WebAssembly module (crates/transport), or undefined when the build had none (see
+ * vite-plugins/transport.ts).
+ */
+declare module "virtual:transport" {
+  export const bindings: import("./transport/bindings.ts").Bindings | undefined;
+}
+
 /** core-js ships no types. These entries only install globals (see src/polyfill/index.ts). */
 declare module "core-js/es/iterator/index.js";
 declare module "core-js/es/promise/with-resolvers.js";

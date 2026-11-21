@@ -3969,6 +3969,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "week-budget-planner-transport"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.4.3",
+ "iroh",
+ "n0-future",
+ "tokio",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "widestring"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

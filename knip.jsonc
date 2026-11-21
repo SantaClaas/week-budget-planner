@@ -5,6 +5,7 @@
   // index.html registers the service worker by its URL, which knip can't follow.
   // stryker.config.mjs names vitest.mutation.config.ts as text, which knip can't follow either.
   "entry": ["scripts/*.ts", "public/service-worker.js", "vitest.mutation.config.ts"],
-  // A system tool, not a package: build-shapes.ts compiles Google's Kotlin sources with it.
-  "ignoreBinaries": ["java"],
+  // System tools, not packages: build-shapes.ts compiles Google's Kotlin sources with java, and
+  // build-transport.ts writes the transport's JavaScript with wasm-bindgen (crates/transport).
+  "ignoreBinaries": ["java", "wasm-bindgen"],
 }

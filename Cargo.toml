@@ -2,7 +2,7 @@
 # built with pnpm and doesn't depend on any of this.
 [workspace]
 resolver = "3"
-members = ["crates/server"]
+members = ["crates/server", "crates/transport"]
 
 [workspace.package]
 edition = "2024"
@@ -15,12 +15,17 @@ publish = false
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "tokio", "ws"] }
 futures-core = "=0.3.34"
 futures-sink = "=0.3.34"
+# Only so the transport's random numbers come from the browser's crypto.getRandomValues: the
+# `getrandom_backend` flag in .cargo/config.toml picks it, and the feature makes it available.
+getrandom = { version = "=0.4.3", features = ["wasm_js"] }
 # The transport (see Transport in docs/spec/network.md): no port mapping, metrics or address lookup
 # through n0's services, which the server doesn't use.
 iroh = { version = "=1.4.1", default-features = false, features = ["tls-ring"] }
 iroh-relay = { version = "=1.4.1", default-features = false, features = ["server", "tls-ring"] }
 # The error type iroh-relay's WebSocket streams use.
 n0-error = "=1.0.3"
+# Timeouts that work in the browser, where tokio's timers don't; iroh uses it too.
+n0-future = "=0.3.2"
 thiserror = "=2.0.21"
 tokio = { version = "=1.54.1", features = ["macros", "net", "rt-multi-thread", "signal"] }
 tower = { version = "=0.5.3", default-features = false, features = ["util"] }
@@ -31,6 +36,19 @@ tracing-subscriber = { version = "=0.3.23", default-features = false, features =
   "json",
   "std",
 ] }
+# The transport's bindings to JavaScript, at the version wasm-bindgen-cli has to match.
+wasm-bindgen = "=0.2.130"
+wasm-bindgen-futures = "=0.4.80"
+
+# The transport's WebAssembly module, which every visitor who syncs downloads: built for size rather
+# than speed, with one unit so the linker can drop what nothing calls (see crates/transport). Its
+# own profile, so the server keeps release's settings.
+[profile.transport]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
