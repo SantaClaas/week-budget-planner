@@ -2,6 +2,8 @@ node_modules/
 dist/
 # Cargo's build output.
 target/
+# The server's node key, which it makes on its first start (crates/server/README.md).
+/node-key
 .vite/
 *.log
 .DS_Store
