@@ -7,28 +7,20 @@
 // up where it broke (see Docs in docs/guidelines/principles.md). Links to other sites are not
 // followed: that needs the network, and a site being down would fail the tests.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { isInFolder, listFiles } from "./repository.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
 /**
- * Folders whose Markdown isn't ours to check: dependencies, build output, the vendored skill, and
- * `.claude/`, whose rule files are links to the docs and would be read from the wrong folder.
+ * Folders not to check beyond what .gitignore leaves out (see scripts/repository.ts): the vendored
+ * skill, and `.claude/`, whose rule files are links to the docs and would be read from the wrong
+ * folder.
  */
-const SKIPPED_FOLDERS = new Set([
-  ".agents",
-  ".claude",
-  ".git",
-  ".stryker-tmp",
-  "dist",
-  "node_modules",
-  "playwright-report",
-  "reports",
-  "target",
-  "test-results",
-]);
+const SKIPPED_FOLDERS = new Set([".agents", ".claude"]);
 
 /** A link whose target isn't there. `line` counts from 1. */
 export type DeadLink = {
@@ -174,14 +166,10 @@ export function findDeadLinks(path: string, markdown: string, files: Files): Dea
 }
 
 /** Every Markdown file in the repository that is ours to check. */
-function listMarkdownFiles(folder: string): string[] {
-  return readdirSync(folder, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(folder, entry.name);
-    if (entry.isDirectory()) return SKIPPED_FOLDERS.has(entry.name) ? [] : listMarkdownFiles(path);
-
-    return entry.isFile() && entry.name.endsWith(".md") ? [path] : [];
-  });
-}
+const listMarkdownFiles = (): string[] =>
+  listFiles(root).filter(
+    (path) => path.endsWith(".md") && !isInFolder(relative(root, path), SKIPPED_FOLDERS),
+  );
 
 /** The dead links in the repository's Markdown files, with paths from its root. */
 export function checkRepository(): DeadLink[] {
@@ -197,7 +185,7 @@ export function checkRepository(): DeadLink[] {
       return anchors;
     },
   };
-  return listMarkdownFiles(root)
+  return listMarkdownFiles()
     .toSorted()
     .values()
     .flatMap((path) => findDeadLinks(path, readFileSync(path, "utf8"), files))
