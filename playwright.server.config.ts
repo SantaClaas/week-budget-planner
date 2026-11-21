@@ -1,3 +1,7 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -6,6 +10,13 @@ import { defineConfig, devices } from "@playwright/test";
  * from playwright.config.ts so that `pnpm test:browser` needs no Rust toolchain.
  */
 const executablePath = process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE"];
+
+/**
+ * A credentials folder of the run's own, outside the repository, as systemd gives a service one:
+ * the server reads its node key from there and never makes one itself (crates/server/README.md).
+ */
+const credentials = mkdtempSync(join(tmpdir(), "week-budget-planner-credentials-"));
+const server = "./target/release/week-budget-planner-server";
 
 export default defineConfig({
   testDir: "e2e",
@@ -25,8 +36,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "./target/release/week-budget-planner-server",
+    command: `${server} generate-node-key ${join(credentials, "node-key")} && ${server}`,
     env: {
+      CREDENTIALS_DIRECTORY: credentials,
       WEEK_BUDGET_PLANNER_ADDRESS: "127.0.0.1:4313",
       WEEK_BUDGET_PLANNER_BASE: "/week-budget-planner/",
     },

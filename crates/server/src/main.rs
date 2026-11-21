@@ -4,6 +4,7 @@
 
 mod base;
 mod configuration;
+mod credential;
 mod header;
 mod node;
 mod relay;
@@ -28,8 +29,10 @@ enum Error {
     },
     #[error("the relay's address on this machine, {0}, isn't a relay URL: {1}")]
     RelayUrl(String, String),
-    #[error("the server's node key: {0}")]
-    NodeKey(#[from] node::KeyError),
+    #[error("the server's secrets: {0}")]
+    Credential(#[from] credential::Error),
+    #[error("use: week-budget-planner-server [generate-node-key <file>]")]
+    Usage,
     #[error("the server's node: {0}")]
     Node(#[from] node::Error),
     #[error("serving stopped: {0}")]
@@ -81,8 +84,9 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let configuration = configuration::read(|name| std::env::var(name))?;
-    // Kept in a file, so a restart keeps the node's id (see Running it in crates/server/README.md).
-    let secret_key = node::load_or_create_key(&configuration.node_key)?;
+    // From the platform's secrets, not the configuration, so a restart keeps the node's id.
+    let credentials = credential::find_directory(|name| std::env::var(name))?;
+    let secret_key = credential::read_node_key(&credentials)?;
     let node_id = secret_key.public();
     // The member list will change who the relay admits (the mailbox, #97); until then it's everyone.
     let (relay, _admission) = relay::create();
@@ -127,13 +131,28 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
+/// Makes the node key for a new server, once (see Running it in crates/server/README.md).
+fn generate_node_key(path: &std::path::Path) -> Result<(), Error> {
+    let key = credential::generate_node_key(path)?;
+    tracing::info!(path = %path.display(), node = %key.public(), "made a new node key");
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> ExitCode {
     tracing_subscriber::fmt()
         .json()
         .with_max_level(Level::INFO)
         .init();
-    match run().await {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    let outcome = match arguments.as_slice() {
+        [] => run().await,
+        [command, path] if command == "generate-node-key" => {
+            generate_node_key(std::path::Path::new(path))
+        }
+        _ => Err(Error::Usage),
+    };
+    match outcome {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             tracing::error!(%error, "the server stopped");
