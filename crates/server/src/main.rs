@@ -1,14 +1,19 @@
-//! The Week Budget Planner's server. Today it serves the app's build, compressed at build time, with
-//! the headers the app needs, and does nothing else (see crates/server/README.md and
-//! docs/spec/network.md).
+//! The Week Budget Planner's server. It serves the app's build, compressed at build time, with the
+//! headers the app needs, and runs the iroh relay and the server's own node that syncing will
+//! connect through (see crates/server/README.md and docs/spec/network.md).
 
 mod base;
 mod configuration;
+mod connection;
 mod header;
+mod node;
+mod relay;
 mod site;
 
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::process::ExitCode;
 
+use iroh::{RelayUrl, SecretKey};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 
@@ -22,8 +27,23 @@ enum Error {
         address: std::net::SocketAddr,
         source: std::io::Error,
     },
+    #[error("the relay's address on this machine, {0}, isn't a relay URL: {1}")]
+    RelayUrl(String, String),
+    #[error("the server's node: {0}")]
+    Node(#[from] node::Error),
     #[error("serving stopped: {0}")]
-    Serve(std::io::Error),
+    Serve(#[from] tokio::task::JoinError),
+}
+
+/// The address the server's own node reaches the relay at: the server's port on this machine,
+/// through the loopback address when the server listens on every address.
+fn find_local_address(listening: SocketAddr) -> SocketAddr {
+    let ip = match listening.ip() {
+        IpAddr::V4(ip) if ip.is_unspecified() => IpAddr::V4(Ipv4Addr::LOCALHOST),
+        IpAddr::V6(ip) if ip.is_unspecified() => IpAddr::V6(Ipv6Addr::LOCALHOST),
+        ip => ip,
+    };
+    SocketAddr::new(ip, listening.port())
 }
 
 /// Waits for Ctrl+C, or for the terminate signal a service manager or container runtime sends, so
@@ -58,22 +78,49 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let configuration = configuration::read(|name| std::env::var(name))?;
-    let router = site::route(&configuration.app, configuration.base).layer(
-        TraceLayer::new_for_http()
-            .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-            .on_response(DefaultOnResponse::new().level(Level::INFO)),
-    );
+    // A new key, and so a new node id, on every start: the app asks for it at /node each time.
+    let secret_key = SecretKey::generate();
+    let node_id = secret_key.public();
+    // The member list will change who the relay admits (the mailbox, #97); until then it's everyone.
+    let (relay, _admission) = relay::create();
+    let router = site::route(&configuration.app, configuration.base)
+        .merge(relay::route())
+        .merge(node::route(node_id))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO)),
+        );
+    let listen_error = |source| Error::Listen {
+        address: configuration.address,
+        source,
+    };
     let listener = tokio::net::TcpListener::bind(configuration.address)
         .await
-        .map_err(|source| Error::Listen {
-            address: configuration.address,
-            source,
-        })?;
+        .map_err(listen_error)?;
+    let local_address = find_local_address(listener.local_addr().map_err(listen_error)?);
+    let relay_url = format!("http://{local_address}");
+    let relay_url: RelayUrl =
+        relay_url
+            .parse()
+            .map_err(|error: <RelayUrl as std::str::FromStr>::Err| {
+                Error::RelayUrl(relay_url.clone(), error.to_string())
+            })?;
     tracing::info!(address = %configuration.address, app = %configuration.app.display(), "listening");
-    axum::serve(listener, router)
-        .with_graceful_shutdown(wait_for_shutdown())
-        .await
-        .map_err(Error::Serve)
+    let serving = tokio::spawn(connection::serve(
+        listener,
+        router,
+        relay,
+        wait_for_shutdown(),
+    ));
+    let node = node::spawn(secret_key, relay_url).await?;
+    tracing::info!(node = %node_id, "the node reached the relay");
+    serving.await?;
+    if let Err(error) = node.shutdown().await {
+        tracing::warn!(%error, "the node didn't shut down cleanly");
+    }
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -88,5 +135,19 @@ async fn main() -> ExitCode {
             tracing::error!(%error, "the server stopped");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::find_local_address;
+
+    #[test]
+    fn reaches_the_relay_on_this_machine() {
+        let local = |address: &str| find_local_address(address.parse().unwrap()).to_string();
+        assert_eq!(local("0.0.0.0:8080"), "127.0.0.1:8080");
+        assert_eq!(local("[::]:8080"), "[::1]:8080");
+        assert_eq!(local("127.0.0.1:4313"), "127.0.0.1:4313");
+        assert_eq!(local("192.0.2.7:80"), "192.0.2.7:80");
     }
 }

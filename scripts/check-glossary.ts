@@ -22,7 +22,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const GLOSSARY = join(root, "docs/spec/glossary.md");
 
 /**
- * Folders that aren't ours to check: dependencies, build output, the vendored skill, the prototype,
+ * Folders that aren't ours to check: dependencies, build output (Cargo's `target/` too), the vendored skill, the prototype,
  * whose copy predates the glossary and is kept as it was (see docs/spec/changes-from-the-prototype.md),
  * and the downloaded icons.
  */
@@ -36,6 +36,7 @@ const SKIPPED_FOLDERS = new Set([
   "playwright-report",
   "prototype",
   "reports",
+  "target",
   "test-results",
 ]);
 

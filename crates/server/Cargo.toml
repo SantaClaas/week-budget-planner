@@ -8,6 +8,10 @@ publish.workspace = true
 
 [dependencies]
 axum.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+iroh.workspace = true
+iroh-relay.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tower-http.workspace = true
