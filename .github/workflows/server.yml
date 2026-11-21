@@ -78,6 +78,16 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps --only-shell chromium
+      # The compressed copies pnpm compress keeps by their content's hash, so the WebAssembly module
+      # is compressed again only when the database engine changes, the only one that takes long (see
+      # scripts/compress.ts). It changes only with pnpm-lock.yaml; older entries still help the other
+      # files. Nothing this job builds is deployed, so a cache a pull request filled can't reach a
+      # deployment, and GitHub doesn't hand a pull request's cache to main.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/compress
+          key: compressed-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: compressed-
       # Builds and compresses the app, builds the server, starts it and runs e2e/server.spec.ts
       # against it.
       - run: pnpm test:server

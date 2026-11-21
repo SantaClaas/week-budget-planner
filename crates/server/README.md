@@ -23,7 +23,7 @@ pnpm build
 pnpm compress
 ```
 
-The first run takes about half a minute, nearly all of it Brotli on the database engine's WebAssembly module. Each copy is kept in `node_modules/.cache/compress/` by the hash of its file's content, so later runs take about a second, until a file changes: the module only does when the engine is updated. Without compressing, the server sends every file as it is.
+The first run takes about half a minute, nearly all of it Brotli on the database engine's WebAssembly module. Each copy is kept in `node_modules/.cache/compress/` by the hash of its file's content, so later runs take about a second, until a file changes: the module only does when the engine is updated. CI keeps the cache between runs too, with `actions/cache`. Without compressing, the server sends every file as it is.
 
 The app is built for GitHub Pages, under `/week-budget-planner/`, so serve it under the same base:
 
