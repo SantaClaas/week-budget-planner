@@ -31,10 +31,8 @@ jobs:
     # Stops a job that hangs: the exploration itself stops after at most an hour.
     timeout-minutes: 75
     permissions:
-      # Reads the repository to run its tests.
-      contents: read
-      # Opens an issue with the seeds when a run breaks a rule.
-      issues: write
+      contents: read # Reads the repository to run its tests.
+      issues: write # Opens an issue with the seeds when a run breaks a rule.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

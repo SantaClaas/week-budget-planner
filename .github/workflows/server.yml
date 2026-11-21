@@ -22,8 +22,7 @@ jobs:
     # Stops a job that hangs. It takes a few minutes, most of them compiling.
     timeout-minutes: 20
     permissions:
-      # Reads the repository to check it.
-      contents: read
+      contents: read # Reads the repository to check it.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,8 +37,7 @@ jobs:
     # Stops a job that hangs. Building cargo-deny takes most of its few minutes.
     timeout-minutes: 20
     permissions:
-      # Reads the repository to check its dependencies.
-      contents: read
+      contents: read # Reads the repository to check its dependencies.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,8 +63,7 @@ jobs:
     # Stops a job that hangs. It builds the app and the server, then runs one short browser test.
     timeout-minutes: 20
     permissions:
-      # Reads the repository to build and test it.
-      contents: read
+      contents: read # Reads the repository to build and test it.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

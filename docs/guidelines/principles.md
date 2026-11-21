@@ -185,10 +185,6 @@ The planner's own rules (a block is 15 minutes to a day long and starts on a slo
 
 How tests are chosen is in [`docs/guidelines/tests.md`](tests.md).
 
-## Comments
-
-**A comment goes on a line of its own**, above the code it's about, not after the code on the same line. A comment at the end of a line is easy to miss, gets cut off or pushed out of view by a long line, and goes stale unseen when the line changes. The one exception is the version after a hash-pinned GitHub Action (`uses: actions/checkout@<hash> # v7.0.1`), which is the convention Dependabot and zizmor read (see [`docs/guidelines/workflows.md`](workflows.md)).
-
 ## Docs
 
 **Draw diagrams in Mermaid**, in a `mermaid` code block in the Markdown. GitHub and most editors render it, and it stays text: it changes in the same diff as the prose around it, and a review sees what changed. Use a diagram where prose makes the reader build a picture in their head: how data structures relate, the steps between tabs or between the page and a worker, a decision with several outcomes, the states of a mode. Don't draw what a list already says plainly. Render a new diagram once before committing, since a syntax error only shows as an error box on GitHub.
