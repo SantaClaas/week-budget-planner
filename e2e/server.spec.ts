@@ -18,7 +18,13 @@ test("reaches the full storage level without a service worker", async ({ browser
   const context = await browser.newContext({ serviceWorkers: "block" });
   const page = await context.newPage();
   const response = await page.goto(SERVER_URL);
-  expect(response?.headers()["content-security-policy"]).toMatch(/frame-ancestors 'none'$/u);
+  // The header is the page's own <meta> policy with frame-ancestors, which only a header carries.
+  const metaPolicy = await page
+    .locator('meta[http-equiv="Content-Security-Policy"]')
+    .getAttribute("content");
+  expect(response?.headers()["content-security-policy"]).toBe(
+    `${String(metaPolicy)}; frame-ancestors 'none'`,
+  );
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
   await expectStatus(page, "full");
   expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();

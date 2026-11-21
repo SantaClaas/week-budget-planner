@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findTemplates } from "./content-security-policy.ts";
+import { buildHeaderPolicy, findTemplates } from "./content-security-policy.ts";
 
 describe("findTemplates", () => {
   it("reads the HTML of Solid's compiled templates as the runtime receives it", () => {
@@ -23,5 +23,13 @@ describe("findTemplates", () => {
   it("refuses a template that isn't a static string", () => {
     const code = 'import { template } from "@solidjs/web"; template(`<p>${name}`);';
     expect(() => findTemplates(code)).toThrow(/static string/u);
+  });
+});
+
+describe("buildHeaderPolicy", () => {
+  it("is the page's policy with frame-ancestors, which only a header can carry", () => {
+    expect(buildHeaderPolicy("default-src 'self'; object-src 'none'")).toBe(
+      "default-src 'self'; object-src 'none'; frame-ancestors 'none'",
+    );
   });
 });
