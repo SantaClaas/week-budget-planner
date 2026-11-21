@@ -155,7 +155,7 @@ Not an attack, but the way the plan is most likely to be damaged: two versions o
 
 ### The person is tracked
 
-**What protects against it:** the app makes no requests to other origins, has no analytics and no account, sends `Referrer-Policy: strict-origin-when-cross-origin`, and turns off camera, microphone and location (`Permissions-Policy`). It never prompts for a browser permission without explaining it first (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)). GitHub, as the host, sees requests for the app's files, as any host would.
+**What protects against it:** the app makes no requests to other origins (the transport, when something starts it, connects only to the relay on the app's own origin), has no analytics and no account, sends `Referrer-Policy: strict-origin-when-cross-origin`, and turns off camera, microphone and location (`Permissions-Policy`). It never prompts for a browser permission without explaining it first (see [Browser permissions](security.md#browser-permissions) in [Security](security.md)). GitHub, as the host, sees requests for the app's files, as any host would.
 
 ## Out of scope
 
