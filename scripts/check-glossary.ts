@@ -14,31 +14,21 @@
 // Its test fails on a use, so the rule is enforced at test time rather than in review (see Where
 // rules are enforced in docs/guidelines/principles.md).
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { isInFolder, listFiles } from "./repository.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const GLOSSARY = join(root, "docs/spec/glossary.md");
 
 /**
- * Folders that aren't ours to check: dependencies, build output (Cargo's `target/` too), the vendored skill, the prototype,
- * whose copy predates the glossary and is kept as it was (see docs/spec/changes-from-the-prototype.md),
- * and the downloaded icons.
+ * Folders not to check beyond what .gitignore leaves out (see scripts/repository.ts): the vendored
+ * skill, the prototype, whose copy predates the glossary and is kept as it was (see
+ * docs/spec/changes-from-the-prototype.md), and the downloaded icons.
  */
-const SKIPPED_FOLDERS = new Set([
-  ".agents",
-  ".git",
-  ".stryker-tmp",
-  "dist",
-  "icons",
-  "node_modules",
-  "playwright-report",
-  "prototype",
-  "reports",
-  "target",
-  "test-results",
-]);
+const SKIPPED_FOLDERS = new Set([".agents", "icons", "prototype"]);
 
 /**
  * Files not to check: the glossary, which lists the wrong names; this check's test, whose examples
@@ -205,15 +195,13 @@ export function findStaleExceptions(wrongNames: WrongName[]): string[] {
 }
 
 /** Every file in the repository that is ours to check. */
-function listFiles(folder: string): string[] {
-  return readdirSync(folder, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(folder, entry.name);
-    if (entry.isDirectory()) return SKIPPED_FOLDERS.has(entry.name) ? [] : listFiles(path);
-
-    const isChecked = CHECKED_EXTENSIONS.has(extname(entry.name)) && !SKIPPED_FILES.has(path);
-    return entry.isFile() && isChecked ? [path] : [];
-  });
-}
+const listCheckedFiles = (): string[] =>
+  listFiles(root).filter(
+    (path) =>
+      CHECKED_EXTENSIONS.has(extname(path)) &&
+      !SKIPPED_FILES.has(path) &&
+      !isInFolder(relative(root, path), SKIPPED_FOLDERS),
+  );
 
 /** The wrong names the glossary lists. */
 export const readGlossary = (): WrongName[] => readWrongNames(readFileSync(GLOSSARY, "utf8"));
@@ -221,7 +209,7 @@ export const readGlossary = (): WrongName[] => readWrongNames(readFileSync(GLOSS
 /** The wrong names used in the repository, with paths from its root. */
 export function checkRepository(): Use[] {
   const wrongNames = readGlossary();
-  return listFiles(root)
+  return listCheckedFiles()
     .toSorted()
     .flatMap((path) =>
       findUses(readFileSync(path, "utf8"), wrongNames).map(({ name, term, line }) => ({
