@@ -39,7 +39,7 @@ pub(crate) struct Configuration {
 /// [`Error::NotUnicode`] when it's set to something that isn't UTF-8: falling back to the default
 /// then would quietly serve something other than what was asked for.
 fn read_or(
-    read_variable: &impl Fn(&str) -> Result<String, VarError>,
+    read_variable: &impl Fn(&'static str) -> Result<String, VarError>,
     name: &'static str,
     default: &str,
 ) -> Result<String, Error> {
@@ -52,13 +52,14 @@ fn read_or(
 
 /// Reads the configuration.
 ///
-/// * `read_variable` - Gives an environment variable as `std::env::var` does.
+/// * `read_variable` - Gives an environment variable as `std::env::var` does. It only gets the
+///   names this module declares, so they are `'static`, which lets `std::env::var` itself be passed.
 ///
 /// # Errors
 ///
 /// When a variable isn't UTF-8, or the address or the base is set to something that isn't one.
 pub(crate) fn read(
-    read_variable: impl Fn(&str) -> Result<String, VarError>,
+    read_variable: impl Fn(&'static str) -> Result<String, VarError>,
 ) -> Result<Configuration, Error> {
     let address = read_or(&read_variable, ADDRESS, "127.0.0.1:8080")?;
     let address = address.parse().map_err(|_| Error::Address(address))?;
@@ -77,7 +78,10 @@ mod test {
     use crate::base::{self, Base};
 
     /// Reads one variable as set to `value`, and every other as not set.
-    fn set(name: &'static str, value: &'static str) -> impl Fn(&str) -> Result<String, VarError> {
+    fn set(
+        name: &'static str,
+        value: &'static str,
+    ) -> impl Fn(&'static str) -> Result<String, VarError> {
         move |asked| {
             if asked == name {
                 return Ok(value.to_owned());

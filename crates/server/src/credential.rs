@@ -50,13 +50,14 @@ pub(crate) enum Error {
 
 /// The folder of the server's credentials.
 ///
-/// * `read_variable` - Gives an environment variable as `std::env::var` does.
+/// * `read_variable` - Gives an environment variable as `std::env::var` does. It only gets the
+///   names this module declares, so they are `'static`, which lets `std::env::var` itself be passed.
 ///
 /// # Errors
 ///
 /// When `CREDENTIALS_DIRECTORY` isn't set, or isn't UTF-8.
 pub(crate) fn find_directory(
-    read_variable: impl Fn(&str) -> Result<String, VarError>,
+    read_variable: impl Fn(&'static str) -> Result<String, VarError>,
 ) -> Result<PathBuf, Error> {
     match read_variable(DIRECTORY) {
         Ok(directory) => Ok(PathBuf::from(directory)),
