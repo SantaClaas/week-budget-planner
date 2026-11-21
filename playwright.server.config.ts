@@ -20,7 +20,7 @@ const server = "./target/release/week-budget-planner-server";
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: "server.spec.ts",
+  testMatch: ["server.spec.ts", "transport.spec.ts"],
   forbidOnly: process.env["CI"] !== undefined,
   globalTimeout: process.env["CI"] === undefined ? 0 : 5 * 60_000,
   retries: 0,

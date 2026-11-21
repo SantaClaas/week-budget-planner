@@ -29,6 +29,8 @@ jobs:
           persist-credentials: false
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --locked -- --deny warnings
+      # The transport's code for the browser, which the native lint above doesn't compile.
+      - run: cargo clippy --locked --package week-budget-planner-transport --target wasm32-unknown-unknown -- --deny warnings
       - run: cargo test --locked
 
   supply-chain:
@@ -69,8 +71,9 @@ jobs:
   browser:
     name: Serve the app to a browser
     runs-on: ubuntu-latest
-    # Stops a job that hangs. It builds the app and the server, then runs one short browser test.
-    timeout-minutes: 20
+    # Stops a job that hangs. It builds the transport's module, the app and the server, then runs
+    # the short browser tests.
+    timeout-minutes: 30
     permissions:
       contents: read # Reads the repository to build and test it.
     steps:
@@ -87,6 +90,24 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps --only-shell chromium
+      # wasm-bindgen-cli has to match the wasm-bindgen crate in Cargo.lock, or the JavaScript it
+      # writes doesn't fit the module (scripts/build-transport.ts), so its version comes from there.
+      - id: wasm-bindgen
+        run: echo "version=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print }' Cargo.lock)" >> "$GITHUB_OUTPUT"
+      # wasm-bindgen-cli as the next step builds it, kept between runs, like cargo-deny's.
+      - id: wasm-bindgen-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/wasm-bindgen
+          key: wasm-bindgen-cli-${{ steps.wasm-bindgen.outputs.version }}-${{ runner.os }}
+      # Built from crates.io at the version in Cargo.lock, which the age check holds to a week old.
+      # Outside the workspace, so it doesn't take the pinned toolchain.
+      - name: Install wasm-bindgen-cli
+        if: steps.wasm-bindgen-cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ steps.wasm-bindgen.outputs.version }}
+        run: cargo install --locked "wasm-bindgen-cli@$VERSION"
       # The compressed copies pnpm compress keeps by their content's hash, so the WebAssembly module
       # is compressed again only when the database engine changes, the only one that takes long (see
       # scripts/compress.ts). It changes only with pnpm-lock.yaml; older entries still help the other
@@ -97,8 +118,8 @@ jobs:
           path: node_modules/.cache/compress
           key: compressed-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: compressed-
-      # Builds and compresses the app, builds the server, starts it and runs e2e/server.spec.ts
-      # against it.
+      # Builds the transport's module, builds and compresses the app, builds the server, starts it and
+      # runs e2e/server.spec.ts and e2e/transport.spec.ts against it.
       - run: pnpm test:server
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
