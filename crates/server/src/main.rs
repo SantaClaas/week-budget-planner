@@ -17,12 +17,12 @@ use tracing::Level;
 enum Error {
     #[error("the configuration: {0}")]
     Config(#[from] config::Error),
-    #[error("couldn't read the app's page, {path}; run pnpm build first: {source}")]
-    NoPage {
+    #[error("couldn't read the page's policy, {path}; run pnpm build first: {source}")]
+    NoPolicy {
         path: std::path::PathBuf,
         source: std::io::Error,
     },
-    #[error("the app's page: {0}")]
+    #[error("the page's policy: {0}")]
     Header(#[from] header::Error),
     #[error("couldn't listen on {address}: {source}")]
     Listen {
@@ -65,12 +65,12 @@ async fn wait_for_shutdown() {
 
 async fn run() -> Result<(), Error> {
     let config = config::read(|name| std::env::var(name).ok())?;
-    let page_path = config.app.join("index.html");
-    let page = std::fs::read_to_string(&page_path).map_err(|source| Error::NoPage {
-        path: page_path,
+    let policy_path = config.app.join("content-security-policy.txt");
+    let policy = std::fs::read_to_string(&policy_path).map_err(|source| Error::NoPolicy {
+        path: policy_path,
         source,
     })?;
-    let policy = header::read_policy(&page)?;
+    let policy = header::parse_policy(&policy)?;
     let router = site::route(&config.app, config.base, policy).layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))

@@ -5,73 +5,31 @@
 
 use axum::http::{HeaderMap, HeaderName, HeaderValue, header};
 
-/// Why the page's policy couldn't be read.
+/// Why the page's policy can't be used.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub(crate) enum Error {
-    #[error("index.html has no Content-Security-Policy <meta>, which the build adds")]
-    Missing,
-    #[error("index.html's Content-Security-Policy can't be sent as a header: {0}")]
+    #[error("the policy file is empty")]
+    Empty,
+    #[error("the policy can't be sent as a header: {0}")]
     Invalid(String),
 }
 
-/// The value of an HTML attribute as text: the build writes `'` as `&#39;`, and the other
-/// characters HTML escapes may appear too.
-fn decode_attribute(value: &str) -> String {
-    let mut decoded = String::with_capacity(value.len());
-    let mut rest = value;
-    while let Some(start) = rest.find('&') {
-        decoded.push_str(&rest[..start]);
-        rest = &rest[start..];
-        let Some(end) = rest.find(';') else {
-            break;
-        };
-        let entity = &rest[1..end];
-        let character = match entity {
-            "amp" => Some('&'),
-            "lt" => Some('<'),
-            "gt" => Some('>'),
-            "quot" => Some('"'),
-            "apos" => Some('\''),
-            _ => entity
-                .strip_prefix('#')
-                .and_then(|number| number.parse::<u32>().ok())
-                .and_then(char::from_u32),
-        };
-        let Some(character) = character else {
-            decoded.push('&');
-            rest = &rest[1..];
-            continue;
-        };
-
-        decoded.push(character);
-        rest = &rest[end + 1..];
-    }
-
-    decoded.push_str(rest);
-    decoded
-}
-
-/// The marker the policy's `<meta>` starts with, as the build writes it
-/// (vite-plugins/content-security-policy.ts).
-const POLICY_META: &str = r#"<meta http-equiv="Content-Security-Policy" content=""#;
-
-/// The page's Content Security Policy as a header: the `<meta>` policy the build put in
-/// `index.html`, with `frame-ancestors 'none'`, which a `<meta>` policy can't carry. Taking it from
-/// the build keeps the header and the `<meta>` from ever disagreeing: the inline scripts' hashes
-/// change with every edit to them.
+/// The page's Content Security Policy as a header, from the file the build writes next to the page
+/// (`content-security-policy.txt`, by vite-plugins/content-security-policy.ts): the policy of the
+/// page's `<meta>`, with `frame-ancestors 'none'`, which a `<meta>` can't carry. The build makes
+/// both from one string, so they can't disagree, although the inline scripts' hashes change with
+/// every edit to them.
 ///
 /// # Errors
 ///
-/// [`Error::Missing`] when the page has no policy `<meta>`, and [`Error::Invalid`] when it can't
-/// be a header value.
-pub(crate) fn read_policy(index_html: &str) -> Result<HeaderValue, Error> {
-    let start = index_html.find(POLICY_META).ok_or(Error::Missing)? + POLICY_META.len();
-    let length = index_html[start..].find('"').ok_or(Error::Missing)?;
-    let policy = decode_attribute(&index_html[start..start + length]);
-    let policy = format!(
-        "{}; frame-ancestors 'none'",
-        policy.trim().trim_end_matches(';')
-    );
+/// [`Error::Empty`] when the file holds nothing, and [`Error::Invalid`] when its text can't be a
+/// header value.
+pub(crate) fn parse_policy(text: &str) -> Result<HeaderValue, Error> {
+    let policy = text.trim();
+    if policy.is_empty() {
+        return Err(Error::Empty);
+    }
+
     HeaderValue::try_from(policy).map_err(|error| Error::Invalid(error.to_string()))
 }
 
@@ -119,33 +77,22 @@ pub(crate) fn add_page(headers: &mut HeaderMap, policy: &HeaderValue) {
 
 #[cfg(test)]
 mod test {
-    use super::{Error, decode_attribute, read_policy};
+    use super::{Error, parse_policy};
 
     #[test]
-    fn decodes_what_html_escapes() {
-        assert_eq!(decode_attribute("&#39;self&#39;"), "'self'");
+    fn takes_the_policy_the_build_wrote() {
         assert_eq!(
-            decode_attribute("a &amp; b &lt;c&gt; &quot;d&quot; &apos;"),
-            "a & b <c> \"d\" '"
-        );
-        assert_eq!(decode_attribute("no entities"), "no entities");
-        assert_eq!(decode_attribute("&unknown; &"), "&unknown; &");
-    }
-
-    #[test]
-    fn reads_the_build_s_policy_and_adds_frame_ancestors() {
-        let page = r#"<head><meta http-equiv="Content-Security-Policy" content="default-src &#39;self&#39;; script-src &#39;self&#39; &#39;sha256-a+b/c=&#39;"><title>x</title>"#;
-        assert_eq!(
-            read_policy(page).unwrap(),
-            "default-src 'self'; script-src 'self' 'sha256-a+b/c='; frame-ancestors 'none'"
+            parse_policy("default-src 'self'; frame-ancestors 'none'\n").unwrap(),
+            "default-src 'self'; frame-ancestors 'none'"
         );
     }
 
     #[test]
-    fn refuses_a_page_without_a_policy() {
-        assert_eq!(
-            read_policy("<head><title>x</title></head>"),
-            Err(Error::Missing)
-        );
+    fn refuses_an_empty_file_and_text_no_header_can_hold() {
+        assert_eq!(parse_policy(" \n"), Err(Error::Empty));
+        assert!(matches!(
+            parse_policy("default-src 'self'\nobject-src 'none'"),
+            Err(Error::Invalid(_))
+        ));
     }
 }

@@ -94,7 +94,7 @@ async fn refuse() -> Response {
 /// outside it.
 ///
 /// * `app` - The folder of the app's build.
-/// * `policy` - The page's Content Security Policy as a header (see [`security::read_policy`]).
+/// * `policy` - The page's Content Security Policy as a header (see [`security::parse_policy`]).
 pub(crate) fn route(app: &Path, base: Base, policy: HeaderValue) -> Router {
     let page = serve_file(&app.join("index.html"));
     // The app's own page for a path it doesn't have (404.html, a copy of index.html the build

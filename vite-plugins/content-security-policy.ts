@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { parseSync, Visitor, type Plugin } from "vite";
@@ -8,6 +8,8 @@ import { parseSync, Visitor, type Plugin } from "vite";
  * The Content Security Policy and Trusted Types (see docs/spec/security.md).
  *
  * - Adds the policy as a `<meta>` to the built `index.html`, with hashes of its inline scripts.
+ * - Writes the same policy as a header, `frame-ancestors` included, to `content-security-policy.txt`
+ *   in the build, for the server to send (crates/server).
  * - Puts the HTML the page may write on the allowlist of the default Trusted Types policy in
  *   `src/trusted-html.ts`: every template the Solid compiler produced, and the listed files.
  * - Fails the build when other code imports `src/trusted-html.ts`.
@@ -37,6 +39,16 @@ function buildPolicy(scriptHashes: string[]): string {
     TRUSTED_TYPES,
   ].join("; ");
 }
+
+/** The file in the build that holds the policy as a header, which the server reads at startup. */
+const HEADER_FILE = "content-security-policy.txt";
+
+/**
+ * The page's policy as a header: the `<meta>` policy with `frame-ancestors 'none'`, which only a
+ * header can carry.
+ */
+export const buildHeaderPolicy = (metaPolicy: string): string =>
+  `${metaPolicy}; frame-ancestors 'none'`;
 
 const hashScript = (script: string) =>
   `sha256-${createHash("sha256").update(script).digest("base64")}`;
@@ -103,6 +115,9 @@ export function addContentSecurityPolicy({
       .split(path.sep)
       .join("/");
 
+  // The policy the build put in the page, for the header file once the build is written.
+  let metaPolicy: string | undefined;
+
   return [
     {
       name: "content-security-policy:guard",
@@ -154,14 +169,20 @@ export function addContentSecurityPolicy({
           const hashes = [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script = ""]) =>
             hashScript(script),
           );
+          metaPolicy = buildPolicy(hashes);
           return [
             {
               tag: "meta",
-              attrs: { "http-equiv": "Content-Security-Policy", content: buildPolicy(hashes) },
+              attrs: { "http-equiv": "Content-Security-Policy", content: metaPolicy },
               injectTo: "head-prepend",
             },
           ];
         },
+      },
+      writeBundle(options) {
+        if (metaPolicy === undefined || options.dir === undefined) return;
+
+        writeFileSync(path.join(options.dir, HEADER_FILE), `${buildHeaderPolicy(metaPolicy)}\n`);
       },
     },
   ];
