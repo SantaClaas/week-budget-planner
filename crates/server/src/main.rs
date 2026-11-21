@@ -57,7 +57,7 @@ async fn wait_for_shutdown() {
 }
 
 async fn run() -> Result<(), Error> {
-    let config = config::read(|name| std::env::var(name).ok())?;
+    let config = config::read(|name| std::env::var(name))?;
     let router = site::route(&config.app, config.base).layer(
         TraceLayer::new_for_http()
             .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
