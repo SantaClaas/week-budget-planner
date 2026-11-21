@@ -83,9 +83,9 @@ async fn wait_for_shutdown() {
 }
 
 async fn run() -> Result<(), Error> {
-    let configuration = configuration::read(|name| std::env::var(name))?;
+    let configuration = configuration::read(std::env::var)?;
     // From the platform's secrets, not the configuration, so a restart keeps the node's id.
-    let credentials = credential::find_directory(|name| std::env::var(name))?;
+    let credentials = credential::find_directory(std::env::var)?;
     let secret_key = credential::read_node_key(&credentials)?;
     let node_id = secret_key.public();
     // The member list will change who the relay admits (the mailbox, #97); until then it's everyone.
