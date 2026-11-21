@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { parseSync, Visitor, type Plugin } from "vite";
+import { parseSync, Visitor, type HtmlTagDescriptor, type Plugin } from "vite";
 
 /**
  * The Content Security Policy and Trusted Types (see docs/spec/security.md).
@@ -29,7 +29,7 @@ const INLINE_SCRIPT_PATTERN = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/
 function buildPolicy(scriptHashes: string[]): string {
   return [
     "default-src 'self'",
-    `script-src 'self' ${scriptHashes.map((hash) => `'${hash}'`).join(" ")} 'wasm-unsafe-eval'`,
+    `script-src ${["'self'", ...scriptHashes.map((hash) => `'${hash}'`), "'wasm-unsafe-eval'"].join(" ")}`,
     // Inline style attributes are part of Solid templates and the icon sprite.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
@@ -52,6 +52,15 @@ const HEADER_FILE = "content-security-policy.txt";
  */
 export const buildHeaderPolicy = (metaPolicy: string): string =>
   `${metaPolicy}; frame-ancestors 'none'`;
+
+/** The policy as the first element of a page's `<head>`. */
+const createMetaTag = (policy: string): HtmlTagDescriptor[] => [
+  {
+    tag: "meta",
+    attrs: { "http-equiv": "Content-Security-Policy", content: policy },
+    injectTo: "head-prepend",
+  },
+];
 
 const hashScript = (script: string) =>
   `sha256-${createHash("sha256").update(script).digest("base64")}`;
@@ -173,6 +182,11 @@ export function addContentSecurityPolicy({
           if (context.server) return html;
 
           const metaPolicy = buildPagePolicy(html);
+          // The header the server sends every page is the app's page's policy. Another page, such
+          // as the transport check, has no inline scripts, so its own policy is stricter, and the
+          // browser enforces both.
+          if (path.basename(context.filename) !== "index.html") return createMetaTag(metaPolicy);
+
           const headerPolicy = readFileSync(path.join(root, HEADER_FILE), "utf8").trim();
           if (headerPolicy !== buildHeaderPolicy(metaPolicy)) {
             throw new Error(
@@ -180,13 +194,7 @@ export function addContentSecurityPolicy({
             );
           }
 
-          return [
-            {
-              tag: "meta",
-              attrs: { "http-equiv": "Content-Security-Policy", content: metaPolicy },
-              injectTo: "head-prepend",
-            },
-          ];
+          return createMetaTag(metaPolicy);
         },
       },
     },

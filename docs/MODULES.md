@@ -35,6 +35,7 @@ flowchart LR
   module_snackbar["snackbar"]
   module_storage["storage"]
   module_top_app_bar["top-app-bar"]
+  module_transport["transport"]
   module_trusted_html["trusted-html"]
   module_week["week"]
   module_activity --> module_announcement
@@ -122,6 +123,7 @@ flowchart LR
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
   module_top_app_bar --> module_week
+  module_transport --> module_result
   module_week --> module_announcement
   module_week --> module_icons
   module_week --> module_plan

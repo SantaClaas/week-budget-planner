@@ -6,3 +6,9 @@
 # skips younger versions when it picks one, but keeps a version that's already in Cargo.lock, so
 # scripts/check-crate-age.ts checks the lockfile against the same age in CI.
 global-min-publish-age = "7 days"
+
+# The transport's WebAssembly module takes its random numbers from the browser's
+# crypto.getRandomValues, through getrandom's `wasm_js` backend, which this flag picks (see
+# crates/transport).
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']

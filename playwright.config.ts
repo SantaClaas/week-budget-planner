@@ -12,8 +12,9 @@ const executablePath = process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE"];
 
 export default defineConfig({
   testDir: "e2e",
-  // The Rust server's test runs with its own config (playwright.server.config.ts, `pnpm test:server`).
-  testIgnore: "server.spec.ts",
+  // The Rust server's tests, and the transport's against it, run with their own config
+  // (playwright.server.config.ts, `pnpm test:server`).
+  testIgnore: ["server.spec.ts", "transport.spec.ts"],
   forbidOnly: process.env["CI"] !== undefined,
   // In CI, a run that hangs stops itself after five minutes and still writes its report; a whole
   // run takes under a minute today. Locally there's no limit (0), for debugging.

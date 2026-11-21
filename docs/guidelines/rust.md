@@ -14,7 +14,7 @@ How the Rust in this project is named, split, checked and kept safe to depend on
 
 ## Layout
 
-- **One Cargo workspace at the repository's root**, with each crate in [`crates/`](../../crates/), named for what it is: [`crates/server/`](../../crates/server/) today, and the browser module and the protocol beside it later. `crates/` is a folder name Rust people and tools expect, like `docs/` (see Modules in [`principles.md`](principles.md)).
+- **One Cargo workspace at the repository's root**, with each crate in [`crates/`](../../crates/), named for what it is: [`crates/server/`](../../crates/server/) and the browser's side of the transport, [`crates/transport/`](../../crates/transport/), today, and the protocol beside them later. `crates/` is a folder name Rust people and tools expect, like `docs/` (see Modules in [`principles.md`](principles.md)).
 - **The toolchain is pinned** in [`rust-toolchain.toml`](../../rust-toolchain.toml), with `rustfmt` and `clippy`, so everyone and CI build with the same compiler, as [`.node-version`](../../.node-version) does for Node. A new Rust release is taken by changing that file, a week after the release, like any dependency.
 - **What every crate shares is set once in the workspace's [`Cargo.toml`](../../Cargo.toml):** the edition, the lints and the dependencies' versions (`[workspace.dependencies]`). A crate takes them with `workspace = true`.
 - **The app's build doesn't depend on Rust.** `pnpm build` and the app's checks run without a Rust toolchain, and the Rust checks run as jobs of their own.
