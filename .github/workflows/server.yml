@@ -34,7 +34,8 @@ jobs:
   supply-chain:
     name: Check the Rust dependencies
     runs-on: ubuntu-latest
-    # Stops a job that hangs. Building cargo-deny takes most of its few minutes.
+    # Stops a job that hangs. Building cargo-deny, when it isn't cached, takes most of its few
+    # minutes.
     timeout-minutes: 20
     permissions:
       contents: read # Reads the repository to check its dependencies.
@@ -42,9 +43,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # cargo-deny as the next step builds it, kept between runs. It only changes with the version in
+      # the key, and a pull request's cache never reaches main.
+      - id: cargo-deny
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-deny
+          key: cargo-deny-0.20.2-${{ runner.os }}
       # Built from crates.io, whose checksums Cargo checks, at a version more than a week old, rather
       # than a downloaded binary. Outside the workspace, so it doesn't take the pinned toolchain.
       - name: Install cargo-deny 0.20.2
+        if: steps.cargo-deny.outputs.cache-hit != 'true'
         working-directory: ${{ runner.temp }}
         run: cargo install --locked cargo-deny@0.20.2
       - run: cargo deny --locked check
