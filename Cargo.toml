@@ -58,4 +58,10 @@ unwrap_used = "warn"
 # Cargo.lock anyway, each with its exact version and why (see The supply chain in
 # docs/guidelines/rust.md). scripts/check-crate-age.ts reads it.
 [workspace.metadata.release-age]
-exclude = []
+exclude = [
+  # The fix for RUSTSEC-2026-0592, a stack overflow in Url::origin() on nested blob: URLs in 2.5.8,
+  # published on 2026-11-20 and taken before the week was up, with the form_urlencoded it requires,
+  # from the same repository (servo/rust-url) a minute earlier. Remove both on 2026-11-27.
+  "form_urlencoded@1.2.3",
+  "url@2.5.9",
+]
