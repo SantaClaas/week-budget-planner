@@ -3,3 +3,9 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
+
+# manual_let_else would turn a match whose error arm ignores the error into
+# `let Ok(value) = … else { return Err(…) };`, the form that throws the error away; a map_err is
+# what such a match means (see Errors in docs/guidelines/rust.md). "Never" leaves matches alone, and
+# question_mark still suggests `?` for an Option. Checked with Rust 1.100 on 2026-11-22.
+matches-for-let-else = "Never"
