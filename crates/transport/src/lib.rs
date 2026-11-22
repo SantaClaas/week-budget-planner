@@ -148,21 +148,21 @@ mod test {
         let key = parse_secret_key(&[7; 32]).unwrap();
         assert_eq!(key.to_bytes(), [7; 32]);
         assert_eq!(
-            parse_secret_key(&[7; 31]).unwrap_err().kind(),
+            parse_secret_key(&[7; 31]).unwrap_err().r#type(),
             Kind::Invalid
         );
-        assert_eq!(parse_secret_key(&[]).unwrap_err().kind(), Kind::Invalid);
+        assert_eq!(parse_secret_key(&[]).unwrap_err().r#type(), Kind::Invalid);
     }
 
     #[test]
     fn refuses_what_isn_t_a_relay_url_or_a_node_id() {
         assert!(parse_relay_url("http://localhost:8080").is_ok());
         assert_eq!(
-            parse_relay_url("not a url").unwrap_err().kind(),
+            parse_relay_url("not a url").unwrap_err().r#type(),
             Kind::Invalid
         );
         assert_eq!(
-            parse_node_id("not an id").unwrap_err().kind(),
+            parse_node_id("not an id").unwrap_err().r#type(),
             Kind::Invalid
         );
         let id = iroh::SecretKey::from_bytes(&[7; 32]).public();

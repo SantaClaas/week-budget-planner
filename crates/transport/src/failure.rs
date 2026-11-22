@@ -24,11 +24,12 @@ pub enum Kind {
     Invalid = "invalid",
 }
 
-/// A failure: its kind, and a message for the console, not for people.
+/// A failure: its type, and a message for the console, not for people. JavaScript reads the type as
+/// `failure.type`, the name the app's TypeScript gives the field that tells values apart.
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Failure {
-    kind: Kind,
+    r#type: Kind,
     message: String,
 }
 
@@ -36,8 +37,8 @@ pub struct Failure {
 impl Failure {
     #[wasm_bindgen(getter)]
     #[must_use]
-    pub fn kind(&self) -> Kind {
-        self.kind
+    pub fn r#type(&self) -> Kind {
+        self.r#type
     }
 
     #[wasm_bindgen(getter)]
@@ -50,7 +51,7 @@ impl Failure {
 impl Failure {
     pub(crate) fn new(kind: Kind, error: impl Display) -> Self {
         Self {
-            kind,
+            r#type: kind,
             message: error.to_string(),
         }
     }
@@ -97,7 +98,7 @@ mod test {
         let failure = run_within(1000, Kind::Unreachable, ready(Err::<(), _>("refused")))
             .await
             .unwrap_err();
-        assert_eq!(failure.kind(), Kind::Unreachable);
+        assert_eq!(failure.r#type(), Kind::Unreachable);
         assert_eq!(failure.message(), "refused");
     }
 
@@ -106,6 +107,6 @@ mod test {
         let failure = run_within(10, Kind::Closed, pending::<Result<(), String>>())
             .await
             .unwrap_err();
-        assert_eq!(failure.kind(), Kind::Timeout);
+        assert_eq!(failure.r#type(), Kind::Timeout);
     }
 }
