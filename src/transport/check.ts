@@ -7,6 +7,7 @@
  *
  * `?timeout=<milliseconds>` sets each step's deadline; it's 10 s by default.
  */
+import type { Result } from "../result.ts";
 import {
   start,
   type ConnectionHandle,
@@ -34,31 +35,51 @@ const DEFAULT_TIMEOUT_MILLISECONDS = 10_000;
 const RECEIVE_LIMIT = 64 * 1024;
 const MESSAGE = "a block from the browser";
 
+/**
+ * Why the server's node couldn't be found: nothing answered at the origin ("no-server"), something
+ * answered without a node, such as GitHub Pages ("no-node"), or `/node` didn't describe one
+ * ("unreadable-node").
+ */
+type ServerProblem = "no-server" | "no-node" | "unreadable-node";
+
 /** Where a check ended: "echoed", or what went wrong. */
-type Outcome = "echoed" | "mismatch" | "no-server" | Problem;
+type Outcome = "echoed" | "mismatch" | ServerProblem | Problem;
 
 function readTimeout(): number {
   const value = Number(new URLSearchParams(location.search).get("timeout"));
   return Number.isInteger(value) && value > 0 ? value : DEFAULT_TIMEOUT_MILLISECONDS;
 }
 
-/** The server's node id, from the server itself (`/node`), or undefined when there's no server. */
-async function findServer(): Promise<string | undefined> {
+/** The node id in `/node`'s body, `{"nodeId":"…"}` (crates/server/src/node.rs). */
+function readNode(description: unknown): Result<{ nodeId: string }, "unreadable-node"> {
+  if (typeof description !== "object" || description === null || !("nodeId" in description)) {
+    return "unreadable-node";
+  }
+
+  return typeof description.nodeId === "string"
+    ? { nodeId: description.nodeId }
+    : "unreadable-node";
+}
+
+/** The server's node, as the server itself describes it at `/node`. */
+async function findServer(): Promise<Result<{ nodeId: string }, ServerProblem>> {
   let response: Response;
   try {
     response = await fetch(new URL("/node", location.origin), { cache: "no-store" });
   } catch {
-    return undefined;
+    return "no-server";
   }
 
-  if (!response.ok) return undefined;
+  if (!response.ok) return "no-node";
 
-  const description: unknown = await response.json().catch(() => null);
-  if (typeof description !== "object" || description === null || !("nodeId" in description)) {
-    return undefined;
+  let description: unknown;
+  try {
+    description = await response.json();
+  } catch {
+    return "unreadable-node";
   }
 
-  return typeof description.nodeId === "string" ? description.nodeId : undefined;
+  return readNode(description);
 }
 
 /** Reads the stream until the other side finishes. */
@@ -138,11 +159,13 @@ async function runEcho(transport: Transport, serverId: string, timeout: number):
 async function runCheck(): Promise<void> {
   const startedAt = performance.now();
   const timeout = readTimeout();
-  const serverId = await findServer();
-  if (serverId === undefined) {
-    report("no-server", startedAt);
+  const server = await findServer();
+  if (typeof server === "string") {
+    report(server, startedAt);
     return;
   }
+
+  const serverId = server.nodeId;
 
   const transport = start();
   const spawned = await transport.spawn(

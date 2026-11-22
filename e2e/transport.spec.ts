@@ -1,4 +1,4 @@
-import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+import { expect, test, type ConsoleMessage, type Page, type Route } from "@playwright/test";
 
 import { expectStatus } from "./app.ts";
 import { startRelayProxy } from "./relay-proxy.ts";
@@ -90,6 +90,33 @@ test("reaches the server's node again after the relay drops and comes back", asy
   expect(await readOutcome(page, 40_000)).toBe("echoed");
   expect(proxy.countRelayConnections()).toBeGreaterThan(before);
 });
+
+// The page fetches /node itself, so Playwright can answer it, unlike the worker's relay.
+const SERVER_ANSWERS = [
+  {
+    outcome: "no-server",
+    when: "nothing answers",
+    answer: (route: Route) => route.abort("connectionrefused"),
+  },
+  {
+    outcome: "no-node",
+    when: "the server has no /node",
+    answer: (route: Route) => route.fulfill({ status: 404 }),
+  },
+  {
+    outcome: "unreadable-node",
+    when: "/node describes no node",
+    answer: (route: Route) => route.fulfill({ json: { id: "not the field it reads" } }),
+  },
+];
+
+for (const { outcome, when, answer } of SERVER_ANSWERS) {
+  test(`ends in ${outcome} when ${when}`, async ({ page }) => {
+    await page.route("**/node", answer);
+    await page.goto(CHECK_URL);
+    expect(await readOutcome(page, 10_000)).toBe(outcome);
+  });
+}
 
 test("the app's normal start asks for nothing of the transport's", async ({ page }) => {
   const asked: string[] = [];
