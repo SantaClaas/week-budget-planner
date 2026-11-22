@@ -117,10 +117,10 @@ const HUES: readonly Hue[] = PALETTE.map((color) => color.hue);
 
 /** 32-bit FNV-1a over the UTF-8 bytes of `text`. */
 export function hashFnv1a32(text: string): number {
-  let hash = 0x811c9dc5;
+  let hash = 0x811c_9dc5;
   for (const byte of new TextEncoder().encode(text)) {
     hash ^= byte;
-    hash = Math.imul(hash, 0x01000193) >>> 0;
+    hash = Math.imul(hash, 0x0100_0193) >>> 0;
   }
 
   return hash >>> 0;
