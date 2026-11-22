@@ -15,6 +15,11 @@ ignore = [
   # paste is unmaintained: a procedural macro under iroh's network watcher (netlink on Linux), with
   # no vulnerability reported. Drop this once iroh moves off it.
   { id = "RUSTSEC-2024-0436", reason = "unmaintained, not vulnerable; only through iroh" },
+  # url 2.5.8 overflows the stack in Url::origin() on deeply nested blob: URLs. Nothing in the tree
+  # calls Url::origin() (iroh, iroh-relay, reqwest and the rest were searched on 2026-11-22), and our
+  # own code doesn't use url. The fix, url 2.5.9, came out on 2026-11-20 and passes the week's wait
+  # on 2026-11-27; Dependabot proposes it then, and this ignore fails the check once it's merged.
+  { id = "RUSTSEC-2026-0592", reason = "Url::origin() isn't called; url 2.5.9 is under a week old" },
 ]
 
 [licenses]
