@@ -51,7 +51,7 @@ The database's module isn't loaded by hash: `@tursodatabase/database-wasm` fetch
 
 ## The transport check
 
-[`transport-check.html`](../../transport-check.html) ([`src/transport/check.ts`](../../src/transport/check.ts)) is a second page of the build, served with the same headers and policy as the app. It starts the worker, connects to the server's node, and sends bytes that the node's echo protocol sends back ([`crates/server/src/node.rs`](../server/src/node.rs)), then shows `echoed` or what went wrong. "Send again" echoes once more with the same node. `?timeout=<milliseconds>` sets each step's deadline. The app's page shares no code with it, so it loads nothing more for it.
+[`transport-check.html`](../../transport-check.html) ([`src/transport/check.ts`](../../src/transport/check.ts)) is a second page of the build, served with the same headers and policy as the app. It starts the worker, connects to the server's node, and sends bytes that the node's echo protocol sends back ([`crates/server/src/node.rs`](../server/src/node.rs)), then shows `echoed` or what went wrong. "Send again" echoes once more with the same node. `?timeout=<milliseconds>` sets each step's deadline, 10 s without it; a value that isn't a whole number above zero ends the check in `invalid-timeout` rather than falling back. The app's page shares no code with it, so it loads nothing more for it.
 
 ## Checking it
 

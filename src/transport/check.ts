@@ -5,7 +5,8 @@
  * browser test, and a person, run the transport under the app's headers and policy. "Send again"
  * echoes once more with the same node, for example after the relay dropped.
  *
- * `?timeout=<milliseconds>` sets each step's deadline; it's 10 s by default.
+ * `?timeout=<milliseconds>` sets each step's deadline; it's 10 s without one, and the check ends in
+ * "invalid-timeout" for one that isn't a whole number above zero.
  */
 import type { Result } from "../result.ts";
 import {
@@ -43,11 +44,20 @@ const MESSAGE = "a block from the browser";
 type ServerProblem = "no-server" | "no-node" | "unreadable-node";
 
 /** Where a check ended: "echoed", or what went wrong. */
-type Outcome = "echoed" | "mismatch" | ServerProblem | Problem;
+type Outcome = "echoed" | "mismatch" | "invalid-timeout" | ServerProblem | Problem;
 
-function readTimeout(): number {
-  const value = Number(new URLSearchParams(location.search).get("timeout"));
-  return Number.isInteger(value) && value > 0 ? value : DEFAULT_TIMEOUT_MILLISECONDS;
+/**
+ * Each step's deadline from `?timeout=`: the default without one, and "invalid-timeout" for one
+ * that isn't a whole number of milliseconds above zero, rather than quietly using the default.
+ *
+ * @param search - The page's query, as `location.search` gives it.
+ */
+function readTimeout(search: string): Result<number, "invalid-timeout"> {
+  const text = new URLSearchParams(search).get("timeout");
+  if (text === null) return DEFAULT_TIMEOUT_MILLISECONDS;
+
+  const value = Number(text);
+  return /^\d+$/u.test(text) && value > 0 ? value : "invalid-timeout";
 }
 
 /** The node id in `/node`'s body, `{"nodeId":"…"}` (crates/server/src/node.rs). */
@@ -158,7 +168,12 @@ async function runEcho(transport: Transport, serverId: string, timeout: number):
 
 async function runCheck(): Promise<void> {
   const startedAt = performance.now();
-  const timeout = readTimeout();
+  const timeout = readTimeout(location.search);
+  if (timeout === "invalid-timeout") {
+    report(timeout, startedAt);
+    return;
+  }
+
   const server = await findServer();
   if (typeof server === "string") {
     report(server, startedAt);
