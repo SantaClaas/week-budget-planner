@@ -23,7 +23,12 @@ const MARGIN_MILLISECONDS = 1000;
 /** The deadline of a call that doesn't wait on the network. */
 const LOCAL_TIMEOUT_MILLISECONDS = 5000;
 
-export type { Problem, StreamHandle };
+export type { ConnectionHandle, Problem, StreamHandle };
+
+/** A connection the worker holds. Disposing it disconnects, so `await using` closes it. */
+type Connection = ConnectionHandle & AsyncDisposable;
+/** A stream the worker holds. Disposing it releases it, so `await using` closes it. */
+type Stream = StreamHandle & AsyncDisposable;
 
 export type Transport = {
   /**
@@ -39,12 +44,18 @@ export type Transport = {
     relayUrl: string,
     timeout: number,
   ): Promise<Result<{ nodeId: string }, Problem>>;
-  connect(nodeId: string, protocol: string, timeout: number): Promise<Answers["connect"]>;
-  open(connection: ConnectionHandle, timeout: number): Promise<Answers["open"]>;
+  connect(nodeId: string, protocol: string, timeout: number): Promise<Result<Connection, Problem>>;
+  open(connection: ConnectionHandle, timeout: number): Promise<Result<Stream, Problem>>;
   send(stream: StreamHandle, bytes: Uint8Array, timeout: number): Promise<Answers["send"]>;
   finish(stream: StreamHandle): Promise<Answers["finish"]>;
   /** @returns The next bytes, at most `limit`, or null once the other side finished. */
   receive(stream: StreamHandle, limit: number, timeout: number): Promise<Answers["receive"]>;
+  /**
+   * Frees the stream in the worker: what was sent is still delivered, and the other side is told to
+   * stop sending. Disposing the stream does it.
+   */
+  release(stream: StreamHandle): Promise<Answers["release"]>;
+  /** Closes the connection and releases its streams. Disposing the connection does it. */
   disconnect(connection: ConnectionHandle): Promise<Answers["disconnect"]>;
   /** Stops the node, closing every connection, and ends the worker. */
   stop(): Promise<Answers["stop"]>;
@@ -104,18 +115,46 @@ export function start(): Transport {
     return promise;
   }
 
+  // Each call names its fields: a handle the page holds carries its dispose function, which object
+  // spread would copy and a message can't carry.
+  const release = (stream: StreamHandle): Promise<Answers["release"]> =>
+    request({ type: "release", stream: stream.stream }, LOCAL_TIMEOUT_MILLISECONDS);
+  const disconnect = (connection: ConnectionHandle): Promise<Answers["disconnect"]> =>
+    request({ type: "disconnect", connection: connection.connection }, LOCAL_TIMEOUT_MILLISECONDS);
+
   return {
     spawn: (secretKey, relayUrl, timeout) =>
       request({ type: "spawn", secretKey, relayUrl, timeout }, timeout),
-    connect: (nodeId, protocol, timeout) =>
-      request({ type: "connect", nodeId, protocol, timeout }, timeout),
-    open: (connection, timeout) => request({ type: "open", timeout, ...connection }, timeout),
-    send: (stream, bytes, timeout) => request({ type: "send", bytes, timeout, ...stream }, timeout),
-    finish: (stream) => request({ type: "finish", ...stream }, LOCAL_TIMEOUT_MILLISECONDS),
+    async connect(nodeId, protocol, timeout) {
+      const connected = await request({ type: "connect", nodeId, protocol, timeout }, timeout);
+      if (typeof connected === "string") return connected;
+
+      return {
+        connection: connected.connection,
+        // A dispose can't give back a Result; a problem there is in the worker's console.
+        [Symbol.asyncDispose]: async () => void (await disconnect(connected)),
+      };
+    },
+    async open(connection, timeout) {
+      const opened = await request(
+        { type: "open", connection: connection.connection, timeout },
+        timeout,
+      );
+      if (typeof opened === "string") return opened;
+
+      return {
+        stream: opened.stream,
+        [Symbol.asyncDispose]: async () => void (await release(opened)),
+      };
+    },
+    send: (stream, bytes, timeout) =>
+      request({ type: "send", stream: stream.stream, bytes, timeout }, timeout),
+    finish: (stream) =>
+      request({ type: "finish", stream: stream.stream }, LOCAL_TIMEOUT_MILLISECONDS),
     receive: (stream, limit, timeout) =>
-      request({ type: "receive", limit, timeout, ...stream }, timeout),
-    disconnect: (connection) =>
-      request({ type: "disconnect", ...connection }, LOCAL_TIMEOUT_MILLISECONDS),
+      request({ type: "receive", stream: stream.stream, limit, timeout }, timeout),
+    release,
+    disconnect,
     async stop() {
       const stopped = await request({ type: "stop" }, LOCAL_TIMEOUT_MILLISECONDS);
       worker.terminate();

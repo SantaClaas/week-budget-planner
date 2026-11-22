@@ -24,6 +24,7 @@ export type Call =
   | ({ type: "send"; bytes: Uint8Array; timeout: number } & StreamHandle)
   | ({ type: "finish" } & StreamHandle)
   | ({ type: "receive"; limit: number; timeout: number } & StreamHandle)
+  | ({ type: "release" } & StreamHandle)
   | ({ type: "disconnect" } & ConnectionHandle)
   | { type: "stop" };
 
@@ -36,6 +37,7 @@ export type Answers = {
   finish: Result<"finished", Problem>;
   /** The next bytes, or null once the other side finished. */
   receive: Result<Uint8Array | null, Problem>;
+  release: Result<"released", Problem>;
   disconnect: Result<"disconnected", Problem>;
   stop: Result<"stopped", Problem>;
 };

@@ -15,7 +15,8 @@ import type { Answers, Call, Problem, Request, Response } from "./call.ts";
 let loading: Promise<Result<Bindings, "unavailable">> | undefined;
 let node: Node | undefined;
 const connections = new Map<number, Connection>();
-const streams = new Map<number, Stream>();
+/** Each stream, with the connection it's on, so disconnecting releases it too. */
+const streams = new Map<number, { stream: Stream; connection: number }>();
 let lastHandle = 0;
 
 async function instantiate(loaded: Bindings): Promise<Result<Bindings, "unavailable">> {
@@ -97,11 +98,11 @@ async function open(call: Extract<Call, { type: "open" }>): Promise<Answers["ope
   const stream = await runStep(() => connection.open(call.timeout));
   if (typeof stream === "string") return stream;
 
-  return { stream: keep(streams, stream) };
+  return { stream: keep(streams, { stream, connection: call.connection }) };
 }
 
 async function send(call: Extract<Call, { type: "send" }>): Promise<Answers["send"]> {
-  const stream = streams.get(call.stream);
+  const stream = streams.get(call.stream)?.stream;
   if (stream === undefined) return "closed";
 
   const sent = await runStep(() => stream.send(call.bytes, call.timeout));
@@ -109,7 +110,7 @@ async function send(call: Extract<Call, { type: "send" }>): Promise<Answers["sen
 }
 
 async function finish(call: Extract<Call, { type: "finish" }>): Promise<Answers["finish"]> {
-  const stream = streams.get(call.stream);
+  const stream = streams.get(call.stream)?.stream;
   if (stream === undefined) return "closed";
 
   const finished = await runStep(() => {
@@ -119,14 +120,33 @@ async function finish(call: Extract<Call, { type: "finish" }>): Promise<Answers[
 }
 
 async function receive(call: Extract<Call, { type: "receive" }>): Promise<Answers["receive"]> {
-  const stream = streams.get(call.stream);
+  const stream = streams.get(call.stream)?.stream;
   if (stream === undefined) return "closed";
 
   const bytes = await runStep(() => stream.receive(call.limit, call.timeout));
   return bytes ?? null;
 }
 
+/**
+ * Frees a stream in the module. Dropping it there finishes what it sends, so what was sent is still
+ * delivered, and tells the other side to stop sending.
+ */
+function freeStream(handle: number): void {
+  streams.get(handle)?.stream.free();
+  streams.delete(handle);
+}
+
+function release(call: Extract<Call, { type: "release" }>): Answers["release"] {
+  freeStream(call.stream);
+  return "released";
+}
+
+/** Releases the connection's streams, then closes and frees the connection. */
 function disconnect(call: Extract<Call, { type: "disconnect" }>): Answers["disconnect"] {
+  for (const [handle, { connection }] of streams) {
+    if (connection === call.connection) freeStream(handle);
+  }
+
   connections.get(call.connection)?.close();
   connections.get(call.connection)?.free();
   connections.delete(call.connection);
@@ -134,7 +154,7 @@ function disconnect(call: Extract<Call, { type: "disconnect" }>): Answers["disco
 }
 
 async function stop(): Promise<Answers["stop"]> {
-  for (const stream of streams.values()) stream.free();
+  for (const { stream } of streams.values()) stream.free();
 
   streams.clear();
   for (const connection of connections.values()) connection.free();
@@ -161,6 +181,8 @@ function answer(call: Call): Promise<Answers[Call["type"]]> | Answers[Call["type
       return finish(call);
     case "receive":
       return receive(call);
+    case "release":
+      return release(call);
     case "disconnect":
       return disconnect(call);
     case "stop":
