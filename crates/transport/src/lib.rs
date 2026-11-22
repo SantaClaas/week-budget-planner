@@ -13,11 +13,12 @@ use iroh::endpoint::presets;
 use iroh::{
     Endpoint, EndpointAddr, EndpointId, RelayMap, RelayMode, RelayUrl, SecretKey, TransportAddr,
 };
+use n0_future::time::Duration;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 pub use crate::connection::{Connection, Stream};
 use crate::failure::run_within;
-pub use crate::failure::{Failure, Kind};
+pub use crate::failure::{Failure, Type};
 
 // Only so getrandom takes its random numbers from the browser (see getrandom in Cargo.toml).
 #[cfg(target_family = "wasm")]
@@ -29,7 +30,7 @@ const SECRET_KEY_LENGTH: usize = 32;
 fn parse_secret_key(bytes: &[u8]) -> Result<SecretKey, Failure> {
     let Ok(bytes) = <&[u8; SECRET_KEY_LENGTH]>::try_from(bytes) else {
         return Err(Failure::new(
-            Kind::Invalid,
+            Type::Invalid,
             format!(
                 "a secret key is {SECRET_KEY_LENGTH} bytes, not {}",
                 bytes.len()
@@ -42,12 +43,12 @@ fn parse_secret_key(bytes: &[u8]) -> Result<SecretKey, Failure> {
 
 fn parse_relay_url(text: &str) -> Result<RelayUrl, Failure> {
     text.parse()
-        .map_err(|error| Failure::new(Kind::Invalid, format!("{text} isn't a relay URL: {error}")))
+        .map_err(|error| Failure::new(Type::Invalid, format!("{text} isn't a relay URL: {error}")))
 }
 
 fn parse_node_id(text: &str) -> Result<EndpointId, Failure> {
     text.parse()
-        .map_err(|error| Failure::new(Kind::Invalid, format!("{text} isn't a node id: {error}")))
+        .map_err(|error| Failure::new(Type::Invalid, format!("{text} isn't a node id: {error}")))
 }
 
 /// An iroh node that reaches other nodes only through one relay, with no address lookup.
@@ -68,8 +69,8 @@ impl Node {
     ///
     /// # Errors
     ///
-    /// [`Kind::Invalid`] for a key or URL that isn't one, [`Kind::Unreachable`] when the node
-    /// can't start, or [`Kind::Timeout`] when the relay doesn't answer in time.
+    /// [`Type::Invalid`] for a key or URL that isn't one, [`Type::Unreachable`] when the node
+    /// can't start, or [`Type::Timeout`] when the relay doesn't answer in time.
     pub async fn spawn(
         secret_key: Vec<u8>,
         relay_url: String,
@@ -82,12 +83,18 @@ impl Node {
             .relay_mode(RelayMode::Custom(RelayMap::from(relay_url.clone())))
             .bind()
             .await
-            .map_err(|error| Failure::new(Kind::Unreachable, error))?;
+            .map_err(|error| Failure::new(Type::Unreachable, error))?;
         let online = async {
             endpoint.online().await;
             Ok::<(), std::convert::Infallible>(())
         };
-        if let Err(failure) = run_within(timeout, Kind::Unreachable, online).await {
+        if let Err(failure) = run_within(
+            Duration::from_millis(timeout.into()),
+            Type::Unreachable,
+            online,
+        )
+        .await
+        {
             // Or it keeps trying to reach the relay in the background.
             endpoint.close().await;
             return Err(failure);
@@ -114,8 +121,8 @@ impl Node {
     ///
     /// # Errors
     ///
-    /// [`Kind::Invalid`] for an id that isn't one, [`Kind::Unreachable`] when the other node
-    /// refuses or the relay can't reach it, or [`Kind::Timeout`].
+    /// [`Type::Invalid`] for an id that isn't one, [`Type::Unreachable`] when the other node
+    /// refuses or the relay can't reach it, or [`Type::Timeout`].
     pub async fn connect(
         &self,
         node_id: String,
@@ -125,8 +132,8 @@ impl Node {
         let id = parse_node_id(&node_id)?;
         let address = EndpointAddr::from_parts(id, [TransportAddr::Relay(self.relay_url.clone())]);
         let connection = run_within(
-            timeout,
-            Kind::Unreachable,
+            Duration::from_millis(timeout.into()),
+            Type::Unreachable,
             self.endpoint.connect(address, protocol.as_bytes()),
         )
         .await?;
@@ -141,7 +148,7 @@ impl Node {
 
 #[cfg(test)]
 mod test {
-    use super::{Kind, parse_node_id, parse_relay_url, parse_secret_key};
+    use super::{Type, parse_node_id, parse_relay_url, parse_secret_key};
 
     #[test]
     fn takes_a_key_of_32_bytes_only() {
@@ -149,9 +156,9 @@ mod test {
         assert_eq!(key.to_bytes(), [7; 32]);
         assert_eq!(
             parse_secret_key(&[7; 31]).unwrap_err().r#type(),
-            Kind::Invalid
+            Type::Invalid
         );
-        assert_eq!(parse_secret_key(&[]).unwrap_err().r#type(), Kind::Invalid);
+        assert_eq!(parse_secret_key(&[]).unwrap_err().r#type(), Type::Invalid);
     }
 
     #[test]
@@ -159,11 +166,11 @@ mod test {
         assert!(parse_relay_url("http://localhost:8080").is_ok());
         assert_eq!(
             parse_relay_url("not a url").unwrap_err().r#type(),
-            Kind::Invalid
+            Type::Invalid
         );
         assert_eq!(
             parse_node_id("not an id").unwrap_err().r#type(),
-            Kind::Invalid
+            Type::Invalid
         );
         let id = iroh::SecretKey::from_bytes(&[7; 32]).public();
         assert_eq!(parse_node_id(&id.to_string()).unwrap(), id);

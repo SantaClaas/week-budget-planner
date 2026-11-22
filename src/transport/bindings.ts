@@ -5,12 +5,12 @@
  * same API by hand. The browser test for the transport runs the real module against them.
  */
 
-/** What kind of failure: `Kind` in crates/transport/src/failure.rs. */
-export type FailureKind = "timeout" | "unreachable" | "closed" | "invalid";
+/** What type of failure: `Type` in crates/transport/src/failure.rs. */
+export type FailureType = "timeout" | "unreachable" | "closed" | "invalid";
 
 /** What the module throws when a call fails: `Failure` in crates/transport/src/failure.rs. */
 interface Failure {
-  readonly type: FailureKind;
+  readonly type: FailureType;
   /** For the console, not for people. */
   readonly message: string;
 }
