@@ -9,10 +9,10 @@ use std::future::Future;
 use n0_future::time::{self, Duration};
 use wasm_bindgen::prelude::wasm_bindgen;
 
-/// What kind of failure it was: what the app decides on.
+/// What type of failure it was: what the app decides on.
 #[wasm_bindgen]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind {
+pub enum Type {
     /// The deadline passed first: the relay or the other node didn't answer in time, or something
     /// between them blocks the connection.
     Timeout = "timeout",
@@ -29,7 +29,7 @@ pub enum Kind {
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Failure {
-    r#type: Kind,
+    r#type: Type,
     message: String,
 }
 
@@ -37,7 +37,7 @@ pub struct Failure {
 impl Failure {
     #[wasm_bindgen(getter)]
     #[must_use]
-    pub fn r#type(&self) -> Kind {
+    pub fn r#type(&self) -> Type {
         self.r#type
     }
 
@@ -49,9 +49,9 @@ impl Failure {
 }
 
 impl Failure {
-    pub(crate) fn new(kind: Kind, error: impl Display) -> Self {
+    pub(crate) fn new(r#type: Type, error: impl Display) -> Self {
         Self {
-            r#type: kind,
+            r#type,
             message: error.to_string(),
         }
     }
@@ -59,54 +59,64 @@ impl Failure {
 
 /// Runs a step that can fail, within a deadline.
 ///
-/// * `milliseconds` - The deadline, from the app.
-/// * `kind` - What a failure of the step itself is.
+/// * `deadline` - How long the step may take, from the app.
+/// * `r#type` - What a failure of the step itself is.
 ///
 /// # Errors
 ///
-/// [`Kind::Timeout`] when the deadline passes first, or `kind` when the step fails.
+/// [`Type::Timeout`] when the deadline passes first, or `r#type` when the step fails.
 pub(crate) async fn run_within<Value, Error: Display>(
-    milliseconds: u32,
-    kind: Kind,
+    deadline: Duration,
+    r#type: Type,
     step: impl Future<Output = Result<Value, Error>>,
 ) -> Result<Value, Failure> {
-    let Ok(outcome) = time::timeout(Duration::from_millis(u64::from(milliseconds)), step).await
-    else {
-        return Err(Failure::new(
-            Kind::Timeout,
-            format!("no answer within {milliseconds} ms"),
-        ));
-    };
-
-    outcome.map_err(|error| Failure::new(kind, error))
+    time::timeout(deadline, step)
+        .await
+        .map_err(|_| Failure::new(Type::Timeout, format!("no answer within {deadline:?}")))?
+        .map_err(|error| Failure::new(r#type, error))
 }
 
 #[cfg(test)]
 mod test {
     use std::future::{pending, ready};
 
-    use super::{Kind, run_within};
+    use n0_future::time::Duration;
+
+    use super::{Type, run_within};
 
     #[tokio::test]
     async fn gives_the_value_of_a_step_in_time() {
-        let outcome = run_within(1000, Kind::Closed, ready(Ok::<_, String>(7))).await;
+        let outcome = run_within(
+            Duration::from_millis(1000),
+            Type::Closed,
+            ready(Ok::<_, String>(7)),
+        )
+        .await;
         assert_eq!(outcome.unwrap(), 7);
     }
 
     #[tokio::test]
-    async fn names_a_failed_step_with_its_kind() {
-        let failure = run_within(1000, Kind::Unreachable, ready(Err::<(), _>("refused")))
-            .await
-            .unwrap_err();
-        assert_eq!(failure.r#type(), Kind::Unreachable);
+    async fn names_a_failed_step_with_its_type() {
+        let failure = run_within(
+            Duration::from_millis(1000),
+            Type::Unreachable,
+            ready(Err::<(), _>("refused")),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.r#type(), Type::Unreachable);
         assert_eq!(failure.message(), "refused");
     }
 
     #[tokio::test]
     async fn times_out_instead_of_waiting_forever() {
-        let failure = run_within(10, Kind::Closed, pending::<Result<(), String>>())
-            .await
-            .unwrap_err();
-        assert_eq!(failure.r#type(), Kind::Timeout);
+        let failure = run_within(
+            Duration::from_millis(10),
+            Type::Closed,
+            pending::<Result<(), String>>(),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.r#type(), Type::Timeout);
     }
 }

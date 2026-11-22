@@ -3,13 +3,13 @@
  * app's code from the same build, so the messages carry no version.
  */
 import type { Result } from "../result.ts";
-import type { FailureKind } from "./bindings.ts";
+import type { FailureType } from "./bindings.ts";
 
 /**
  * What can go wrong: the module's own failures, or "unavailable" when there is no module to run (the
  * build had none, or it didn't load, or its bytes didn't match its hash).
  */
-export type Problem = FailureKind | "unavailable";
+export type Problem = FailureType | "unavailable";
 
 /** A connection the worker holds, by its number there. */
 export type ConnectionHandle = { readonly connection: number };
