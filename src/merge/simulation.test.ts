@@ -34,7 +34,7 @@ function createRandom(seed: number) {
   let state = seed >>> 0;
   /** A number from 0 up to, not including, 1. */
   const pickFraction = (): number => {
-    state = (state + 0x6d_2b_79_f5) >>> 0;
+    state = (state + 0x6d2b_79f5) >>> 0;
     let value = state;
     value = Math.imul(value ^ (value >>> 15), value | 1);
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
@@ -625,7 +625,7 @@ function findBrokenRule(seed: number): string[] {
 }
 
 /** The largest seed: the generator keeps 32 bits, so a larger one would replay a smaller one. */
-const MAX_SEED = 0xff_ff_ff_ff;
+const MAX_SEED = 0xffff_ffff;
 
 /**
  * Reads a seed from the environment variable `name`.

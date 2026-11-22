@@ -12,8 +12,8 @@ import {
 
 describe("look", () => {
   it("hashes with 32-bit FNV-1a", () => {
-    expect(hashFnv1a32("")).toBe(0x811c9dc5);
-    expect(hashFnv1a32("a")).toBe(0xe40c292c);
+    expect(hashFnv1a32("")).toBe(0x811c_9dc5);
+    expect(hashFnv1a32("a")).toBe(0xe40c_292c);
   });
 
   it("gives the example week the shapes listed in examples/example-week.json", () => {

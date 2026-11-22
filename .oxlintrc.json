@@ -33,6 +33,10 @@
     "jsdoc/require-param-name": "error",
     "jsdoc/require-param-description": "error",
     "jsdoc/require-returns-description": "error",
+    // Long numbers in groups of three, from five digits (10_000), and hexadecimal in groups of four
+    // (0x811c_9dc5), as Clippy's unreadable_literal and inconsistent_digit_grouping have the Rust
+    // write them (see Formatting and linting in docs/guidelines/typescript.md).
+    "unicorn/numeric-separators-style": ["error", { "hexadecimal": { "groupLength": 4 } }],
     "week-budget-planner/require-reason": "error",
     "week-budget-planner/function-starts-with-verb": "error",
     // Return early instead (see Functions in docs/guidelines/principles.md).
