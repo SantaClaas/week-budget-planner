@@ -118,6 +118,13 @@ for (const { outcome, when, answer } of SERVER_ANSWERS) {
   });
 }
 
+test("refuses a timeout that isn't a whole number of milliseconds", async ({ page }) => {
+  for (const timeout of ["soon", "1.5", "0", "-100", ""]) {
+    await page.goto(`${CHECK_URL}?timeout=${timeout}`);
+    expect(await readOutcome(page, 10_000), timeout).toBe("invalid-timeout");
+  }
+});
+
 test("the app's normal start asks for nothing of the transport's", async ({ page }) => {
   const asked: string[] = [];
   page.on("request", (request) => {
