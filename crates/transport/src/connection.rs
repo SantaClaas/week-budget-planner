@@ -4,7 +4,7 @@ use iroh::endpoint::{RecvStream, SendStream};
 use n0_future::time::Duration;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use crate::failure::{Failure, Type, run_within};
+use crate::failure::{Failure, RunWithin, Type};
 
 /// A connection to another node, through the relay, for one protocol.
 #[wasm_bindgen]
@@ -26,12 +26,11 @@ impl Connection {
     ///
     /// [`Type::Timeout`], or [`Type::Closed`] when the connection is closed.
     pub async fn open(&self, timeout: u32) -> Result<Stream, Failure> {
-        let (send, receive) = run_within(
-            Duration::from_millis(timeout.into()),
-            Type::Closed,
-            self.0.open_bi(),
-        )
-        .await?;
+        let (send, receive) = self
+            .0
+            .open_bi()
+            .run_within(Duration::from_millis(timeout.into()), Type::Closed)
+            .await?;
         Ok(Stream { send, receive })
     }
 
@@ -58,12 +57,10 @@ impl Stream {
     ///
     /// [`Type::Timeout`], or [`Type::Closed`] when the stream or its connection is closed.
     pub async fn send(&mut self, bytes: Vec<u8>, timeout: u32) -> Result<(), Failure> {
-        run_within(
-            Duration::from_millis(timeout.into()),
-            Type::Closed,
-            self.send.write_all(&bytes),
-        )
-        .await
+        self.send
+            .write_all(&bytes)
+            .run_within(Duration::from_millis(timeout.into()), Type::Closed)
+            .await
     }
 
     /// Tells the other side that nothing more comes on this stream. What was sent is still
@@ -87,12 +84,11 @@ impl Stream {
     /// [`Type::Timeout`], or [`Type::Closed`] when the stream or its connection is closed.
     pub async fn receive(&mut self, limit: u32, timeout: u32) -> Result<Option<Vec<u8>>, Failure> {
         let limit = usize::try_from(limit).unwrap_or(usize::MAX);
-        let chunk = run_within(
-            Duration::from_millis(timeout.into()),
-            Type::Closed,
-            self.receive.read_chunk(limit),
-        )
-        .await?;
+        let chunk = self
+            .receive
+            .read_chunk(limit)
+            .run_within(Duration::from_millis(timeout.into()), Type::Closed)
+            .await?;
         Ok(chunk.map(|bytes| bytes.to_vec()))
     }
 }
