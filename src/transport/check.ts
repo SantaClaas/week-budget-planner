@@ -100,7 +100,7 @@ async function receiveAll(
 ): Promise<{ text: string } | Problem> {
   const decoder = new TextDecoder();
   let text = "";
-  for (;;) {
+  while (true) {
     // One chunk after another, in order, until the node finishes.
     // oxlint-disable-next-line no-await-in-loop -- a stream's chunks arrive in order.
     const chunk = await transport.receive(stream, RECEIVE_LIMIT, timeout);
