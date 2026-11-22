@@ -57,23 +57,33 @@ impl Failure {
     }
 }
 
-/// Runs a step that can fail, within a deadline.
-///
-/// * `deadline` - How long the step may take, from the app.
-/// * `r#type` - What a failure of the step itself is.
-///
-/// # Errors
-///
-/// [`Type::Timeout`] when the deadline passes first, or `r#type` when the step fails.
-pub(crate) async fn run_within<Value, Error: Display>(
-    deadline: Duration,
-    r#type: Type,
-    step: impl Future<Output = Result<Value, Error>>,
-) -> Result<Value, Failure> {
-    time::timeout(deadline, step)
-        .await
-        .map_err(|_| Failure::new(Type::Timeout, format!("no answer within {deadline:?}")))?
-        .map_err(|error| Failure::new(r#type, error))
+/// A step that can fail, run within a deadline, chained on the step:
+/// `connection.open_bi().run_within(deadline, Type::Closed).await?`.
+pub(crate) trait RunWithin<Value, Error>:
+    Future<Output = Result<Value, Error>> + Sized
+{
+    /// Runs the step within a deadline.
+    ///
+    /// * `deadline` - How long the step may take, from the app.
+    /// * `r#type` - What a failure of the step itself is.
+    ///
+    /// # Errors
+    ///
+    /// [`Type::Timeout`] when the deadline passes first, or `r#type` when the step fails.
+    async fn run_within(self, deadline: Duration, r#type: Type) -> Result<Value, Failure>;
+}
+
+impl<Step, Value, Error> RunWithin<Value, Error> for Step
+where
+    Step: Future<Output = Result<Value, Error>>,
+    Error: Display,
+{
+    async fn run_within(self, deadline: Duration, r#type: Type) -> Result<Value, Failure> {
+        time::timeout(deadline, self)
+            .await
+            .map_err(|_| Failure::new(Type::Timeout, format!("no answer within {deadline:?}")))?
+            .map_err(|error| Failure::new(r#type, error))
+    }
 }
 
 #[cfg(test)]
@@ -82,41 +92,32 @@ mod test {
 
     use n0_future::time::Duration;
 
-    use super::{Type, run_within};
+    use super::{RunWithin, Type};
 
     #[tokio::test]
     async fn gives_the_value_of_a_step_in_time() {
-        let outcome = run_within(
-            Duration::from_millis(1000),
-            Type::Closed,
-            ready(Ok::<_, String>(7)),
-        )
-        .await;
+        let outcome = ready(Ok::<_, String>(7))
+            .run_within(Duration::from_millis(1000), Type::Closed)
+            .await;
         assert_eq!(outcome.unwrap(), 7);
     }
 
     #[tokio::test]
     async fn names_a_failed_step_with_its_type() {
-        let failure = run_within(
-            Duration::from_millis(1000),
-            Type::Unreachable,
-            ready(Err::<(), _>("refused")),
-        )
-        .await
-        .unwrap_err();
+        let failure = ready(Err::<(), _>("refused"))
+            .run_within(Duration::from_millis(1000), Type::Unreachable)
+            .await
+            .unwrap_err();
         assert_eq!(failure.r#type(), Type::Unreachable);
         assert_eq!(failure.message(), "refused");
     }
 
     #[tokio::test]
     async fn times_out_instead_of_waiting_forever() {
-        let failure = run_within(
-            Duration::from_millis(10),
-            Type::Closed,
-            pending::<Result<(), String>>(),
-        )
-        .await
-        .unwrap_err();
+        let failure = pending::<Result<(), String>>()
+            .run_within(Duration::from_millis(10), Type::Closed)
+            .await
+            .unwrap_err();
         assert_eq!(failure.r#type(), Type::Timeout);
     }
 }

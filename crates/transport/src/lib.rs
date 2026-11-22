@@ -17,7 +17,7 @@ use n0_future::time::Duration;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 pub use crate::connection::{Connection, Stream};
-use crate::failure::run_within;
+use crate::failure::RunWithin;
 pub use crate::failure::{Failure, Type};
 
 // Only so getrandom takes its random numbers from the browser (see getrandom in Cargo.toml).
@@ -88,12 +88,9 @@ impl Node {
             endpoint.online().await;
             Ok::<(), std::convert::Infallible>(())
         };
-        if let Err(failure) = run_within(
-            Duration::from_millis(timeout.into()),
-            Type::Unreachable,
-            online,
-        )
-        .await
+        if let Err(failure) = online
+            .run_within(Duration::from_millis(timeout.into()), Type::Unreachable)
+            .await
         {
             // Or it keeps trying to reach the relay in the background.
             endpoint.close().await;
@@ -131,12 +128,11 @@ impl Node {
     ) -> Result<Connection, Failure> {
         let id = parse_node_id(&node_id)?;
         let address = EndpointAddr::from_parts(id, [TransportAddr::Relay(self.relay_url.clone())]);
-        let connection = run_within(
-            Duration::from_millis(timeout.into()),
-            Type::Unreachable,
-            self.endpoint.connect(address, protocol.as_bytes()),
-        )
-        .await?;
+        let connection = self
+            .endpoint
+            .connect(address, protocol.as_bytes())
+            .run_within(Duration::from_millis(timeout.into()), Type::Unreachable)
+            .await?;
         Ok(Connection::new(connection))
     }
 
