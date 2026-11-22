@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PROTOCOL_VERSION } from "./protocol/index.ts";
-import { consume, ProviderMissingError, provide, RemoteCallError } from "./service.ts";
+import {
+  consume,
+  consumeSameVersion,
+  ProviderMissingError,
+  provide,
+  RemoteCallError,
+} from "./service.ts";
 
 // The proxy leans on behavior TypeScript can't check: a Proxy answers any method name, errors lose
 // their class when they're cloned, and a missing provider shows only as silence. These tests pin
@@ -24,11 +30,23 @@ function openChannel(): BroadcastChannel {
   return channel;
 }
 
+const ports: MessagePort[] = [];
+/** Both ends of a MessageChannel, started, as a page and its worker hold them. */
+function openPorts(): [MessagePort, MessagePort] {
+  const { port1, port2 } = new MessageChannel();
+  port1.start();
+  port2.start();
+  ports.push(port1, port2);
+  return [port1, port2];
+}
+
 // Each test's providers serve until afterEach closes its channels, so their stop functions are
 // thrown away on purpose.
 afterEach(() => {
   vi.useRealTimers();
   for (const channel of channels.splice(0)) channel.close();
+
+  for (const port of ports.splice(0)) port.close();
 });
 
 describe("broadcast service", () => {
@@ -61,6 +79,17 @@ describe("broadcast service", () => {
     type Strict = { add(first: number, second: number): Promise<number> };
     // @ts-expect-error -- add can't give back "newer-version", which a refused call answers with.
     expect(consume<Strict>(openChannel(), "test").proxy).toBeDefined();
+  });
+
+  it("serves a worker's API over a MessagePort, whose methods needn't answer newer-version", async () => {
+    // From the same build on both sides, as between the page and the transport's worker.
+    type Strict = { add(first: number, second: number): Promise<number> };
+    const [page, worker] = openPorts();
+    void provide(worker, "worker", {
+      add: (first: number, second: number) => Promise.resolve(first + second),
+    });
+    const { proxy } = consumeSameVersion<Strict>(page, "worker");
+    await expect(proxy.add(2, 3)).resolves.toBe(5);
   });
 
   it("answers its open calls and later ones with newer-version once a newer protocol answers", async () => {
