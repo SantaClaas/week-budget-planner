@@ -28,17 +28,15 @@ use getrandom as _;
 const SECRET_KEY_LENGTH: usize = 32;
 
 fn parse_secret_key(bytes: &[u8]) -> Result<SecretKey, Failure> {
-    let Ok(bytes) = <&[u8; SECRET_KEY_LENGTH]>::try_from(bytes) else {
-        return Err(Failure::new(
-            Type::Invalid,
-            format!(
-                "a secret key is {SECRET_KEY_LENGTH} bytes, not {}",
-                bytes.len()
-            ),
-        ));
-    };
-
-    Ok(SecretKey::from_bytes(bytes))
+    <&[u8; SECRET_KEY_LENGTH]>::try_from(bytes)
+        .map(SecretKey::from_bytes)
+        .map_err(|_| {
+            let length = bytes.len();
+            Failure::new(
+                Type::Invalid,
+                format!("a secret key is {SECRET_KEY_LENGTH} bytes, not {length}"),
+            )
+        })
 }
 
 fn parse_relay_url(text: &str) -> Result<RelayUrl, Failure> {
