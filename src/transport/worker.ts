@@ -38,12 +38,12 @@ function load(): Promise<Result<Bindings, "unavailable">> {
   return loading;
 }
 
-/** A failure the module threw, as its kind. Anything else is a mistake, and is thrown on. */
+/** A failure the module threw, as its type. Anything else is a mistake, and is thrown on. */
 function readFailure(loaded: Bindings, error: unknown): Problem {
   if (!(error instanceof loaded.Failure)) throw error;
 
-  console.debug("[transport]", error.kind, error.message);
-  return error.kind;
+  console.debug("[transport]", error.type, error.message);
+  return error.type;
 }
 
 /** Runs one call into the module, with its failure as a value. */

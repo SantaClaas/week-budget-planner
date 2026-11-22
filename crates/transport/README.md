@@ -10,7 +10,7 @@ Its interface says nothing about syncing ([`src/lib.rs`](src/lib.rs), [`src/conn
 - **`node.connect(nodeId, protocol, timeout)`** connects to another node by its id, through the relay, for one protocol.
 - **`connection.open(timeout)`** opens a stream; **`stream.send(bytes, timeout)`**, **`stream.finish()`** and **`stream.receive(limit, timeout)`** send and receive bytes on it; **`connection.close()`** and **`node.close()`** close.
 - **Every call that waits on the network takes a deadline**, in milliseconds, since iroh waits silently when something blocks it.
-- **A failure is a value**: a `Failure` with a `kind` (`"timeout"`, `"unreachable"`, `"closed"` or `"invalid"`) for the app to decide on and put into words ("Can't reach the server"), and a `message` for the console ([`src/failure.rs`](src/failure.rs)).
+- **A failure is a value**: a `Failure` with a `type` (`"timeout"`, `"unreachable"`, `"closed"` or `"invalid"`) for the app to decide on and put into words ("Can't reach the server"), and a `message` for the console ([`src/failure.rs`](src/failure.rs)).
 
 ## Where it runs
 

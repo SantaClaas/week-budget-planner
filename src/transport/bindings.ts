@@ -10,7 +10,7 @@ export type FailureKind = "timeout" | "unreachable" | "closed" | "invalid";
 
 /** What the module throws when a call fails: `Failure` in crates/transport/src/failure.rs. */
 interface Failure {
-  readonly kind: FailureKind;
+  readonly type: FailureKind;
   /** For the console, not for people. */
   readonly message: string;
 }
