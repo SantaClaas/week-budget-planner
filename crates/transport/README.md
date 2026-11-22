@@ -23,6 +23,14 @@ Its interface says nothing about syncing ([`src/lib.rs`](src/lib.rs), [`src/conn
 - **Beside the database's worker, not inside it:** the database worker is Turso's, and a module of its own can start, fail and stop without touching the plan's storage.
 - **The leader starts it, and the other tabs reach it through the leader,** as they reach the database (see [`docs/guidelines/database.md`](../../docs/guidelines/database.md)). That wiring comes with the first thing that syncs; until then the transport check below is the only page that starts it.
 
+## When the sync protocol comes
+
+The page reaches a stream through calls (`send`, `finish`, `receive`, `release`), each giving back a `Result`, which is enough for the transport check's one echo. The sync protocol is the first real reader, so its needs decide the stream API. Where to start then:
+
+- **Web Streams, in WebTransport's shape:** the worker hands the page a stream as `{ readable, writable }`, transferred through `postMessage`, so the platform's own tools apply: `pipeThrough` with a `TransformStream`, `pipeTo` with backpressure, and `for await` over the readable. wasm-bindgen's stream adapters (`IntoUnderlyingSource` and the rest, already in the generated types) cover the Rust side.
+- **Check first:** whether Safari transfers streams through `postMessage`, which decides the design. A stream's failure is an error rather than a value, so the `Problem`s would travel as rejection reasons and be read back at the edge. And a deadline per call becomes `AbortSignal.timeout()` on a pipe.
+- **An async generator for the framing:** an `async function*` that reads bytes and yields whole messages, which the protocol reads with `for await`. `Array.fromAsync` and `ReadableStream.from()` fit around it. Iterator helpers for async iterators aren't in browsers yet.
+
 ## How it's built
 
 **CI builds it, and nothing built is committed.** `pnpm transport` ([`scripts/build-transport.ts`](../../scripts/build-transport.ts)) compiles the crate for `wasm32-unknown-unknown` with the size profile (`[profile.transport]` in [`Cargo.toml`](../../Cargo.toml)), then wasm-bindgen writes the module and the JavaScript that loads it into `target/transport-module/`, where [`vite-plugins/transport.ts`](../../vite-plugins/transport.ts) picks them up for `pnpm build`.
