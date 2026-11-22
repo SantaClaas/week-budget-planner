@@ -56,9 +56,9 @@ impl Stream {
     /// # Errors
     ///
     /// [`Type::Timeout`], or [`Type::Closed`] when the stream or its connection is closed.
-    pub async fn send(&mut self, bytes: Vec<u8>, timeout: u32) -> Result<(), Failure> {
+    pub async fn send(&mut self, bytes: &[u8], timeout: u32) -> Result<(), Failure> {
         self.send
-            .write_all(&bytes)
+            .write_all(bytes)
             .run_within(Duration::from_millis(timeout.into()), Type::Closed)
             .await
     }
