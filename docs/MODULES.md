@@ -123,6 +123,7 @@ flowchart LR
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
   module_top_app_bar --> module_week
+  module_transport --> module_broadcast
   module_transport --> module_result
   module_week --> module_announcement
   module_week --> module_icons

@@ -1,16 +1,17 @@
 /**
  * Runs the transport's WebAssembly module (crates/transport) in a worker of its own, beside the
  * database's (see Where it runs in crates/transport/README.md). The page that starts it sends a
- * port, and every call comes over that port (./call.ts).
+ * port, and the worker provides its methods (./api.ts) over it through the broadcast service.
  *
  * The module is fetched only on the first call, by its hash, so the browser refuses bytes that
  * aren't the ones the build made.
  */
 import { bindings } from "virtual:transport";
 
+import { provide } from "../broadcast/service.ts";
 import type { Result } from "../result.ts";
+import { SCOPE, type Problem, type TransportApi } from "./api.ts";
 import type { Bindings, Connection, Node, Stream } from "./bindings.ts";
-import type { Answers, Call, Problem, Request, Response } from "./call.ts";
 
 let loading: Promise<Result<Bindings, "unavailable">> | undefined;
 let node: Node | undefined;
@@ -68,64 +69,62 @@ function keep<Value>(handles: Map<number, Value>, value: Value): number {
   return lastHandle;
 }
 
-async function spawn(call: Extract<Call, { type: "spawn" }>): Promise<Answers["spawn"]> {
+const spawn: TransportApi["spawn"] = async (secretKey, relayUrl, timeout) => {
   const loaded = await load();
   if (loaded === "unavailable") return loaded;
 
-  const spawned = await runStep(() =>
-    loaded.Node.spawn(call.secretKey, call.relayUrl, call.timeout),
-  );
+  const spawned = await runStep(() => loaded.Node.spawn(secretKey, relayUrl, timeout));
   if (typeof spawned === "string") return spawned;
 
   node = spawned;
   return { nodeId: spawned.id };
-}
+};
 
-async function connect(call: Extract<Call, { type: "connect" }>): Promise<Answers["connect"]> {
+const connect: TransportApi["connect"] = async (nodeId, protocol, timeout) => {
   const current = node;
   if (current === undefined) return "closed";
 
-  const connection = await runStep(() => current.connect(call.nodeId, call.protocol, call.timeout));
+  const connection = await runStep(() => current.connect(nodeId, protocol, timeout));
   if (typeof connection === "string") return connection;
 
   return { connection: keep(connections, connection) };
-}
+};
 
-async function open(call: Extract<Call, { type: "open" }>): Promise<Answers["open"]> {
-  const connection = connections.get(call.connection);
+const open: TransportApi["open"] = async ({ connection: handle }, timeout) => {
+  const connection = connections.get(handle);
   if (connection === undefined) return "closed";
 
-  const stream = await runStep(() => connection.open(call.timeout));
+  const stream = await runStep(() => connection.open(timeout));
   if (typeof stream === "string") return stream;
 
-  return { stream: keep(streams, { stream, connection: call.connection }) };
-}
+  return { stream: keep(streams, { stream, connection: handle }) };
+};
 
-async function send(call: Extract<Call, { type: "send" }>): Promise<Answers["send"]> {
-  const stream = streams.get(call.stream)?.stream;
+const send: TransportApi["send"] = async ({ stream: handle }, bytes, timeout) => {
+  const stream = streams.get(handle)?.stream;
   if (stream === undefined) return "closed";
 
-  const sent = await runStep(() => stream.send(call.bytes, call.timeout));
+  const sent = await runStep(() => stream.send(bytes, timeout));
   return sent ?? "sent";
-}
+};
 
-async function finish(call: Extract<Call, { type: "finish" }>): Promise<Answers["finish"]> {
-  const stream = streams.get(call.stream)?.stream;
+const finish: TransportApi["finish"] = async ({ stream: handle }) => {
+  const stream = streams.get(handle)?.stream;
   if (stream === undefined) return "closed";
 
   const finished = await runStep(() => {
     stream.finish();
   });
   return finished ?? "finished";
-}
+};
 
-async function receive(call: Extract<Call, { type: "receive" }>): Promise<Answers["receive"]> {
-  const stream = streams.get(call.stream)?.stream;
+const receive: TransportApi["receive"] = async ({ stream: handle }, limit, timeout) => {
+  const stream = streams.get(handle)?.stream;
   if (stream === undefined) return "closed";
 
-  const bytes = await runStep(() => stream.receive(call.limit, call.timeout));
+  const bytes = await runStep(() => stream.receive(limit, timeout));
   return bytes ?? null;
-}
+};
 
 /**
  * Frees a stream in the module. Dropping it there finishes what it sends, so what was sent is still
@@ -136,24 +135,23 @@ function freeStream(handle: number): void {
   streams.delete(handle);
 }
 
-function release(call: Extract<Call, { type: "release" }>): Answers["release"] {
-  freeStream(call.stream);
-  return "released";
-}
+const release: TransportApi["release"] = ({ stream: handle }) => {
+  freeStream(handle);
+  return Promise.resolve("released");
+};
 
-/** Releases the connection's streams, then closes and frees the connection. */
-function disconnect(call: Extract<Call, { type: "disconnect" }>): Answers["disconnect"] {
-  for (const [handle, { connection }] of streams) {
-    if (connection === call.connection) freeStream(handle);
+const disconnect: TransportApi["disconnect"] = ({ connection: handle }) => {
+  for (const [stream, { connection }] of streams) {
+    if (connection === handle) freeStream(stream);
   }
 
-  connections.get(call.connection)?.close();
-  connections.get(call.connection)?.free();
-  connections.delete(call.connection);
-  return "disconnected";
-}
+  connections.get(handle)?.close();
+  connections.get(handle)?.free();
+  connections.delete(handle);
+  return Promise.resolve("disconnected");
+};
 
-async function stop(): Promise<Answers["stop"]> {
+const stop: TransportApi["stop"] = async () => {
   for (const { stream } of streams.values()) stream.free();
 
   streams.clear();
@@ -164,58 +162,29 @@ async function stop(): Promise<Answers["stop"]> {
   node?.free();
   node = undefined;
   return "stopped";
-}
+};
 
-// oxlint-disable-next-line typescript/consistent-return -- the switch names every call (switch-exhaustiveness-check), so the end is never reached.
-function answer(call: Call): Promise<Answers[Call["type"]]> | Answers[Call["type"]] {
-  switch (call.type) {
-    case "spawn":
-      return spawn(call);
-    case "connect":
-      return connect(call);
-    case "open":
-      return open(call);
-    case "send":
-      return send(call);
-    case "finish":
-      return finish(call);
-    case "receive":
-      return receive(call);
-    case "release":
-      return release(call);
-    case "disconnect":
-      return disconnect(call);
-    case "stop":
-      return stop();
-  }
-}
-
-async function respond(port: MessagePort, { id, call }: Request): Promise<void> {
-  let result: Answers[Call["type"]];
-  try {
-    result = await answer(call);
-  } catch (error) {
-    console.error("[transport]", error);
-    port.postMessage({ type: "error", id, message: String(error) } satisfies Response);
-    return;
-  }
-
-  port.postMessage({ type: "answer", id, answer: result } satisfies Response);
-}
-
-function serve(port: MessagePort): void {
-  port.addEventListener("message", (event: MessageEvent<Request>) => {
-    // Answers its own errors: a mistake goes back to the page as an error.
-    void respond(port, event.data);
-  });
-  port.start();
-}
+const api: TransportApi = {
+  spawn,
+  connect,
+  open,
+  send,
+  finish,
+  receive,
+  release,
+  disconnect,
+  stop,
+};
 
 addEventListener(
   "message",
   (event: MessageEvent<unknown>) => {
     const [port] = event.ports;
-    if (port !== undefined) serve(port);
+    if (port === undefined) return;
+
+    port.start();
+    // It serves for as long as the worker runs, so the function that stops serving isn't needed.
+    void provide(port, SCOPE, api);
   },
   { once: true },
 );
