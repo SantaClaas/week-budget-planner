@@ -55,15 +55,22 @@ unimplemented = "warn"
 unwrap_used = "warn"
 
 # Crate versions younger than registry.global-min-publish-age in .cargo/config.toml that may be in
-# Cargo.lock anyway: one table per exact version, with the reason it's taken early, which
-# scripts/check-crate-age.ts requires (see The supply chain in docs/guidelines/rust.md). Cargo
-# ignores [workspace.metadata]; the script is what reads it.
+# Cargo.lock anyway: one table per exact version, with why it's taken early, who agreed and when,
+# and optionally the last day it holds, as "YYYY-MM-DD" strings. scripts/check-crate-age.ts requires
+# them, and fails on an exception past its until or no longer needed (see The supply chain in
+# docs/guidelines/rust.md). Cargo ignores [workspace.metadata]; the script is what reads it.
 [[workspace.metadata.release-age.exclude]]
 name = "url"
 version = "2.5.9"
-reason = "The fix for RUSTSEC-2026-0592, a stack overflow in Url::origin() on nested blob: URLs in 2.5.8, published on 2026-11-20. Remove on 2026-11-27."
+reason = "The fix for RUSTSEC-2026-0592, a stack overflow in Url::origin() on nested blob: URLs in 2.5.8, published on 2026-11-20."
+approved-by = "SantaClaas"
+approved-on = "2026-11-22"
+until = "2026-11-27"
 
 [[workspace.metadata.release-age.exclude]]
 name = "form_urlencoded"
 version = "1.2.3"
-reason = "url 2.5.9 requires it; from the same repository (servo/rust-url), published a minute earlier. Remove on 2026-11-27."
+reason = "url 2.5.9 requires it; from the same repository (servo/rust-url), published a minute earlier."
+approved-by = "SantaClaas"
+approved-on = "2026-11-22"
+until = "2026-11-27"

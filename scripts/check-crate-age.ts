@@ -8,7 +8,8 @@
 //
 // It asks Cargo for the locked crates (`cargo metadata --locked`) and the crates.io index for when
 // each version was published. Exceptions are in [workspace.metadata.release-age] in Cargo.toml, one
-// table per exact version with the reason it's taken early: an entry without one fails the check.
+// table per exact version with why it's taken early, who agreed and when, and optionally until
+// when. An entry without them fails the check, and so does one past its date or no longer needed.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -105,49 +106,131 @@ export function readMinimumDays(config: string): number | undefined {
 /** The shortest reason an exception may give, as for a disabled lint rule (require-reason). */
 const MINIMUM_REASON_LENGTH = 10;
 
+/** A version allowed although it's younger than the minimum, with who allowed it and why. */
+export type Exception = {
+  name: string;
+  version: string;
+  reason: string;
+  /** Who agreed to take it early. */
+  approvedBy: string;
+  approvedOn: Temporal.PlainDate;
+  /** The last day it holds, if it should end before the version is old enough on its own. */
+  until: Temporal.PlainDate | undefined;
+};
+
+/** A date as `YYYY-MM-DD`, or undefined for anything else, a TOML date included. */
+function parseDate(value: unknown): Temporal.PlainDate | undefined {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return undefined;
+
+  let date: Temporal.PlainDate;
+  try {
+    date = Temporal.PlainDate.from(value, { overflow: "reject" });
+  } catch {
+    return undefined;
+  }
+
+  return date;
+}
+
+/** One exception from Cargo.toml, or what's wrong with it. */
+function readException(entry: unknown, position: string): Exception | string[] {
+  if (!isRecord(entry)) return [`${position} isn't a table.`];
+
+  const { name, version, reason } = entry;
+  if (typeof name !== "string" || typeof version !== "string") {
+    return [`${position} needs the crate's name and its exact version.`];
+  }
+
+  const label = `${name}@${version}`;
+  const approvedBy = entry["approved-by"];
+  const approvedOn = parseDate(entry["approved-on"]);
+  const until = entry["until"] === undefined ? undefined : parseDate(entry["until"]);
+  const problems = [
+    ...(typeof reason === "string" && reason.trim().length >= MINIMUM_REASON_LENGTH
+      ? []
+      : [`${label} needs a reason why it's taken early.`]),
+    ...(typeof approvedBy === "string" && approvedBy.trim() !== ""
+      ? []
+      : [`${label} needs approved-by: who agreed to take it early.`]),
+    ...(approvedOn === undefined ? [`${label} needs approved-on, as "YYYY-MM-DD".`] : []),
+    ...(entry["until"] !== undefined && until === undefined
+      ? [`${label} has an until that isn't a date as "YYYY-MM-DD".`]
+      : []),
+  ];
+  if (
+    problems.length > 0 ||
+    typeof reason !== "string" ||
+    typeof approvedBy !== "string" ||
+    approvedOn === undefined
+  ) {
+    return problems;
+  }
+
+  return { name, version, reason, approvedBy, approvedOn, until };
+}
+
 /**
- * The exceptions from `[workspace.metadata.release-age]`, as `name@version`, or what's wrong with
- * them: every entry is a table with the crate's `name`, its exact `version` and a `reason` of at
- * least ten characters.
+ * The exceptions from `[workspace.metadata.release-age]`, or what's wrong with them: every entry is
+ * a table with the crate's `name`, its exact `version`, a `reason` of at least ten characters,
+ * `approved-by` and `approved-on`, and optionally `until`, the dates as `"YYYY-MM-DD"` strings
+ * (`cargo metadata` hands a TOML date over in a private form of its own).
  *
  * @param settings - The `release-age` table, as `cargo metadata` gives it, or nothing without one.
  */
-export function readExceptions(settings?: unknown): Set<string> | { problems: string[] } {
-  if (settings === undefined) return new Set();
+export function readExceptions(settings?: unknown): Exception[] | { problems: string[] } {
+  if (settings === undefined) return [];
 
   const excluded = isRecord(settings) ? (settings["exclude"] ?? []) : undefined;
   if (!Array.isArray(excluded)) {
     return { problems: ["release-age.exclude has to be a list of tables."] };
   }
 
-  const problems = excluded.flatMap((entry: unknown, index) => {
-    const position = `Exception ${(index + 1).toString()}`;
-    if (!isRecord(entry)) return [`${position} isn't a table with name, version and reason.`];
-
-    const { name, version, reason } = entry;
-    if (typeof name !== "string" || typeof version !== "string") {
-      return [`${position} needs the crate's name and its exact version.`];
-    }
-
-    return typeof reason === "string" && reason.trim().length >= MINIMUM_REASON_LENGTH
-      ? []
-      : [`${name}@${version} needs a reason why it's taken early.`];
-  });
+  const read = excluded.map((entry: unknown, index) =>
+    readException(entry, `Exception ${(index + 1).toString()}`),
+  );
+  const problems = read.flatMap((item) => (Array.isArray(item) ? item : []));
   if (problems.length > 0) return { problems };
 
-  return new Set(
-    excluded
-      .values()
-      .flatMap((entry: unknown) =>
-        isRecord(entry) && typeof entry["name"] === "string" && typeof entry["version"] === "string"
-          ? [`${entry["name"]}@${entry["version"]}`]
-          : [],
-      ),
-  );
+  return read.flatMap((item) => (Array.isArray(item) ? [] : [item]));
+}
+
+/**
+ * The exceptions that have to go: past their `until`, for a version no longer in the lockfile, or
+ * for one that's old enough by now. An exception that isn't needed any more fails, as cargo-deny's
+ * unused ignores do, so the list stays what the lockfile needs.
+ *
+ * @param publishTimes - When each `name@version` was published, as the index says.
+ * @param now - The time the check runs; `until` is compared with its date in UTC.
+ */
+export function findStaleExceptions(
+  exceptions: readonly Exception[],
+  crates: readonly LockedCrate[],
+  publishTimes: ReadonlyMap<string, string>,
+  now: Temporal.Instant,
+  minimumDays: number,
+): string[] {
+  const today = now.toZonedDateTimeISO("UTC").toPlainDate();
+  const locked = new Set(crates.values().map((crate) => `${crate.name}@${crate.version}`));
+  const oldest = now.epochMilliseconds - minimumDays * DAY;
+  return exceptions.flatMap((exception) => {
+    const label = `${exception.name}@${exception.version}`;
+    if (exception.until !== undefined && Temporal.PlainDate.compare(today, exception.until) > 0) {
+      return [`${label}'s exception ended on ${exception.until.toString()}.`];
+    }
+
+    if (!locked.has(label)) return [`${label} isn't in Cargo.lock any more; remove its exception.`];
+
+    const publishedAt = publishTimes.get(label);
+    const isOldEnough =
+      publishedAt !== undefined && Temporal.Instant.from(publishedAt).epochMilliseconds <= oldest;
+    return isOldEnough
+      ? [`${label} is old enough now (${minimumDays.toString()} days); remove its exception.`]
+      : [];
+  });
 }
 
 /** The locked crates from crates.io and the exceptions, from `cargo metadata`. */
-function readWorkspace(): { crates: LockedCrate[]; exceptions: Set<string> } {
+function readWorkspace(): { crates: LockedCrate[]; exceptions: Exception[] } {
   const output = execFileSync(
     "cargo",
     ["metadata", "--format-version", "1", "--locked", "--quiet"],
@@ -171,7 +254,7 @@ function readWorkspace(): { crates: LockedCrate[]; exceptions: Set<string> } {
     .toArray();
   const workspace = isRecord(metadata["metadata"]) ? metadata["metadata"] : {};
   const exceptions = readExceptions(workspace["release-age"]);
-  if (!(exceptions instanceof Set)) {
+  if (!Array.isArray(exceptions)) {
     throw new TypeError(`Cargo.toml's crate age exceptions: ${exceptions.problems.join(" ")}`);
   }
 
@@ -209,12 +292,14 @@ if (import.meta.main) {
   }
 
   const { crates, exceptions } = readWorkspace();
+  const publishTimes = await fetchPublishTimes(crates);
+  const now = Temporal.Now.instant();
   const young = findYoungCrates(
     crates,
-    await fetchPublishTimes(crates),
-    Temporal.Now.instant(),
+    publishTimes,
+    now,
     minimumDays,
-    exceptions,
+    new Set(exceptions.values().map((exception) => `${exception.name}@${exception.version}`)),
   );
   for (const crate of young) {
     console.error(
@@ -222,10 +307,13 @@ if (import.meta.main) {
     );
   }
 
+  const stale = findStaleExceptions(exceptions, crates, publishTimes, now, minimumDays);
+  for (const problem of stale) console.error(problem);
+
   console.log(
     young.length === 0
-      ? `Every one of ${crates.length.toString()} crates is at least ${minimumDays.toString()} days old.`
+      ? `Every one of ${crates.length.toString()} crates is at least ${minimumDays.toString()} days old, or excepted.`
       : `${young.length.toString()} crates are younger than ${minimumDays.toString()} days. Wait, or add an exception with a reason to Cargo.toml.`,
   );
-  process.exitCode = young.length === 0 ? 0 : 1;
+  process.exitCode = young.length === 0 && stale.length === 0 ? 0 : 1;
 }
