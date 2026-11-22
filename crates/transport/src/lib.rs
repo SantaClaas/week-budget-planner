@@ -69,13 +69,9 @@ impl Node {
     ///
     /// [`Type::Invalid`] for a key or URL that isn't one, [`Type::Unreachable`] when the node
     /// can't start, or [`Type::Timeout`] when the relay doesn't answer in time.
-    pub async fn spawn(
-        secret_key: Vec<u8>,
-        relay_url: String,
-        timeout: u32,
-    ) -> Result<Node, Failure> {
-        let secret_key = parse_secret_key(&secret_key)?;
-        let relay_url = parse_relay_url(&relay_url)?;
+    pub async fn spawn(secret_key: &[u8], relay_url: &str, timeout: u32) -> Result<Node, Failure> {
+        let secret_key = parse_secret_key(secret_key)?;
+        let relay_url = parse_relay_url(relay_url)?;
         let endpoint = Endpoint::builder(presets::Minimal)
             .secret_key(secret_key)
             .relay_mode(RelayMode::Custom(RelayMap::from(relay_url.clone())))
@@ -120,11 +116,11 @@ impl Node {
     /// refuses or the relay can't reach it, or [`Type::Timeout`].
     pub async fn connect(
         &self,
-        node_id: String,
-        protocol: String,
+        node_id: &str,
+        protocol: &str,
         timeout: u32,
     ) -> Result<Connection, Failure> {
-        let id = parse_node_id(&node_id)?;
+        let id = parse_node_id(node_id)?;
         let address = EndpointAddr::from_parts(id, [TransportAddr::Relay(self.relay_url.clone())]);
         let connection = self
             .endpoint
