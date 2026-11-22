@@ -7,7 +7,13 @@
  *
  * `?timeout=<milliseconds>` sets each step's deadline; it's 10 s by default.
  */
-import { start, type Problem, type StreamHandle, type Transport } from "./index.ts";
+import {
+  start,
+  type ConnectionHandle,
+  type Problem,
+  type StreamHandle,
+  type Transport,
+} from "./index.ts";
 
 /**
  * The page's default Trusted Types policy, which the policy requires before the worker starts: the
@@ -75,11 +81,12 @@ async function receiveAll(
   }
 }
 
-/** Connects to the server's node, sends the message on a stream, and checks what comes back. */
-async function echo(transport: Transport, serverId: string, timeout: number): Promise<Outcome> {
-  const connection = await transport.connect(serverId, ECHO, timeout);
-  if (typeof connection === "string") return connection;
-
+/** Sends the message on a new stream of the connection, and checks what comes back. */
+async function echoOn(
+  transport: Transport,
+  connection: ConnectionHandle,
+  timeout: number,
+): Promise<Outcome> {
   const stream = await transport.open(connection, timeout);
   if (typeof stream === "string") return stream;
 
@@ -90,10 +97,24 @@ async function echo(transport: Transport, serverId: string, timeout: number): Pr
   if (finished !== "finished") return finished;
 
   const received = await receiveAll(transport, stream, timeout);
-  void (await transport.disconnect(connection));
   if (typeof received === "string") return received;
 
   return received.text === MESSAGE ? "echoed" : "mismatch";
+}
+
+/**
+ * Connects to the server's node and echoes on it, then disconnects, which releases the stream too.
+ * Not with `await using`, which the app's own code can use on a connection: here the bundler would
+ * move the helper that lowers it into a chunk shared with the app's page, which would then load
+ * one more file on a normal start.
+ */
+async function echo(transport: Transport, serverId: string, timeout: number): Promise<Outcome> {
+  const connection = await transport.connect(serverId, ECHO, timeout);
+  if (typeof connection === "string") return connection;
+
+  const outcome = await echoOn(transport, connection, timeout);
+  void (await transport.disconnect(connection));
+  return outcome;
 }
 
 const output = document.querySelector("output");
