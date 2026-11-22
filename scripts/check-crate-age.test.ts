@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   createIndexPath,
   findYoungCrates,
+  readExceptions,
   readMinimumDays,
   readPublishTimes,
 } from "./check-crate-age.ts";
@@ -71,6 +72,46 @@ describe("crates younger than a week", () => {
     expect(findYoungCrates(crates, times, NOW, 7, new Set(["young@1.0.0"]))).toEqual([
       { name: "young", version: "1.0.1", publishedAt: undefined },
     ]);
+  });
+});
+
+describe("the exceptions in Cargo.toml", () => {
+  const reason = "The fix for an advisory, taken early.";
+
+  it("reads each exact version with its reason", () => {
+    const exceptions = readExceptions({
+      exclude: [
+        { name: "url", version: "2.5.9", reason },
+        { name: "form_urlencoded", version: "1.2.3", reason },
+      ],
+    });
+    expect(exceptions).toEqual(new Set(["url@2.5.9", "form_urlencoded@1.2.3"]));
+  });
+
+  it("has none without the table or without a list", () => {
+    expect(readExceptions()).toEqual(new Set());
+    expect(readExceptions({})).toEqual(new Set());
+  });
+
+  it("refuses an exception without a reason, or with one too short to say anything", () => {
+    expect(readExceptions({ exclude: [{ name: "url", version: "2.5.9" }] })).toEqual({
+      problems: ["url@2.5.9 needs a reason why it's taken early."],
+    });
+    expect(readExceptions({ exclude: [{ name: "url", version: "2.5.9", reason: "fix" }] })).toEqual(
+      { problems: ["url@2.5.9 needs a reason why it's taken early."] },
+    );
+  });
+
+  it("refuses the old form, a plain name@version, and an entry without its version", () => {
+    expect(readExceptions({ exclude: ["url@2.5.9"] })).toEqual({
+      problems: ["Exception 1 isn't a table with name, version and reason."],
+    });
+    expect(readExceptions({ exclude: [{ name: "url", reason }] })).toEqual({
+      problems: ["Exception 1 needs the crate's name and its exact version."],
+    });
+    expect(readExceptions({ exclude: "url@2.5.9" })).toEqual({
+      problems: ["release-age.exclude has to be a list of tables."],
+    });
   });
 });
 

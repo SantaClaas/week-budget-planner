@@ -7,7 +7,8 @@
 //   node scripts/check-crate-age.ts
 //
 // It asks Cargo for the locked crates (`cargo metadata --locked`) and the crates.io index for when
-// each version was published. Exceptions are in [workspace.metadata.release-age] in Cargo.toml.
+// each version was published. Exceptions are in [workspace.metadata.release-age] in Cargo.toml, one
+// table per exact version with the reason it's taken early: an entry without one fails the check.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -101,6 +102,50 @@ export function readMinimumDays(config: string): number | undefined {
   return match[2]?.startsWith("week") === true ? count * 7 : count;
 }
 
+/** The shortest reason an exception may give, as for a disabled lint rule (require-reason). */
+const MINIMUM_REASON_LENGTH = 10;
+
+/**
+ * The exceptions from `[workspace.metadata.release-age]`, as `name@version`, or what's wrong with
+ * them: every entry is a table with the crate's `name`, its exact `version` and a `reason` of at
+ * least ten characters.
+ *
+ * @param settings - The `release-age` table, as `cargo metadata` gives it, or nothing without one.
+ */
+export function readExceptions(settings?: unknown): Set<string> | { problems: string[] } {
+  if (settings === undefined) return new Set();
+
+  const excluded = isRecord(settings) ? (settings["exclude"] ?? []) : undefined;
+  if (!Array.isArray(excluded)) {
+    return { problems: ["release-age.exclude has to be a list of tables."] };
+  }
+
+  const problems = excluded.flatMap((entry: unknown, index) => {
+    const position = `Exception ${(index + 1).toString()}`;
+    if (!isRecord(entry)) return [`${position} isn't a table with name, version and reason.`];
+
+    const { name, version, reason } = entry;
+    if (typeof name !== "string" || typeof version !== "string") {
+      return [`${position} needs the crate's name and its exact version.`];
+    }
+
+    return typeof reason === "string" && reason.trim().length >= MINIMUM_REASON_LENGTH
+      ? []
+      : [`${name}@${version} needs a reason why it's taken early.`];
+  });
+  if (problems.length > 0) return { problems };
+
+  return new Set(
+    excluded
+      .values()
+      .flatMap((entry: unknown) =>
+        isRecord(entry) && typeof entry["name"] === "string" && typeof entry["version"] === "string"
+          ? [`${entry["name"]}@${entry["version"]}`]
+          : [],
+      ),
+  );
+}
+
 /** The locked crates from crates.io and the exceptions, from `cargo metadata`. */
 function readWorkspace(): { crates: LockedCrate[]; exceptions: Set<string> } {
   const output = execFileSync(
@@ -125,12 +170,12 @@ function readWorkspace(): { crates: LockedCrate[]; exceptions: Set<string> } {
     )
     .toArray();
   const workspace = isRecord(metadata["metadata"]) ? metadata["metadata"] : {};
-  const settings = isRecord(workspace["release-age"]) ? workspace["release-age"] : {};
-  const excluded = Array.isArray(settings["exclude"]) ? settings["exclude"] : [];
-  return {
-    crates,
-    exceptions: new Set(excluded.values().filter((item: unknown) => typeof item === "string")),
-  };
+  const exceptions = readExceptions(workspace["release-age"]);
+  if (!(exceptions instanceof Set)) {
+    throw new TypeError(`Cargo.toml's crate age exceptions: ${exceptions.problems.join(" ")}`);
+  }
+
+  return { crates, exceptions };
 }
 
 /** Asks the index when each version of the crates was published. */
