@@ -29,7 +29,7 @@ Its interface says nothing about syncing ([`src/lib.rs`](src/lib.rs), [`src/conn
 
 - **Why not commit the module:** a 2.6 MB binary in Git with every iroh update, which a review can't read and nothing proves was built from this source.
 - **`pnpm build` doesn't need Rust:** without `pnpm transport` first, the build warns, and the app's transport says `"unavailable"`. GitHub Pages builds that way, since it has no relay to reach. The server's browser test ([`.github/workflows/server.yml`](../../.github/workflows/server.yml)) builds the module first.
-- **Shipping the server and the app as one container**, with the module built inside it, is the next step for production.
+- **Shipping the server and the app as one container**, with the module built inside it, is the next step for production. With that, revisit the module as a package of the pnpm workspace, whose types would be wasm-bindgen's own instead of the ones written by hand in [`src/transport/bindings.ts`](../../src/transport/bindings.ts). It only pays off once every build has Rust: until then the package would be empty wherever `pnpm build` runs without it, and the Vite plugin still has to write in the module's hash.
 
 It needs Rust (with the `wasm32-unknown-unknown` target, which [`rust-toolchain.toml`](../../rust-toolchain.toml) installs) and wasm-bindgen-cli at the version of the `wasm-bindgen` crate in [`Cargo.lock`](../../Cargo.lock), which the script checks:
 
