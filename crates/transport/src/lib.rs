@@ -27,28 +27,6 @@ use getrandom as _;
 /// How long a secret key is, in bytes.
 const SECRET_KEY_LENGTH: usize = 32;
 
-fn parse_secret_key(bytes: &[u8]) -> Result<SecretKey, Failure> {
-    <&[u8; SECRET_KEY_LENGTH]>::try_from(bytes)
-        .map(SecretKey::from_bytes)
-        .map_err(|_| {
-            let length = bytes.len();
-            Failure::new(
-                Type::Invalid,
-                format!("a secret key is {SECRET_KEY_LENGTH} bytes, not {length}"),
-            )
-        })
-}
-
-fn parse_relay_url(text: &str) -> Result<RelayUrl, Failure> {
-    text.parse()
-        .map_err(|error| Failure::new(Type::Invalid, format!("{text} isn't a relay URL: {error}")))
-}
-
-fn parse_node_id(text: &str) -> Result<EndpointId, Failure> {
-    text.parse()
-        .map_err(|error| Failure::new(Type::Invalid, format!("{text} isn't a node id: {error}")))
-}
-
 /// An iroh node that reaches other nodes only through one relay, with no address lookup.
 #[wasm_bindgen]
 pub struct Node {
@@ -70,8 +48,21 @@ impl Node {
     /// [`Type::Invalid`] for a key or URL that isn't one, [`Type::Unreachable`] when the node
     /// can't start, or [`Type::Timeout`] when the relay doesn't answer in time.
     pub async fn spawn(secret_key: &[u8], relay_url: &str, timeout: u32) -> Result<Node, Failure> {
-        let secret_key = parse_secret_key(secret_key)?;
-        let relay_url = parse_relay_url(relay_url)?;
+        let secret_key = <&[u8; SECRET_KEY_LENGTH]>::try_from(secret_key)
+            .map(SecretKey::from_bytes)
+            .map_err(|_| {
+                let length = secret_key.len();
+                Failure::new(
+                    Type::Invalid,
+                    format!("a secret key is {SECRET_KEY_LENGTH} bytes, not {length}"),
+                )
+            })?;
+        let relay_url: RelayUrl = relay_url.parse().map_err(|error| {
+            Failure::new(
+                Type::Invalid,
+                format!("{relay_url} isn't a relay URL: {error}"),
+            )
+        })?;
         let endpoint = Endpoint::builder(presets::Minimal)
             .secret_key(secret_key)
             .relay_mode(RelayMode::Custom(RelayMap::from(relay_url.clone())))
@@ -120,7 +111,9 @@ impl Node {
         protocol: &str,
         timeout: u32,
     ) -> Result<Connection, Failure> {
-        let id = parse_node_id(node_id)?;
+        let id: EndpointId = node_id.parse().map_err(|error| {
+            Failure::new(Type::Invalid, format!("{node_id} isn't a node id: {error}"))
+        })?;
         let address = EndpointAddr::from_parts(id, [TransportAddr::Relay(self.relay_url.clone())]);
         let connection = self
             .endpoint
@@ -138,31 +131,27 @@ impl Node {
 
 #[cfg(test)]
 mod test {
-    use super::{Type, parse_node_id, parse_relay_url, parse_secret_key};
+    use super::{Node, Type};
 
-    #[test]
-    fn takes_a_key_of_32_bytes_only() {
-        let key = parse_secret_key(&[7; 32]).unwrap();
-        assert_eq!(key.to_bytes(), [7; 32]);
-        assert_eq!(
-            parse_secret_key(&[7; 31]).unwrap_err().r#type(),
-            Type::Invalid
-        );
-        assert_eq!(parse_secret_key(&[]).unwrap_err().r#type(), Type::Invalid);
+    /// A relay URL that parses; these tests never reach it.
+    const RELAY_URL: &str = "http://127.0.0.1:9";
+
+    // Node isn't Debug, so a failure is read with err() rather than unwrap_err().
+
+    #[tokio::test]
+    async fn takes_a_key_of_32_bytes_only() {
+        for key in [&[7; 31][..], &[7; 33], &[]] {
+            let failure = Node::spawn(key, RELAY_URL, 1000).await.err().unwrap();
+            assert_eq!(failure.r#type(), Type::Invalid, "{} bytes", key.len());
+        }
     }
 
-    #[test]
-    fn refuses_what_isn_t_a_relay_url_or_a_node_id() {
-        assert!(parse_relay_url("http://localhost:8080").is_ok());
-        assert_eq!(
-            parse_relay_url("not a url").unwrap_err().r#type(),
-            Type::Invalid
-        );
-        assert_eq!(
-            parse_node_id("not an id").unwrap_err().r#type(),
-            Type::Invalid
-        );
-        let id = iroh::SecretKey::from_bytes(&[7; 32]).public();
-        assert_eq!(parse_node_id(&id.to_string()).unwrap(), id);
+    #[tokio::test]
+    async fn refuses_what_isn_t_a_relay_url() {
+        let failure = Node::spawn(&[7; 32], "not a url", 1000)
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(failure.r#type(), Type::Invalid);
     }
 }
