@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createIndexPath,
+  findStaleExceptions,
   findYoungCrates,
   readExceptions,
   readMinimumDays,
@@ -76,42 +77,120 @@ describe("crates younger than a week", () => {
 });
 
 describe("the exceptions in Cargo.toml", () => {
-  const reason = "The fix for an advisory, taken early.";
+  const approved = {
+    reason: "The fix for an advisory, taken early.",
+    "approved-by": "SantaClaas",
+    "approved-on": "2026-11-22",
+  };
 
-  it("reads each exact version with its reason", () => {
+  it("reads each exact version with why, who agreed and when, and until when", () => {
     const exceptions = readExceptions({
       exclude: [
-        { name: "url", version: "2.5.9", reason },
-        { name: "form_urlencoded", version: "1.2.3", reason },
+        { name: "url", version: "2.5.9", ...approved, until: "2026-11-27" },
+        { name: "form_urlencoded", version: "1.2.3", ...approved },
       ],
     });
-    expect(exceptions).toEqual(new Set(["url@2.5.9", "form_urlencoded@1.2.3"]));
+    expect(exceptions).toEqual([
+      {
+        name: "url",
+        version: "2.5.9",
+        reason: approved.reason,
+        approvedBy: "SantaClaas",
+        approvedOn: Temporal.PlainDate.from("2026-11-22"),
+        until: Temporal.PlainDate.from("2026-11-27"),
+      },
+      {
+        name: "form_urlencoded",
+        version: "1.2.3",
+        reason: approved.reason,
+        approvedBy: "SantaClaas",
+        approvedOn: Temporal.PlainDate.from("2026-11-22"),
+        until: undefined,
+      },
+    ]);
   });
 
   it("has none without the table or without a list", () => {
-    expect(readExceptions()).toEqual(new Set());
-    expect(readExceptions({})).toEqual(new Set());
+    expect(readExceptions()).toEqual([]);
+    expect(readExceptions({})).toEqual([]);
   });
 
   it("refuses an exception without a reason, or with one too short to say anything", () => {
-    expect(readExceptions({ exclude: [{ name: "url", version: "2.5.9" }] })).toEqual({
-      problems: ["url@2.5.9 needs a reason why it's taken early."],
+    const { reason: _, ...withoutReason } = approved;
+    expect(
+      readExceptions({ exclude: [{ name: "url", version: "2.5.9", ...withoutReason }] }),
+    ).toEqual({ problems: ["url@2.5.9 needs a reason why it's taken early."] });
+    expect(
+      readExceptions({ exclude: [{ name: "url", version: "2.5.9", ...approved, reason: "fix" }] }),
+    ).toEqual({ problems: ["url@2.5.9 needs a reason why it's taken early."] });
+  });
+
+  it("refuses an exception without who agreed and when", () => {
+    expect(
+      readExceptions({ exclude: [{ name: "url", version: "2.5.9", reason: approved.reason }] }),
+    ).toEqual({
+      problems: [
+        "url@2.5.9 needs approved-by: who agreed to take it early.",
+        'url@2.5.9 needs approved-on, as "YYYY-MM-DD".',
+      ],
     });
-    expect(readExceptions({ exclude: [{ name: "url", version: "2.5.9", reason: "fix" }] })).toEqual(
-      { problems: ["url@2.5.9 needs a reason why it's taken early."] },
-    );
+  });
+
+  it("refuses dates that aren't YYYY-MM-DD, or aren't days at all", () => {
+    for (const until of ["2026-11-31", "27.11.2026", "2026-11-27T00:00", { date: "2026-11-27" }]) {
+      expect(
+        readExceptions({ exclude: [{ name: "url", version: "2.5.9", ...approved, until }] }),
+      ).toEqual({ problems: ['url@2.5.9 has an until that isn\'t a date as "YYYY-MM-DD".'] });
+    }
   });
 
   it("refuses the old form, a plain name@version, and an entry without its version", () => {
     expect(readExceptions({ exclude: ["url@2.5.9"] })).toEqual({
-      problems: ["Exception 1 isn't a table with name, version and reason."],
+      problems: ["Exception 1 isn't a table."],
     });
-    expect(readExceptions({ exclude: [{ name: "url", reason }] })).toEqual({
+    expect(readExceptions({ exclude: [{ name: "url", ...approved }] })).toEqual({
       problems: ["Exception 1 needs the crate's name and its exact version."],
     });
     expect(readExceptions({ exclude: "url@2.5.9" })).toEqual({
       problems: ["release-age.exclude has to be a list of tables."],
     });
+  });
+});
+
+describe("exceptions that have to go", () => {
+  const exception = {
+    name: "young",
+    version: "1.0.0",
+    reason: "The fix for an advisory, taken early.",
+    approvedBy: "SantaClaas",
+    approvedOn: Temporal.PlainDate.from("2026-11-19"),
+    until: undefined,
+  };
+  const locked = [{ name: "young", version: "1.0.0" }];
+  const times = new Map([["young@1.0.0", "2026-11-19T00:00:00Z"]]);
+
+  it("keeps one the lockfile still needs", () => {
+    expect(findStaleExceptions([exception], locked, times, NOW, 7)).toEqual([]);
+  });
+
+  it("trips the day after its until, in UTC", () => {
+    const until = Temporal.PlainDate.from("2026-11-19");
+    expect(findStaleExceptions([{ ...exception, until }], locked, times, NOW, 7)).toEqual([
+      "young@1.0.0's exception ended on 2026-11-19.",
+    ]);
+    const today = Temporal.PlainDate.from("2026-11-20");
+    expect(findStaleExceptions([{ ...exception, until: today }], locked, times, NOW, 7)).toEqual(
+      [],
+    );
+  });
+
+  it("trips once the version is old enough, or isn't locked any more", () => {
+    expect(findStaleExceptions([exception], locked, times, NOW, 1)).toEqual([
+      "young@1.0.0 is old enough now (1 days); remove its exception.",
+    ]);
+    expect(findStaleExceptions([exception], [], times, NOW, 7)).toEqual([
+      "young@1.0.0 isn't in Cargo.lock any more; remove its exception.",
+    ]);
   });
 });
 
