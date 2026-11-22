@@ -1,7 +1,8 @@
 import { RuleTester } from "oxlint/plugins-dev";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import rule from "./function-starts-with-verb.ts";
+import verbs from "./verbs.json" with { type: "json" };
 
 // RuleTester names and runs its own tests, and makes the assertions in them. Handing it Vitest's
 // describe and it lets Vitest report them.
@@ -67,3 +68,13 @@ new RuleTester({ languageOptions: { parserOptions: { lang: "tsx" } } }).run(
     ],
   },
 );
+
+describe("the list of verbs", () => {
+  it("holds lowercase words only", () => {
+    expect(verbs.filter((verb) => !/^[a-z]+$/u.test(verb))).toEqual([]);
+  });
+
+  it("is sorted, with each verb once", () => {
+    expect(verbs).toEqual([...new Set(verbs)].toSorted());
+  });
+});
