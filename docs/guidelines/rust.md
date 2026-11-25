@@ -33,6 +33,18 @@ How the Rust in this project is named, split, checked and kept safe to depend on
 - **A module builds its own router and exports only that**, as Vertical first in [`principles.md`](principles.md) describes: handlers stay private, and `main` merges a few routers instead of listing every handler.
 - **Declare before use** holds as in the principles, although Rust doesn't need it: types, constants and helpers first, the module's entry point last, and its `#[cfg(test)] mod test` at the very end.
 
+## Types and dispatch
+
+Follow [The rule of least power](principles.md#the-rule-of-least-power) in [`docs/guidelines/principles.md`](principles.md) when choosing how to represent variation: reach for the narrowest form the problem needs, in order.
+
+- **Start with a concrete type.** When there's only one implementation today, write that type directly instead of introducing a trait or an enum for a second one that doesn't exist yet (see [Refactoring](principles.md#refactoring) in [`docs/guidelines/principles.md`](principles.md)). Don't add a `dyn Trait` just to mock a dependency in tests: the pure core takes plain values and functions instead (below), and networked edges use `turmoil`.
+- **Use an `enum` for a closed set of cases.** When the workspace owns all the variants, model them as an `enum` rather than a trait object — even when values of different kinds live in the same struct, channel or `Vec`, or are chosen at runtime. Every case stays in one place, `match` checks exhaustiveness at compile time, `Clone`/`Debug`/`PartialEq` stay trivial, and `async` methods don't hit dyn-compatibility limits. When one variant is much larger than the rest, box that variant (`Box<…>`) rather than switching to `dyn Trait`; `pedantic`'s `large_enum_variant` flags it. Prefer a plain `match` over adding a procedural-macro crate such as `enum_dispatch` (see [The supply chain](#the-supply-chain)).
+- **Use generics (`impl Trait` or `<T: Trait>`) for an open set chosen statically.** Traits give open extensibility without dynamic dispatch whenever each call site or struct instance fixes one concrete type (for example, a stream or a socket swapped between Tokio and `turmoil`). Generics inline across the call boundary with no vtable overhead and work with `async fn` and associated types, at the cost of monomorphization (compile time and binary size) and the type parameter appearing in signatures.
+- **Use `dyn Trait` only when type erasure earns its keep:**
+  - **At an outside API that requires it.** The relay's [`crates/server/src/relay/admission.rs`](../../crates/server/src/relay/admission.rs) returns `Arc<dyn DynAccessControl>` because `iroh-relay` expects it, while the policy inside stays a closed enum (`Admitted`).
+  - **To mix or swap an open set at runtime,** where an enum can't name every implementation (middleware stacks, callbacks, erased or recursive futures).
+  - **To bound monomorphization or signature noise,** when carrying a generic parameter through surrounding structs would complicate the code or bloat binary size (notably in WASM crates such as [`crates/transport/`](../../crates/transport/)) more than a vtable call costs.
+
 ## Errors
 
 - **What can fail returns a `Result`**, and its error says what went wrong as a value: an enum per module, made with [`thiserror`](https://docs.rs/thiserror), whose variants are the outcomes a caller can act on. No `Box<dyn Error>` and no `anyhow` in a library crate; a binary's `main` may report one error type of its own.
