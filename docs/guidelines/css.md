@@ -7,7 +7,7 @@ paths:
 
 How the styles are written. It adds to [`docs/guidelines/principles.md`](principles.md), which always applies, and the same rules hold for styles set from TypeScript. The design itself, Material 3 Expressive, is in [`docs/spec/design.md`](../spec/design.md), and its tokens and components in [`docs/design/m3-tokens.css`](../design/m3-tokens.css).
 
-**Google is the only source for Material Design**, and only the user approves a deviation from it (see [`CLAUDE.md`](../../CLAUDE.md)). Build the components (navigation bar, bottom sheet, snackbar, floating toolbar and so on) in plain CSS, without a component library, and use the `modern-web-guidance` skill before writing a new one.
+**Google is the only source for Material Design**, and only the user approves a deviation from it (see [`AGENTS.md`](../../AGENTS.md)). Build the components (navigation bar, bottom sheet, snackbar, floating toolbar and so on) in plain CSS, without a component library, and use the `modern-web-guidance` skill before writing a new one.
 
 **Cascade layers.** Declare the order once: `@layer reset, base, theme, components, utilities;`. A later layer always wins, so no selector needs extra specificity to beat an earlier one. Use `:where()` inside a layer for defaults that should be easy to override.
 

@@ -26,4 +26,4 @@ Before committing, run `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm knip`
 - [`docs/CODING-GUIDELINES.md`](docs/CODING-GUIDELINES.md): how the code is named, split, styled and checked.
 - [`docs/design/m3-tokens.css`](docs/design/m3-tokens.css): the Material 3 Expressive design tokens.
 - [`prototype/week-budget-planner.html`](prototype/week-budget-planner.html): the original single-file prototype, still the reference for behavior.
-- [`CLAUDE.md`](CLAUDE.md): context for Claude Code sessions.
+- [`AGENTS.md`](AGENTS.md): context for coding agent sessions (imported by [`CLAUDE.md`](CLAUDE.md)).
