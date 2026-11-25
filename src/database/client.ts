@@ -12,11 +12,11 @@ import {
 } from "../broadcast/service.ts";
 import { createLocalQueryService, type QueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, runOnDatabase, type Database } from "./drizzle.ts";
+import { rebuild as rebuildImport, type ImportProblem } from "./import.ts";
 import { runMigrations } from "./migration.ts";
 import { createRandomNodeId } from "./node.ts";
-import { loadNode, loadPlan, renewNode } from "./plan-repository.ts";
+import { loadNode } from "./plan-repository.ts";
 import type { Stamp } from "../merge/stamp.ts";
-import { randomIds } from "../plan/id.ts";
 import type { Result } from "../result.ts";
 
 const DATABASE_FILE = "week-budget-planner.db";
@@ -274,38 +274,37 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
   bytes.length >= SQLITE_HEADER.length &&
   SQLITE_HEADER.every((byte, index) => bytes[index] === byte);
 
-/** Why a file can't be imported. */
-type ImportProblem = "invalid-file" | "newer-version";
-
 /**
- * Opens the copy of an imported database, migrates it and reads its plan, then gives its node a new
- * id and the later clock (see `renewNode`) and folds the WAL into the file. "newer-version" when a
- * newer version of the app made it; throws when it isn't a database this app can read.
+ * Rebuilds the copy of an imported database into a fresh database file made by this version's
+ * migrations, then folds the rebuilt file's WAL into it.
  *
+ * @param sourceName - The OPFS file holding the imported bytes.
+ * @param targetName - A new OPFS file to build the replacement database in.
  * @param clock - This browser's clock before the import.
  */
-async function readCopy(
-  name: string,
+async function rebuildCopy(
+  sourceName: string,
+  targetName: string,
   clock: Stamp | undefined,
-): Promise<Result<"readable", "newer-version">> {
+): Promise<Result<"rebuilt", ImportProblem>> {
   await using resources = new AsyncDisposableStack();
-  const connection = resources.adopt(await connectFile(name), (opened) => opened.close());
-  if ((await runMigrations(connection)) === "newer-version") return "newer-version";
+  const source = resources.adopt(await connectFile(sourceName), (opened) => opened.close());
+  const target = resources.adopt(await connectFile(targetName), (opened) => opened.close());
+  const outcome = await rebuildImport(source, target, clock, createRandomNodeId());
+  if (outcome !== "rebuilt") return outcome;
 
-  const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
-  await loadPlan(database, randomIds);
-  await renewNode(database, clock, createRandomNodeId());
-  await connection.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-  return "readable";
+  await target.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+  return "rebuilt";
 }
 
 /**
- * Checks that the file is a database this app can open: it has the SQLite header, and a copy of it
- * opens, migrates and holds a readable plan. The copy is deleted again either way.
+ * Checks that the file is a database this app can open and rebuilds it into a fresh database made
+ * by this version's migrations, so no byte of the imported file's schema is kept. Both temporary
+ * files are deleted again either way.
  *
- * @param clock - This browser's clock before the import, which the copy's node takes when it's
+ * @param clock - This browser's clock before the import, which the rebuilt node takes when it's
  *   later.
- * @returns The copy's bytes, migrated and with the new node: what replaces the database.
+ * @returns The rebuilt database's bytes, with the new node: what replaces the database.
  */
 async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
@@ -315,19 +314,20 @@ async function checkImport(
 
   await using cleanup = new AsyncDisposableStack();
   cleanup.defer(removeImportLeftovers);
-  const name = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
-  await writeFile(await navigator.storage.getDirectory(), name, bytes);
-  let copy: Result<"readable", "newer-version">;
+  const sourceName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
+  const targetName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
+  await writeFile(await navigator.storage.getDirectory(), sourceName, bytes);
+  let outcome: Result<"rebuilt", ImportProblem>;
   try {
-    copy = await readCopy(name, clock);
+    outcome = await rebuildCopy(sourceName, targetName, clock);
   } catch (error) {
     console.warn("[database] the imported file can't be opened", error);
     return "invalid-file";
   }
 
-  if (copy === "newer-version") return copy;
+  if (outcome !== "rebuilt") return outcome;
 
-  return await readFileBytes(name);
+  return await readFileBytes(targetName);
 }
 
 function broadcastReload(): void {

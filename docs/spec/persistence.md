@@ -116,7 +116,7 @@ Backup works like flashcut's (`src/lib/db-file.ts`, `src/lib/download.ts`, and `
 
 - **Export database:** downloads the raw SQLite file as `week-budget-planner-YYYY-MM-DD-HH-MM-SS.db` (`application/vnd.sqlite3`), named after the local date and time the export started, so a second export on the same day gets its own name instead of the browser adding " (1)", and the files sort by when they were made. The time's parts are separated by hyphens, since Windows allows no `:` in a file name. Settings describes the name rather than showing it ("Saves a .db file named with the date and time"), since a name with seconds in it would be out of date as soon as it showed. The leader runs `PRAGMA wal_checkpoint(TRUNCATE)`, briefly closes the database, reads the file bytes from OPFS, then reopens. Calls that arrive in the meantime queue behind the reopen. Export works from any tab.
 - **Import database:** the user picks a `.db` file and confirms in a native `<dialog>` ("Replace your plan?") that names the file and how many activities and blocks it replaces, with a link to export first. The leader closes the database, deletes the stale `-wal`, writes the file and makes every tab reload. Run migrations on the imported file at open, so older exports still load.
-- **An import never replaces the plan with something that can't be opened.** Before touching the database, the leader checks that the file starts with the SQLite header (the 16 bytes `SQLite format 3\0`), then writes it to a separate file in OPFS (a new name for each try, because the engine keeps a file it failed to open locked until the page reloads; the leader removes leftover copies when it opens the database), opens that copy, runs the migrations on it, reads the plan from it, and gives the copy's node a new id and the later of its clock and this browser's, so two browsers that import the same file never stamp under one id (see [Export and import](merge.md#export-and-import) in [Merging changes](merge.md)). Only if all of that works does it replace the database with the copy. Otherwise the plan stays as it was, the copy is deleted, and the snackbar says: "This file isn't a Week Budget Planner database, so nothing was changed." A `.json` file has to be a plan in the stored format, or the snackbar says: "This file isn't a Week Budget Planner plan, so nothing was changed."
+- **An import never replaces the plan with something that can't be opened, and keeps no byte of the imported file's schema.** Before touching the database, the leader checks that the file starts with the SQLite header (the 16 bytes `SQLite format 3\0`), writes it to a separate copy in OPFS (a new name for each try, because the engine keeps a file it failed to open locked until the page reloads; the leader removes leftover copies when it opens the database), checks that it has applied migrations and runs any pending ones on the copy. It then creates a brand-new database in OPFS with this version's migrations and copies the rows from the copy into it with foreign keys on (`src/database/import.ts`), so every row runs through the fresh schema's `STRICT`, `CHECK` and `FOREIGN KEY` constraints and the merge's strict check, while triggers, views, extra tables and altered tables from the imported file are never kept. It gives the rebuilt database's node a new id and the later of its clock and this browser's, so two browsers that import the same file never stamp under one id (see [Export and import](merge.md#export-and-import) in [Merging changes](merge.md)). Only if all of that works does it replace the database with the rebuilt file. Otherwise the plan stays as it was, the temporary files are deleted, and the snackbar says: "This file isn't a Week Budget Planner database, so nothing was changed." A `.json` file has to be a plan in the stored format, or the snackbar says: "This file isn't a Week Budget Planner plan, so nothing was changed."
 ```mermaid
 sequenceDiagram
   actor User
@@ -127,12 +127,13 @@ sequenceDiagram
   Tab->>Leader: importFile(bytes)
   Leader->>Leader: starts with "SQLite format 3"?
   Leader->>OPFS: write a copy under a new name
-  Leader->>OPFS: open the copy, migrate it, read the plan, give it a new node id
+  Leader->>OPFS: open the copy, check its migrations and migrate it
+  Leader->>OPFS: create a fresh migrated database, copy and check the rows, give it a new node id
   alt every step worked
-    Leader->>OPFS: replace the database with the copy
+    Leader->>OPFS: replace the database with the rebuilt file
     Leader-->>Tab: every tab reloads
   else any step failed
-    Leader->>OPFS: delete the copy
+    Leader->>OPFS: delete the temporary files
     Leader-->>Tab: invalid file, nothing changed
     Tab-->>User: snackbar: this file isn't a Week Budget Planner database
   end
