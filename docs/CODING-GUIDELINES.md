@@ -14,6 +14,6 @@ How code in this project is named, split, styled and checked. The guidelines liv
 | [`rust.md`](guidelines/rust.md) | `.rs`, [`crates/`](../crates/), the Cargo files | the workspace and the pinned toolchain, Rust's names, modules and visibility, errors and panics, the pure core in async code, actors, Clippy and explained exceptions, the supply chain (exact versions, a week's wait, cargo-deny), tests and deterministic simulation |
 | [`workflows.md`](guidelines/workflows.md) | [`.github/`](../.github/) | hash-pinned actions, workflow linting, least privilege, Dependabot |
 
-Start with the principles; they hold everywhere. Before working on a kind of code, read its file too. Claude Code loads them by itself: [`.claude/rules/`](../.claude/rules/) links to each file, and each file lists the paths it applies to in its front matter, so it loads the first time a matching file is read or edited. The principles have no paths, so they load at the start of every session.
+Start with the principles; they hold everywhere. Before working on a kind of code, read its file too. Coding agents load them by themselves: [`.claude/rules/`](../.claude/rules/) links to each file for Claude Code (using each file's `paths` front matter, or always-on when there is none), and [`.agents/rules/`](../.agents/rules/) mirrors the same triggers for Antigravity.
 
 **These are idealistic documents.** They describe the code we strive for, not code we expect to reach perfectly, and if one guideline turns out wrong, the others still apply (see the start of `principles.md`).

@@ -113,7 +113,7 @@ allowBuilds:
 # Fails when a dependency says it doesn't support the Node version in use.
 engineStrict: true
 
-# Saves exact versions, never ranges (see Stack in CLAUDE.md).
+# Saves exact versions, never ranges (see Stack in AGENTS.md).
 savePrefix: ""
 
 # Fails instead of downloading another pnpm when the running one isn't the packageManager version.
