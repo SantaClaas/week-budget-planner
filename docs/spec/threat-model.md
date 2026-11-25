@@ -77,16 +77,11 @@ Someone sends a person a file and asks them to import it, or a file is simply br
 
 **What protects against it** (see [Export, import and reset](persistence.md#export-import-and-reset-required) in [Persistence](persistence.md)):
 
-- A `.db` file must start with the SQLite header, and a copy of it is opened, migrated and read before anything is replaced. A file that fails any step changes nothing.
+- A `.db` file must start with the SQLite header and hold applied migrations; a copy of it is opened and migrated, and its rows are copied into a brand-new database built from this version's migrations (`rebuild` in [`src/database/import.ts`](../../src/database/import.ts), [SantaClaas/week-budget-planner#124](https://github.com/SantaClaas/week-budget-planner/issues/124)). No byte of the imported file's schema (triggers, views, extra tables or tables missing `STRICT` or `CHECK` constraints) is kept, and every row has to pass the fresh database's `STRICT`, `CHECK` and `FOREIGN KEY` constraints and the merge's strict check before anything is replaced. A file that fails any step changes nothing.
 - A file from a newer version is refused, never read as this version's.
 - A `.json` file must be a plan in the stored format.
 - Every plan that is loaded, from storage or an import, goes through `sanitizePlan`, which repairs what's out of range and drops what doesn't belong (see [Data model](data-model.md)). The plan on screen is therefore always valid, whatever the file held.
 - The person confirms first, in a dialog that names the file and what it replaces, with a link to export the current plan.
-
-**Gap, open ([SantaClaas/week-budget-planner#124](https://github.com/SantaClaas/week-budget-planner/issues/124)):** an imported `.db` file is kept byte for byte once its copy reads, so everything in its schema comes with it, not just its rows. A crafted file can hold tables without the `CHECK` constraints or `STRICT` that the migrations create while listing those migrations as applied, and it can hold triggers. The database engine runs triggers (checked with `@tursodatabase/database` on 2026-11-20), so a trigger in the file would run on the app's own later writes, for example deleting every block whenever an activity is saved. SQL has no way to reach the network, so it can't send the plan anywhere, but it can damage the plan from then on, travel on in every export, and with syncing, shape the changes this browser sends; the other devices check those strictly and refuse what's invalid (see [What is received is checked](merge.md#what-is-received-is-checked) in [Merging changes](merge.md)). Done looks like either of these, with a test using a file that has a trigger and a table without its constraints:
-
-- compare the copy's schema (`sqlite_schema`) with the one the migrations make, and refuse the file if it holds anything else; or
-- build a new database with the migrations and write the plan read from the copy into it, so no byte of the file's schema is kept.
 
 ### The account's other GitHub Pages sites share the origin
 

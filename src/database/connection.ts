@@ -88,7 +88,7 @@ type Transaction = AsyncDisposable & { commit(): Promise<void> };
  * Starts a transaction on the connection. Declared with `await using`, everything since rolls back
  * however the scope ends, a programming mistake included, unless commit() ran first.
  */
-async function startTransaction(connection: TursoConnection): Promise<Transaction> {
+export async function startTransaction(connection: TursoConnection): Promise<Transaction> {
   await connection.exec("BEGIN");
   let isCommitted = false;
   return {

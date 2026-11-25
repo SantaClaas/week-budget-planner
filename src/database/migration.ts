@@ -43,6 +43,15 @@ async function readAppliedNames(connection: TursoConnection): Promise<Set<string
 }
 
 /**
+ * Whether the database has at least one applied migration in Drizzle's table. An imported SQLite
+ * file with none isn't a Week Budget Planner database and must be refused before migrations run on
+ * it.
+ */
+export async function hasAppliedMigrations(connection: TursoConnection): Promise<boolean> {
+  return (await readAppliedNames(connection)).size > 0;
+}
+
+/**
  * Applies pending migrations to a real database connection (the leader tab's, an imported copy, or
  * a test database). A database that is up to date costs one query: the migrator and the SQL are
  * only loaded for migrations it doesn't have yet. Safe to run on every open. "newer-version" when
