@@ -92,6 +92,28 @@ describe("broadcast service", () => {
     await expect(proxy.add(2, 3)).resolves.toBe(5);
   });
 
+  it("consumes within one build over a MessagePort only, not between tabs", () => {
+    type Strict = { add(first: number, second: number): Promise<number> };
+    // @ts-expect-error -- a BroadcastChannel reaches tabs that can run other versions: they need consume.
+    expect(consumeSameVersion<Strict>(openChannel(), "test").proxy).toBeDefined();
+  });
+
+  it("rejects a call within one build when the other side speaks another version", async () => {
+    type Strict = { add(first: number, second: number): Promise<number> };
+    const [page, worker] = openPorts();
+    worker.addEventListener("message", () => {
+      worker.postMessage({
+        protocolVersion: PROTOCOL_VERSION + 1,
+        scope: "worker",
+        type: "provider-ready",
+        providerId: "other",
+      });
+    });
+    const { proxy } = consumeSameVersion<Strict>(page, "worker");
+    // Not "newer-version", which Strict's add can't give back: a mistake in the build, as an error.
+    await expect(proxy.add(2, 3)).rejects.toThrow(/protocol version/u);
+  });
+
   it("answers its open calls and later ones with newer-version once a newer protocol answers", async () => {
     const other = openChannel();
     other.addEventListener("message", () => {
