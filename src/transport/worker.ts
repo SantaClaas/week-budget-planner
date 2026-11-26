@@ -182,9 +182,10 @@ addEventListener(
     const [port] = event.ports;
     if (port === undefined) return;
 
-    port.start();
-    // It serves for as long as the worker runs, so the function that stops serving isn't needed.
+    // It serves for as long as the worker runs, so the function that stops serving isn't needed. It
+    // listens before the port starts delivering.
     void provide(port, SCOPE, api);
+    port.start();
   },
   { once: true },
 );

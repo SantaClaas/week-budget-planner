@@ -23,7 +23,14 @@ export type StreamHandle = { readonly stream: number };
 
 /** Every `timeout` is a deadline in milliseconds. */
 export type TransportApi = {
-  /** Loads the module on the first call, starts this browser's node, and waits for the relay. */
+  /**
+   * Loads the module on the first call, starts this browser's node, and waits until it has reached
+   * the relay.
+   *
+   * @param secretKey - The node's 32 secret bytes, which make its id.
+   * @param relayUrl - The relay's origin: the node connects to `/relay` and measures `/ping` there.
+   * @returns The node's id.
+   */
   spawn(
     secretKey: Uint8Array,
     relayUrl: string,
