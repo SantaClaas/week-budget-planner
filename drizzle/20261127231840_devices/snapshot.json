@@ -1,0 +1,952 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "4683704e-05f7-4dc7-8a0f-1261cfa441ed",
+  "prevIds": [
+    "dc4941c1-34f8-42e5-b1be-20fd9421e468"
+  ],
+  "ddl": [
+    {
+      "name": "activities",
+      "entityType": "tables"
+    },
+    {
+      "name": "blocks",
+      "entityType": "tables"
+    },
+    {
+      "name": "devices",
+      "entityType": "tables"
+    },
+    {
+      "name": "node",
+      "entityType": "tables"
+    },
+    {
+      "name": "progress",
+      "entityType": "tables"
+    },
+    {
+      "name": "settings",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hue",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hue_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shape",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shape_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "mode",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "budget_minutes",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "days",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "budget_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "order_key",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "order_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "is_deleted",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "existence_stamp",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_at",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_by",
+      "entityType": "columns",
+      "table": "activities"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "activity_id",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "is_deleted",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "existence_stamp",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "start",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "length",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_stamp",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_at",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_by",
+      "entityType": "columns",
+      "table": "blocks"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "relay",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "identity_stamp",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name_stamp",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "proof",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "membership_stamp",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_at",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_by",
+      "entityType": "columns",
+      "table": "devices"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "node"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "node_id",
+      "entityType": "columns",
+      "table": "node"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "clock",
+      "entityType": "columns",
+      "table": "node"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "counter",
+      "entityType": "columns",
+      "table": "node"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "device_id",
+      "entityType": "columns",
+      "table": "progress"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "received",
+      "entityType": "columns",
+      "table": "progress"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "delivered",
+      "entityType": "columns",
+      "table": "progress"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_start",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_start_stamp",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_end",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day_end_stamp",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "example_loaded_at",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "example_loaded_at_stamp",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_at",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "changed_by",
+      "entityType": "columns",
+      "table": "settings"
+    },
+    {
+      "columns": [
+        "activity_id"
+      ],
+      "tableTo": "activities",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_blocks_activity_id_activities_id_fk",
+      "entityType": "fks",
+      "table": "blocks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "activities_pk",
+      "table": "activities",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "blocks_pk",
+      "table": "blocks",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "devices_pk",
+      "table": "devices",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "node_pk",
+      "table": "node",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "device_id"
+      ],
+      "nameExplicit": false,
+      "name": "progress_pk",
+      "table": "progress",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "settings_pk",
+      "table": "settings",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "activity_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "blocks_activity_id",
+      "entityType": "indexes",
+      "table": "blocks"
+    },
+    {
+      "value": "\"changed_at\" >= 0",
+      "name": "activities_changed_at",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"changed_by\" IS NULL OR (length(\"changed_by\") = 64 AND \"changed_by\" NOT GLOB '*[^0-9a-f]*')",
+      "name": "activities_changed_by",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"name_stamp\" = '0000000000000-000000-' OR (\"name_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"name_stamp\") <= 61 AND substr(\"name_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_name_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"hue_stamp\" = '0000000000000-000000-' OR (\"hue_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"hue_stamp\") <= 61 AND substr(\"hue_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_hue_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"shape_stamp\" = '0000000000000-000000-' OR (\"shape_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"shape_stamp\") <= 61 AND substr(\"shape_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_shape_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"budget_stamp\" = '0000000000000-000000-' OR (\"budget_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"budget_stamp\") <= 61 AND substr(\"budget_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_budget_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"order_stamp\" = '0000000000000-000000-' OR (\"order_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"order_stamp\") <= 61 AND substr(\"order_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_order_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "(\"existence_stamp\" = '0000000000000-000000-' OR (\"existence_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"existence_stamp\") <= 61 AND substr(\"existence_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "activities_existence_stamp",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "length(\"order_key\") BETWEEN 1 AND 100 AND \"order_key\" NOT GLOB '*[^0-9A-Za-z]*' AND \"order_key\" NOT GLOB '*0'",
+      "name": "activities_order_key",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"is_deleted\" IN (0, 1)",
+      "name": "activities_is_deleted",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "length(\"id\") BETWEEN 1 AND 40",
+      "name": "activities_id",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "length(\"name\") BETWEEN 1 AND 60",
+      "name": "activities_name",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"hue\" IN (255, 28, 152, 78, 305, 198, 350, 118)",
+      "name": "activities_hue",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"shape\" IN ('circle', 'square', 'slanted', 'arch', 'fan', 'arrow', 'semi-circle', 'oval', 'pill', 'triangle', 'diamond', 'clam-shell', 'pentagon', 'gem', 'sunny', 'very-sunny', 'cookie-4', 'cookie-6', 'cookie-7', 'cookie-9', 'cookie-12', 'ghostish', 'clover-4', 'clover-8', 'burst', 'soft-burst', 'boom', 'soft-boom', 'flower', 'puffy', 'puffy-diamond', 'pixel-circle', 'pixel-triangle', 'bun', 'heart')",
+      "name": "activities_shape",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"mode\" IN ('week', 'day')",
+      "name": "activities_mode",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"budget_minutes\" % 15 = 0 AND \"budget_minutes\" >= 15 AND ((\"mode\" = 'day' AND \"budget_minutes\" <= 1440) OR (\"mode\" = 'week' AND \"budget_minutes\" <= 10080))",
+      "name": "activities_budget_minutes",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"days\" BETWEEN 1 AND 7",
+      "name": "activities_days",
+      "entityType": "checks",
+      "table": "activities"
+    },
+    {
+      "value": "\"changed_at\" >= 0",
+      "name": "blocks_changed_at",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"changed_by\" IS NULL OR (length(\"changed_by\") = 64 AND \"changed_by\" NOT GLOB '*[^0-9a-f]*')",
+      "name": "blocks_changed_by",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "(\"existence_stamp\" = '0000000000000-000000-' OR (\"existence_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"existence_stamp\") <= 61 AND substr(\"existence_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "blocks_existence_stamp",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "(\"time_stamp\" = '0000000000000-000000-' OR (\"time_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"time_stamp\") <= 61 AND substr(\"time_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "blocks_time_stamp",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"is_deleted\" IN (0, 1)",
+      "name": "blocks_is_deleted",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "length(\"id\") BETWEEN 1 AND 40",
+      "name": "blocks_id",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"day\" BETWEEN 0 AND 6",
+      "name": "blocks_day",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"start\" BETWEEN 0 AND 1425 AND \"start\" % 15 = 0",
+      "name": "blocks_start",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "\"length\" BETWEEN 15 AND 1440 AND \"length\" % 15 = 0",
+      "name": "blocks_length",
+      "entityType": "checks",
+      "table": "blocks"
+    },
+    {
+      "value": "(\"identity_stamp\" = '0000000000000-000000-' OR (\"identity_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"identity_stamp\") <= 61 AND substr(\"identity_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "devices_identity_stamp",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "(\"name_stamp\" = '0000000000000-000000-' OR (\"name_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"name_stamp\") <= 61 AND substr(\"name_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "devices_name_stamp",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "(\"membership_stamp\" = '0000000000000-000000-' OR (\"membership_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"membership_stamp\") <= 61 AND substr(\"membership_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "devices_membership_stamp",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "\"changed_at\" >= 0",
+      "name": "devices_changed_at",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "\"changed_by\" IS NULL OR (length(\"changed_by\") = 64 AND \"changed_by\" NOT GLOB '*[^0-9a-f]*')",
+      "name": "devices_changed_by",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "length(\"id\") = 64 AND \"id\" NOT GLOB '*[^0-9a-f]*'",
+      "name": "devices_id",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "length(\"relay\") BETWEEN 1 AND 200 AND (\"relay\" GLOB 'https://*' OR \"relay\" GLOB 'http://*')",
+      "name": "devices_relay",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "length(\"name\") BETWEEN 1 AND 60",
+      "name": "devices_name",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "\"status\" IN ('member', 'removed', 'temporary')",
+      "name": "devices_status",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "\"proof\" IS NULL",
+      "name": "devices_proof",
+      "entityType": "checks",
+      "table": "devices"
+    },
+    {
+      "value": "\"counter\" >= 0",
+      "name": "node_counter",
+      "entityType": "checks",
+      "table": "node"
+    },
+    {
+      "value": "length(\"node_id\") BETWEEN 1 AND 40 AND \"node_id\" NOT GLOB '*[^0-9A-Za-z]*'",
+      "name": "node_node_id",
+      "entityType": "checks",
+      "table": "node"
+    },
+    {
+      "value": "(\"clock\" = '0000000000000-000000-' OR (\"clock\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"clock\") <= 61 AND substr(\"clock\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "node_clock",
+      "entityType": "checks",
+      "table": "node"
+    },
+    {
+      "value": "length(\"device_id\") = 64 AND \"device_id\" NOT GLOB '*[^0-9a-f]*'",
+      "name": "progress_device_id",
+      "entityType": "checks",
+      "table": "progress"
+    },
+    {
+      "value": "\"received\" >= 0",
+      "name": "progress_received",
+      "entityType": "checks",
+      "table": "progress"
+    },
+    {
+      "value": "\"delivered\" >= 0",
+      "name": "progress_delivered",
+      "entityType": "checks",
+      "table": "progress"
+    },
+    {
+      "value": "\"changed_at\" >= 0",
+      "name": "settings_changed_at",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "\"changed_by\" IS NULL OR (length(\"changed_by\") = 64 AND \"changed_by\" NOT GLOB '*[^0-9a-f]*')",
+      "name": "settings_changed_by",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "(\"day_start_stamp\" = '0000000000000-000000-' OR (\"day_start_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"day_start_stamp\") <= 61 AND substr(\"day_start_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "settings_day_start_stamp",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "(\"day_end_stamp\" = '0000000000000-000000-' OR (\"day_end_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"day_end_stamp\") <= 61 AND substr(\"day_end_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "settings_day_end_stamp",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "(\"example_loaded_at_stamp\" = '0000000000000-000000-' OR (\"example_loaded_at_stamp\" GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]-?*' AND length(\"example_loaded_at_stamp\") <= 61 AND substr(\"example_loaded_at_stamp\", 22) NOT GLOB '*[^0-9A-Za-z]*'))",
+      "name": "settings_example_loaded_at_stamp",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "\"day_start\" BETWEEN 0 AND 12",
+      "name": "settings_day_start",
+      "entityType": "checks",
+      "table": "settings"
+    },
+    {
+      "value": "\"day_end\" BETWEEN 13 AND 24",
+      "name": "settings_day_end",
+      "entityType": "checks",
+      "table": "settings"
+    }
+  ],
+  "renames": []
+}

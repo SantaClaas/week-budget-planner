@@ -259,7 +259,13 @@ export function make(
   const activities = writeActivities(rows, before, after, stamp);
   const blocks = writeBlocks(rows, before, after, stamp);
   const settings = writeSettings(rows.settings, before, after, stamp);
-  const written = merge(rows, { version: FORMAT_VERSION, activities, blocks, settings });
+  const written = merge(rows, {
+    version: FORMAT_VERSION,
+    activities,
+    blocks,
+    settings,
+    devices: [],
+  });
   const included = new Map(activities.values().map((row) => [row.id, row]));
   for (const block of blocks) {
     const id = block.existence.value.activityId;
@@ -268,6 +274,12 @@ export function make(
 
   return {
     rows: written,
-    change: { version: FORMAT_VERSION, activities: [...included.values()], blocks, settings },
+    change: {
+      version: FORMAT_VERSION,
+      activities: [...included.values()],
+      blocks,
+      settings,
+      devices: [],
+    },
   };
 }

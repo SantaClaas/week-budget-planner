@@ -1,5 +1,15 @@
 // The rows a plan is kept in, each split into exactly the registers of the table in Registers in
 // docs/spec/merge.md, and merging two versions of one row.
+import {
+  parseDeviceKey,
+  parseDeviceName,
+  parseMembership,
+  parseRelay,
+  type DeviceKey,
+  type DeviceName,
+  type Membership,
+  type Relay,
+} from "../device/index.ts";
 import type { Mode } from "../plan/activity/index.ts";
 import { isHue, isShape, type Hue, type Shape } from "../plan/activity/look.ts";
 import { sanitizeActivityName, type ActivityName } from "../plan/activity/name.ts";
@@ -71,6 +81,17 @@ export type SettingsRow = {
   readonly exampleLoadedAt: Register<string | null>;
 };
 
+/** How a device is reached: set when it's added, and never changed. Its key is the row's id. */
+type DeviceIdentity = { readonly relay: Relay };
+
+/** A device in the group's device list (see The device list in docs/spec/self-service.md). */
+export type DeviceRow = {
+  readonly id: DeviceKey;
+  readonly identity: Register<DeviceIdentity>;
+  readonly name: Register<DeviceName>;
+  readonly membership: Register<Membership>;
+};
+
 /**
  * The merged row, or the one held when no register changed, so a row nothing changed stays the
  * same object.
@@ -111,6 +132,15 @@ export const mergeSettings = (first: SettingsRow, second: SettingsRow): Settings
     dayStart: mergeRegisters(first.dayStart, second.dayStart),
     dayEnd: mergeRegisters(first.dayEnd, second.dayEnd),
     exampleLoadedAt: mergeRegisters(first.exampleLoadedAt, second.exampleLoadedAt),
+  });
+
+/** Two versions of one device's row, merged register by register. */
+export const mergeDevice = (first: DeviceRow, second: DeviceRow): DeviceRow =>
+  keepUnchanged(first, {
+    id: first.id,
+    identity: mergeRegisters(first.identity, second.identity),
+    name: mergeRegisters(first.name, second.name),
+    membership: mergeRegisters(first.membership, second.membership),
   });
 
 // Parsing received rows strictly (see "What is received is checked" in docs/spec/merge.md). A
@@ -291,4 +321,34 @@ export function parseSettings(value: unknown): Result<SettingsRow, Problem> {
   if (typeof exampleLoadedAt === "string") return exampleLoadedAt;
 
   return { dayStart, dayEnd, exampleLoadedAt };
+}
+
+function parseDeviceIdentity(value: unknown): DeviceIdentity | undefined {
+  const relay = parseRelay(readExact(value, ["relay"])?.["relay"]);
+  return relay === undefined ? undefined : { relay };
+}
+
+function parseMembershipValue(value: unknown): Membership | undefined {
+  const fields = readExact(value, ["status", "proof"]);
+  return fields && parseMembership(fields["status"], fields["proof"]);
+}
+
+/** A received device's row, parsed strictly. */
+export function parseDevice(value: unknown): Result<DeviceRow, Problem> {
+  const fields = readExact(value, ["id", "identity", "name", "membership"]);
+  if (fields === undefined) return "not-a-change";
+
+  const id = parseDeviceKey(fields["id"]);
+  if (id === undefined) return "invalid-id";
+
+  const identity = parseRegister(fields["identity"], parseDeviceIdentity, "invalid-value");
+  if (typeof identity === "string") return identity;
+
+  const name = parseRegister(fields["name"], parseDeviceName, "invalid-value");
+  if (typeof name === "string") return name;
+
+  const membership = parseRegister(fields["membership"], parseMembershipValue, "invalid-value");
+  if (typeof membership === "string") return membership;
+
+  return { id, identity, name, membership };
 }

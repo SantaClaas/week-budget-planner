@@ -17,17 +17,22 @@ import {
 } from "./connection.ts";
 import { createDatabase } from "./drizzle.ts";
 import { hasAppliedMigrations, runMigrations } from "./migration.ts";
-import { loadRows, renewNode } from "./plan-repository.ts";
-import { activities, blocks, node, settings } from "./schema.ts";
+import { loadRows, renewNode, type StoredNode } from "./plan-repository.ts";
+import { activities, blocks, devices, node, settings } from "./schema.ts";
 
 /** Why a file can't be imported. */
 export type ImportProblem = "invalid-file" | "newer-version" | "future-clock";
 
-/** The tables an import copies, parents before children so foreign keys hold while inserting. */
+/**
+ * The tables an import copies, parents before children so foreign keys hold while inserting. Not
+ * `progress`: how far other devices have the file's changes was another device's, and goes (see
+ * `renewNode`).
+ */
 export const IMPORTED_TABLES: readonly { table: SQLiteTable; isSingleRow: boolean }[] = [
   { table: activities, isSingleRow: false },
   { table: blocks, isSingleRow: false },
   { table: settings, isSingleRow: true },
+  { table: devices, isSingleRow: false },
   { table: node, isSingleRow: true },
 ];
 
@@ -145,19 +150,20 @@ async function migrateSource(source: TursoConnection): Promise<Result<"migrated"
  * Rebuilds an imported database into a fresh `target` connection: checks and migrates `source`,
  * creates the schema on `target` from this version's migrations, copies every row through
  * `target`'s constraints, verifies the rows with the merge's strict check and refuses stamps or a
- * node clock far ahead of `now`, then gives the node a new id and the later clock. No byte of
- * `source`'s schema is kept.
+ * node clock far ahead of `now`, then gives the node a new id, the later clock and a counter above
+ * both. No byte of `source`'s schema is kept.
  *
  * @param source - A copy of the imported file, opened on its own.
  * @param target - A brand-new empty database to build the replacement in.
- * @param clock - This browser's clock before the import, or undefined before its first save.
+ * @param before - This browser's clock and counter before the import, or undefined before its
+ *   first save.
  * @param nodeId - The new node id for this browser.
  * @param now - When the import ran, to refuse files whose stamps or node clock are far ahead.
  */
 export async function rebuild(
   source: TursoConnection,
   target: TursoConnection,
-  clock: Stamp | undefined,
+  before: StoredNode | undefined,
   nodeId: NodeId,
   now: Temporal.Instant,
 ): Promise<Result<"rebuilt", ImportProblem>> {
@@ -191,6 +197,6 @@ export async function rebuild(
     return "future-clock";
   }
 
-  await renewNode(targetDatabase, clock, nodeId);
+  await renewNode(targetDatabase, before, nodeId);
   return "rebuilt";
 }

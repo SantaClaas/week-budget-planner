@@ -44,7 +44,7 @@ sequenceDiagram
 
 | Register | Holds |
 | --- | --- |
-| identity | the device's key, which is its id on the transport, and the relay it's reached through. Set when it's added, and never changed. |
+| identity | the relay it's reached through. Set when it's added, and never changed. The device's key, its id on the transport, is the row's id. |
 | name | what the person calls it, at first what the browser says it is ("Firefox on Linux") |
 | membership | in the group, removed, or temporary; and, where the group has a passkey, the proof that the person agreed (see [Who may change the group](#who-may-change-the-group)) |
 
@@ -65,6 +65,11 @@ Beside its rows and its clock:
 | per other device, **how far that device has its own changes** | knowing when everyone has a deletion marker |
 
 **There is no queue of unsent changes.** What one device owes another is every row that changed after the point the other says it has, as it is now.
+
+- **The counter goes up once per write,** an action or a merge, and every row that write touched gets the same number. "Changed after a point" needs nothing finer.
+- **A row merged from another device came from it** only when it came out as that device's version, every register the same. One that came out with registers from both sides is a version only this device has, so it counts as this device's own, and goes to everyone, the sender too.
+- **Rows that were there before counting began** count as this device's change 1, so a device that has nothing of this one's (0) gets them.
+- **In code:** the pure part is [`src/sync/origin.ts`](../../src/sync/origin.ts) (`noteAction`, `noteMerge`, `collectSince`); the device list's values are in [`src/device/index.ts`](../../src/device/index.ts) and its row in [`src/merge/row.ts`](../../src/merge/row.ts); the tables are in [Storage](merge.md#storage) in [Merging changes](merge.md).
 
 A stamp wouldn't do for this. It says when a value was written. What a device has to send is what changed on it, in the order it changed there, and that includes rows it merged from a third device.
 

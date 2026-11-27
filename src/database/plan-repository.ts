@@ -4,13 +4,23 @@ import { eq } from "drizzle-orm";
 import { make } from "../merge/change.ts";
 import { advance, issueNext } from "../merge/clock.ts";
 import { convertPlan, readPlan, type Change, type Rows } from "../merge/index.ts";
-import type { ActivityRow, BlockRow, SettingsRow } from "../merge/row.ts";
+import type { DeviceKey } from "../device/index.ts";
+import type { ActivityRow, BlockRow, DeviceRow, SettingsRow } from "../merge/row.ts";
 import { LOWEST, sanitizeTime, type NodeId, type Stamp } from "../merge/stamp.ts";
 import type { ActivityId, BlockId, IdGenerator } from "../plan/id.ts";
 import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import { sanitizePlan } from "../plan/sanitize.ts";
+import {
+  NO_CHANGE,
+  createEmptyOrigins,
+  incrementChangeNumber,
+  noteAction,
+  type ChangeNumber,
+  type Origin,
+  type Origins,
+} from "../sync/origin.ts";
 import type { Database } from "./drizzle.ts";
-import { activities, blocks, node, settings } from "./schema.ts";
+import { activities, blocks, devices, node, progress, settings } from "./schema.ts";
 
 /** The id of the one row of the settings and the node tables. */
 const SINGLE_ROW_ID = 1;
@@ -18,6 +28,12 @@ const SINGLE_ROW_ID = 1;
 type ActivityRecord = typeof activities.$inferSelect;
 type BlockRecord = typeof blocks.$inferSelect;
 type SettingsRecord = typeof settings.$inferSelect;
+type DeviceRecord = typeof devices.$inferSelect;
+
+const readOrigin = (record: { changedAt: ChangeNumber; changedBy: DeviceKey | null }): Origin => ({
+  changedAt: record.changedAt,
+  changedBy: record.changedBy,
+});
 
 const readActivity = (record: ActivityRecord): ActivityRow => ({
   id: record.id,
@@ -54,13 +70,26 @@ const readSettings = (record: SettingsRecord | undefined): SettingsRow =>
         exampleLoadedAt: { value: record.exampleLoadedAt, stamp: record.exampleLoadedAtStamp },
       };
 
-/** This browser's node: its id and its clock, once the first save has made them. */
-type StoredNode = { nodeId: NodeId; clock: Stamp };
+const readDevice = (record: DeviceRecord): DeviceRow => ({
+  id: record.id,
+  identity: { value: { relay: record.relay }, stamp: record.identityStamp },
+  name: { value: record.name, stamp: record.nameStamp },
+  membership: {
+    value: { status: record.status, proof: record.proof },
+    stamp: record.membershipStamp,
+  },
+});
+
+/**
+ * This browser's node: its id, its clock and its counter (see What a device keeps for syncing in
+ * docs/spec/self-service.md), once the first save has made them.
+ */
+export type StoredNode = { nodeId: NodeId; clock: Stamp; counter: ChangeNumber };
 
 /** Reads this browser's node, or undefined before the first save. */
 export async function loadNode(database: Database): Promise<StoredNode | undefined> {
   const record = await database.select().from(node).where(eq(node.id, SINGLE_ROW_ID)).get();
-  return record && { nodeId: record.nodeId, clock: record.clock };
+  return record && { nodeId: record.nodeId, clock: record.clock, counter: record.counter };
 }
 
 /**
@@ -68,16 +97,20 @@ export async function loadNode(database: Database): Promise<StoredNode | undefin
  * hold every value to the same rules as the merge's strict check, and its foreign key keeps every
  * block's activity row there, so the rows are taken as they are.
  *
- * @returns The rows, whether the database has ever held a plan (a settings row), and the node, or
- *   undefined before the first save.
+ * @returns The rows, their origins, whether the database has ever held a plan (a settings row),
+ *   and the node, or undefined before the first save.
  */
-export async function loadRows(
-  database: Database,
-): Promise<{ rows: Rows; isStored: boolean; node: StoredNode | undefined }> {
-  const [settingsRecord, activityRecords, blockRecords, stored] = await Promise.all([
+export async function loadRows(database: Database): Promise<{
+  rows: Rows;
+  origins: Origins;
+  isStored: boolean;
+  node: StoredNode | undefined;
+}> {
+  const [settingsRecord, activityRecords, blockRecords, deviceRecords, stored] = await Promise.all([
     database.select().from(settings).where(eq(settings.id, SINGLE_ROW_ID)).get(),
     database.select().from(activities),
     database.select().from(blocks),
+    database.select().from(devices),
     loadNode(database),
   ]);
   const rows: Rows = {
@@ -88,9 +121,20 @@ export async function loadRows(
       blockRecords.values().map((record) => [record.id, readBlock(record)]),
     ),
     settings: readSettings(settingsRecord),
+    devices: new Map<DeviceKey, DeviceRow>(
+      deviceRecords.values().map((record) => [record.id, readDevice(record)]),
+    ),
+  };
+  const origins: Origins = {
+    activities: new Map(activityRecords.values().map((record) => [record.id, readOrigin(record)])),
+    blocks: new Map(blockRecords.values().map((record) => [record.id, readOrigin(record)])),
+    settings:
+      settingsRecord === undefined ? createEmptyOrigins().settings : readOrigin(settingsRecord),
+    devices: new Map(deviceRecords.values().map((record) => [record.id, readOrigin(record)])),
   };
   return {
     rows,
+    origins,
     isStored: settingsRecord !== undefined,
     node: stored,
   };
@@ -109,19 +153,31 @@ export async function loadPlan(
   return { plan: sanitizePlan(readPlan(rows), ids), isStored };
 }
 
+/** A row's origin, which the write being built has noted. */
+function requireOrigin<Key>(origins: ReadonlyMap<Key, Origin>, key: Key): Origin {
+  const origin = origins.get(key);
+  if (origin === undefined) throw new Error(`A row to write has no origin: ${String(key)}.`);
+
+  return origin;
+}
+
 /**
- * The statements that write a change's rows and the node's clock: each row whole, inserted or, when
- * it's there, updated. A new activity's row is created at `now`.
+ * The statements that write a change's rows, with their origins, and the node: each row whole,
+ * inserted or, when it's there, updated. A new activity's row is created at `now`.
+ *
+ * @param origins - The origins after the write, which hold one for every row in the change.
  */
 export function buildChangeStatements(
   database: Database,
   change: Change,
+  origins: Origins,
   stored: StoredNode,
   now: Temporal.Instant,
 ): BatchItem<"sqlite">[] {
   const statements: BatchItem<"sqlite">[] = [];
   for (const row of change.activities) {
     const values = {
+      ...requireOrigin(origins.activities, row.id),
       name: row.name.value,
       nameStamp: row.name.stamp,
       hue: row.hue.value,
@@ -147,6 +203,7 @@ export function buildChangeStatements(
 
   for (const row of change.blocks) {
     const values = {
+      ...requireOrigin(origins.blocks, row.id),
       activityId: row.existence.value.activityId,
       isDeleted: row.existence.value.isDeleted,
       existenceStamp: row.existence.stamp,
@@ -165,6 +222,7 @@ export function buildChangeStatements(
 
   if (change.settings !== null) {
     const values = {
+      ...origins.settings,
       dayStart: change.settings.dayStart.value,
       dayStartStamp: change.settings.dayStart.stamp,
       dayEnd: change.settings.dayEnd.value,
@@ -180,6 +238,25 @@ export function buildChangeStatements(
     );
   }
 
+  for (const row of change.devices) {
+    const values = {
+      ...requireOrigin(origins.devices, row.id),
+      relay: row.identity.value.relay,
+      identityStamp: row.identity.stamp,
+      name: row.name.value,
+      nameStamp: row.name.stamp,
+      status: row.membership.value.status,
+      proof: row.membership.value.proof,
+      membershipStamp: row.membership.stamp,
+    };
+    statements.push(
+      database
+        .insert(devices)
+        .values({ id: row.id, ...values })
+        .onConflictDoUpdate({ target: devices.id, set: values }),
+    );
+  }
+
   statements.push(
     database
       .insert(node)
@@ -191,8 +268,9 @@ export function buildChangeStatements(
 
 /**
  * Saves one user action through the rows (see Storage in docs/spec/merge.md): reads the rows and
- * the node, stamps what the action changed with the node's next stamp, and writes the touched rows
- * and the clock in one batch. The read and the write are two calls, so the caller makes sure no
+ * the node, stamps what the action changed with the node's next stamp, numbers the write with the
+ * counter's next value, and writes the touched rows, their origins, the clock and the counter in
+ * one batch. The read and the write are two calls, so the caller makes sure no
  * other save runs in between, as the database store does with a lock.
  *
  * @param database - The database, through the leader tab or directly.
@@ -201,8 +279,9 @@ export function buildChangeStatements(
  *   docs/guidelines/principles.md).
  * @param createNodeId - Makes this browser's node id, on the first save.
  * @returns The plan the rows show after the action.
- * @throws {Error} When the node's clock is at the latest stamp there is, which only a broken
- *   device brings it to: the action can't be stamped, and the caller reports the failed save.
+ * @throws {Error} When the node's clock is at the latest stamp there is, or its counter at the
+ *   highest number, which only a broken device brings it to: the action can't be stamped, and the
+ *   caller reports the failed save.
  */
 export async function saveAction(
   database: Database,
@@ -215,11 +294,16 @@ export async function saveAction(
   const stamp = issueNext(loaded.node?.clock ?? LOWEST, sanitizeTime(now), nodeId);
   if (stamp === undefined) throw new Error("This device's clock is at the latest stamp there is.");
 
+  const counter = incrementChangeNumber(loaded.node?.counter ?? NO_CHANGE);
+  if (counter === "out-of-range") throw new Error("This device's counter is at its highest.");
+
   const made = make(loaded.rows, update, stamp);
+  const origins = noteAction(loaded.rows, made.rows, loaded.origins, counter);
   const [first, ...rest] = buildChangeStatements(
     database,
     made.change,
-    { nodeId, clock: stamp },
+    origins,
+    { nodeId, clock: stamp, counter },
     now,
   );
   if (first) await database.batch([first, ...rest]);
@@ -227,30 +311,60 @@ export async function saveAction(
   return readPlan(made.rows);
 }
 
+/** The higher of two counters, which can't go back. */
+const findHigher = (first: ChangeNumber, second: ChangeNumber): ChangeNumber =>
+  first > second ? first : second;
+
 /**
- * Gives an imported database's node a new id and the later of two clocks (see Export and import in
- * docs/spec/merge.md). With the file's id, two browsers that imported the same file would issue
- * stamps under one id, and two different values could get the same stamp. With the earlier clock,
- * this browser's next stamp could be earlier than one it issued before the import.
+ * Gives an imported database's node a new id, the later of two clocks and a counter above both
+ * (see Export and import in docs/spec/merge.md). With the file's id, two browsers that imported
+ * the same file would issue stamps under one id, and two different values could get the same
+ * stamp. With the earlier clock, this browser's next stamp could be earlier than one it issued
+ * before the import.
+ *
+ * The import replaces this browser's rows, so every row counts as changed here, at the new
+ * counter, and every other device gets them all: one that had this browser's changes up to its old
+ * counter, or the file's, would otherwise miss rows the import brought. The file's progress was
+ * another device's, so it goes.
  *
  * @param database - The imported database, migrated.
- * @param clock - This browser's clock before the import, or undefined before its first save.
+ * @param before - This browser's clock and counter before the import, or undefined before its
+ *   first save.
  * @param nodeId - The new id.
- * @returns The node it wrote, or undefined when neither the file nor this browser has a clock: the
- *   first save then makes the node, as in a new database.
+ * @returns The node it wrote, or undefined when neither the file nor this browser has a node: the
+ *   first save then makes it, as in a new database.
+ * @throws {Error} When the counter is at its highest, which only a broken device brings it to.
  */
 export async function renewNode(
   database: Database,
-  clock: Stamp | undefined,
+  before: { clock: Stamp; counter: ChangeNumber } | undefined,
   nodeId: NodeId,
 ): Promise<StoredNode | undefined> {
   const imported = await loadNode(database);
-  if (imported === undefined && clock === undefined) return undefined;
+  // A file without a node never saved, so it has no progress either.
+  if (imported === undefined && before === undefined) return undefined;
 
-  const renewed = { nodeId, clock: advance(clock ?? LOWEST, imported?.clock ?? LOWEST) };
-  await database
-    .insert(node)
-    .values({ id: SINGLE_ROW_ID, ...renewed })
-    .onConflictDoUpdate({ target: node.id, set: renewed });
+  const counter = incrementChangeNumber(
+    findHigher(before?.counter ?? NO_CHANGE, imported?.counter ?? NO_CHANGE),
+  );
+  if (counter === "out-of-range") throw new Error("This device's counter is at its highest.");
+
+  const renewed = {
+    nodeId,
+    clock: advance(before?.clock ?? LOWEST, imported?.clock ?? LOWEST),
+    counter,
+  };
+  const origin = { changedAt: counter, changedBy: null };
+  await database.batch([
+    database
+      .insert(node)
+      .values({ id: SINGLE_ROW_ID, ...renewed })
+      .onConflictDoUpdate({ target: node.id, set: renewed }),
+    database.update(activities).set(origin),
+    database.update(blocks).set(origin),
+    database.update(settings).set(origin),
+    database.update(devices).set(origin),
+    database.delete(progress),
+  ]);
   return renewed;
 }

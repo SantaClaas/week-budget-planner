@@ -19,6 +19,12 @@ import { createDatabase, type Database } from "./drizzle.ts";
 import { MIGRATION_NAMES, runMigrations } from "./migration.ts";
 import { LOWEST, parse as parseStamp, parseNodeId, type NodeId } from "../merge/stamp.ts";
 import {
+  NO_CHANGE,
+  createEmptyOrigins,
+  parseChangeNumber,
+  type ChangeNumber,
+} from "../sync/origin.ts";
+import {
   buildChangeStatements,
   loadNode,
   loadPlan,
@@ -55,6 +61,14 @@ const sortBlocks = (plan: Plan): Plan => ({
   blocks: plan.blocks.toSorted((first, second) => (first.id < second.id ? -1 : 1)),
 });
 
+function createChangeNumber(value: number): ChangeNumber {
+  const number = parseChangeNumber(value);
+  if (number === "out-of-range")
+    throw new Error(`The test has an invalid counter: ${String(value)}.`);
+
+  return number;
+}
+
 const NODE_ID: NodeId = requireValue(parseNodeId("testNode"), "node id");
 const createNodeId = (): NodeId => NODE_ID;
 
@@ -62,14 +76,40 @@ const createNodeId = (): NodeId => NODE_ID;
 const save = (database: Database, update: (before: Plan) => Plan, now = NOW): Promise<Plan> =>
   saveAction(database, update, now, createNodeId);
 
-/** The first migration's SQL, before stamps: what databases saved by the first release hold. */
-const readFirstMigration = (): [string, string] => {
-  const [first = ""] = readdirSync(new URL("../../drizzle/", import.meta.url)).toSorted();
-  return [
-    first,
-    readFileSync(new URL(`../../drizzle/${first}/migration.sql`, import.meta.url), "utf8"),
-  ];
-};
+/**
+ * The first migrations' SQL, by name: what databases saved by the releases before them hold.
+ *
+ * @param count - How many, from the first.
+ */
+function readMigrations(count: number): Record<string, string> {
+  const names = readdirSync(new URL("../../drizzle/", import.meta.url))
+    .toSorted()
+    .slice(0, count);
+  return Object.fromEntries(
+    names
+      .values()
+      .map((name) => [
+        name,
+        readFileSync(new URL(`../../drizzle/${name}/migration.sql`, import.meta.url), "utf8"),
+      ]),
+  );
+}
+
+/**
+ * A database with only the first migrations applied, through Drizzle's migrator, as the releases
+ * before the others ran them.
+ */
+async function openOlderDatabase(count: number): Promise<TursoConnection> {
+  const connection = await connect(":memory:");
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- construct() exists at runtime, but Drizzle's types leave it out (as in migration.ts).
+  const driver = driverCore as unknown as {
+    construct(client: unknown): Parameters<typeof migrate>[0];
+  };
+  expect(
+    await migrate(driver.construct(connection), { migrations: readMigrations(count) }),
+  ).toBeFalsy();
+  return connection;
+}
 
 describe("migrations", () => {
   it("bundles the generated migrations", () => {
@@ -89,7 +129,9 @@ describe("migrations", () => {
     expect(tables).toEqual([
       { name: "activities", strict: 1 },
       { name: "blocks", strict: 1 },
+      { name: "devices", strict: 1 },
       { name: "node", strict: 1 },
+      { name: "progress", strict: 1 },
       { name: "settings", strict: 1 },
     ]);
   });
@@ -147,6 +189,22 @@ describe("plan repository", () => {
     const second = requireValue((await loadRows(database)).node, "node");
     expect(second.clock > first.clock).toBe(true);
     expect(second.clock.endsWith("-testNode")).toBe(true);
+  });
+
+  it("numbers each save with the counter, and notes it on the rows it wrote as this device's", async () => {
+    const { database } = await openTestDatabase();
+    await save(database, createExample);
+    const first = await loadRows(database);
+    expect(first.node?.counter).toBe(1);
+    expect(first.origins.settings).toEqual({ changedAt: 1, changedBy: null });
+    await save(database, (plan) => ({ ...plan, dayStart: sanitizeDayStart(6) }));
+    const second = await loadRows(database);
+    expect(second.node?.counter).toBe(2);
+    expect(second.origins.settings).toEqual({ changedAt: 2, changedBy: null });
+    // The activities weren't touched, so they keep the first save's number.
+    expect(new Set(second.origins.activities.values().map((origin) => origin.changedAt))).toEqual(
+      new Set([1]),
+    );
   });
 
   it("stamps only what the action changed", async () => {
@@ -236,11 +294,13 @@ describe("plan repository", () => {
         ...rows.settings,
         dayStart: { ...rows.settings.dayStart, value: sanitizeDayStart(6) },
       },
+      devices: [],
     };
     const [settingsUpdate] = buildChangeStatements(
       database,
       change,
-      { nodeId: NODE_ID, clock: LOWEST },
+      createEmptyOrigins(),
+      { nodeId: NODE_ID, clock: LOWEST, counter: NO_CHANGE },
       NOW,
     );
     // A duplicate primary key makes the second statement fail after the first one ran.
@@ -253,6 +313,7 @@ describe("plan repository", () => {
       start: sanitizeDayMinute(0),
       length: sanitizeLength(15),
       timeStamp: LOWEST,
+      changedAt: NO_CHANGE,
     });
     await expect(
       database.batch([requireValue(settingsUpdate, "settings update"), duplicate]),
@@ -270,7 +331,7 @@ describe("plan repository", () => {
     const lowest = "'0000000000000-000000-'";
     const insert = (values: string) =>
       connection.exec(
-        `INSERT INTO blocks (id, activity_id, is_deleted, existence_stamp, day, start, length, time_stamp) VALUES (${values})`,
+        `INSERT INTO blocks (id, activity_id, is_deleted, existence_stamp, day, start, length, time_stamp, changed_at) VALUES (${values}, 1)`,
       );
     const insertBlock = (id: string, day: number, start: number, length: number, stamp = lowest) =>
       insert(
@@ -306,22 +367,114 @@ describe("plan repository", () => {
     await expect(connection.exec("UPDATE settings SET day_end = 12")).rejects.toThrow(
       /CHECK constraint failed/u,
     );
+    await expect(connection.exec("UPDATE activities SET changed_at = -1")).rejects.toThrow(
+      /CHECK constraint failed/u,
+    );
+    await expect(connection.exec("UPDATE activities SET changed_by = 'phone'")).rejects.toThrow(
+      /CHECK constraint failed/u,
+    );
+    await expect(connection.exec("UPDATE node SET counter = -1")).rejects.toThrow(
+      /CHECK constraint failed/u,
+    );
     await insertBlock("b8", 6, 1425, 1440, "'1763200000000-000001-Node7'");
+  });
+});
+
+describe("the device list's table", () => {
+  const key = "a".repeat(64);
+  const insertDevice = (connection: TursoConnection, values: Record<string, string>) => {
+    const row = {
+      id: `'${key}'`,
+      relay: "'https://relay.example/'",
+      identity_stamp: "'0000000000000-000000-'",
+      name: "'Firefox on Linux'",
+      name_stamp: "'0000000000000-000000-'",
+      status: "'member'",
+      proof: "NULL",
+      membership_stamp: "'0000000000000-000000-'",
+      changed_at: "1",
+      changed_by: "NULL",
+      ...values,
+    };
+    return connection.exec(
+      `INSERT INTO devices (${Object.keys(row).join(", ")}) VALUES (${Object.values(row).join(", ")})`,
+    );
+  };
+
+  it("takes a device the app could have written, and reads it back", async () => {
+    const { database, connection } = await openTestDatabase();
+    await insertDevice(connection, {});
+    const { rows, origins } = await loadRows(database);
+    const device = requireValue(rows.devices.values().next().value, "device");
+    expect(device).toEqual({
+      id: key,
+      identity: { value: { relay: "https://relay.example/" }, stamp: LOWEST },
+      name: { value: "Firefox on Linux", stamp: LOWEST },
+      membership: { value: { status: "member", proof: null }, stamp: LOWEST },
+    });
+    expect(origins.devices.get(device.id)).toEqual({ changedAt: 1, changedBy: null });
+  });
+
+  it("refuses values that break the rules", async () => {
+    const { connection } = await openTestDatabase();
+    const refused = [
+      { id: "'phone'" },
+      { id: `'${"A".repeat(64)}'` },
+      { relay: "'ftp://relay.example/'" },
+      { name: "''" },
+      { name: `'${"n".repeat(61)}'` },
+      { status: "'admin'" },
+      { proof: "'signature'" },
+      { membership_stamp: "'yesterday'" },
+      { changed_by: "'phone'" },
+    ];
+    await Promise.all(
+      refused.map((values) =>
+        expect(insertDevice(connection, values)).rejects.toThrow(/CHECK constraint failed/u),
+      ),
+    );
+    await expect(connection.exec(`INSERT INTO progress VALUES ('${key}', -1, 0)`)).rejects.toThrow(
+      /CHECK constraint failed/u,
+    );
+  });
+});
+
+describe("the migration to the device list", () => {
+  it("counts every row that's there as this device's change 1", async () => {
+    const connection = await openOlderDatabase(2);
+    const lowest = "'0000000000000-000000-'";
+    await connection.exec(
+      `INSERT INTO activities (id, name, name_stamp, hue, hue_stamp, shape, shape_stamp, mode, budget_minutes, days, budget_stamp, order_key, order_stamp, is_deleted, existence_stamp, created_at) VALUES ('work', 'Work', ${lowest}, 78, ${lowest}, 'square', ${lowest}, 'week', 720, 5, ${lowest}, 'V', ${lowest}, 0, ${lowest}, '2026-10-01T00:00:00Z')`,
+    );
+    await connection.exec(
+      `INSERT INTO blocks (id, activity_id, is_deleted, existence_stamp, day, start, length, time_stamp) VALUES ('b1', 'work', 0, ${lowest}, 0, 600, 90, ${lowest})`,
+    );
+    await connection.exec(
+      `INSERT INTO settings (id, day_start, day_start_stamp, day_end, day_end_stamp, example_loaded_at, example_loaded_at_stamp) VALUES (1, 6, ${lowest}, 23, ${lowest}, NULL, ${lowest})`,
+    );
+    await connection.exec(`INSERT INTO node VALUES (1, 'oldNode', ${lowest})`);
+
+    expect(await runMigrations(connection)).toBe("migrated");
+    const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
+    const { rows, origins, node } = await loadRows(database);
+    const work = requireValue(sanitizeActivityId("work"), "activity id");
+    expect(rows.activities.get(work)?.name.value).toBe("Work");
+    expect(rows.devices.size).toBe(0);
+    const changeOne = { changedAt: 1, changedBy: null };
+    expect(origins.activities.get(work)).toEqual(changeOne);
+    expect([...origins.blocks.values()]).toEqual([changeOne]);
+    expect(origins.settings).toEqual(changeOne);
+    expect(node).toEqual({ nodeId: "oldNode", clock: LOWEST, counter: 1 });
+
+    // The next save numbers its write after them.
+    await save(database, (shown) => ({ ...shown, dayStart: sanitizeDayStart(8) }));
+    expect((await loadRows(database)).origins.settings).toEqual({ changedAt: 2, changedBy: null });
   });
 });
 
 describe("the migration to stamps", () => {
   it("keeps a plan saved before stamps, with the lowest stamps and its order", async () => {
-    const connection = await connect(":memory:");
-    const [name, sql] = readFirstMigration();
-    // The first migration alone, through Drizzle's migrator, as the first release ran it.
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- construct() exists at runtime, but Drizzle's types leave it out (as in migration.ts).
-    const driver = driverCore as unknown as {
-      construct(client: unknown): Parameters<typeof migrate>[0];
-    };
-    expect(
-      await migrate(driver.construct(connection), { migrations: { [name]: sql } }),
-    ).toBeFalsy();
+    const connection = await openOlderDatabase(1);
     await connection.exec(`INSERT INTO activities VALUES
       ('work', 'Work', 78, 'square', 'week', 720, 5, 1, '2026-10-01T00:00:00Z'),
       ('gym', 'Gym', 152, 'arch', 'day', 90, 3, 0, '2026-10-01T00:00:00Z'),
@@ -361,27 +514,36 @@ describe("the migration to stamps", () => {
 describe("the node after an import", () => {
   const imported = requireValue(parseNodeId("newNode"), "node id");
   const later = requireValue(parseStamp("1900000000000-000004-elsewhere"), "stamp");
+  const laterNode = { clock: later, counter: createChangeNumber(5) };
 
   it("gets a new id, and keeps the file's clock where it's later", async () => {
     const { database } = await openTestDatabase();
     await save(database, createExample);
     const fileClock = requireValue(await loadNode(database), "node").clock;
-    expect(await renewNode(database, LOWEST, imported)).toEqual({
-      nodeId: "newNode",
-      clock: fileClock,
-    });
-    expect(await loadNode(database)).toEqual({ nodeId: "newNode", clock: fileClock });
+    const renewed = { nodeId: "newNode", clock: fileClock, counter: 2 };
+    expect(await renewNode(database, { clock: LOWEST, counter: NO_CHANGE }, imported)).toEqual(
+      renewed,
+    );
+    expect(await loadNode(database)).toEqual(renewed);
   });
 
   it("keeps this browser's clock where it's later", async () => {
     const { database } = await openTestDatabase();
     await save(database, createExample);
-    expect(await renewNode(database, later, imported)).toEqual({ nodeId: "newNode", clock: later });
+    expect(await renewNode(database, laterNode, imported)).toEqual({
+      nodeId: "newNode",
+      clock: later,
+      counter: 6,
+    });
   });
 
-  it("takes this browser's clock for a file that has no node yet", async () => {
+  it("takes this browser's clock and counter for a file that has no node yet", async () => {
     const { database } = await openTestDatabase();
-    expect(await renewNode(database, later, imported)).toEqual({ nodeId: "newNode", clock: later });
+    expect(await renewNode(database, laterNode, imported)).toEqual({
+      nodeId: "newNode",
+      clock: later,
+      counter: 6,
+    });
   });
 
   it("makes no node when neither has a clock, so the first save makes one", async () => {
@@ -390,10 +552,27 @@ describe("the node after an import", () => {
     expect(await loadNode(database)).toBeUndefined();
   });
 
+  it("counts every row as changed here at the new counter, and drops the file's progress", async () => {
+    const { database, connection } = await openTestDatabase();
+    await save(database, createExample);
+    await save(database, (plan) => ({ ...plan, dayStart: sanitizeDayStart(6) }));
+    await connection.exec(`INSERT INTO progress VALUES ('${"b".repeat(64)}', 3, 2)`);
+    await connection.exec(`UPDATE blocks SET changed_by = '${"b".repeat(64)}'`);
+    await renewNode(database, laterNode, imported);
+    const { origins } = await loadRows(database);
+    const renewed = { changedAt: 6, changedBy: null };
+    expect(new Set(origins.blocks.values().map((origin) => JSON.stringify(origin)))).toEqual(
+      new Set([JSON.stringify(renewed)]),
+    );
+    expect(origins.settings).toEqual(renewed);
+    const statement = await connection.prepare("SELECT count(*) AS count FROM progress");
+    expect(await statement.get()).toEqual({ count: 0 });
+  });
+
   it("stamps the next save with the new id, later than both clocks", async () => {
     const { database } = await openTestDatabase();
     await save(database, createExample);
-    await renewNode(database, later, imported);
+    await renewNode(database, laterNode, imported);
     await save(database, (plan) => ({ ...plan, dayStart: sanitizeDayStart(6) }));
     const { rows, node } = await loadRows(database);
     expect(rows.settings.dayStart.stamp.endsWith("-newNode")).toBe(true);

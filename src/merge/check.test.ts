@@ -5,7 +5,7 @@ import { sanitizePlan } from "../plan/sanitize.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
 import { parse, type Problem } from "./check.ts";
 import { convertPlan, takeSnapshot } from "./index.ts";
-import { act, createNode } from "./test-data.ts";
+import { act, createDevice, createNode } from "./test-data.ts";
 
 const example = sanitizePlan(exampleWeek, createPredictableIds());
 const node = createNode("me", convertPlan(example));
@@ -16,7 +16,10 @@ void act(node, 1_763_200_000_000, (plan) => ({
   activities: plan.activities.toReversed(),
   blocks: plan.blocks.slice(1),
 }));
-const valid = JSON.stringify(takeSnapshot(node.rows));
+const device = createDevice("a", node.clock);
+const valid = JSON.stringify(
+  takeSnapshot({ ...node.rows, devices: new Map([[device.id, device]]) }),
+);
 
 type Container = Record<string | number, unknown>;
 const isContainer = (value: unknown): value is Container =>
@@ -69,6 +72,13 @@ const findActivityField = (field: string, ...rest: string[]): (string | number)[
   field,
   ...rest,
 ];
+/** The path to a field of the device in the snapshot. */
+const findDeviceField = (field: string, ...rest: string[]): (string | number)[] => [
+  "devices",
+  0,
+  field,
+  ...rest,
+];
 /** The path to a field of the first block in the snapshot. */
 const findBlockField = (field: string, ...rest: string[]): (string | number)[] => [
   "blocks",
@@ -107,6 +117,12 @@ describe("checking what is received", () => {
     [["settings", "exampleLoadedAt", "value"], "2026-11-15T10:00:00.123Z"],
     [["settings"], null],
     [findBlockField("id"), "x".repeat(40)],
+    [findDeviceField("identity", "value", "relay"), "http://localhost:8080/relay"],
+    [findDeviceField("name", "value"), "Firefox on Linux 🦊"],
+    [findDeviceField("name", "value"), "x".repeat(60)],
+    [findDeviceField("membership", "value", "status"), "removed"],
+    [findDeviceField("membership", "value", "status"), "temporary"],
+    [["devices"], []],
   ] as const)("accepts %j set to %j", (path, value) => {
     expect(typeof parse(createReceived(path, value))).toBe("object");
   });
@@ -243,6 +259,62 @@ describe("checking what is received", () => {
     ],
     ["a time that isn't text", ["settings", "exampleLoadedAt", "value"], 0, "invalid-value"],
     ["settings that aren't an object", ["settings"], "none", "not-a-change"],
+    ["a device list that isn't a list", ["devices"], {}, "not-a-change"],
+    ["a device key too short", findDeviceField("id"), "a".repeat(63), "invalid-id"],
+    ["a device key in capitals", findDeviceField("id"), "A".repeat(64), "invalid-id"],
+    ["a device key that isn't hex", findDeviceField("id"), "g".repeat(64), "invalid-id"],
+    [
+      "a relay that isn't http or https",
+      findDeviceField("identity", "value", "relay"),
+      "ftp://relay.example/",
+      "invalid-value",
+    ],
+    [
+      "a relay that isn't written as URL writes it",
+      findDeviceField("identity", "value", "relay"),
+      "https://Relay.example",
+      "invalid-value",
+    ],
+    [
+      "a relay that isn't a URL",
+      findDeviceField("identity", "value", "relay"),
+      "relay.example",
+      "invalid-value",
+    ],
+    [
+      "a relay too long",
+      findDeviceField("identity", "value", "relay"),
+      `https://relay.example/${"x".repeat(200)}`,
+      "invalid-value",
+    ],
+    [
+      "an identity with the key in it",
+      findDeviceField("identity", "value", "key"),
+      "a".repeat(64),
+      "invalid-value",
+    ],
+    ["an untrimmed device name", findDeviceField("name", "value"), "Phone ", "invalid-value"],
+    ["an empty device name", findDeviceField("name", "value"), "", "invalid-value"],
+    ["a device name too long", findDeviceField("name", "value"), "x".repeat(61), "invalid-value"],
+    [
+      "an unknown membership",
+      findDeviceField("membership", "value", "status"),
+      "admin",
+      "invalid-value",
+    ],
+    [
+      "a proof, which nothing could check yet",
+      findDeviceField("membership", "value", "proof"),
+      "signature",
+      "invalid-value",
+    ],
+    [
+      "a membership without its proof",
+      findDeviceField("membership", "value", "proof"),
+      undefined,
+      "invalid-value",
+    ],
+    ["a device stamp out of form", findDeviceField("name", "stamp"), "now", "invalid-stamp"],
     ["a block that isn't an object", ["blocks", 0], 7, "not-a-change"],
   ];
 

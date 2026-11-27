@@ -16,6 +16,7 @@ flowchart LR
   module_brand["brand"]
   module_broadcast["broadcast"]
   module_database["database"]
+  module_device["device"]
   module_download["download"]
   module_font["font"]
   module_icons["icons"]
@@ -34,6 +35,7 @@ flowchart LR
   module_settings["settings"]
   module_snackbar["snackbar"]
   module_storage["storage"]
+  module_sync["sync"]
   module_top_app_bar["top-app-bar"]
   module_transport["transport"]
   module_trusted_html["trusted-html"]
@@ -63,9 +65,12 @@ flowchart LR
   module_App --> module_top_app_bar
   module_App --> module_week
   module_database --> module_broadcast
+  module_database --> module_device
   module_database --> module_merge
   module_database --> module_plan
   module_database --> module_result
+  module_database --> module_sync
+  module_device --> module_brand
   module_index --> module_App
   module_index --> module_font
   module_index --> module_icons
@@ -78,6 +83,7 @@ flowchart LR
   module_keeping --> module_snackbar
   module_keeping --> module_storage
   module_merge --> module_brand
+  module_merge --> module_device
   module_merge --> module_plan
   module_merge --> module_result
   module_navigation --> module_icons
@@ -119,6 +125,11 @@ flowchart LR
   module_storage --> module_merge
   module_storage --> module_plan
   module_storage --> module_result
+  module_sync --> module_brand
+  module_sync --> module_device
+  module_sync --> module_merge
+  module_sync --> module_plan
+  module_sync --> module_result
   module_top_app_bar --> module_icons
   module_top_app_bar --> module_page
   module_top_app_bar --> module_planner
