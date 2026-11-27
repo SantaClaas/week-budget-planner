@@ -5,7 +5,13 @@
 import type { Result } from "../result.ts";
 import { FORMAT_VERSION, type Change } from "./index.ts";
 import { isRecord, readExact } from "./record.ts";
-import { parseActivity, parseBlock, parseSettings, type Problem as RowProblem } from "./row.ts";
+import {
+  parseActivity,
+  parseBlock,
+  parseDevice,
+  parseSettings,
+  type Problem as RowProblem,
+} from "./row.ts";
 
 /**
  * Why a change was refused. "newer-version" when a newer version of the app made it, so the node
@@ -53,7 +59,7 @@ const isFromNewerVersion = (value: unknown): boolean =>
 export function parse(value: unknown): Result<Change, Problem> {
   if (isFromNewerVersion(value)) return "newer-version";
 
-  const fields = readExact(value, ["version", "activities", "blocks", "settings"]);
+  const fields = readExact(value, ["version", "activities", "blocks", "settings", "devices"]);
   if (fields?.["version"] !== FORMAT_VERSION) return "not-a-change";
 
   const activities = parseList(fields["activities"], parseActivity);
@@ -65,9 +71,12 @@ export function parse(value: unknown): Result<Change, Problem> {
   const settings = fields["settings"] === null ? null : parseSettings(fields["settings"]);
   if (typeof settings === "string") return settings;
 
+  const devices = parseList(fields["devices"], parseDevice);
+  if (typeof devices === "string") return devices;
+
   const activityIds = new Set(activities.values().map((row) => row.id));
   const blockActivityIds = new Set(blocks.values().map((row) => row.existence.value.activityId));
   if (!blockActivityIds.isSubsetOf(activityIds)) return "missing-activity";
 
-  return { version: FORMAT_VERSION, activities, blocks, settings };
+  return { version: FORMAT_VERSION, activities, blocks, settings, devices };
 }

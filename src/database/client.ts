@@ -15,8 +15,7 @@ import { createDatabase, runOnDatabase, type Database } from "./drizzle.ts";
 import { rebuild as rebuildImport, type ImportProblem } from "./import.ts";
 import { runMigrations } from "./migration.ts";
 import { createRandomNodeId } from "./node.ts";
-import { loadNode } from "./plan-repository.ts";
-import type { Stamp } from "../merge/stamp.ts";
+import { loadNode, type StoredNode } from "./plan-repository.ts";
 import type { Result } from "../result.ts";
 
 const DATABASE_FILE = "week-budget-planner.db";
@@ -283,13 +282,13 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
  *
  * @param sourceName - The OPFS file holding the imported bytes.
  * @param targetName - A new OPFS file to build the replacement database in.
- * @param clock - This browser's clock before the import.
+ * @param before - This browser's clock and counter before the import.
  * @param now - When the import ran, to refuse files with clocks far in the future.
  */
 async function rebuildCopy(
   sourceName: string,
   targetName: string,
-  clock: Stamp | undefined,
+  before: StoredNode | undefined,
   now: Temporal.Instant,
 ): Promise<Result<"rebuilt", ImportProblem>> {
   await using resources = new AsyncDisposableStack();
@@ -303,7 +302,7 @@ async function rebuildCopy(
 
   const source = resources.adopt(openedSource, (opened) => opened.close());
   const target = resources.adopt(await connectFile(targetName), (opened) => opened.close());
-  const outcome = await rebuildImport(source, target, clock, createRandomNodeId(), now);
+  const outcome = await rebuildImport(source, target, before, createRandomNodeId(), now);
   if (outcome !== "rebuilt") return outcome;
 
   await target.exec("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -315,14 +314,14 @@ async function rebuildCopy(
  * by this version's migrations, so no byte of the imported file's schema is kept. Both temporary
  * files are deleted again either way.
  *
- * @param clock - This browser's clock before the import, which the rebuilt node takes when it's
- *   later.
+ * @param before - This browser's clock and counter before the import, which the rebuilt node takes
+ *   when they're later.
  * @param now - When the import ran, to refuse files with clocks far in the future.
  * @returns The rebuilt database's bytes, with the new node: what replaces the database.
  */
 async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
-  clock: Stamp | undefined,
+  before: StoredNode | undefined,
   now: Temporal.Instant,
 ): Promise<Result<Uint8Array<ArrayBuffer>, ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
@@ -332,7 +331,7 @@ async function checkImport(
   const sourceName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   const targetName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   await writeFile(await navigator.storage.getDirectory(), sourceName, bytes);
-  const outcome = await rebuildCopy(sourceName, targetName, clock, now);
+  const outcome = await rebuildCopy(sourceName, targetName, before, now);
   if (outcome !== "rebuilt") return outcome;
 
   return await readFileBytes(targetName);
@@ -381,7 +380,7 @@ const localService: DatabaseService = {
     );
     if (stored === "newer-version") return stored;
 
-    const imported = await checkImport(bytes, stored?.clock, Temporal.Now.instant());
+    const imported = await checkImport(bytes, stored, Temporal.Now.instant());
     if (typeof imported === "string") return imported;
 
     if ((await closeForReload()) === "newer-version") return "newer-version";

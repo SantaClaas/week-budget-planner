@@ -2,11 +2,13 @@
 // A node acts as the app will: it reads the plan from its rows, makes the plan after, and saves a
 // change with one stamp from its clock. What it receives goes through JSON and the strict check, as
 // it will over the network.
+import { parseDeviceKey, parseDeviceName, parseRelay } from "../device/index.ts";
 import type { Plan } from "../plan/index.ts";
 import { make } from "./change.ts";
 import { parse } from "./check.ts";
 import { advance, issueNext } from "./clock.ts";
 import { findLatestStamp, merge, type Change, type Rows } from "./index.ts";
+import type { DeviceRow } from "./row.ts";
 import {
   LOWEST,
   create,
@@ -40,6 +42,24 @@ export function createStamp(time: number, counter: number, node: string): Stamp 
     throw new Error(`The test data has a stamp out of range: ${String(time)}, ${String(counter)}.`);
 
   return create(checkedTime, checkedCounter, createNodeId(node));
+}
+
+/**
+ * A device's row: a member reached through the test relay, every register stamped `stamp`.
+ *
+ * @param digit - The hexadecimal digit its key repeats, so each device in a test has its own.
+ */
+export function createDevice(digit: string, stamp: Stamp = LOWEST): DeviceRow {
+  const id = requireValue(parseDeviceKey(digit.repeat(64)), "device key");
+  return {
+    id,
+    identity: {
+      value: { relay: requireValue(parseRelay("https://relay.example/"), "relay") },
+      stamp,
+    },
+    name: { value: requireValue(parseDeviceName(`Device ${digit}`), "device name"), stamp },
+    membership: { value: { status: "member", proof: null }, stamp },
+  };
 }
 
 export type Node = { readonly id: NodeId; clock: Stamp; rows: Rows };

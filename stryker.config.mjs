@@ -10,12 +10,14 @@ export default {
   testRunner: "vitest",
   // Every unit test but the merge's simulation, which that config leaves out and says why.
   vitest: { configFile: "vitest.mutation.config.ts" },
-  // The pure core, where a test is input and expected output: the plan, and merging it between
-  // devices. Components and the code at the edges are left out: mutating them gives noise, and
+  // The pure core, where a test is input and expected output: the plan, merging it between
+  // devices, the device list's values, and what a device keeps for syncing. Components and the code at the edges are left out: mutating them gives noise, and
   // their tests are slower.
   mutate: [
     "src/plan/**/*.ts",
     "src/merge/**/*.ts",
+    "src/device/**/*.ts",
+    "src/sync/**/*.ts",
     "!src/**/*.test.ts",
     "!src/plan/test-data.ts",
     "!src/merge/test-data.ts",

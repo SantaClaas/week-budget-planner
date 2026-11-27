@@ -50,7 +50,13 @@ const moveToMidnight = (shown: Plan, id: string): Plan => ({
 describe("making a change", () => {
   it("changes nothing when the action changed nothing", () => {
     const made = act(rows, (shown) => shown);
-    expect(made.change).toEqual({ version: 1, activities: [], blocks: [], settings: null });
+    expect(made.change).toEqual({
+      version: 1,
+      activities: [],
+      blocks: [],
+      settings: null,
+      devices: [],
+    });
     expect(takeSnapshot(made.rows)).toEqual(takeSnapshot(rows));
   });
 

@@ -8,6 +8,15 @@ import {
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
+import {
+  MAX_DEVICE_NAME_CHARACTERS,
+  MAX_RELAY_CHARACTERS,
+  MEMBERSHIP_STATUSES,
+  type DeviceKey,
+  type DeviceName,
+  type MembershipStatus,
+  type Relay,
+} from "../device/index.ts";
 import type { OrderKey } from "../merge/order.ts";
 import type { NodeId, Stamp } from "../merge/stamp.ts";
 import { MAX_NAME_CHARACTERS, type ActivityName } from "../plan/activity/name.ts";
@@ -25,6 +34,7 @@ import {
   type Length,
 } from "../plan/time.ts";
 import { PALETTE, SHAPES, type Hue, type Shape } from "../plan/activity/look.ts";
+import type { ChangeNumber } from "../sync/origin.ts";
 
 // The columns hold the plan's branded values, and CHECK constraints enforce the same rules as their
 // sanitizers (see docs/spec/data-model.md), so nothing that skipped the types can be stored.
@@ -72,6 +82,39 @@ const isOrderKey = (column: AnySQLiteColumn): SQL =>
 /** A boolean, which a STRICT table keeps as the integer 0 or 1. */
 const isBoolean = (column: AnySQLiteColumn): SQL => sql`${column} IN (0, 1)`;
 
+/** A device's key: 64 lowercase hexadecimal digits (see device/index.ts). */
+const isDeviceKey = (column: AnySQLiteColumn): SQL =>
+  sql`length(${column}) = 64 AND ${column} NOT GLOB '*[^0-9a-f]*'`;
+
+/** A value of a device's counter: a whole number from 0 (see sync/origin.ts). */
+const createChangeNumberColumn = (name: string) => integer(name).$type<ChangeNumber>().notNull();
+
+/**
+ * Where a row's last change came from (see What a device keeps for syncing in
+ * docs/spec/self-service.md): the counter's value when it was written here, and the device that
+ * sent it, or null for this device's own. These are this device's alone, and never sent.
+ */
+const createOriginColumns = () => ({
+  changedAt: createChangeNumberColumn("changed_at"),
+  changedBy: text("changed_by").$type<DeviceKey>(),
+});
+
+/**
+ * The `CHECK`s on a table's origin columns.
+ *
+ * @param table - The table's name, which starts each constraint's name.
+ */
+const checkOrigin = (
+  table: string,
+  columns: { changedAt: AnySQLiteColumn; changedBy: AnySQLiteColumn },
+) => [
+  check(`${table}_changed_at`, sql`${columns.changedAt} >= 0`),
+  check(
+    `${table}_changed_by`,
+    sql`${columns.changedBy} IS NULL OR (${isDeviceKey(columns.changedBy)})`,
+  ),
+];
+
 /**
  * Every activity's row, deleted ones too, as deletion markers (see Storage in docs/spec/merge.md).
  * Each register's value sits beside its stamp; the budget's three fields share one. Times and
@@ -96,8 +139,10 @@ export const activities = sqliteTable(
     isDeleted: integer("is_deleted", { mode: "boolean" }).notNull(),
     existenceStamp: createStampColumn("existence_stamp"),
     createdAt: text("created_at").notNull(),
+    ...createOriginColumns(),
   },
   (table) => [
+    ...checkOrigin("activities", table),
     ...checkStamps("activities", {
       name_stamp: table.nameStamp,
       hue_stamp: table.hueStamp,
@@ -146,8 +191,10 @@ export const blocks = sqliteTable(
     start: integer().$type<DayMinute>().notNull(),
     length: integer().$type<Length>().notNull(),
     timeStamp: createStampColumn("time_stamp"),
+    ...createOriginColumns(),
   },
   (table) => [
+    ...checkOrigin("blocks", table),
     ...checkStamps("blocks", {
       existence_stamp: table.existenceStamp,
       time_stamp: table.timeStamp,
@@ -179,8 +226,10 @@ export const settings = sqliteTable(
     /** When the example week was loaded (ISO 8601, UTC), null when there is none. */
     exampleLoadedAt: text("example_loaded_at"),
     exampleLoadedAtStamp: createStampColumn("example_loaded_at_stamp"),
+    ...createOriginColumns(),
   },
   (table) => [
+    ...checkOrigin("settings", table),
     ...checkStamps("settings", {
       day_start_stamp: table.dayStartStamp,
       day_end_stamp: table.dayEndStamp,
@@ -192,9 +241,69 @@ export const settings = sqliteTable(
 );
 
 /**
- * A single row (id 1) with this browser's node: its id in the stamps it issues, and its clock, the
- * latest stamp it has issued or merged (see Stamps and the clock in docs/spec/merge.md). Made by
- * the first save after the database opens without one.
+ * The group's device list, one row per device, removed ones too (see The device list in
+ * docs/spec/self-service.md). The key is the row's id; the relay is set when the device is added
+ * and never changes. A membership's proof is always null until the passkey guard comes.
+ */
+export const devices = sqliteTable(
+  "devices",
+  {
+    id: text().$type<DeviceKey>().primaryKey(),
+    relay: text().$type<Relay>().notNull(),
+    identityStamp: createStampColumn("identity_stamp"),
+    name: text().$type<DeviceName>().notNull(),
+    nameStamp: createStampColumn("name_stamp"),
+    status: text().$type<MembershipStatus>().notNull(),
+    proof: text().$type<null>(),
+    membershipStamp: createStampColumn("membership_stamp"),
+    ...createOriginColumns(),
+  },
+  (table) => [
+    ...checkStamps("devices", {
+      identity_stamp: table.identityStamp,
+      name_stamp: table.nameStamp,
+      membership_stamp: table.membershipStamp,
+    }),
+    ...checkOrigin("devices", table),
+    check("devices_id", isDeviceKey(table.id)),
+    check(
+      "devices_relay",
+      sql`length(${table.relay}) BETWEEN 1 AND ${formatLiteral(MAX_RELAY_CHARACTERS)} AND (${table.relay} GLOB 'https://*' OR ${table.relay} GLOB 'http://*')`,
+    ),
+    check(
+      "devices_name",
+      sql`length(${table.name}) BETWEEN 1 AND ${formatLiteral(MAX_DEVICE_NAME_CHARACTERS)}`,
+    ),
+    check("devices_status", sql`${table.status} IN (${formatList(MEMBERSHIP_STATUSES)})`),
+    check("devices_proof", sql`${table.proof} IS NULL`),
+  ],
+);
+
+/**
+ * How far this device and each other device have each other's changes (see What a device keeps for
+ * syncing in docs/spec/self-service.md): `received` is the other's counter up to which this device
+ * has merged its changes, and `delivered` this device's counter up to which the other said it has
+ * them. This device's alone, and never sent; a device without a row has nothing of the other's.
+ */
+export const progress = sqliteTable(
+  "progress",
+  {
+    deviceId: text("device_id").$type<DeviceKey>().primaryKey(),
+    received: createChangeNumberColumn("received"),
+    delivered: createChangeNumberColumn("delivered"),
+  },
+  (table) => [
+    check("progress_device_id", isDeviceKey(table.deviceId)),
+    check("progress_received", sql`${table.received} >= 0`),
+    check("progress_delivered", sql`${table.delivered} >= 0`),
+  ],
+);
+
+/**
+ * A single row (id 1) with this browser's node: its id in the stamps it issues, its clock, the
+ * latest stamp it has issued or merged (see Stamps and the clock in docs/spec/merge.md), and its
+ * counter, the number of its latest write (see What a device keeps for syncing in
+ * docs/spec/self-service.md). Made by the first save after the database opens without one.
  */
 export const node = sqliteTable(
   "node",
@@ -202,8 +311,10 @@ export const node = sqliteTable(
     id: integer().primaryKey(),
     nodeId: text("node_id").$type<NodeId>().notNull(),
     clock: createStampColumn("clock"),
+    counter: createChangeNumberColumn("counter"),
   },
   (table) => [
+    check("node_counter", sql`${table.counter} >= 0`),
     check(
       "node_node_id",
       sql`length(${table.nodeId}) BETWEEN 1 AND 40 AND ${isAlphanumeric(table.nodeId)}`,

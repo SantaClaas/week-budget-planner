@@ -16,6 +16,7 @@ import {
   type NodeId,
 } from "../merge/stamp.ts";
 import { createExampleWeek } from "../plan/example.ts";
+import { NO_CHANGE } from "../sync/origin.ts";
 import { sanitizeActivityId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import { createPredictableIds } from "../plan/test-data.ts";
@@ -38,6 +39,9 @@ function requireValue<Value>(value: Value | undefined, what: string): Value {
 const SOURCE_NODE: NodeId = requireValue(parseNodeId("sourceNode"), "source node id");
 const TARGET_NODE: NodeId = requireValue(parseNodeId("targetNode"), "target node id");
 const LATER_CLOCK = requireValue(parseStamp("1900000000000-000004-elsewhere"), "later clock");
+/** This browser's node before the import, with a later clock and no change of its own yet. */
+const LATER_NODE = { nodeId: TARGET_NODE, clock: LATER_CLOCK, counter: NO_CHANGE };
+const LOWEST_NODE = { nodeId: TARGET_NODE, clock: LOWEST, counter: NO_CHANGE };
 
 const createExample = (): Plan => createExampleWeek(NOW, createPredictableIds());
 
@@ -79,35 +83,42 @@ async function createDatabaseWithoutActivityConstraints(): Promise<TursoConnecti
   await connection.exec(`CREATE TABLE activities (
     id text, name text, name_stamp text, hue integer, hue_stamp text, shape text, shape_stamp text,
     mode text, budget_minutes integer, days integer, budget_stamp text, order_key text,
-    order_stamp text, is_deleted integer, existence_stamp text, created_at text
+    order_stamp text, is_deleted integer, existence_stamp text, created_at text,
+    changed_at integer, changed_by text
   )`);
   await connection.exec(`CREATE TABLE blocks (
     id text, activity_id text, is_deleted integer, existence_stamp text, day integer, start integer,
-    length integer, time_stamp text
+    length integer, time_stamp text, changed_at integer, changed_by text
   )`);
   await connection.exec(`CREATE TABLE settings (
     id integer, day_start integer, day_start_stamp text, day_end integer, day_end_stamp text,
-    example_loaded_at text, example_loaded_at_stamp text
+    example_loaded_at text, example_loaded_at_stamp text, changed_at integer, changed_by text
   )`);
-  await connection.exec("CREATE TABLE node (id integer, node_id text, clock text)");
+  await connection.exec(`CREATE TABLE devices (
+    id text, relay text, identity_stamp text, name text, name_stamp text, status text, proof text,
+    membership_stamp text, changed_at integer, changed_by text
+  )`);
+  await connection.exec(
+    "CREATE TABLE node (id integer, node_id text, clock text, counter integer)",
+  );
   await connection.exec(`INSERT INTO activities VALUES (
     'work', 'Work', '${LOWEST}', 78, '${LOWEST}', 'square', '${LOWEST}', 'week', 720, 5,
-    '${LOWEST}', '11', '${LOWEST}', 0, '${LOWEST}', '2026-10-01T00:00:00Z'
+    '${LOWEST}', '11', '${LOWEST}', 0, '${LOWEST}', '2026-10-01T00:00:00Z', 1, NULL
   )`);
   await connection.exec(
-    `INSERT INTO blocks VALUES ('b1', 'work', 0, '${LOWEST}', 0, 600, 90, '${LOWEST}')`,
+    `INSERT INTO blocks VALUES ('b1', 'work', 0, '${LOWEST}', 0, 600, 90, '${LOWEST}', 1, NULL)`,
   );
   await connection.exec(
-    `INSERT INTO settings VALUES (1, 7, '${LOWEST}', 22, '${LOWEST}', NULL, '${LOWEST}')`,
+    `INSERT INTO settings VALUES (1, 7, '${LOWEST}', 22, '${LOWEST}', NULL, '${LOWEST}', 1, NULL)`,
   );
   return connection;
 }
 
 describe("rebuilding an imported database", () => {
-  it("copies every table the migrations create", async () => {
+  it("copies every table the migrations create, but the progress that was another device's", async () => {
     const { connection } = await openMigrated();
     const statement = await connection.prepare(
-      "SELECT name FROM pragma_table_list WHERE schema = 'main' AND name NOT LIKE 'sqlite%' AND name <> '__drizzle_migrations' ORDER BY name",
+      "SELECT name FROM pragma_table_list WHERE schema = 'main' AND name NOT LIKE 'sqlite%' AND name NOT IN ('__drizzle_migrations', 'progress') ORDER BY name",
     );
     const copiedNames = IMPORTED_TABLES.map(({ table }) => getTableName(table)).toSorted();
     expect(await statement.raw(true).all()).toEqual(copiedNames.map((name) => [name]));
@@ -136,7 +147,7 @@ describe("rebuilding an imported database", () => {
       .from(activitiesTable);
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE, NOW)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LATER_NODE, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const targetDatabase = wrapDatabase(targetConnection);
@@ -144,7 +155,8 @@ describe("rebuilding an imported database", () => {
     expect(afterRows.rows).toEqual(beforeRows.rows);
     expect(afterRows.isStored).toBe(true);
     expect(afterRows.rows.activities.get(gym)?.existence.value.isDeleted).toBe(true);
-    expect(afterRows.node).toEqual({ nodeId: TARGET_NODE, clock: LATER_CLOCK });
+    // The file saved twice, so this browser's next write comes after both.
+    expect(afterRows.node).toEqual({ nodeId: TARGET_NODE, clock: LATER_CLOCK, counter: 3 });
     const afterCreatedAt = await targetDatabase
       .select({ id: activitiesTable.id, createdAt: activitiesTable.createdAt })
       .from(activitiesTable);
@@ -157,12 +169,13 @@ describe("rebuilding an imported database", () => {
     const sourceClock = requireValue(await loadNode(source.database), "source node").clock;
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LOWEST, TARGET_NODE, NOW)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LOWEST_NODE, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     expect(await loadNode(wrapDatabase(targetConnection))).toEqual({
       nodeId: TARGET_NODE,
       clock: sourceClock,
+      counter: 2,
     });
   });
 
@@ -277,9 +290,12 @@ describe("rebuilding an imported database", () => {
       "UPDATE activities SET name = '   '",
       "UPDATE blocks SET activity_id = 'missing'",
       "UPDATE settings SET example_loaded_at = 'yesterday'",
-      "INSERT INTO settings VALUES (2, 7, '0000000000000-000000-', 22, '0000000000000-000000-', NULL, '0000000000000-000000-')",
+      "INSERT INTO settings VALUES (2, 7, '0000000000000-000000-', 22, '0000000000000-000000-', NULL, '0000000000000-000000-', 1, NULL)",
       "UPDATE settings SET id = 2",
-      "INSERT INTO node VALUES (1, 'bad-node-id', '0000000000000-000000-')",
+      "INSERT INTO node VALUES (1, 'bad-node-id', '0000000000000-000000-', 1)",
+      "UPDATE blocks SET changed_by = 'phone'",
+      "UPDATE activities SET changed_at = -1",
+      `INSERT INTO devices VALUES ('${"a".repeat(64)}', 'https://relay.example/', '0000000000000-000000-', 'Phone', '0000000000000-000000-', 'member', 'signature', '0000000000000-000000-', 1, NULL)`,
     ];
     for (const statement of badStatements) {
       // oxlint-disable-next-line no-await-in-loop -- each bad mutation gets its own fresh source and target database.
@@ -326,7 +342,7 @@ describe("rebuilding an imported database", () => {
     const source = await openMigrated();
     await saveAction(source.database, createExample, NOW.add({ hours: 1 }), () => SOURCE_NODE);
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LOWEST, TARGET_NODE, NOW)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LOWEST_NODE, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
   });
@@ -366,7 +382,7 @@ describe("rebuilding an imported database", () => {
     const source = await openMigrated();
     await saveAction(source.database, createExample, NOW, () => SOURCE_NODE);
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE, NOW)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LATER_NODE, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const targetDatabase = wrapDatabase(targetConnection);

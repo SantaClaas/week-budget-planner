@@ -1,23 +1,30 @@
 // Merging changes: the rows a node keeps its plan in, merging a change or a snapshot into them,
 // and reading the plan from them (see docs/spec/merge.md). Pure: time and ids are passed in.
+import type { DeviceKey } from "../device/index.ts";
 import type { ActivityId, BlockId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
 import { compare as compareOrder, spread } from "./order.ts";
 import {
   mergeActivity,
   mergeBlock,
+  mergeDevice,
   mergeSettings,
   type ActivityRow,
   type BlockRow,
+  type DeviceRow,
   type SettingsRow,
 } from "./row.ts";
 import { LOWEST, compare as compareStamps, type Stamp } from "./stamp.ts";
 
-/** The rows a node holds: every activity and block it has seen, deleted ones too, and the settings. */
+/**
+ * The rows a node holds: every activity and block it has seen, deleted ones too, the settings, and
+ * the group's device list.
+ */
 export type Rows = {
   readonly activities: ReadonlyMap<ActivityId, ActivityRow>;
   readonly blocks: ReadonlyMap<BlockId, BlockRow>;
   readonly settings: SettingsRow;
+  readonly devices: ReadonlyMap<DeviceKey, DeviceRow>;
 };
 
 /** The version of the format of changes and snapshots. A newer one is refused (see check.ts). */
@@ -33,6 +40,7 @@ export type Change = {
   readonly activities: readonly ActivityRow[];
   readonly blocks: readonly BlockRow[];
   readonly settings: SettingsRow | null;
+  readonly devices: readonly DeviceRow[];
 };
 
 /**
@@ -59,7 +67,14 @@ export function merge(rows: Rows, change: Change): Rows {
 
   const settings =
     change.settings === null ? rows.settings : mergeSettings(rows.settings, change.settings);
-  return { activities, blocks, settings };
+
+  const devices = new Map(rows.devices);
+  for (const row of change.devices) {
+    const held = devices.get(row.id);
+    devices.set(row.id, held === undefined ? row : mergeDevice(held, row));
+  }
+
+  return { activities, blocks, settings, devices };
 }
 
 /** For sorting rows by id. Two rows of one kind never have the same id. */
@@ -72,6 +87,7 @@ export const takeSnapshot = (rows: Rows): Change => ({
   activities: rows.activities.values().toArray().toSorted(compareIds),
   blocks: rows.blocks.values().toArray().toSorted(compareIds),
   settings: rows.settings,
+  devices: rows.devices.values().toArray().toSorted(compareIds),
 });
 
 /** Every stamp in a change: each register's, row by row, named one by one so the types say so. */
@@ -88,6 +104,12 @@ function* listStamps(change: Change): Generator<Stamp> {
   for (const row of change.blocks) {
     yield row.time.stamp;
     yield row.existence.stamp;
+  }
+
+  for (const row of change.devices) {
+    yield row.identity.stamp;
+    yield row.name.stamp;
+    yield row.membership.stamp;
   }
 
   if (change.settings === null) return;
@@ -202,5 +224,6 @@ export function convertPlan(plan: Plan): Rows {
       dayEnd: createUnstamped(plan.dayEnd),
       exampleLoadedAt: createUnstamped(plan.exampleLoadedAt),
     },
+    devices: new Map(),
   };
 }
