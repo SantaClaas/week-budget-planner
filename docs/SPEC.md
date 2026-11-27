@@ -24,4 +24,4 @@ The behavior and the design of the app, split by topic in [`docs/spec/`](spec/).
 | [`sync.md`](spec/sync.md) | phase 3 of syncing, not built yet: what the server's mailbox adds, and the protocol between a node and it. The log, cursors, snapshots and the storage limit, joining, dropping deletion markers, what the server learns | |
 | [`identity.md`](spec/identity.md) | phase 3 of syncing, not built yet: accounts, invite codes and passkeys, a node's keys, the group's key, adding and removing a device, recovery, and who can do what | |
 
-Start with the overview and the glossary, then read the files for the feature at hand. Claude Code loads the glossary in every session, and the files in the last column the first time it touches a matching file, through [`.claude/rules/`](../.claude/rules/).
+Start with the overview and the glossary, then read the files for the feature at hand. Coding agents load the glossary in every session, and the files in the last column the first time they touch a matching file, through [`.claude/rules/`](../.claude/rules/) and [`.agents/rules/`](../.agents/rules/).

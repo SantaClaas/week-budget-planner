@@ -39,7 +39,7 @@ Then run the server:
 pnpm server
 ```
 
-[`scripts/run-server.ts`](../../scripts/run-server.ts) serves the app under `/week-budget-planner/`, the base it's built for, at <http://127.0.0.1:8080/week-budget-planner/>. The server needs a node key, which it reads from its credentials and never makes itself (see [Secrets](#secrets) below), so the script makes one the first time, in `.credentials/` at the repository's root, and keeps it, so the node's id survives restarts as it does in production. The folder holds a `.gitignore` of its own that ignores everything in it, whatever the root `.gitignore` says, so the key can't be committed by mistake. Deleting the folder gives the server a new id on its next start.
+[`scripts/run-server.ts`](../../scripts/run-server.ts) serves the app under `/week-budget-planner/`, the base it's built for, at <http://127.0.0.1:8080/week-budget-planner/>. To try the transport against it, build with `pnpm build:transport-check` instead of `pnpm build`: that build adds the transport check, at <http://127.0.0.1:8080/week-budget-planner/transport-check.html> (see [`crates/transport/README.md`](../transport/README.md)). The server needs a node key, which it reads from its credentials and never makes itself (see [Secrets](#secrets) below), so the script makes one the first time, in `.credentials/` at the repository's root, and keeps it, so the node's id survives restarts as it does in production. The folder holds a `.gitignore` of its own that ignores everything in it, whatever the root `.gitignore` says, so the key can't be committed by mistake. Deleting the folder gives the server a new id on its next start.
 
 Run by hand, the same is:
 

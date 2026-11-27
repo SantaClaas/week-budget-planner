@@ -8,7 +8,7 @@ The planner started as a single-file prototype in vanilla JavaScript ([`prototyp
 
 ## Decision
 
-Build the app with SolidJS 2.0, on its release candidates, with every Solid package pinned to an exact version: `solid-js` and `@solidjs/web` at `2.0.0-rc.14` and `@solidjs/vite-plugin` at `3.0.0-next.47` (see [`CLAUDE.md`](../../CLAUDE.md)).
+Build the app with SolidJS 2.0, on its release candidates, with every Solid package pinned to an exact version: `solid-js` and `@solidjs/web` at `2.0.0-rc.14` and `@solidjs/vite-plugin` at `3.0.0-next.47` (see [`AGENTS.md`](../../AGENTS.md)).
 
 ## Alternatives
 

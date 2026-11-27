@@ -1,19 +1,31 @@
 // Adapted from SantaClaas/flashcut (src/lib/broadcast-service.ts).
 /**
- * Comlink-style RPC between same-origin tabs, in the spirit of crackle, but over a
- * BroadcastChannel: exactly one tab (the provider, elected elsewhere via the Web Locks API) serves
- * calls from every other tab.
+ * Comlink-style RPC, in the spirit of crackle: one provider serves the calls of its consumers.
+ * Between same-origin tabs it runs over a BroadcastChannel, where exactly one tab (the provider,
+ * elected elsewhere via the Web Locks API) serves calls from every other tab. It also runs over a
+ * MessagePort, between the page and a worker of its own, such as the transport's (src/transport/).
  *
- * Unlike a MessagePort proxy, a BroadcastChannel cannot transfer ports, so each call is correlated
- * with its response by a random id on the shared channel. Consumers discover the provider through a
- * query/ready handshake; the provider announces itself with a random providerId so consumers can
- * tell a leadership change apart from a plain "still here" reply.
+ * A BroadcastChannel cannot transfer ports, so each call is correlated with its response by a
+ * random id on the shared channel, and the same works over a port. Consumers discover the provider
+ * through a query/ready handshake; the provider announces itself with a random providerId so
+ * consumers can tell a leadership change apart from a plain "still here" reply.
  */
 
 import { PROTOCOL_VERSION } from "./protocol/index.ts";
 
 /** Every exposed method must be async — the channel makes everything async anyway. */
 type AsyncApi = Record<string, (...parameters: never[]) => Promise<unknown>>;
+
+/**
+ * What the service needs of the way it talks: a BroadcastChannel between tabs, or a MessagePort,
+ * such as the one between the page and the transport's worker (src/transport/). A MessagePort only
+ * delivers once it's started (`port.start()`), which its owner does.
+ */
+type Channel = {
+  postMessage(message: unknown): void;
+  addEventListener(type: "message", listener: (event: MessageEvent) => void): void;
+  removeEventListener(type: "message", listener: (event: MessageEvent) => void): void;
+};
 
 /**
  * What a call gives back when a tab on a newer protocol version runs: the call never ran, since
@@ -54,7 +66,7 @@ export class ProviderChangedError extends Error {}
  * The provider changed or went silent while the call was in flight. The old provider may or may
  * not have applied it, so it is NOT retried automatically.
  */
-class CallLostError extends Error {}
+export class CallLostError extends Error {}
 
 /** No provider answered within the time limit. The call was never sent. */
 export class ProviderMissingError extends Error {}
@@ -71,7 +83,7 @@ export class RemoteCallError extends Error {}
 function readRemoteError(error: unknown, name: string | undefined): RemoteCallError {
   if (error instanceof Error && name !== undefined) error.name = name;
 
-  return new RemoteCallError("The leader tab failed to execute the call.", { cause: error });
+  return new RemoteCallError("The provider failed to execute the call.", { cause: error });
 }
 
 /**
@@ -79,7 +91,7 @@ function readRemoteError(error: unknown, name: string | undefined): RemoteCallEr
  * @mustUse Gives back the function that stops serving, for when this tab steps down.
  */
 export function provide(
-  channel: BroadcastChannel,
+  channel: Channel,
   scope: string,
   target: AsyncApi,
   { onNewerVersion = doNothing }: Options = {},
@@ -212,13 +224,18 @@ const PROVIDER_QUERY_INTERVAL_MILLISECONDS = 500;
 const SILENCE_LIMIT_MILLISECONDS = 10_000;
 
 /**
- * A proxy whose method calls are served by whichever tab currently provides `scope`. Once a tab on
- * a newer protocol version runs, every call, open or new, gives back "newer-version".
+ * Whether the provider can run another version of the app than the consumer: between tabs it can,
+ * and a newer one makes every call answer "newer-version"; within one build it can't, and a message
+ * of another version is a mistake that rejects the open calls.
  */
-export function consume<T extends AsyncApi & ConsumableApi<T>>(
-  channel: BroadcastChannel,
+type Versions = "may-differ" | "same";
+
+/** The proxy for `consume` and `consumeSameVersion`. */
+function createConsumer<T extends AsyncApi>(
+  channel: Channel,
   scope: string,
-  { onNewerVersion = doNothing }: Options = {},
+  versions: Versions,
+  { onNewerVersion = doNothing }: Options,
 ): Consumer<T> {
   const sent = new Map<string, PendingCall>();
   let providerId: string | undefined;
@@ -276,9 +293,9 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
       // Forget the silent provider, so the next call looks for one again.
       providerId = undefined;
       settleWaiters((waiter) => {
-        waiter.reject(new ProviderMissingError("No database leader tab answered."));
+        waiter.reject(new ProviderMissingError(`No provider of ${scope} answered.`));
       });
-      failSent(new CallLostError("The database leader tab stopped answering."));
+      failSent(new CallLostError(`The provider of ${scope} stopped answering.`));
       stopQueryingWhenIdle();
     }, PROVIDER_QUERY_INTERVAL_MILLISECONDS);
   }
@@ -295,10 +312,23 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
     onNewerVersion();
   }
 
+  /** Rejects every open call: within one build, a message of another version is a mistake. */
+  function refuseOtherVersion(version: number) {
+    const reason = new Error(
+      `The provider of ${scope} speaks protocol version ${version.toString()}, not ${PROTOCOL_VERSION.toString()}, within one build.`,
+    );
+    providerId = undefined;
+    settleWaiters((waiter) => {
+      waiter.reject(reason);
+    });
+    failSent(reason);
+    stopQueryingWhenIdle();
+  }
+
   /** Follows the provider that announced itself; calls sent to a different one are lost. */
   function acceptProvider(announcedId: string) {
     if (providerId !== undefined && providerId !== announcedId) {
-      failSent(new CallLostError("The database leader changed while a call was in flight."));
+      failSent(new CallLostError(`The provider of ${scope} changed while a call was in flight.`));
     }
 
     providerId = announcedId;
@@ -323,6 +353,11 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
   channel.addEventListener("message", (event: MessageEvent<ServiceMessage>) => {
     const message = event.data;
     if (message.scope !== scope) return;
+
+    if (versions === "same" && message.protocolVersion !== PROTOCOL_VERSION) {
+      refuseOtherVersion(message.protocolVersion);
+      return;
+    }
 
     // Every version keeps `protocolVersion` and `scope` in its envelope, so any tab can read them.
     if (message.protocolVersion > PROTOCOL_VERSION) {
@@ -402,9 +437,35 @@ export function consume<T extends AsyncApi & ConsumableApi<T>>(
         waiter.reject(new ProviderChangedError("This tab became the provider."));
       });
       failSent(
-        new CallLostError("This tab became the database leader while a call was in flight."),
+        new CallLostError(`This tab became the provider of ${scope} while a call was in flight.`),
       );
       stopQueryingWhenIdle();
     },
   };
+}
+
+/**
+ * A proxy whose method calls are served by whichever tab currently provides `scope`. Once a tab on
+ * a newer protocol version runs, every call, open or new, gives back "newer-version", so every
+ * method of T has to be able to answer it.
+ */
+export function consume<T extends AsyncApi & ConsumableApi<T>>(
+  channel: Channel,
+  scope: string,
+  options: Options = {},
+): Consumer<T> {
+  return createConsumer<T>(channel, scope, "may-differ", options);
+}
+
+/**
+ * A proxy for a provider from the same build, such as the page's own worker: both sides always speak
+ * the same protocol version, so T's methods needn't answer "newer-version", and a message of another
+ * version rejects the open calls as the mistake it is. It takes a MessagePort only: a
+ * BroadcastChannel reaches tabs that can run other versions, and they need `consume`.
+ */
+export function consumeSameVersion<T extends AsyncApi>(
+  port: MessagePort,
+  scope: string,
+): Consumer<T> {
+  return createConsumer<T>(port, scope, "same", {});
 }
