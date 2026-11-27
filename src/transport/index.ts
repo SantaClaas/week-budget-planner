@@ -25,7 +25,7 @@ const MARGIN_MILLISECONDS = 1000;
 /** The deadline of a call that doesn't wait on the network. */
 const LOCAL_TIMEOUT_MILLISECONDS = 5000;
 
-export type { ConnectionHandle, Problem, StreamHandle };
+export type { Problem, StreamHandle };
 
 /** A connection the worker holds. Disposing it disconnects, so `await using` closes it. */
 type Connection = ConnectionHandle & AsyncDisposable;

@@ -9,13 +9,7 @@
  * "invalid-timeout" for one that isn't a whole number above zero.
  */
 import type { Result } from "../result.ts";
-import {
-  start,
-  type ConnectionHandle,
-  type Problem,
-  type StreamHandle,
-  type Transport,
-} from "./index.ts";
+import { start, type Problem, type StreamHandle, type Transport } from "./index.ts";
 
 /**
  * The page's default Trusted Types policy, which the policy requires before the worker starts: the
@@ -112,15 +106,20 @@ async function receiveAll(
   }
 }
 
-/** Sends the message on a new stream of the connection, and checks what comes back. */
-async function echoOn(
-  transport: Transport,
-  connection: ConnectionHandle,
-  timeout: number,
-): Promise<Outcome> {
-  const stream = await transport.open(connection, timeout);
-  if (typeof stream === "string") return stream;
+/**
+ * Connects to the server's node, sends the message on a stream, and checks what comes back. The
+ * stream and the connection close when it returns, however it returns, through their dispose
+ * functions.
+ */
+async function echo(transport: Transport, serverId: string, timeout: number): Promise<Outcome> {
+  const connected = await transport.connect(serverId, ECHO, timeout);
+  if (typeof connected === "string") return connected;
 
+  await using connection = connected;
+  const opened = await transport.open(connection, timeout);
+  if (typeof opened === "string") return opened;
+
+  await using stream = opened;
   const sent = await transport.send(stream, new TextEncoder().encode(MESSAGE), timeout);
   if (sent !== "sent") return sent;
 
@@ -131,21 +130,6 @@ async function echoOn(
   if (typeof received === "string") return received;
 
   return received.text === MESSAGE ? "echoed" : "mismatch";
-}
-
-/**
- * Connects to the server's node and echoes on it, then disconnects, which releases the stream too.
- * Not with `await using`, which the app's own code can use on a connection: here the bundler would
- * move the helper that lowers it into a chunk shared with the app's page, which would then load
- * one more file on a normal start.
- */
-async function echo(transport: Transport, serverId: string, timeout: number): Promise<Outcome> {
-  const connection = await transport.connect(serverId, ECHO, timeout);
-  if (typeof connection === "string") return connection;
-
-  const outcome = await echoOn(transport, connection, timeout);
-  void (await transport.disconnect(connection));
-  return outcome;
 }
 
 const output = document.querySelector("output");
@@ -167,6 +151,10 @@ async function runEcho(transport: Transport, serverId: string, timeout: number):
 }
 
 async function runCheck(): Promise<void> {
+  // `using` needs the disposal symbols, which Safari doesn't have yet: the app's polyfill, in a
+  // chunk of its own (see src/polyfill/index.ts).
+  if (!("AsyncDisposableStack" in globalThis)) await import("../polyfill/disposal.ts");
+
   const startedAt = performance.now();
   const timeout = readTimeout(location.search);
   if (timeout === "invalid-timeout") {

@@ -16,9 +16,28 @@ function readLostCall(error: unknown): "timeout" {
   throw error;
 }
 
+/** A timer that clears itself when its scope ends, declared with `using`. */
+type Timer = Disposable & {
+  /** Resolves with "timeout" once the time is up. */
+  elapsed: Promise<"timeout">;
+};
+
+function startTimer(milliseconds: number): Timer {
+  const { promise: elapsed, resolve } = Promise.withResolvers<"timeout">();
+  const timer = setTimeout(() => {
+    resolve("timeout");
+  }, milliseconds);
+  return {
+    elapsed,
+    [Symbol.dispose]: () => {
+      clearTimeout(timer);
+    },
+  };
+}
+
 /**
  * The call's answer, "timeout" once `deadline` milliseconds passed or the worker stopped
- * answering, or "unavailable" once the worker stopped.
+ * answering, or "unavailable" once the worker stopped. The timer is cleared however it ends.
  *
  * @param stopped - Resolves once the worker stopped, with an error event.
  */
@@ -27,18 +46,10 @@ export async function waitWithin<Value>(
   deadline: number,
   stopped: Promise<"unavailable">,
 ): Promise<Value | "timeout" | "unavailable"> {
-  const { promise: late, resolve } = Promise.withResolvers<"timeout">();
-  const timer = setTimeout(() => {
-    resolve("timeout");
-  }, deadline);
-  let answer: Value | "timeout" | "unavailable";
+  using timer = startTimer(deadline);
   try {
-    answer = await Promise.race([call, late, stopped]);
+    return await Promise.race([call, timer.elapsed, stopped]);
   } catch (error) {
-    clearTimeout(timer);
     return readLostCall(error);
   }
-
-  clearTimeout(timer);
-  return answer;
 }

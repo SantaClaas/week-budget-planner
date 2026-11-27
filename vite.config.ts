@@ -18,7 +18,15 @@ const crossOriginIsolation = {
 /** Where `pnpm server` listens: the server's default address (crates/server/README.md). */
 const SERVER = "http://127.0.0.1:8080";
 
-export default defineConfig({
+/**
+ * The mode that adds the transport check (transport-check.html) to the build, for the server's
+ * browser tests (`pnpm build:transport-check`, which `pnpm test:server` runs). The app's own build
+ * leaves it out: two entries in one build share their common code as chunks of its own, which the
+ * app's page would then load at start, and the check page has nothing to reach on GitHub Pages.
+ */
+const TRANSPORT_CHECK = "transport-check";
+
+export default defineConfig(({ mode }) => ({
   // GitHub Pages serves the project site from /week-budget-planner/.
   base: "/week-budget-planner/",
   plugins: [
@@ -32,13 +40,13 @@ export default defineConfig({
   // module from virtual:transport.
   worker: { format: "es", plugins: () => [addTransport()] },
   build: {
-    // No polyfill for <link rel="modulepreload">, which every browser the app supports has: with two
-    // pages, Vite would put it in a chunk of its own that the app's page loads for the check page.
-    modulePreload: { polyfill: false },
     rolldownOptions: {
       // The transport check runs the transport under the app's headers until the app can turn
       // syncing on (see crates/transport/README.md).
-      input: { index: "index.html", "transport-check": "transport-check.html" },
+      input:
+        mode === TRANSPORT_CHECK
+          ? { index: "index.html", "transport-check": "transport-check.html" }
+          : { index: "index.html" },
     },
   },
   server: {
@@ -53,4 +61,4 @@ export default defineConfig({
     },
   },
   preview: { headers: crossOriginIsolation },
-});
+}));

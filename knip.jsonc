@@ -4,7 +4,14 @@
   // points from the Vite, Vitest, Playwright, drizzle-kit and oxlint configs.
   // index.html registers the service worker by its URL, which knip can't follow.
   // stryker.config.mjs names vitest.mutation.config.ts as text, which knip can't follow either.
-  "entry": ["scripts/*.ts", "public/service-worker.js", "vitest.mutation.config.ts"],
+  // The transport check is an entry only in the build's transport-check mode (vite.config.ts),
+  // which knip's Vite plugin doesn't read.
+  "entry": [
+    "scripts/*.ts",
+    "public/service-worker.js",
+    "vitest.mutation.config.ts",
+    "src/transport/check.ts",
+  ],
   // System tools, not packages: build-shapes.ts compiles Google's Kotlin sources with java, and
   // build-transport.ts writes the transport's JavaScript with wasm-bindgen (crates/transport).
   "ignoreBinaries": ["java", "wasm-bindgen"],
