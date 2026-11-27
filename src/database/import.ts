@@ -62,8 +62,14 @@ async function copyTable(
 ): Promise<void> {
   const name = getTableName(table);
   const columns = Object.values(getColumns(table)).map((column) => column.name);
-  const quotedColumns = columns.map((column) => `"${column}"`).join(", ");
-  const placeholders = columns.map(() => "?").join(", ");
+  const quotedColumns = columns
+    .values()
+    .map((column) => `"${column}"`)
+    .reduce((joined, column) => `${joined}, ${column}`);
+  const placeholders = columns
+    .values()
+    .map(() => "?")
+    .reduce((joined, placeholder) => `${joined}, ${placeholder}`);
   const select = await source.prepare(`SELECT ${quotedColumns} FROM "${name}"`);
   const rows = await select.raw(true).all();
   if (isSingleRow && rows.length > 1) {
