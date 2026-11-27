@@ -6,7 +6,15 @@ import * as driverCore from "drizzle-orm/tursodatabase/driver-core";
 import { migrate } from "drizzle-orm/tursodatabase/wasm-migrator";
 import { describe, expect, it } from "vitest";
 
-import { LOWEST, parse as parseStamp, parseNodeId, type NodeId } from "../merge/stamp.ts";
+import {
+  FIRST_COUNTER,
+  LOWEST,
+  create as createStamp,
+  parse as parseStamp,
+  parseNodeId,
+  sanitizeTime,
+  type NodeId,
+} from "../merge/stamp.ts";
 import { createExampleWeek } from "../plan/example.ts";
 import { sanitizeActivityId } from "../plan/id.ts";
 import type { Plan } from "../plan/index.ts";
@@ -128,7 +136,7 @@ describe("rebuilding an imported database", () => {
       .from(activitiesTable);
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const targetDatabase = wrapDatabase(targetConnection);
@@ -149,7 +157,9 @@ describe("rebuilding an imported database", () => {
     const sourceClock = requireValue(await loadNode(source.database), "source node").clock;
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LOWEST, TARGET_NODE)).toBe("rebuilt");
+    expect(await rebuild(source.connection, targetConnection, LOWEST, TARGET_NODE, NOW)).toBe(
+      "rebuilt",
+    );
     expect(await loadNode(wrapDatabase(targetConnection))).toEqual({
       nodeId: TARGET_NODE,
       clock: sourceClock,
@@ -173,7 +183,7 @@ describe("rebuilding an imported database", () => {
     await sourceConnection.exec("INSERT INTO settings VALUES (1, 6, 23, NULL)");
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE)).toBe(
+    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const targetDatabase = wrapDatabase(targetConnection);
@@ -196,7 +206,7 @@ describe("rebuilding an imported database", () => {
     await source.connection.exec("CREATE VIEW extra_view AS SELECT id FROM activities");
 
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE)).toBe(
+    expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const triggers = await (
@@ -245,7 +255,7 @@ describe("rebuilding an imported database", () => {
   it("restores STRICT and CHECK constraints when an imported file's table lacks them", async () => {
     const sourceConnection = await createDatabaseWithoutActivityConstraints();
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE)).toBe(
+    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const strictTables = await (
@@ -279,10 +289,46 @@ describe("rebuilding an imported database", () => {
       // oxlint-disable-next-line no-await-in-loop -- creating a fresh target for this case.
       const targetConnection = await connect(":memory:");
       // oxlint-disable-next-line no-await-in-loop -- checking rebuild rejects this crafted database.
-      expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE)).toBe(
+      expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
         "invalid-file",
       );
     }
+  });
+
+  it("refuses a database whose node clock or row stamps are far in the future", async () => {
+    const tooFarAhead = createStamp(
+      sanitizeTime(NOW.add({ hours: 25 })),
+      FIRST_COUNTER,
+      SOURCE_NODE,
+    );
+    const mutations = [
+      "UPDATE node SET clock = '9999999999999-000000-x'",
+      `UPDATE node SET clock = '${tooFarAhead}'`,
+      `UPDATE activities SET name_stamp = '${tooFarAhead}'`,
+    ];
+    for (const statement of mutations) {
+      // oxlint-disable-next-line no-await-in-loop -- each mutation gets its own fresh source and target database.
+      const source = await openMigrated();
+      // oxlint-disable-next-line no-await-in-loop -- seeding valid rows before mutating the clock or stamp.
+      await saveAction(source.database, createExample, NOW, () => SOURCE_NODE);
+      // oxlint-disable-next-line no-await-in-loop -- applying the future-clock mutation.
+      await source.connection.exec(statement);
+      // oxlint-disable-next-line no-await-in-loop -- creating a fresh target for this case.
+      const targetConnection = await connect(":memory:");
+      // oxlint-disable-next-line no-await-in-loop -- checking rebuild rejects far-future clocks.
+      expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
+        "invalid-file",
+      );
+    }
+  });
+
+  it("accepts a database whose clock is modestly ahead within the drift margin", async () => {
+    const source = await openMigrated();
+    await saveAction(source.database, createExample, NOW.add({ hours: 1 }), () => SOURCE_NODE);
+    const targetConnection = await connect(":memory:");
+    expect(await rebuild(source.connection, targetConnection, LOWEST, TARGET_NODE, NOW)).toBe(
+      "rebuilt",
+    );
   });
 
   it("refuses an unrelated SQLite database that has no applied migrations", async () => {
@@ -290,7 +336,7 @@ describe("rebuilding an imported database", () => {
     await sourceConnection.exec("CREATE TABLE notes (body TEXT)");
     await sourceConnection.exec("INSERT INTO notes VALUES ('hello')");
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE)).toBe(
+    expect(await rebuild(sourceConnection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
       "invalid-file",
     );
   });
@@ -301,16 +347,26 @@ describe("rebuilding an imported database", () => {
       "INSERT INTO __drizzle_migrations (hash, created_at, name) VALUES ('', 0, '29991231000000_future')",
     );
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE)).toBe(
+    expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
       "newer-version",
     );
+  });
+
+  it("propagates failures on the target database instead of reporting invalid-file", async () => {
+    const source = await openMigrated();
+    await saveAction(source.database, createExample, NOW, () => SOURCE_NODE);
+    const targetConnection = await connect(":memory:");
+    await targetConnection.close();
+    await expect(
+      rebuild(source.connection, targetConnection, undefined, TARGET_NODE, NOW),
+    ).rejects.toThrow(/not open/u);
   });
 
   it("keeps saving on the rebuilt database", async () => {
     const source = await openMigrated();
     await saveAction(source.database, createExample, NOW, () => SOURCE_NODE);
     const targetConnection = await connect(":memory:");
-    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE)).toBe(
+    expect(await rebuild(source.connection, targetConnection, LATER_CLOCK, TARGET_NODE, NOW)).toBe(
       "rebuilt",
     );
     const targetDatabase = wrapDatabase(targetConnection);
