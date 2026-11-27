@@ -276,21 +276,33 @@ const hasSqliteHeader = (bytes: Uint8Array): boolean =>
 
 /**
  * Rebuilds the copy of an imported database into a fresh database file made by this version's
- * migrations, then folds the rebuilt file's WAL into it.
+ * migrations, then folds the rebuilt file's WAL into it. Only failures opening or reading the
+ * imported source file turn into `"invalid-file"`; failures on the fresh target database propagate
+ * as storage errors.
  *
  * @param sourceName - The OPFS file holding the imported bytes.
  * @param targetName - A new OPFS file to build the replacement database in.
  * @param clock - This browser's clock before the import.
+ * @param now - When the import ran, to refuse files with clocks far in the future.
  */
 async function rebuildCopy(
   sourceName: string,
   targetName: string,
   clock: Stamp | undefined,
+  now: Temporal.Instant,
 ): Promise<Result<"rebuilt", ImportProblem>> {
   await using resources = new AsyncDisposableStack();
-  const source = resources.adopt(await connectFile(sourceName), (opened) => opened.close());
+  let openedSource: TursoConnection;
+  try {
+    openedSource = await connectFile(sourceName);
+  } catch (error) {
+    console.warn("[database] the imported file can't be opened", error);
+    return "invalid-file";
+  }
+
+  const source = resources.adopt(openedSource, (opened) => opened.close());
   const target = resources.adopt(await connectFile(targetName), (opened) => opened.close());
-  const outcome = await rebuildImport(source, target, clock, createRandomNodeId());
+  const outcome = await rebuildImport(source, target, clock, createRandomNodeId(), now);
   if (outcome !== "rebuilt") return outcome;
 
   await target.exec("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -304,11 +316,13 @@ async function rebuildCopy(
  *
  * @param clock - This browser's clock before the import, which the rebuilt node takes when it's
  *   later.
+ * @param now - When the import ran, to refuse files with clocks far in the future.
  * @returns The rebuilt database's bytes, with the new node: what replaces the database.
  */
 async function checkImport(
   bytes: Uint8Array<ArrayBuffer>,
   clock: Stamp | undefined,
+  now: Temporal.Instant,
 ): Promise<Result<Uint8Array<ArrayBuffer>, ImportProblem>> {
   if (!hasSqliteHeader(bytes)) return "invalid-file";
 
@@ -317,14 +331,7 @@ async function checkImport(
   const sourceName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   const targetName = `${IMPORT_FILE_PREFIX}${crypto.randomUUID()}.db`;
   await writeFile(await navigator.storage.getDirectory(), sourceName, bytes);
-  let outcome: Result<"rebuilt", ImportProblem>;
-  try {
-    outcome = await rebuildCopy(sourceName, targetName, clock);
-  } catch (error) {
-    console.warn("[database] the imported file can't be opened", error);
-    return "invalid-file";
-  }
-
+  const outcome = await rebuildCopy(sourceName, targetName, clock, now);
   if (outcome !== "rebuilt") return outcome;
 
   return await readFileBytes(targetName);
@@ -373,7 +380,7 @@ const localService: DatabaseService = {
     );
     if (stored === "newer-version") return stored;
 
-    const imported = await checkImport(bytes, stored?.clock);
+    const imported = await checkImport(bytes, stored?.clock, Temporal.Now.instant());
     if (typeof imported === "string") return imported;
 
     if ((await closeForReload()) === "newer-version") return "newer-version";

@@ -5,8 +5,8 @@ import { getColumns, getTableName } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { parse as parseChange } from "../merge/check.ts";
-import { takeSnapshot } from "../merge/index.ts";
-import type { NodeId, Stamp } from "../merge/stamp.ts";
+import { findLatestStamp, takeSnapshot } from "../merge/index.ts";
+import { read as readStamp, type NodeId, type Stamp } from "../merge/stamp.ts";
 import type { Result } from "../result.ts";
 import {
   createLocalQueryService,
@@ -33,6 +33,17 @@ export const IMPORTED_TABLES: readonly { table: SQLiteTable; isSingleRow: boolea
 
 /** The id of the single row in `settings` and `node`. */
 const SINGLE_ROW_ID = 1;
+
+/**
+ * How far ahead of this browser's wall clock an imported file's stamps or node clock may be. Wide
+ * enough for normal clock drift or a misconfigured timezone, while refusing crafted far-future
+ * clocks that would make every later edit win merges or exhaust the stamp range.
+ */
+const MAX_CLOCK_AHEAD = { hours: 24 } as const;
+
+/** Whether a stamp's time is further ahead of `now` than {@link MAX_CLOCK_AHEAD} allows. */
+const isFarInFuture = (stamp: Stamp, now: Temporal.Instant): boolean =>
+  readStamp(stamp).time > now.add(MAX_CLOCK_AHEAD).epochMilliseconds;
 
 /** Checks that a raw SQLite row holds the expected number of values SQLite can store. */
 function readRow(row: unknown, columnCount: number, tableName: string): SqlValue[] {
@@ -133,19 +144,22 @@ async function migrateSource(source: TursoConnection): Promise<Result<"migrated"
 /**
  * Rebuilds an imported database into a fresh `target` connection: checks and migrates `source`,
  * creates the schema on `target` from this version's migrations, copies every row through
- * `target`'s constraints, verifies the rows with the merge's strict check, and gives the node a
- * new id and the later clock. No byte of `source`'s schema is kept.
+ * `target`'s constraints, verifies the rows with the merge's strict check and refuses stamps or a
+ * node clock far ahead of `now`, then gives the node a new id and the later clock. No byte of
+ * `source`'s schema is kept.
  *
  * @param source - A copy of the imported file, opened on its own.
  * @param target - A brand-new empty database to build the replacement in.
  * @param clock - This browser's clock before the import, or undefined before its first save.
  * @param nodeId - The new node id for this browser.
+ * @param now - When the import ran, to refuse files whose stamps or node clock are far ahead.
  */
 export async function rebuild(
   source: TursoConnection,
   target: TursoConnection,
   clock: Stamp | undefined,
   nodeId: NodeId,
+  now: Temporal.Instant,
 ): Promise<Result<"rebuilt", ImportProblem>> {
   const migrated = await migrateSource(source);
   if (migrated !== "migrated") return migrated;
@@ -161,9 +175,21 @@ export async function rebuild(
     return "invalid-file";
   }
 
+  // `copyRows` already enforced `target`'s `STRICT`, `CHECK` and `FOREIGN KEY` constraints on raw
+  // values (including `is_deleted IN (0, 1)` before Drizzle maps integers to booleans). `loadRows`
+  // reads stored values without repairing them, so `parseChange` catches what SQLite's `CHECK`
+  // constraints don't express (such as whitespace-only activity names and invalid `example_loaded_at`).
   const targetDatabase = createDatabase(createLocalQueryService(() => Promise.resolve(target)));
-  const { rows } = await loadRows(targetDatabase);
-  if (typeof parseChange(takeSnapshot(rows)) === "string") return "invalid-file";
+  const { rows, node: importedNode } = await loadRows(targetDatabase);
+  const snapshot = takeSnapshot(rows);
+  if (typeof parseChange(snapshot) === "string") return "invalid-file";
+
+  if (
+    isFarInFuture(findLatestStamp(snapshot), now) ||
+    (importedNode !== undefined && isFarInFuture(importedNode.clock, now))
+  ) {
+    return "invalid-file";
+  }
 
   await renewNode(targetDatabase, clock, nodeId);
   return "rebuilt";
