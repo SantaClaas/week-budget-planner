@@ -28,6 +28,7 @@ declare module "core-js/es/symbol/dispose.js";
 declare module "core-js/es/symbol/async-dispose.js";
 declare module "core-js/es/disposable-stack/index.js";
 declare module "core-js/es/async-disposable-stack/index.js";
+declare module "core-js/modules/web.url.parse.js";
 
 /**
  * Element-scoped View Transitions, which TypeScript's DOM types don't have yet (see
