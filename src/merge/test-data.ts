@@ -44,12 +44,31 @@ export function createStamp(time: number, counter: number, node: string): Stamp 
   return create(checkedTime, checkedCounter, createNodeId(node));
 }
 
+/** A hexadecimal digit, as a device's key is written. */
+type HexadecimalDigit =
+  | "0"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "a"
+  | "b"
+  | "c"
+  | "d"
+  | "e"
+  | "f";
+
 /**
  * A device's row: a member reached through the test relay, every register stamped `stamp`.
  *
- * @param digit - The hexadecimal digit its key repeats, so each device in a test has its own.
+ * @param digit - The digit its key repeats, so each device in a test has its own.
  */
-export function createDevice(digit: string, stamp: Stamp = LOWEST): DeviceRow {
+export function createDevice(digit: HexadecimalDigit, stamp: Stamp = LOWEST): DeviceRow {
   const id = requireValue(parseDeviceKey(digit.repeat(64)), "device key");
   return {
     id,
