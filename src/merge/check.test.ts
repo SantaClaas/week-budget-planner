@@ -55,13 +55,13 @@ function createWithRenamedStamp(): unknown {
   return received;
 }
 
-/** The snapshot as JSON would arrive, with the first row of a kind twice. */
-function createWithRepeated(kind: "blocks" | "devices"): unknown {
+/** The snapshot as JSON would arrive, with the first row of one of its lists twice. */
+function createWithRepeated(list: "blocks" | "devices"): unknown {
   const received = createReceived([]);
-  const list = isContainer(received) ? received[kind] : undefined;
-  if (!Array.isArray(list)) throw new Error(`The snapshot has no ${kind}.`);
+  const rows = isContainer(received) ? received[list] : undefined;
+  if (!Array.isArray(rows)) throw new Error(`The snapshot has no ${list}.`);
 
-  list.push(list.at(0));
+  rows.push(rows.at(0));
   return received;
 }
 
