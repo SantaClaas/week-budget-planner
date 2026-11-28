@@ -3,14 +3,17 @@ import { describe, expect, it } from "vitest";
 import type { DeviceKey } from "../device/index.ts";
 import { make } from "../merge/change.ts";
 import { convertPlan, merge, takeSnapshot, type Change, type Rows } from "../merge/index.ts";
+import { parseDeviceName } from "../device/index.ts";
+import type { DeviceRow } from "../merge/row.ts";
 import { createDevice, createStamp, requireValue } from "../merge/test-data.ts";
 import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import { createActivity, createBlock } from "../plan/test-data.ts";
-import { sanitizeDayStart } from "../plan/time.ts";
+import { sanitizeDayEnd, sanitizeDayStart } from "../plan/time.ts";
 import {
   NO_CHANGE,
   collectSince,
   createEmptyOrigins,
+  findLatestChange,
   incrementChangeNumber,
   noteAction,
   noteMerge,
@@ -123,6 +126,28 @@ describe("the counter's values", () => {
   });
 });
 
+/** This device's own change at `changedAt`. */
+const createOriginAt = (changedAt: number) => ({
+  changedAt: createChangeNumber(changedAt),
+  changedBy: null,
+});
+
+describe("the latest change among the rows", () => {
+  it("is the highest number any row was changed at, of any kind", () => {
+    expect(findLatestChange(createEmptyOrigins())).toBe(0);
+    const origins: Origins = {
+      activities: new Map([[requireValue(plan.activities[0], "activity").id, createOriginAt(2)]]),
+      blocks: new Map([[requireValue(plan.blocks[0], "block").id, createOriginAt(5)]]),
+      settings: createOriginAt(3),
+      devices: new Map([[phone, createOriginAt(4)]]),
+    };
+    expect(findLatestChange(origins)).toBe(5);
+    expect(findLatestChange({ ...origins, blocks: new Map() })).toBe(4);
+    expect(findLatestChange({ ...origins, blocks: new Map(), devices: new Map() })).toBe(3);
+    expect(findLatestChange({ ...origins, settings: createOriginAt(7) })).toBe(7);
+  });
+});
+
 describe("noting an action", () => {
   it("gives the rows it wrote the counter's next value, as this device's own", () => {
     const device = createTestDevice(phone, convertPlan(plan));
@@ -177,6 +202,54 @@ describe("noting a merge", () => {
     // The laptop's later name wins, so its row stays its own change 1.
     const work = requireValue(plan.activities[0], "activity").id;
     expect(receiver.origins.activities.get(work)).toEqual({ changedAt: 1, changedBy: null });
+  });
+
+  it("notes settings and a device that came out as neither side's as this device's own", () => {
+    const sender = createTestDevice(phone, convertPlan(plan));
+    const receiver = createTestDevice(laptop, convertPlan(plan));
+    act(sender, 1_763_200_000_000, (shown) => ({ ...shown, dayStart: sanitizeDayStart(6) }));
+    act(receiver, 1_763_200_000_005, (shown) => ({ ...shown, dayEnd: sanitizeDayEnd(20) }));
+    const device = createDevice("d", createStamp(1_763_200_000_000, 0, "phone"));
+    const renamedHere: DeviceRow = {
+      ...device,
+      name: {
+        value: requireValue(parseDeviceName("Tablet"), "name"),
+        stamp: createStamp(1_763_200_000_005, 0, "laptop"),
+      },
+    };
+    const removedThere: DeviceRow = {
+      ...device,
+      membership: {
+        value: { status: "removed", proof: null },
+        stamp: createStamp(1_763_200_000_001, 0, "phone"),
+      },
+    };
+    const held = { ...receiver.rows, devices: new Map([[device.id, renamedHere]]) };
+    const change = { ...takeSnapshot(sender.rows), devices: [removedThere] };
+    const merged = merge(held, change);
+    const origins = noteMerge(held, merged, change, receiver.origins, createChangeNumber(4), phone);
+    expect(merged.settings).toMatchObject({ dayStart: { value: 6 }, dayEnd: { value: 20 } });
+    expect(origins.settings).toEqual({ changedAt: 4, changedBy: null });
+    expect(origins.devices.get(device.id)).toEqual({ changedAt: 4, changedBy: null });
+  });
+
+  it("leaves a device the merge didn't alter as it was", () => {
+    const device = createDevice("d", createStamp(1_763_200_000_000, 0, "phone"));
+    const rows = { ...convertPlan(plan), devices: new Map([[device.id, device]]) };
+    const origins = {
+      ...createEmptyOrigins(),
+      devices: new Map([[device.id, { changedAt: createChangeNumber(1), changedBy: null }]]),
+    };
+    const change = { ...takeSnapshot(rows), devices: [createDevice("d")] };
+    const noted = noteMerge(
+      rows,
+      merge(rows, change),
+      change,
+      origins,
+      createChangeNumber(2),
+      phone,
+    );
+    expect(noted.devices.get(device.id)).toEqual({ changedAt: 1, changedBy: null });
   });
 
   it("notes settings and devices the same way", () => {
@@ -257,6 +330,37 @@ describe("collecting what another device hasn't got", () => {
     const block = requireValue(plan.blocks[0], "block").id;
     expect(tabletDevice.rows.blocks.get(block)?.time.value.start).toBe(0);
     expect(tabletDevice.origins.blocks.get(block)).toEqual({ changedAt: 1, changedBy: laptop });
+  });
+
+  it("sorts what it gives by id", () => {
+    const device = createTestDevice(phone, convertPlan(plan));
+    act(device, 1_763_200_000_000, (shown) => ({
+      ...shown,
+      blocks: shown.blocks.map((block) => ({ ...block, start: createBlock({ start: 0 }).start })),
+    }));
+    const later = createDevice("e");
+    const earlier = createDevice("1");
+    const rows = {
+      ...device.rows,
+      devices: new Map([
+        [later.id, later],
+        [earlier.id, earlier],
+      ]),
+    };
+    const origins = noteAction(device.rows, rows, device.origins, createChangeNumber(2));
+    expect(listIds(collectSince(rows, origins, NO_CHANGE, laptop))).toEqual({
+      activities: ["gym", "work"],
+      blocks: ["1", "2"],
+      settings: false,
+      devices: [earlier.id, later.id],
+    });
+  });
+
+  it("throws on a block whose activity has no row, which the rows never hold", () => {
+    const device = createTestDevice(phone, convertPlan(plan));
+    act(device, 1_763_200_000_000, moveBlock("1", 0));
+    const rows = { ...device.rows, activities: new Map() };
+    expect(() => collectSince(rows, device.origins, NO_CHANGE, laptop)).toThrow(/has no row/u);
   });
 
   it("includes the device list", () => {

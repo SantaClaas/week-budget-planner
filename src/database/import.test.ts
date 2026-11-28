@@ -204,7 +204,12 @@ describe("rebuilding an imported database", () => {
     expect(isStored).toBe(true);
     expect(plan.activities.map((activity) => activity.id)).toEqual(["gym", "work"]);
     expect(plan.blocks).toHaveLength(1);
-    expect(await loadNode(targetDatabase)).toBeUndefined();
+    // A file from before stamps has no node, but its rows are change 1, so this browser counts on.
+    expect(await loadNode(targetDatabase)).toEqual({
+      nodeId: TARGET_NODE,
+      clock: LOWEST,
+      counter: 2,
+    });
     const work = requireValue(sanitizeActivityId("work"), "work id");
     expect((await loadRows(targetDatabase)).rows.activities.get(work)?.name.stamp).toBe(LOWEST);
   });

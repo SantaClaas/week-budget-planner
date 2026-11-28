@@ -13,16 +13,21 @@ import {
   sanitizeDayStart,
   sanitizeLength,
 } from "../plan/time.ts";
-import type { Plan } from "../plan/index.ts";
+import { createEmptyPlan, type Plan } from "../plan/index.ts";
 import { createLocalQueryService, type TursoConnection } from "./connection.ts";
 import { createDatabase, type Database } from "./drizzle.ts";
 import { MIGRATION_NAMES, runMigrations } from "./migration.ts";
 import { LOWEST, parse as parseStamp, parseNodeId, type NodeId } from "../merge/stamp.ts";
+import { parseDeviceKey, parseDeviceName } from "../device/index.ts";
+import { convertPlan, takeSnapshot } from "../merge/index.ts";
+import type { DeviceRow } from "../merge/row.ts";
+import { createDevice, createStamp } from "../merge/test-data.ts";
 import {
   NO_CHANGE,
   createEmptyOrigins,
   parseChangeNumber,
   type ChangeNumber,
+  type Origin,
 } from "../sync/origin.ts";
 import {
   buildChangeStatements,
@@ -415,6 +420,47 @@ describe("the device list's table", () => {
     expect(origins.devices.get(device.id)).toEqual({ changedAt: 1, changedBy: null });
   });
 
+  it("writes a device through a change, and updates it with a later one", async () => {
+    const { database } = await openTestDatabase();
+    const device = createDevice("a", createStamp(1_763_200_000_000, 0, "phone"));
+    const stored = { nodeId: NODE_ID, clock: LOWEST, counter: createChangeNumber(3) };
+    const write = async (row: DeviceRow, origin: Origin) => {
+      const change = { ...takeSnapshot(convertPlan(createEmptyPlan())), devices: [row] };
+      const origins = { ...createEmptyOrigins(), devices: new Map([[row.id, origin]]) };
+      const [first, ...rest] = buildChangeStatements(database, change, origins, stored, NOW);
+      await database.batch([requireValue(first, "statement"), ...rest]);
+    };
+    const laptop = requireValue(parseDeviceKey("b".repeat(64)), "device key");
+    await write(device, { changedAt: createChangeNumber(2), changedBy: laptop });
+    expect((await loadRows(database)).rows.devices.get(device.id)).toEqual(device);
+    const renamed: DeviceRow = {
+      ...device,
+      name: {
+        value: requireValue(parseDeviceName("Phone"), "name"),
+        stamp: createStamp(1_763_200_000_001, 0, "phone"),
+      },
+    };
+    await write(renamed, { changedAt: createChangeNumber(3), changedBy: null });
+    const { rows, origins } = await loadRows(database);
+    expect(rows.devices.get(device.id)).toEqual(renamed);
+    expect(origins.devices.get(device.id)).toEqual({ changedAt: 3, changedBy: null });
+  });
+
+  it("refuses to build a write for a row without its origin", async () => {
+    const { database } = await openTestDatabase();
+    const device = createDevice("a");
+    const change = { ...takeSnapshot(convertPlan(createEmptyPlan())), devices: [device] };
+    expect(() =>
+      buildChangeStatements(
+        database,
+        change,
+        createEmptyOrigins(),
+        { nodeId: NODE_ID, clock: LOWEST, counter: NO_CHANGE },
+        NOW,
+      ),
+    ).toThrow(/has no origin/u);
+  });
+
   it("refuses values that break the rules", async () => {
     const { connection } = await openTestDatabase();
     const refused = [
@@ -495,12 +541,14 @@ describe("the migration to stamps", () => {
       ["b2", "gym", 420],
     ]);
     expect(plan).toMatchObject({ dayStart: 6, dayEnd: 23, exampleLoadedAt: null });
-    const { rows, node } = await loadRows(database);
+    const { rows, node, counter } = await loadRows(database);
     expect(node).toBeUndefined();
+    // Without a node, the counter is the rows' latest change, which the migration made 1.
+    expect(counter).toBe(1);
     const work = requireValue(sanitizeActivityId("work"), "activity id");
     expect(rows.activities.get(work)?.name.stamp).toBe(LOWEST);
 
-    // The next save works on the migrated rows.
+    // The next save works on the migrated rows, and numbers its write after theirs.
     await saveAction(
       database,
       (shown) => ({ ...shown, dayStart: sanitizeDayStart(8) }),
@@ -508,6 +556,9 @@ describe("the migration to stamps", () => {
       createNodeId,
     );
     expect((await loadPlan(database, createPredictableIds())).plan.dayStart).toBe(8);
+    const saved = await loadRows(database);
+    expect(saved.node?.counter).toBe(2);
+    expect(saved.origins.settings).toEqual({ changedAt: 2, changedBy: null });
   });
 });
 
@@ -546,10 +597,31 @@ describe("the node after an import", () => {
     });
   });
 
-  it("makes no node when neither has a clock, so the first save makes one", async () => {
-    const { database } = await openTestDatabase();
-    expect(await renewNode(database, undefined, imported)).toBeUndefined();
-    expect(await loadNode(database)).toBeUndefined();
+  it("makes a node with the lowest clock when neither has one, counting past the file's rows", async () => {
+    const connection = await openOlderDatabase(1);
+    await connection.exec(
+      "INSERT INTO activities VALUES ('work', 'Work', 78, 'square', 'week', 720, 5, 0, '2026-10-01T00:00:00Z')",
+    );
+    expect(await runMigrations(connection)).toBe("migrated");
+    const database = createDatabase(createLocalQueryService(() => Promise.resolve(connection)));
+    const renewed = { nodeId: "newNode", clock: LOWEST, counter: 2 };
+    expect(await renewNode(database, undefined, imported)).toEqual(renewed);
+    expect(await loadNode(database)).toEqual(renewed);
+  });
+
+  it("drops progress and every row's sender from a file without a node, as a crafted one can be", async () => {
+    const { database, connection } = await openTestDatabase();
+    await save(database, createExample);
+    await connection.exec("DELETE FROM node");
+    await connection.exec(`INSERT INTO progress VALUES ('${"b".repeat(64)}', 3, 2)`);
+    await connection.exec(`UPDATE blocks SET changed_by = '${"b".repeat(64)}'`);
+    await renewNode(database, undefined, imported);
+    const { origins } = await loadRows(database);
+    expect(new Set(origins.blocks.values().map((origin) => origin.changedBy))).toEqual(
+      new Set([null]),
+    );
+    const statement = await connection.prepare("SELECT count(*) AS count FROM progress");
+    expect(await statement.get()).toEqual({ count: 0 });
   });
 
   it("counts every row as changed here at the new counter, and drops the file's progress", async () => {
