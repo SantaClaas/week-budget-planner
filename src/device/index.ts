@@ -55,13 +55,8 @@ export const parseDeviceKey = (value: unknown): DeviceKey | undefined =>
 export function parseRelay(value: unknown): Relay | undefined {
   if (typeof value !== "string" || value.length > MAX_RELAY_CHARACTERS) return undefined;
 
-  // Not URL.canParse, which came after the browsers the app reaches down to (Safari 17).
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return undefined;
-  }
+  const url = URL.parse(value);
+  if (url === null) return undefined;
 
   if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
 
