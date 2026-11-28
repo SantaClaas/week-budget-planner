@@ -68,7 +68,10 @@ const hashScript = (script: string) =>
 /** The page's policy for its `<meta>`: its inline scripts' hashes, and the fixed directives. */
 export const buildPagePolicy = (html: string): string =>
   buildPolicy(
-    [...html.matchAll(INLINE_SCRIPT_PATTERN)].map(([, script = ""]) => hashScript(script)),
+    html
+      .matchAll(INLINE_SCRIPT_PATTERN)
+      .toArray()
+      .map(([, script = ""]) => hashScript(script)),
   );
 
 /** The static HTML of every Solid `template()` call in compiled code, as the runtime receives it. */

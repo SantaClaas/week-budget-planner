@@ -31,6 +31,11 @@ new RuleTester().run("no-intermediate-array", rule, {
     // Not handed to something that takes any iterable.
     "use(rows.map((row) => row.id));",
     "const ids = new Set(rows);",
+    // Spreading a string or an array, or more than an iterator, isn't what toArray() says.
+    "const characters = [...name];",
+    "const copy = [...rows];",
+    "const all = [first, ...rows.values()];",
+    "const all = [...rows.values(), ...others.values()];",
   ],
   invalid: [
     {
@@ -71,6 +76,27 @@ new RuleTester().run("no-intermediate-array", rule, {
     {
       code: "const isAny = rows.map((row) => row.id).some((id) => id === wanted);",
       output: "const isAny = rows.values().map((row) => row.id).some((id) => id === wanted);",
+      errors: 1,
+    },
+    // An iterator spread into an array of its own.
+    {
+      code: "const activities = [...included.values()];",
+      output: "const activities = included.values().toArray();",
+      errors: 1,
+    },
+    {
+      code: "const kept = [...byId.keys().filter(isKept)];",
+      output: "const kept = byId.keys().filter(isKept).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const matches = [...text.matchAll(pattern)];",
+      output: "const matches = text.matchAll(pattern).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const ids = [...Iterator.from(rows).take(3)];",
+      output: "const ids = Iterator.from(rows).take(3).toArray();",
       errors: 1,
     },
     // Parentheses around the start stay outside.

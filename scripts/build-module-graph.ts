@@ -112,10 +112,14 @@ const formatId = (module: string): string => `module_${module.replaceAll(/\W/gu,
 export function render(graph: Graph): string {
   const modules = new Set([...graph.keys(), ...graph.values().flatMap((edges) => edges.keys())]);
   const nodes = [...modules].toSorted().map((module) => `  ${formatId(module)}["${module}"]`);
-  const edges = [...graph.entries()]
+  const edges = graph
+    .entries()
+    .toArray()
     .toSorted(([a], [b]) => a.localeCompare(b))
     .flatMap(([from, targets]) =>
-      [...targets.entries()]
+      targets
+        .entries()
+        .toArray()
         .toSorted(([a], [b]) => a.localeCompare(b))
         .map(
           ([to, { isDynamic }]) =>

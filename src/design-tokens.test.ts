@@ -144,11 +144,14 @@ function findLevelRules(level: string): Map<string, string>[] {
  * at the other level keeps its standard value at this one. */
 function countOwnValues(level: string): number {
   const values = readBase(":root");
-  return [...values.keys()].filter(
-    (name) =>
-      name.endsWith(`-${level}-contrast`) &&
-      values.get(name) !== values.get(name.replace(`-${level}-`, "-standard-")),
-  ).length;
+  return values
+    .keys()
+    .toArray()
+    .filter(
+      (name) =>
+        name.endsWith(`-${level}-contrast`) &&
+        values.get(name) !== values.get(name.replace(`-${level}-`, "-standard-")),
+    ).length;
 }
 
 describe("design tokens", () => {
