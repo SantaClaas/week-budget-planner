@@ -508,7 +508,7 @@ describe("the migration to the device list", () => {
     expect(rows.devices.size).toBe(0);
     const changeOne = { changedAt: 1, changedBy: null };
     expect(origins.activities.get(work)).toEqual(changeOne);
-    expect([...origins.blocks.values()]).toEqual([changeOne]);
+    expect(origins.blocks.values().toArray()).toEqual([changeOne]);
     expect(origins.settings).toEqual(changeOne);
     expect(node).toEqual({ nodeId: "oldNode", clock: LOWEST, counter: 1 });
 
