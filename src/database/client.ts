@@ -45,7 +45,8 @@ type DatabaseService = QueryService & {
    * Replaces the database file and reloads every tab. Destructive.
    *
    * @returns "imported", or, leaving the database as it was, "invalid-file" when the file isn't a
-   *   database this app can open, or "newer-version" when a newer version of the app made it.
+   *   database this app can open, "newer-version" when a newer version of the app made it, or
+   *   "future-clock" when its stamps or node clock are far ahead of this browser's clock.
    */
   importFile(bytes: Uint8Array<ArrayBuffer>): Promise<Result<"imported", ImportProblem>>;
   /** Deletes the database files entirely and reloads every tab. Destructive. */

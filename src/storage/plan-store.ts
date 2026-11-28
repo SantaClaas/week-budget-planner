@@ -31,8 +31,9 @@ export const createExportName = (at: Temporal.PlainDateTime, extension: "db" | "
  * - "invalid-file": it isn't a plan, or a database this app can open.
  * - "needs-database": a `.db` file, which only the full level can import.
  * - "newer-version": a newer version of the app made it; reloading updates the app.
+ * - "future-clock": its stamps or node clock are far ahead of this browser's clock.
  */
-export type ImportProblem = "invalid-file" | "needs-database" | "newer-version";
+export type ImportProblem = "invalid-file" | "needs-database" | "newer-version" | "future-clock";
 
 /**
  * Where the plan is kept. Every method gives back "newer-version" instead of doing anything once a

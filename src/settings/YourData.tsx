@@ -19,32 +19,38 @@ const describeContents = (plan: Plan): string =>
 
 /** What the snackbar says when an import changed nothing (see Export, import and reset). */
 function showImportProblem(problem: ImportProblem, file: File): void {
-  if (problem === "newer-version") {
-    snackbar.show({
-      message:
-        "This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.",
-      action: {
-        label: "Reload",
-        run: () => {
-          location.reload();
+  switch (problem) {
+    case "newer-version":
+      snackbar.show({
+        message:
+          "This file is from a newer version of Week Budget Planner. Reload to update the app, then import it again.",
+        action: {
+          label: "Reload",
+          run: () => {
+            location.reload();
+          },
         },
-      },
-    });
-    return;
+      });
+      break;
+    case "needs-database":
+      snackbar.show({
+        message: "This browser can only import a .json plan here, so nothing was changed.",
+      });
+      break;
+    case "future-clock":
+      snackbar.show({
+        message:
+          "This file was saved with a clock in the future, so nothing was changed. Check your device's date and time.",
+      });
+      break;
+    case "invalid-file":
+      snackbar.show({
+        message: jsonFile.isJson(file)
+          ? "This file isn't a Week Budget Planner plan, so nothing was changed."
+          : "This file isn't a Week Budget Planner database, so nothing was changed.",
+      });
+      break;
   }
-
-  if (problem === "needs-database") {
-    snackbar.show({
-      message: "This browser can only import a .json plan here, so nothing was changed.",
-    });
-    return;
-  }
-
-  snackbar.show({
-    message: jsonFile.isJson(file)
-      ? "This file isn't a Week Budget Planner plan, so nothing was changed."
-      : "This file isn't a Week Budget Planner database, so nothing was changed.",
-  });
 }
 
 /**

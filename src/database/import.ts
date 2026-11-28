@@ -21,7 +21,7 @@ import { loadRows, renewNode } from "./plan-repository.ts";
 import { activities, blocks, node, settings } from "./schema.ts";
 
 /** Why a file can't be imported. */
-export type ImportProblem = "invalid-file" | "newer-version";
+export type ImportProblem = "invalid-file" | "newer-version" | "future-clock";
 
 /** The tables an import copies, parents before children so foreign keys hold while inserting. */
 export const IMPORTED_TABLES: readonly { table: SQLiteTable; isSingleRow: boolean }[] = [
@@ -188,7 +188,7 @@ export async function rebuild(
     isFarInFuture(findLatestStamp(snapshot), now) ||
     (importedNode !== undefined && isFarInFuture(importedNode.clock, now))
   ) {
-    return "invalid-file";
+    return "future-clock";
   }
 
   await renewNode(targetDatabase, clock, nodeId);
