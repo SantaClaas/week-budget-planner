@@ -190,7 +190,7 @@ function pressBlock(event: PointerEvent, drawn: DrawnBlock, planner: Planner): v
 
   selection.select(drawn.block.id);
   startDrag(event, {
-    part: { block: drawn.block, kind: drawn.part },
+    part: { block: drawn.block, half: drawn.part },
     grip: readGrip(event.target),
     planner,
     scroller,

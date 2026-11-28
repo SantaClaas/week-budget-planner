@@ -9,3 +9,9 @@ allow-panic-in-tests = true
 # what such a match means (see Errors in docs/guidelines/rust.md). "Never" leaves matches alone, and
 # question_mark still suggests `?` for an Option. Checked with Rust 1.100 on 2026-11-22.
 matches-for-let-else = "Never"
+
+# No binding named "kind": a value is named for what it means (see Names in docs/guidelines/rust.md,
+# and Discriminated unions in docs/guidelines/typescript.md for the app's side). ".." keeps Clippy's
+# own list (foo, baz, quux). It checks bindings, not fields; a field is left to review. Checked with
+# Rust 1.100 on 2026-11-28.
+disallowed-names = ["..", "kind"]

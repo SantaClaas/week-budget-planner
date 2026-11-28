@@ -21,10 +21,10 @@ describe("week", () => {
   it("splits an overnight block into two parts", () => {
     const night = createBlock({ day: 1, start: 1320, length: 240 });
     expect(
-      splitIntoParts(night).map(({ day, start, end, kind }) => ({ day, start, end, kind })),
+      splitIntoParts(night).map(({ day, start, end, half }) => ({ day, start, end, half })),
     ).toEqual([
-      { day: 1, start: 1320, end: 1440, kind: "first" },
-      { day: 2, start: 0, end: 120, kind: "second" },
+      { day: 1, start: 1320, end: 1440, half: "first" },
+      { day: 2, start: 0, end: 120, half: "second" },
     ]);
   });
 
@@ -100,8 +100,8 @@ describe("week", () => {
   it("keeps a block that ends at midnight a one-day block", () => {
     const untilMidnight = createBlock({ day: 1, start: 1380, length: 60 });
     expect(
-      splitIntoParts(untilMidnight).map(({ day, start, end, kind }) => ({ day, start, end, kind })),
-    ).toEqual([{ day: 1, start: 1380, end: 1440, kind: "only" }]);
+      splitIntoParts(untilMidnight).map(({ day, start, end, half }) => ({ day, start, end, half })),
+    ).toEqual([{ day: 1, start: 1380, end: 1440, half: "only" }]);
     expect(describeTime(untilMidnight, { locale: "en-GB" })).toBe("23:00–00:00 · 1h");
     // Its bottom edge stops at midnight, and can come back up to a slot below the start.
     expect(resizeEnd(untilMidnight, 1500)).toMatchObject({ length: 60 });

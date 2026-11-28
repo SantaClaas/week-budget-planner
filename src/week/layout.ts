@@ -42,11 +42,11 @@ type BlockSize = "regular" | "short" | "tiny";
 /** One block, or one part of an overnight block, as a day draws it. */
 export type DrawnBlock = {
   /** Unique within the week: an overnight block has a part on each of its two days. */
-  key: `${BlockId}-${BlockPart["kind"]}`;
+  key: `${BlockId}-${BlockPart["half"]}`;
   /** The whole block this is a part of, which a drag or a key changes. */
   block: Block;
   activity: Activity;
-  part: BlockPart["kind"];
+  part: BlockPart["half"];
   /** Where this part starts on its day, and how long it is on this day. */
   start: DayMinute;
   length: Length;
@@ -114,7 +114,7 @@ const createLengthText = (minutes: number, format: Format): TimeText => ({
 function describeRange(part: BlockPart, format: Format): TimeText[] {
   const { block } = part;
   const end = block.start + block.length;
-  if (part.kind === "only") {
+  if (part.half === "only") {
     return formatClockRangeToParts(block.start, end, format).map(({ text, source }) => {
       if (source === "shared") return { text };
 
@@ -150,7 +150,7 @@ function speakRange(block: Block, format: Format): string {
 function speak(part: BlockPart, activity: Activity, format: Format): string {
   const { block } = part;
   const length = formatLength(block.length, "long", format);
-  if (part.kind !== "second") return `${activity.name}, ${speakRange(block, format)}, ${length}`;
+  if (part.half !== "second") return `${activity.name}, ${speakRange(block, format)}, ${length}`;
 
   const startDay = formatWeekday(block.day, "long", format);
   const end = formatClock(block.start + block.length, format);
@@ -183,10 +183,10 @@ function drawBlock(part: BlockPart, activity: Activity, lane: Lane, format: Form
   const size = pickSize(length);
   const lengthText = createLengthText(part.block.length, format);
   return {
-    key: `${part.block.id}-${part.kind}`,
+    key: `${part.block.id}-${part.half}`,
     block: part.block,
     activity,
-    part: part.kind,
+    part: part.half,
     start: part.start,
     length,
     lane,
