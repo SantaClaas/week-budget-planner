@@ -70,8 +70,8 @@ export const buildPagePolicy = (html: string): string =>
   buildPolicy(
     html
       .matchAll(INLINE_SCRIPT_PATTERN)
-      .toArray()
-      .map(([, script = ""]) => hashScript(script)),
+      .map(([, script = ""]) => hashScript(script))
+      .toArray(),
   );
 
 /** The static HTML of every Solid `template()` call in compiled code, as the runtime receives it. */

@@ -31,6 +31,10 @@ new RuleTester().run("no-intermediate-array", rule, {
     // Not handed to something that takes any iterable.
     "use(rows.map((row) => row.id));",
     "const ids = new Set(rows);",
+    // An array is needed after toArray().
+    "const sorted = rows.values().toArray().toSorted();",
+    "const first = rows.values().toArray()[0];",
+    "const copy = rows.values().toArray();",
     // Spreading a string or an array, or more than an iterator, isn't what toArray() says.
     "const characters = [...name];",
     "const copy = [...rows];",
@@ -97,6 +101,68 @@ new RuleTester().run("no-intermediate-array", rule, {
     {
       code: "const ids = [...Iterator.from(rows).take(3)];",
       output: "const ids = Iterator.from(rows).take(3).toArray();",
+      errors: 1,
+    },
+    // An iterator materialized with toArray() before a chain or iterable consumer.
+    {
+      code: "const matches = html.matchAll(pattern).toArray().map((match) => match[0]);",
+      output: "const matches = html.matchAll(pattern).map((match) => match[0]).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const kept = values.keys().toArray().filter(isKept);",
+      output: "const kept = values.keys().filter(isKept).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const isAny = rows.values().toArray().some(isKept);",
+      output: "const isAny = rows.values().some(isKept);",
+      errors: 1,
+    },
+    {
+      code: "const total = rows.values().toArray().reduce((count) => count + 1, 0);",
+      output: "const total = rows.values().reduce((count) => count + 1, 0);",
+      errors: 1,
+    },
+    {
+      code: "const ids = new Set(rows.values().toArray());",
+      output: "const ids = new Set(rows.values());",
+      errors: 1,
+    },
+    {
+      code: "const ids = new Set(rows.values().toArray().map((row) => row.id));",
+      output: "const ids = new Set(rows.values().map((row) => row.id));",
+      errors: 1,
+    },
+    {
+      code: "for (const row of rows.values().toArray()) use(row);",
+      output: "for (const row of rows.values()) use(row);",
+      errors: 1,
+    },
+    // An iterator spread before a chain or iterable consumer chains directly without an array in between.
+    {
+      code: "const matches = [...html.matchAll(pattern)].map((match) => match[0]);",
+      output: "const matches = html.matchAll(pattern).map((match) => match[0]).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const ids = [...rows.values()].filter(isKept).map((row) => row.id);",
+      output: "const ids = rows.values().filter(isKept).map((row) => row.id).toArray();",
+      errors: 1,
+    },
+    {
+      code: "const isAny = [...rows.values()].some(isKept);",
+      output: "const isAny = rows.values().some(isKept);",
+      errors: 1,
+    },
+    {
+      code: "const ids = new Set([...rows.values()]);",
+      output: "const ids = new Set(rows.values());",
+      errors: 1,
+    },
+    {
+      code: "const ids = new Set([...rows.values()].map((row) => row.id));",
+      output: "const ids = new Set(rows.values().map((row) => row.id));",
       errors: 1,
     },
     // Parentheses around the start stay outside.

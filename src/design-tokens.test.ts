@@ -146,12 +146,12 @@ function countOwnValues(level: string): number {
   const values = readBase(":root");
   return values
     .keys()
-    .toArray()
     .filter(
       (name) =>
         name.endsWith(`-${level}-contrast`) &&
         values.get(name) !== values.get(name.replace(`-${level}-`, "-standard-")),
-    ).length;
+    )
+    .reduce((count) => count + 1, 0);
 }
 
 describe("design tokens", () => {
