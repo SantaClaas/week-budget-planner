@@ -67,8 +67,9 @@ export function parseRelay(value: unknown): Relay | undefined {
 export function parseDeviceName(value: unknown): DeviceName | undefined {
   if (typeof value !== "string" || value !== value.trim()) return undefined;
 
-  // oxlint-disable-next-line typescript/no-misused-spread -- code points are what is counted here, the way the database's length() counts them.
-  const characters = [...value].length;
+  // A string iterates by code points, as the database's length() counts them (not graphemes, as
+  // Intl.Segmenter would: a flag is one grapheme of two code points).
+  const characters = Iterator.from(value).reduce((count) => count + 1, 0);
   return characters >= 1 && characters <= MAX_DEVICE_NAME_CHARACTERS
     ? brand<DeviceName>(value)
     : undefined;

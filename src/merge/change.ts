@@ -276,7 +276,7 @@ export function make(
     rows: written,
     change: {
       version: FORMAT_VERSION,
-      activities: [...included.values()],
+      activities: included.values().toArray(),
       blocks,
       settings,
       devices: [],
