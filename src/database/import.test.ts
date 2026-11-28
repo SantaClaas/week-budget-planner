@@ -317,7 +317,7 @@ describe("rebuilding an imported database", () => {
       const targetConnection = await connect(":memory:");
       // oxlint-disable-next-line no-await-in-loop -- checking rebuild rejects far-future clocks.
       expect(await rebuild(source.connection, targetConnection, undefined, TARGET_NODE, NOW)).toBe(
-        "invalid-file",
+        "future-clock",
       );
     }
   });
