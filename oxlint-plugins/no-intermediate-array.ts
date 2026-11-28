@@ -10,6 +10,10 @@ import { defineRule } from "@oxlint/plugins";
  * - Two or more of them in a row, or one followed by a step the iterator helpers have too (`find`,
  *   `some`, `every`, `reduce`, `forEach`).
  *
+ * - An iterator spread into an array literal of its own, `[...rows.values()]`, which `toArray()`
+ *   says directly, and which the fix writes. Only a chain from `values()`, `keys()`, `entries()`,
+ *   `matchAll()` or `Iterator.from()` counts, so spreading a string or an array passes.
+ *
  * Lint plugins don't see types, so a chain counts as eager unless it starts from `values()`,
  * `keys()`, `entries()`, `matchAll()` or `Iterator.from()`. The fix starts it from `values()`, and
  * ends it with `toArray()` where its result is still used as an array. Where the rule guesses
@@ -31,6 +35,8 @@ const ENDING = new Set(["find", "some", "every", "reduce", "forEach"]);
 /** Calls that give an iterator, so the steps after them are the iterator helpers already. */
 const LAZY_STARTS = new Set(["values", "keys", "entries", "matchAll"]);
 const ITERABLE_CONSTRUCTORS = new Set(["Set", "Map", "WeakSet", "WeakMap"]);
+/** The iterator helpers that give another iterator, which a chain from a lazy start goes on with. */
+const ITERATOR_STEPS = new Set(["map", "filter", "flatMap", "take", "drop"]);
 
 const isNode = (value: unknown): value is Node =>
   typeof value === "object" && value !== null && "type" in value;
@@ -87,6 +93,30 @@ function isTakenAsIterable(node: Node): boolean {
   );
 }
 
+/** Whether `node` gives an iterator: a chain of iterator helpers from a lazy start. */
+function isIterator(node: Node): boolean {
+  let start = node;
+  let step = readMethod(start);
+  while (step !== undefined && ITERATOR_STEPS.has(step.name)) {
+    start = step.object;
+    step = readMethod(start);
+  }
+
+  return (step !== undefined && LAZY_STARTS.has(step.name)) || isIteratorFrom(start);
+}
+
+/** The iterator an array literal holds nothing but, spread, as in `[...rows.values()]`. */
+function readSpreadIterator(node: Node): Node | undefined {
+  const elements = node["elements"];
+  if (!Array.isArray(elements) || elements.length !== 1) return undefined;
+
+  const element: unknown = elements[0];
+  if (!isNode(element) || element.type !== "SpreadElement") return undefined;
+
+  const argument = element["argument"];
+  return isNode(argument) && isIterator(argument) ? argument : undefined;
+}
+
 export default defineRule({
   meta: {
     type: "suggestion",
@@ -97,6 +127,23 @@ export default defineRule({
   },
   create(context) {
     return {
+      ArrayExpression(raw) {
+        const node: unknown = raw;
+        if (!isNode(node)) return;
+
+        const iterator = readSpreadIterator(node);
+        if (iterator === undefined) return;
+
+        context.report({
+          node,
+          message: "This spreads an iterator into an array. Call toArray() on it instead.",
+          fix: (fixer) =>
+            fixer.replaceTextRange(
+              node.range,
+              `${context.sourceCode.text.slice(...iterator.range)}.toArray()`,
+            ),
+        });
+      },
       CallExpression(raw) {
         const node: unknown = raw;
         if (!isNode(node)) return;

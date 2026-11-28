@@ -20,7 +20,7 @@ class MemoryStorage implements Storage {
   }
   // oxlint-disable-next-line week-budget-planner/function-starts-with-verb -- the Storage interface's own method, which this class stands in for.
   key(index: number) {
-    return [...this.#items.keys()][index] ?? null;
+    return this.#items.keys().toArray()[index] ?? null;
   }
   removeItem(key: string) {
     this.#items.delete(key);
