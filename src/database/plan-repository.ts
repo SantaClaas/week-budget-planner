@@ -13,6 +13,7 @@ import { sanitizePlan } from "../plan/sanitize.ts";
 import {
   NO_CHANGE,
   createEmptyOrigins,
+  findLatestChange,
   incrementChangeNumber,
   noteAction,
   type ChangeNumber,
@@ -86,6 +87,10 @@ const readDevice = (record: DeviceRecord): DeviceRow => ({
  */
 export type StoredNode = { nodeId: NodeId; clock: Stamp; counter: ChangeNumber };
 
+/** The higher of two counters, which can't go back. */
+const findHigher = (first: ChangeNumber, second: ChangeNumber): ChangeNumber =>
+  first > second ? first : second;
+
 /** Reads this browser's node, or undefined before the first save. */
 export async function loadNode(database: Database): Promise<StoredNode | undefined> {
   const record = await database.select().from(node).where(eq(node.id, SINGLE_ROW_ID)).get();
@@ -98,13 +103,15 @@ export async function loadNode(database: Database): Promise<StoredNode | undefin
  * block's activity row there, so the rows are taken as they are.
  *
  * @returns The rows, their origins, whether the database has ever held a plan (a settings row),
- *   and the node, or undefined before the first save.
+ *   the node, or undefined before the first save, and the counter: the node's, but never below the
+ *   latest change of a row, which rows migrated before the first save have without a node.
  */
 export async function loadRows(database: Database): Promise<{
   rows: Rows;
   origins: Origins;
   isStored: boolean;
   node: StoredNode | undefined;
+  counter: ChangeNumber;
 }> {
   const [settingsRecord, activityRecords, blockRecords, deviceRecords, stored] = await Promise.all([
     database.select().from(settings).where(eq(settings.id, SINGLE_ROW_ID)).get(),
@@ -137,6 +144,7 @@ export async function loadRows(database: Database): Promise<{
     origins,
     isStored: settingsRecord !== undefined,
     node: stored,
+    counter: findHigher(stored?.counter ?? NO_CHANGE, findLatestChange(origins)),
   };
 }
 
@@ -165,6 +173,9 @@ function requireOrigin<Key>(origins: ReadonlyMap<Key, Origin>, key: Key): Origin
  * The statements that write a change's rows, with their origins, and the node: each row whole,
  * inserted or, when it's there, updated. A new activity's row is created at `now`.
  *
+ * @param change - The rows as they are after the write, merged: each overwrites the row stored. A
+ *   change as it was received must be merged into the rows first (see `merge()`), and only the
+ *   rows that merge altered written, or older registers would replace newer ones.
  * @param origins - The origins after the write, which hold one for every row in the change.
  */
 export function buildChangeStatements(
@@ -294,7 +305,7 @@ export async function saveAction(
   const stamp = issueNext(loaded.node?.clock ?? LOWEST, sanitizeTime(now), nodeId);
   if (stamp === undefined) throw new Error("This device's clock is at the latest stamp there is.");
 
-  const counter = incrementChangeNumber(loaded.node?.counter ?? NO_CHANGE);
+  const counter = incrementChangeNumber(loaded.counter);
   if (counter === "out-of-range") throw new Error("This device's counter is at its highest.");
 
   const made = make(loaded.rows, update, stamp);
@@ -311,10 +322,6 @@ export async function saveAction(
   return readPlan(made.rows);
 }
 
-/** The higher of two counters, which can't go back. */
-const findHigher = (first: ChangeNumber, second: ChangeNumber): ChangeNumber =>
-  first > second ? first : second;
-
 /**
  * Gives an imported database's node a new id, the later of two clocks and a counter above both
  * (see Export and import in docs/spec/merge.md). With the file's id, two browsers that imported
@@ -325,33 +332,27 @@ const findHigher = (first: ChangeNumber, second: ChangeNumber): ChangeNumber =>
  * The import replaces this browser's rows, so every row counts as changed here, at the new
  * counter, and every other device gets them all: one that had this browser's changes up to its old
  * counter, or the file's, would otherwise miss rows the import brought. The file's progress was
- * another device's, so it goes.
+ * another device's, so it goes, also from a file without a node, which a crafted one can be.
  *
  * @param database - The imported database, migrated.
  * @param before - This browser's clock and counter before the import, or undefined before its
  *   first save.
  * @param nodeId - The new id.
- * @returns The node it wrote, or undefined when neither the file nor this browser has a node: the
- *   first save then makes it, as in a new database.
+ * @returns The node it wrote.
  * @throws {Error} When the counter is at its highest, which only a broken device brings it to.
  */
 export async function renewNode(
   database: Database,
   before: { clock: Stamp; counter: ChangeNumber } | undefined,
   nodeId: NodeId,
-): Promise<StoredNode | undefined> {
-  const imported = await loadNode(database);
-  // A file without a node never saved, so it has no progress either.
-  if (imported === undefined && before === undefined) return undefined;
-
-  const counter = incrementChangeNumber(
-    findHigher(before?.counter ?? NO_CHANGE, imported?.counter ?? NO_CHANGE),
-  );
+): Promise<StoredNode> {
+  const imported = await loadRows(database);
+  const counter = incrementChangeNumber(findHigher(before?.counter ?? NO_CHANGE, imported.counter));
   if (counter === "out-of-range") throw new Error("This device's counter is at its highest.");
 
   const renewed = {
     nodeId,
-    clock: advance(before?.clock ?? LOWEST, imported?.clock ?? LOWEST),
+    clock: advance(before?.clock ?? LOWEST, imported.node?.clock ?? LOWEST),
     counter,
   };
   const origin = { changedAt: counter, changedBy: null };

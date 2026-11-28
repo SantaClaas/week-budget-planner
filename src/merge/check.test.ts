@@ -55,13 +55,13 @@ function createWithRenamedStamp(): unknown {
   return received;
 }
 
-/** The snapshot as JSON would arrive, with its first block twice. */
-function createWithRepeatedBlock(): unknown {
+/** The snapshot as JSON would arrive, with the first row of a kind twice. */
+function createWithRepeated(kind: "blocks" | "devices"): unknown {
   const received = createReceived([]);
-  const blocks = isContainer(received) ? received["blocks"] : undefined;
-  if (!Array.isArray(blocks)) throw new Error("The snapshot has no blocks.");
+  const list = isContainer(received) ? received[kind] : undefined;
+  if (!Array.isArray(list)) throw new Error(`The snapshot has no ${kind}.`);
 
-  blocks.push(blocks.at(0));
+  list.push(list.at(0));
   return received;
 }
 
@@ -315,6 +315,8 @@ describe("checking what is received", () => {
       "invalid-value",
     ],
     ["a device stamp out of form", findDeviceField("name", "stamp"), "now", "invalid-stamp"],
+    ["a device without its name", findDeviceField("name"), undefined, "not-a-change"],
+    ["an unknown field in a device", findDeviceField("color"), "red", "not-a-change"],
     ["a block that isn't an object", ["blocks", 0], 7, "not-a-change"],
   ];
 
@@ -329,7 +331,11 @@ describe("checking what is received", () => {
   });
 
   it("refuses two rows with the same id", () => {
-    expect(parse(createWithRepeatedBlock())).toBe("repeated-id");
+    expect(parse(createWithRepeated("blocks"))).toBe("repeated-id");
+  });
+
+  it("refuses two devices with the same key", () => {
+    expect(parse(createWithRepeated("devices"))).toBe("repeated-id");
   });
 
   it.each([null, undefined, "{}", 1, [], {}])(

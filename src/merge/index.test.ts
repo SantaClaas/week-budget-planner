@@ -17,10 +17,11 @@ import {
   type Rows,
 } from "./index.ts";
 import { formatCanonical, isSame, merge as mergeRegisters } from "./register.ts";
-import { mergeActivity } from "./row.ts";
+import { mergeActivity, mergeDevice, type DeviceRow } from "./row.ts";
+import { parseDeviceName } from "../device/index.ts";
 import { LOWEST } from "./stamp.ts";
 import { parse } from "./check.ts";
-import { createStamp, requireValue } from "./test-data.ts";
+import { createDevice, createStamp, requireValue } from "./test-data.ts";
 
 const work = createActivity({ id: "work", name: "Work" });
 const gym = createActivity({ id: "gym", name: "Gym", hue: 152, shape: "arch" });
@@ -152,6 +153,62 @@ describe("rows", () => {
     }));
     expect(findLatestStamp(moved)).toBe("1763200000000-000004-n");
     expect(findLatestStamp(takeSnapshot(merge(rows, moved)))).toBe("1763200000000-000004-n");
+  });
+});
+
+/** A change of the converted rows' activities and blocks, without settings, with these devices. */
+const createChangeOf = (...devices: DeviceRow[]): Change => ({
+  ...takeSnapshot(rows),
+  settings: null,
+  devices,
+});
+
+describe("devices", () => {
+  const device = createDevice("a", createStamp(1_763_200_000_000, 0, "phone"));
+  const renamed: DeviceRow = {
+    ...device,
+    name: {
+      value: requireValue(parseDeviceName("Phone"), "name"),
+      stamp: createStamp(1_763_200_000_002, 0, "phone"),
+    },
+  };
+  const removed: DeviceRow = {
+    ...device,
+    membership: {
+      value: { status: "removed", proof: null },
+      stamp: createStamp(1_763_200_000_001, 0, "laptop"),
+    },
+  };
+  it("merges a device's row register by register, whatever the order", () => {
+    const merged = mergeDevice(renamed, removed);
+    expect(merged.name).toBe(renamed.name);
+    expect(merged.membership).toBe(removed.membership);
+    expect(mergeDevice(removed, renamed)).toEqual(merged);
+    expect(mergeDevice(merged, device)).toBe(merged);
+  });
+
+  it("merges into a device it holds, and adds one it doesn't", () => {
+    const held = merge(rows, createChangeOf(renamed));
+    const other = createDevice("b");
+    const merged = merge(held, createChangeOf(removed, other));
+    expect(merged.devices.get(device.id)).toMatchObject({
+      name: { value: "Phone" },
+      membership: { value: { status: "removed" } },
+    });
+    expect(merged.devices.get(other.id)).toBe(other);
+  });
+
+  it("counts a device's stamps for the latest stamp", () => {
+    expect(findLatestStamp(createChangeOf(device))).toBe(device.identity.stamp);
+    expect(findLatestStamp(createChangeOf(removed))).toBe(removed.membership.stamp);
+    expect(findLatestStamp(createChangeOf(renamed))).toBe(renamed.name.stamp);
+  });
+
+  it("holds every device in a snapshot, sorted by key", () => {
+    const later = createDevice("c");
+    const earlier = createDevice("1");
+    const snapshot = takeSnapshot(merge(rows, createChangeOf(later, earlier)));
+    expect(snapshot.devices.map((row) => row.id)).toEqual([earlier.id, later.id]);
   });
 });
 

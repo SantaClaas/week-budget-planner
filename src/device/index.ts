@@ -55,10 +55,14 @@ export const parseDeviceKey = (value: unknown): DeviceKey | undefined =>
 export function parseRelay(value: unknown): Relay | undefined {
   if (typeof value !== "string" || value.length > MAX_RELAY_CHARACTERS) return undefined;
 
-  // URL.canParse is in every browser the polyfills reach down to (Safari 17); URL.parse isn't.
-  if (!URL.canParse(value)) return undefined;
+  // Not URL.canParse, which came after the browsers the app reaches down to (Safari 17).
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return undefined;
+  }
 
-  const url = new URL(value);
   if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
 
   return url.href === value ? brand<Relay>(value) : undefined;

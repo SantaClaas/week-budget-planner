@@ -68,6 +68,20 @@ export const createEmptyOrigins = (): Origins => ({
   devices: new Map(),
 });
 
+/**
+ * The highest number any row was changed at. The counter is never below it, also before the node
+ * that holds the counter exists, as in a database migrated before its first save, whose rows count
+ * as change 1.
+ */
+export const findLatestChange = (origins: Origins): ChangeNumber =>
+  [origins.activities, origins.blocks, origins.devices]
+    .values()
+    .flatMap((each) => each.values())
+    .reduce(
+      (latest, origin) => (origin.changedAt > latest ? origin.changedAt : latest),
+      origins.settings.changedAt,
+    );
+
 /** Rows by their ids. */
 const collectById = <Key, Row extends { id: Key }>(rows: readonly Row[]): Map<Key, Row> =>
   new Map(rows.values().map((row) => [row.id, row]));
