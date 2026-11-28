@@ -89,6 +89,7 @@ Two devices speak over one connection of the transport, which has already proven
 - **A device that says it has more of the other's changes than the other ever made** has outlived the other's data, for example after the other was restored from an old copy. The other then sends everything.
 - **A new device has nothing,** so it gets everything: the first `Rows` it receives is a snapshot.
 - **Nothing depends on order or on arriving once** (see [The idea](merge.md#the-idea) in [Merging changes](merge.md)). When a connection drops, the two say `Hello` again and continue.
+- **In code:** the pure state machine is [`src/sync/protocol.ts`](../../src/sync/protocol.ts) (`createProtocolState`, `stepProtocol`), with its messages in [`src/sync/message.ts`](../../src/sync/message.ts), group ids in [`src/sync/group.ts`](../../src/sync/group.ts), and deterministic simulation in [`src/sync/simulation.test.ts`](../../src/sync/simulation.test.ts).
 
 ### Finding each other
 
