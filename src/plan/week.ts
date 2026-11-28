@@ -36,8 +36,8 @@ export type BlockPart = {
   length: Length;
   /** Minutes from that day's midnight where the part ends, up to 1440. */
   end: number;
-  /** "only", or which half of an overnight block this is. */
-  kind: "only" | "first" | "second";
+  /** Which half of an overnight block this is, or "only" for a block within one day. */
+  half: "only" | "first" | "second";
 };
 
 /** The block's start on the week. */
@@ -50,7 +50,7 @@ const isOvernight = (block: Pick<Block, "start" | "length">): boolean =>
 export function splitIntoParts(block: Block): BlockPart[] {
   const end = block.start + block.length;
   if (end <= DAY) {
-    return [{ block, day: block.day, start: block.start, length: block.length, end, kind: "only" }];
+    return [{ block, day: block.day, start: block.start, length: block.length, end, half: "only" }];
   }
 
   return [
@@ -61,7 +61,7 @@ export function splitIntoParts(block: Block): BlockPart[] {
       // An overnight block starts at least a slot before midnight, so each part has a slot or more.
       length: sanitizeLength(DAY - block.start),
       end: DAY,
-      kind: "first",
+      half: "first",
     },
     {
       block,
@@ -69,7 +69,7 @@ export function splitIntoParts(block: Block): BlockPart[] {
       start: sanitizeDayMinute(0),
       length: sanitizeLength(end - DAY),
       end: end - DAY,
-      kind: "second",
+      half: "second",
     },
   ];
 }

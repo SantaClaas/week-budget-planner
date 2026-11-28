@@ -101,7 +101,7 @@ export function scrollNearEdge(scroller: HTMLElement, y: number): boolean {
 export function startDrag(
   event: PointerEvent,
   options: {
-    part: Pick<BlockPart, "block" | "kind">;
+    part: Pick<BlockPart, "block" | "half">;
     grip: Grip;
     planner: Planner;
     scroller: HTMLElement;

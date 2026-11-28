@@ -21,9 +21,9 @@ export const readMinute = (offsetFromTop: number, columnHeight: number): number 
  * How far into the block, in minutes from its start, the pointer took hold of it, so a move keeps
  * that offset and the block doesn't jump. A second part's minutes count on from midnight.
  */
-export function measureGrab(part: Pick<BlockPart, "block" | "kind">, minute: number): number {
+export function measureGrab(part: Pick<BlockPart, "block" | "half">, minute: number): number {
   const fromStart =
-    part.kind === "second" ? DAY - part.block.start + minute : minute - part.block.start;
+    part.half === "second" ? DAY - part.block.start + minute : minute - part.block.start;
   return clamp(fromStart, 0, part.block.length);
 }
 
@@ -34,13 +34,13 @@ export function measureGrab(part: Pick<BlockPart, "block" | "kind">, minute: num
  * one edge, within its part's own day.
  */
 export function drag(
-  part: Pick<BlockPart, "block" | "kind">,
+  part: Pick<BlockPart, "block" | "half">,
   grip: Grip,
   grab: number,
   place: PointerPlace,
 ): Block {
   const { block } = part;
-  const isSecond = part.kind === "second";
+  const isSecond = part.half === "second";
   if (grip === "top") return resizeStart(block, snap(place.minute));
 
   if (grip === "bottom") return resizeEnd(block, snap(place.minute) + (isSecond ? DAY : 0));

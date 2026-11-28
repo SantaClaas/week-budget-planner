@@ -64,6 +64,9 @@
     // Chain lazily with the iterator helpers where array methods would build arrays only to throw
     // them away (see Iterators in docs/guidelines/typescript.md).
     "week-budget-planner/no-intermediate-array": "error",
+    // No name "kind": a discriminator is `type`, and any other field is named for what it means
+    // (see Discriminated unions in docs/guidelines/typescript.md).
+    "week-budget-planner/no-kind": "error",
     // Everything is declared above its first use, as in F#, so a file reads bottom-up: types and
     // helpers first, the module's entry point last (see Functions in
     // docs/guidelines/principles.md). Type references count too.

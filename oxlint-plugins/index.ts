@@ -4,6 +4,7 @@ import blankLineAfterScope from "./blank-line-after-scope.ts";
 import functionStartsWithVerb from "./function-starts-with-verb.ts";
 import noElse from "./no-else.ts";
 import noIntermediateArray from "./no-intermediate-array.ts";
+import noKind from "./no-kind.ts";
 import oneOperationPerTry from "./one-operation-per-try.ts";
 import preferUsing from "./prefer-using.ts";
 import shorterBranchFirst from "./shorter-branch-first.ts";
@@ -17,6 +18,7 @@ export default definePlugin({
     "function-starts-with-verb": functionStartsWithVerb,
     "no-else": noElse,
     "no-intermediate-array": noIntermediateArray,
+    "no-kind": noKind,
     "one-operation-per-try": oneOperationPerTry,
     "prefer-using": preferUsing,
     "shorter-branch-first": shorterBranchFirst,

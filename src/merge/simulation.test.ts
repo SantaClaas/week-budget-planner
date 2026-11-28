@@ -64,7 +64,7 @@ type WallClock = { offset: number; isStuck: boolean; stuckAt: number };
 
 /** Clocks that agree, that run ahead by hours or days, that lag, and that don't move at all. */
 function createWallClock(random: Random): WallClock {
-  const kind = random.pickInteger(0, 5);
+  const clock = random.pickInteger(0, 5);
   const offsets = [
     random.pickInteger(-2000, 2000),
     random.pickInteger(-2000, 2000),
@@ -74,8 +74,8 @@ function createWallClock(random: Random): WallClock {
     0,
   ];
   return {
-    offset: offsets[kind] ?? 0,
-    isStuck: kind >= 4,
+    offset: offsets[clock] ?? 0,
+    isStuck: clock >= 4,
     stuckAt: START + random.pickInteger(0, 5000),
   };
 }
@@ -99,7 +99,7 @@ type Context = {
   readonly random: Random;
   readonly node: SimulatedNode;
   /** A new id for an activity or a block that this node adds. */
-  readonly createId: (kind: "a" | "b") => string;
+  readonly createId: (prefix: "a" | "b") => string;
 };
 
 /** A user action, as the app could make it: the plan a node shows, and the plan after. */
@@ -327,7 +327,8 @@ function createAction(
   node: SimulatedNode,
   actions: readonly Weighted[],
 ): (shown: Plan) => Plan {
-  const createId = (kind: "a" | "b"): string => `${node.id}-${kind}${String((node.count += 1))}`;
+  const createId = (prefix: "a" | "b"): string =>
+    `${node.id}-${prefix}${String((node.count += 1))}`;
   const context: Context = { random, node, createId };
   return (shown) => {
     const action =
@@ -346,15 +347,15 @@ const listRegisters = (row: object): [string, { value: unknown; stamp: Stamp }][
       typeof entry[1] === "object" && entry[1] !== null && "stamp" in entry[1],
   );
 
-/** Finds a row of the rows by the kind of a row in a change, and its id, if it has one. */
+/** Finds a row of the rows by the type of a row in a change, and its id, if it has one. */
 function findRow(
   rows: Rows,
-  kind: "activity" | "block" | "settings",
+  type: "activity" | "block" | "settings",
   id?: string,
 ): object | undefined {
-  if (kind === "settings") return rows.settings;
+  if (type === "settings") return rows.settings;
 
-  const all: ReadonlyMap<string, object> = kind === "activity" ? rows.activities : rows.blocks;
+  const all: ReadonlyMap<string, object> = type === "activity" ? rows.activities : rows.blocks;
   return all.get(id ?? "");
 }
 
@@ -388,7 +389,7 @@ function isValid(rows: Rows): boolean {
   return isSame(sanitizePlan(shown, createPredictableIds()), shown);
 }
 
-/** A row of a change, with its kind and its id, if it has one. */
+/** A row of a change, with its type and its id, if it has one. */
 type RowOfChange = readonly ["activity" | "block" | "settings", object, string | undefined];
 
 const listRowsOfChange = (change: Change): RowOfChange[] => [
@@ -402,17 +403,17 @@ const listRowsOfChange = (change: Change): RowOfChange[] => [
  * A deleted row keeps its values too, so that holds for deleted rows as well.
  */
 function checkKept(rows: Rows, change: Change): void {
-  for (const [kind, saved, id] of listRowsOfChange(change)) {
-    const held = findRow(rows, kind, id);
-    check(held !== undefined, `the ${kind} ${String(id)} a change saved is still there`);
+  for (const [type, saved, id] of listRowsOfChange(change)) {
+    const held = findRow(rows, type, id);
+    check(held !== undefined, `the ${type} ${String(id)} a change saved is still there`);
     for (const [name, register] of listRegisters(saved)) {
       const now = held === undefined ? undefined : readRegister(held, name);
       const order = now === undefined ? -1 : compareStamps(now.stamp, register.stamp);
-      check(order >= 0, `the ${name} of ${kind} ${String(id)} is as saved or later`);
+      check(order >= 0, `the ${name} of ${type} ${String(id)} is as saved or later`);
       const isSameValue = order > 0 || isSame(now?.value, register.value);
       check(
         isSameValue,
-        `the ${name} of ${kind} ${String(id)} keeps the value saved with its stamp`,
+        `the ${name} of ${type} ${String(id)} keeps the value saved with its stamp`,
       );
     }
   }
@@ -424,8 +425,8 @@ function checkKept(rows: Rows, change: Change): void {
  * so it can't overwrite what another node changed meanwhile.
  */
 function checkOnlyChanged(rowsBefore: Rows, change: Change): void {
-  for (const [kind, saved, id] of listRowsOfChange(change)) {
-    const held = findRow(rowsBefore, kind, id);
+  for (const [type, saved, id] of listRowsOfChange(change)) {
+    const held = findRow(rowsBefore, type, id);
     if (held === undefined) continue;
 
     for (const [name, register] of listRegisters(saved)) {
@@ -433,7 +434,7 @@ function checkOnlyChanged(rowsBefore: Rows, change: Change): void {
       const isCarried = before !== undefined && compareStamps(before.stamp, register.stamp) === 0;
       check(
         isCarried || !isSame(before?.value, register.value),
-        `the ${name} of ${kind} ${String(id)} gets a new stamp only when its value changed`,
+        `the ${name} of ${type} ${String(id)} gets a new stamp only when its value changed`,
       );
     }
   }
