@@ -3,24 +3,29 @@ import { defineRule } from "@oxlint/plugins";
 /**
  * Array methods that build an array only for the next step to throw it away are reported, so the
  * chain runs lazily with the iterator helpers instead (see Iterators in
- * docs/guidelines/typescript.md). Two cases are clear without types:
+ * docs/guidelines/typescript.md). These cases are clear without types:
  *
  * - A chain of `map`, `filter` or `flatMap` handed straight to something that takes any iterable:
  *   `new Set`, `new Map`, `new WeakSet`, `new WeakMap`, `Object.fromEntries` or `for … of`.
  * - Two or more of them in a row, or one followed by a step the iterator helpers have too (`find`,
  *   `some`, `every`, `reduce`, `forEach`).
- *
- * - An iterator spread into an array literal of its own, `[...rows.values()]`, which `toArray()`
- *   says directly, and which the fix writes. Only a chain from `values()`, `keys()`, `entries()`,
- *   `matchAll()` or `Iterator.from()` counts, so spreading a string or an array passes.
+ * - An iterator materialized into an array — either `toArray()` or an array literal holding nothing
+ *   but an iterator spread, `[...rows.values()]` — before such a chain or handed straight to
+ *   something that takes any iterable. Its fix chains on the iterator directly, moving `toArray()`
+ *   to the end only when an array is still needed.
+ * - A standalone iterator spread into an array literal of its own, `[...rows.values()]`, which
+ *   `toArray()` says directly, and which the fix writes. Only a chain from `values()`, `keys()`,
+ *   `entries()`, `matchAll()` or `Iterator.from()` counts, so spreading a string or an array
+ *   passes.
  *
  * Lint plugins don't see types, so a chain counts as eager unless it starts from `values()`,
  * `keys()`, `entries()`, `matchAll()` or `Iterator.from()`. The fix starts it from `values()`, and
  * ends it with `toArray()` where its result is still used as an array. Where the rule guesses
- * wrong, such as a generator, the fix doesn't compile, so the typecheck catches it. It also misses
- * an array stored in a variable before it's handed on. If wrong guesses pile up or those misses
- * matter, the check moves to a script that asks the type checker, like scripts/check-must-use.ts
- * (see "Our own checks come in two kinds" in docs/guidelines/typescript.md).
+ * wrong, such as a generator or a non-iterator `toArray()`, the fix doesn't compile, so the
+ * typecheck catches it. It also misses an array stored in a variable before it's handed on. If
+ * wrong guesses pile up or those misses matter, the check moves to a script that asks the type
+ * checker, like scripts/check-must-use.ts (see "Our own checks come in two kinds" in
+ * docs/guidelines/typescript.md).
  */
 
 type Node = { type: string; range: [number, number]; parent: Node | null } & Record<
@@ -66,6 +71,24 @@ function isIteratorFrom(node: Node): boolean {
     method.object.type === "Identifier" &&
     method.object["name"] === "Iterator"
   );
+}
+
+/** Whether `node` is a `toArray()` call with no arguments, returning its receiver. */
+function readToArrayReceiver(node: Node): Node | undefined {
+  const method = readMethod(node);
+  const callArguments = node["arguments"];
+  return method?.name === "toArray" && Array.isArray(callArguments) && callArguments.length === 0
+    ? method.object
+    : undefined;
+}
+
+/** Whether `node` is the object of a method call in `BUILDING` or `ENDING`. */
+function isChainedToStep(node: Node): boolean {
+  const parent = node.parent;
+  if (parent?.type !== "MemberExpression" || parent["object"] !== node) return false;
+
+  const outer = readMethod(isNode(parent.parent) ? parent.parent : null);
+  return outer !== undefined && (BUILDING.has(outer.name) || ENDING.has(outer.name));
 }
 
 /** Whether the value of `node` is taken by something that accepts any iterable. */
@@ -117,6 +140,33 @@ function readSpreadIterator(node: Node): Node | undefined {
   return isNode(argument) && isIterator(argument) ? argument : undefined;
 }
 
+/**
+ * An iterator materialized into an array at the start of a chain — either `iter.toArray()` or
+ * `[...iter]` — with the range and replacement that unwrap it back to the iterator.
+ */
+function readMaterializedIterator(
+  node: Node,
+  sourceText: string,
+): { range: [number, number]; replacement: string; messagePrefix: string } | undefined {
+  const receiver = readToArrayReceiver(node);
+  if (receiver !== undefined) {
+    return {
+      range: [receiver.range[1], node.range[1]],
+      replacement: "",
+      messagePrefix: "This calls toArray()",
+    };
+  }
+
+  const iterator = readSpreadIterator(node);
+  if (iterator === undefined) return undefined;
+
+  return {
+    range: node.range,
+    replacement: sourceText.slice(...iterator.range),
+    messagePrefix: "This spreads an iterator into an array",
+  };
+}
+
 export default defineRule({
   meta: {
     type: "suggestion",
@@ -132,15 +182,19 @@ export default defineRule({
         if (!isNode(node)) return;
 
         const iterator = readSpreadIterator(node);
-        if (iterator === undefined) return;
+        if (iterator === undefined || isChainedToStep(node)) return;
 
+        const isIterable = isTakenAsIterable(node);
+        const iteratorText = context.sourceCode.text.slice(...iterator.range);
         context.report({
           node,
-          message: "This spreads an iterator into an array. Call toArray() on it instead.",
+          message: isIterable
+            ? "This spreads an iterator into an array only to iterate it again. Pass the iterator directly."
+            : "This spreads an iterator into an array. Call toArray() on it instead.",
           fix: (fixer) =>
             fixer.replaceTextRange(
               node.range,
-              `${context.sourceCode.text.slice(...iterator.range)}.toArray()`,
+              isIterable ? iteratorText : `${iteratorText}.toArray()`,
             ),
         });
       },
@@ -148,18 +202,25 @@ export default defineRule({
         const node: unknown = raw;
         if (!isNode(node)) return;
 
+        const toArrayReceiver = readToArrayReceiver(node);
+        if (toArrayReceiver !== undefined) {
+          if (!isChainedToStep(node) && isTakenAsIterable(node)) {
+            context.report({
+              node,
+              message:
+                "This calls toArray() only to iterate the result again. Pass the iterator directly.",
+              fix: (fixer) => fixer.removeRange([toArrayReceiver.range[1], node.range[1]]),
+            });
+          }
+
+          return;
+        }
+
         const top = readMethod(node);
         if (top === undefined || !(BUILDING.has(top.name) || ENDING.has(top.name))) return;
 
         // Only the outermost step of a chain reports, so a chain is reported once.
-        const outer = node.parent;
-        const outerMethod = readMethod(isNode(outer?.parent) ? outer.parent : null);
-        const isInner =
-          outer?.type === "MemberExpression" &&
-          outer["object"] === node &&
-          outerMethod !== undefined &&
-          (BUILDING.has(outerMethod.name) || ENDING.has(outerMethod.name));
-        if (isInner) return;
+        if (isChainedToStep(node)) return;
 
         // Walk down to where the chain starts, counting the steps that build an array.
         let building = BUILDING.has(top.name) ? 1 : 0;
@@ -173,14 +234,31 @@ export default defineRule({
           step = readMethod(start);
         }
 
+        const isIterable = BUILDING.has(top.name) && isTakenAsIterable(node);
+        const needsArray = BUILDING.has(top.name) && !isIterable;
+        const materialized = readMaterializedIterator(start, context.sourceCode.text);
+        if (materialized !== undefined) {
+          context.report({
+            node,
+            message: needsArray
+              ? `${materialized.messagePrefix} before chaining array methods, building an array only to throw it away. Chain on the iterator and call toArray() at the end.`
+              : `${materialized.messagePrefix} before a chain that iterators support too. Chain on the iterator directly.`,
+            fix: (fixer) => {
+              const unwrap = fixer.replaceTextRange(materialized.range, materialized.replacement);
+              return needsArray
+                ? [unwrap, fixer.insertTextAfterRange(node.range, ".toArray()")]
+                : unwrap;
+            },
+          });
+          return;
+        }
+
         const isLazy = (step !== undefined && LAZY_STARTS.has(step.name)) || isIteratorFrom(start);
         if (isLazy) return;
 
-        const isIterable = BUILDING.has(top.name) && isTakenAsIterable(node);
         const stepsInBetween = building - (BUILDING.has(top.name) ? 1 : 0);
         if (stepsInBetween === 0 && !isIterable) return;
 
-        const needsArray = BUILDING.has(top.name) && !isIterable;
         context.report({
           node,
           message: needsArray
