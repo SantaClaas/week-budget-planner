@@ -9,5 +9,7 @@ import base from "./vitest.config.ts";
 // say which rule a mutant broke.
 export default mergeConfig(
   base,
-  defineConfig({ test: { exclude: ["src/merge/simulation.test.ts"] } }),
+  defineConfig({
+    test: { exclude: ["src/merge/simulation.test.ts", "src/sync/simulation.test.ts"] },
+  }),
 );
